@@ -1,0 +1,10 @@
+# Example orders for Player 1, Turn 1
+
+# Recruit some soldiers in our starting city
+Recruit 20 soldiers in Madegi Doy.
+
+# Move our leader to explore
+Have Emperor Marcus go to Kitesta.
+
+# Try to recruit more units
+Have Emperor Marcus recruit 10 soldiers in Kitesta.

@@ -1,0 +1,95 @@
+{
+  "cities": [
+    {
+      "id": "madegi_doy",
+      "name": "Madegi Doy",
+      "population_band": "1M+",
+      "terrain": [
+        "coastal",
+        "plains"
+      ],
+      "region": "Main Continent",
+      "is_port": true
+    },
+    {
+      "id": "kitesta",
+      "name": "Kitesta",
+      "population_band": "100k-999k",
+      "terrain": [
+        "river",
+        "plains"
+      ],
+      "region": "Main Continent",
+      "is_port": false
+    },
+    {
+      "id": "riverton",
+      "name": "Riverton",
+      "population_band": "10k-99k",
+      "terrain": [
+        "forest",
+        "river"
+      ],
+      "region": "Main Continent",
+      "is_port": false
+    },
+    {
+      "id": "albatross_city",
+      "name": "Albatross City",
+      "population_band": "100k-999k",
+      "terrain": [
+        "coastal",
+        "mountains"
+      ],
+      "region": "Northern Island",
+      "is_port": true
+    },
+    {
+      "id": "peshandi",
+      "name": "Peshandi",
+      "population_band": "< 10k",
+      "terrain": [
+        "desert"
+      ],
+      "region": "Main Continent",
+      "is_port": false
+    }
+  ],
+  "roads": [
+    {
+      "id": "road_1",
+      "from": "madegi_doy",
+      "to": "kitesta",
+      "quality": "good",
+      "bidirectional": true
+    },
+    {
+      "id": "road_2",
+      "from": "kitesta",
+      "to": "riverton",
+      "quality": "fair",
+      "bidirectional": true
+    },
+    {
+      "id": "road_3",
+      "from": "riverton",
+      "to": "peshandi",
+      "quality": "poor",
+      "bidirectional": true
+    },
+    {
+      "id": "road_4",
+      "from": "peshandi",
+      "to": "madegi_doy",
+      "quality": "fair",
+      "bidirectional": true
+    },
+    {
+      "id": "sea_1",
+      "from": "madegi_doy",
+      "to": "albatross_city",
+      "quality": "sea",
+      "bidirectional": true
+    }
+  ]
+}

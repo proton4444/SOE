@@ -1,0 +1,164 @@
+{
+  "turn_number": 1,
+  "world_map": {
+    "cities": {
+      "madegi_doy": {
+        "id": "madegi_doy",
+        "name": "Madegi Doy",
+        "population_band": "1M+",
+        "terrain": [
+          "coastal",
+          "plains"
+        ],
+        "region": "Main Continent",
+        "is_port": true
+      },
+      "kitesta": {
+        "id": "kitesta",
+        "name": "Kitesta",
+        "population_band": "100k-999k",
+        "terrain": [
+          "river",
+          "plains"
+        ],
+        "region": "Main Continent",
+        "is_port": false
+      },
+      "riverton": {
+        "id": "riverton",
+        "name": "Riverton",
+        "population_band": "10k-99k",
+        "terrain": [
+          "forest",
+          "river"
+        ],
+        "region": "Main Continent",
+        "is_port": false
+      },
+      "albatross_city": {
+        "id": "albatross_city",
+        "name": "Albatross City",
+        "population_band": "100k-999k",
+        "terrain": [
+          "coastal",
+          "mountains"
+        ],
+        "region": "Northern Island",
+        "is_port": true
+      },
+      "peshandi": {
+        "id": "peshandi",
+        "name": "Peshandi",
+        "population_band": "< 10k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Main Continent",
+        "is_port": false
+      }
+    },
+    "roads": {
+      "road_1": {
+        "id": "road_1",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "kitesta",
+        "quality": "good",
+        "bidirectional": true
+      },
+      "road_2": {
+        "id": "road_2",
+        "from_city_id": "kitesta",
+        "to_city_id": "riverton",
+        "quality": "fair",
+        "bidirectional": true
+      },
+      "road_3": {
+        "id": "road_3",
+        "from_city_id": "riverton",
+        "to_city_id": "peshandi",
+        "quality": "poor",
+        "bidirectional": true
+      },
+      "road_4": {
+        "id": "road_4",
+        "from_city_id": "peshandi",
+        "to_city_id": "madegi_doy",
+        "quality": "fair",
+        "bidirectional": true
+      },
+      "sea_1": {
+        "id": "sea_1",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "albatross_city",
+        "quality": "sea",
+        "bidirectional": true
+      }
+    }
+  },
+  "factions": {
+    "player_1": {
+      "id": "player_1",
+      "name": "The Golden Empire",
+      "controlled_city_ids": [
+        "madegi_doy"
+      ],
+      "treasury": 1470
+    },
+    "player_2": {
+      "id": "player_2",
+      "name": "The Silver Horde",
+      "controlled_city_ids": [
+        "albatross_city"
+      ],
+      "treasury": 1170
+    }
+  },
+  "characters": {
+    "char_player_1_leader": {
+      "id": "char_player_1_leader",
+      "name": "Emperor Marcus",
+      "faction_id": "player_1",
+      "location_city_id": "kitesta",
+      "movement_points": 10,
+      "combat_skill": 10,
+      "magic_skill": 5,
+      "magic_power_current": 5,
+      "health": 100
+    },
+    "char_player_2_leader": {
+      "id": "char_player_2_leader",
+      "name": "Khan Tengri",
+      "faction_id": "player_2",
+      "location_city_id": "madegi_doy",
+      "movement_points": 10,
+      "combat_skill": 10,
+      "magic_skill": 5,
+      "magic_power_current": 5,
+      "health": 100
+    }
+  },
+  "unit_stacks": {
+    "stack_player_1_0_2824": {
+      "id": "stack_player_1_0_2824",
+      "faction_id": "player_1",
+      "location_city_id": "madegi_doy",
+      "unit_type": "soldier",
+      "count": 20
+    },
+    "stack_player_1_1_1409": {
+      "id": "stack_player_1_1_1409",
+      "faction_id": "player_1",
+      "location_city_id": "kitesta",
+      "unit_type": "soldier",
+      "count": 10
+    },
+    "stack_player_2_2_5506": {
+      "id": "stack_player_2_2_5506",
+      "faction_id": "player_2",
+      "location_city_id": "albatross_city",
+      "unit_type": "soldier",
+      "count": 30
+    }
+  },
+  "ships": {}
+}

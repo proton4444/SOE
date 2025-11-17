@@ -1,0 +1,9 @@
+players:
+- id: player_1
+  leader_name: Emperor Marcus
+  name: The Golden Empire
+  start_city: madegi_doy
+- id: player_2
+  leader_name: Khan Tengri
+  name: The Silver Horde
+  start_city: albatross_city

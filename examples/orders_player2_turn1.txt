@@ -1,0 +1,10 @@
+# Example orders for Player 2, Turn 1
+
+# Build up our forces
+Recruit 30 soldiers in Albatross City.
+
+# Buy a ship since we're at a port
+Buy 1 galley in Albatross City.
+
+# Scout with our leader
+Have Khan Tengri go to Madegi Doy.
