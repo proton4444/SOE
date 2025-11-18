@@ -1,5 +1,5 @@
 {
-  "turn_number": 1,
+  "turn_number": 2,
   "world_map": {
     "cities": {
       "madegi_doy": {
@@ -7,8 +7,8 @@
         "name": "Madegi Doy",
         "population_band": "1M+",
         "terrain": [
-          "coastal",
-          "plains"
+          "plains",
+          "coastal"
         ],
         "region": "Main Continent",
         "is_port": true
@@ -18,8 +18,8 @@
         "name": "Kitesta",
         "population_band": "100k-999k",
         "terrain": [
-          "river",
-          "plains"
+          "plains",
+          "river"
         ],
         "region": "Main Continent",
         "is_port": false
@@ -40,8 +40,8 @@
         "name": "Albatross City",
         "population_band": "100k-999k",
         "terrain": [
-          "coastal",
-          "mountains"
+          "mountains",
+          "coastal"
         ],
         "region": "Northern Island",
         "is_port": true
@@ -102,7 +102,7 @@
       "controlled_city_ids": [
         "madegi_doy"
       ],
-      "treasury": 1470
+      "treasury": 1970
     },
     "player_2": {
       "id": "player_2",
@@ -110,7 +110,7 @@
       "controlled_city_ids": [
         "albatross_city"
       ],
-      "treasury": 1170
+      "treasury": 1370
     }
   },
   "characters": {

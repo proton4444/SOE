@@ -19,6 +19,7 @@ from spoils_engine.orders import (
     Order, MoveOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder
 )
 from spoils_engine import config
+from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
 
 
 # ============================================================================
@@ -442,7 +443,7 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
 
 def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                    turn_log: TurnLog, rng: random.Random):
-    """Process combat orders."""
+    """Process combat orders using CombatResolver."""
     # Group attacks by location
     attacks_by_location = defaultdict(list)
 
@@ -450,6 +451,9 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
         for order in orders:
             if isinstance(order, AttackOrder) and not order.warnings:
                 attacks_by_location[order.location_city_id].append((player_id, order))
+
+    # Initialize combat resolver
+    resolver = CombatResolver(rng)
 
     # Process each battle
     for city_id, attacks in attacks_by_location.items():
@@ -470,101 +474,56 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             location=city_id, character_id=attacker.id, success=False)
                 continue
 
-            # Calculate attacker power
+            # Calculate powers
             attacker_power = calculate_faction_power(attacker_player_id, city_id, game_state)
-
-            # Calculate defender power
             defender_power = calculate_faction_power(defender_faction_id, city_id, game_state)
 
+            # Validate engagement
             if defender_power == 0:
                 turn_log.add("combat", attacker_player_id, "attack_failed",
                             f"{attacker.name} found no defenders in {city.name}",
                             location=city_id, character_id=attacker.id, success=False)
                 continue
 
-            # Check if attacker wants to engage
-            if attacker_power < defender_power * config.COMBAT_MINIMUM_ATTACK_RATIO:
+            if not resolver.should_attack(attacker_power, defender_power):
                 turn_log.add("combat", attacker_player_id, "attack_declined",
                             f"{attacker.name} declined to attack (odds too poor)",
                             location=city_id, character_id=attacker.id, success=False)
                 continue
 
-            # Resolve combat (simplified)
-            # Add randomness
-            attacker_roll = attacker_power * (0.8 + rng.random() * 0.4)  # 0.8x to 1.2x
-            defender_roll = defender_power * (0.8 + rng.random() * 0.4)
+            # Resolve combat
+            result = resolver.resolve_combat(
+                attacker_player_id, defender_faction_id,
+                attacker_power, defender_power
+            )
 
-            if attacker_roll > defender_roll:
-                # Attacker wins
-                winner_id = attacker_player_id
-                loser_id = defender_faction_id
-                apply_casualties(loser_id, city_id, config.COMBAT_CASUALTY_RATE_LOSER, game_state, rng)
-                apply_casualties(winner_id, city_id, config.COMBAT_CASUALTY_RATE_WINNER, game_state, rng)
+            # Apply casualties
+            attacker_losses = apply_casualties(
+                attacker_player_id, city_id, result.attacker_casualties, game_state, rng
+            )
+            defender_losses = apply_casualties(
+                defender_faction_id, city_id, result.defender_casualties, game_state, rng
+            )
 
+            # Log results
+            if result.winner_id == attacker_player_id:
                 turn_log.add("combat", attacker_player_id, "victory",
-                            f"{attacker.name} defeated {attack_order.target_name} in {city.name}",
+                            f"{attacker.name} defeated {attack_order.target_name} in {city.name} "
+                            f"(lost {attacker_losses['units']} units)",
                             location=city_id, character_id=attacker.id)
                 turn_log.add("combat", defender_faction_id, "defeat",
-                            f"Your forces were defeated by {attacker.name} in {city.name}",
+                            f"Your forces were defeated by {attacker.name} in {city.name} "
+                            f"(lost {defender_losses['units']} units)",
                             location=city_id)
             else:
-                # Defender wins
-                winner_id = defender_faction_id
-                loser_id = attacker_player_id
-                apply_casualties(loser_id, city_id, config.COMBAT_CASUALTY_RATE_LOSER, game_state, rng)
-                apply_casualties(winner_id, city_id, config.COMBAT_CASUALTY_RATE_WINNER, game_state, rng)
-
                 turn_log.add("combat", attacker_player_id, "defeat",
-                            f"{attacker.name} was defeated in {city.name}",
+                            f"{attacker.name} was defeated in {city.name} "
+                            f"(lost {attacker_losses['units']} units)",
                             location=city_id, character_id=attacker.id)
                 turn_log.add("combat", defender_faction_id, "victory",
-                            f"Your forces successfully defended {city.name}",
+                            f"Your forces successfully defended {city.name} "
+                            f"(lost {defender_losses['units']} units)",
                             location=city_id)
-
-
-def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState) -> float:
-    """Calculate total combat power of a faction at a location."""
-    power = 0.0
-
-    # Add character combat skills
-    best_combat_skill = 0
-    for char in game_state.characters.values():
-        if char.faction_id == faction_id and char.location_city_id == city_id:
-            best_combat_skill = max(best_combat_skill, char.combat_skill)
-
-    # Add unit attack values
-    for stack in game_state.unit_stacks.values():
-        if stack.faction_id == faction_id and stack.location_city_id == city_id:
-            power += stack.attack_value
-
-    # Add ship attack values
-    for ship in game_state.ships.values():
-        if ship.faction_id == faction_id and ship.location_city_id == city_id:
-            power += ship.attack_value
-
-    # Apply skill multiplier
-    skill_multiplier = 1.0 + (best_combat_skill * config.COMBAT_SKILL_BONUS_PER_POINT)
-    power *= skill_multiplier
-
-    return power
-
-
-def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
-                     game_state: GameState, rng: random.Random):
-    """Apply casualties to a faction's forces at a location."""
-    # Apply to unit stacks
-    for stack in list(game_state.unit_stacks.values()):
-        if stack.faction_id == faction_id and stack.location_city_id == city_id:
-            casualties = int(stack.count * casualty_rate)
-            stack.count -= casualties
-            if stack.count <= 0:
-                del game_state.unit_stacks[stack.id]
-
-    # Ships have chance to be destroyed
-    for ship in list(game_state.ships.values()):
-        if ship.faction_id == faction_id and ship.location_city_id == city_id:
-            if rng.random() < casualty_rate:
-                del game_state.ships[ship.id]
 
 
 # ============================================================================

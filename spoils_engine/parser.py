@@ -1,5 +1,5 @@
 """
-Natural-language order parser (rule-based).
+Natural-language order parser (rule-based) - REFACTORED.
 
 Parses English-like commands into structured Order objects.
 This implementation uses regex and string matching, but the
@@ -7,9 +7,10 @@ interface is designed to be replaceable with an LLM-based parser.
 """
 
 import re
-from typing import Optional
+from typing import Optional, Tuple, Type
+from dataclasses import dataclass
 
-from spoils_engine.models import GameState, UnitType, ShipType
+from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder
 )
@@ -32,52 +33,50 @@ def normalize_text(text: str) -> str:
 
 def extract_sentences(text: str) -> list[str]:
     """Split text into sentences (periods delimit sentences)."""
-    # Split on periods, keep non-empty
     sentences = [s.strip() for s in text.split('.') if s.strip()]
     return sentences
-
-
-def extract_number(text: str, pattern: str) -> Optional[int]:
-    """Extract a number from text using a regex pattern."""
-    match = re.search(pattern, text)
-    if match:
-        try:
-            return int(match.group(1))
-        except (ValueError, IndexError):
-            pass
-    return None
 
 
 # ============================================================================
 # ENTITY RESOLUTION
 # ============================================================================
 
-def resolve_character(name_text: str, game_state: GameState, player_id: str) -> Optional[tuple[str, str]]:
+@dataclass
+class ResolvedEntity:
+    """Result of entity resolution."""
+    entity_id: str
+    entity_name: str
+    found: bool = True
+
+
+def resolve_character(name_text: str, game_state: GameState,
+                     player_id: Optional[str] = None) -> ResolvedEntity:
     """
     Resolve a character name to ID.
 
     Args:
         name_text: Character name from order text
         game_state: Current game state
-        player_id: Player issuing the order
+        player_id: Player issuing the order (None = search all)
 
     Returns:
-        Tuple of (character_id, resolved_name) or None
+        ResolvedEntity with id and name (found=False if not found)
     """
-    # Try to find character in player's faction
-    char = game_state.get_character_by_name(name_text, faction_id=player_id)
-    if char:
-        return (char.id, char.name)
+    # Try player's faction first if specified
+    if player_id:
+        char = game_state.get_character_by_name(name_text, faction_id=player_id)
+        if char:
+            return ResolvedEntity(char.id, char.name)
 
-    # Try without faction restriction (for targets)
+    # Try all factions
     char = game_state.get_character_by_name(name_text)
     if char:
-        return (char.id, char.name)
+        return ResolvedEntity(char.id, char.name)
 
-    return None
+    return ResolvedEntity("", name_text, found=False)
 
 
-def resolve_city(name_text: str, game_state: GameState) -> Optional[tuple[str, str]]:
+def resolve_city(name_text: str, game_state: GameState) -> ResolvedEntity:
     """
     Resolve a city name to ID.
 
@@ -86,129 +85,167 @@ def resolve_city(name_text: str, game_state: GameState) -> Optional[tuple[str, s
         game_state: Current game state
 
     Returns:
-        Tuple of (city_id, resolved_name) or None
+        ResolvedEntity with id and name (found=False if not found)
     """
     city = game_state.world_map.get_city_by_name(name_text)
     if city:
-        return (city.id, city.name)
+        return ResolvedEntity(city.id, city.name)
+    return ResolvedEntity("", name_text, found=False)
+
+
+def get_player_leader(game_state: GameState, player_id: str) -> Optional[Character]:
+    """Get the first character (leader) for a faction."""
+    for char in game_state.characters.values():
+        if char.faction_id == player_id:
+            return char
     return None
 
 
 # ============================================================================
-# ORDER PARSERS
+# PARSER BASE CLASS
+# ============================================================================
+
+class OrderParserBase:
+    """Base class for order parsers with common functionality."""
+
+    def __init__(self, game_state: GameState, player_id: str, original_text: str):
+        self.game_state = game_state
+        self.player_id = player_id
+        self.original_text = original_text
+
+    def create_order(self, order_class: Type[Order]) -> Order:
+        """Create an order instance with base attributes."""
+        return order_class(player_id=self.player_id, original_text=self.original_text)
+
+    def add_warning(self, order: Order, message: str) -> Order:
+        """Add a warning to an order."""
+        order.warnings.append(message)
+        return order
+
+    def resolve_actor(self, order: Order, actor_name: Optional[str]) -> bool:
+        """
+        Resolve actor to character ID, handling implicit leader.
+
+        Returns:
+            True if resolved successfully, False otherwise
+        """
+        if actor_name:
+            # Explicit actor name
+            resolved = resolve_character(actor_name, self.game_state, self.player_id)
+            if not resolved.found:
+                self.add_warning(order, f"Character '{actor_name}' not found")
+                return False
+            order.actor_id = resolved.entity_id
+        else:
+            # Implicit leader
+            leader = get_player_leader(self.game_state, self.player_id)
+            if not leader:
+                self.add_warning(order, "No leader character found")
+                return False
+            order.actor_id = leader.id
+
+        return True
+
+    def resolve_location(self, order: Order, city_name: Optional[str],
+                        use_actor_location: bool = True) -> bool:
+        """
+        Resolve location to city ID.
+
+        Args:
+            order: Order to update
+            city_name: Optional city name from text
+            use_actor_location: If True and city_name is None, use actor's location
+
+        Returns:
+            True if resolved successfully, False otherwise
+        """
+        if city_name:
+            resolved = resolve_city(city_name, self.game_state)
+            if not resolved.found:
+                self.add_warning(order, f"City '{city_name}' not found")
+                return False
+            order.city_id = resolved.entity_id
+        elif use_actor_location and hasattr(order, 'actor_id'):
+            # Use actor's current location
+            actor = self.game_state.characters.get(order.actor_id)
+            if actor:
+                order.city_id = actor.location_city_id
+            else:
+                return False
+
+        return True
+
+
+# ============================================================================
+# ORDER PARSERS (REFACTORED)
 # ============================================================================
 
 def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Optional[MoveOrder]:
-    """
-    Parse a movement order.
-
-    Patterns:
-        - "have <char> go to <city>"
-        - "have <char> move to <city>"
-        - "have <char> travel to <city>"
-        - "go to <city>" (implicit: player's leader)
-    """
-    order = MoveOrder(player_id=player_id, original_text=sentence)
+    """Parse a movement order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(MoveOrder)
 
     # Pattern: "have <name> go/move/travel to <city>"
     match = re.search(r'have\s+(.+?)\s+(?:go|move|travel)\s+to\s+(.+)', sentence)
     if match:
-        char_name = match.group(1).strip()
-        city_name = match.group(2).strip()
+        actor_name, city_name = match.group(1).strip(), match.group(2).strip()
 
-        char_result = resolve_character(char_name, game_state, player_id)
-        if not char_result:
-            order.warnings.append(f"Character '{char_name}' not found")
+        if not parser.resolve_actor(order, actor_name):
             return order
 
-        city_result = resolve_city(city_name, game_state)
-        if not city_result:
-            order.warnings.append(f"City '{city_name}' not found")
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
             return order
 
-        order.actor_id = char_result[0]
-        order.destination_city_id = city_result[0]
+        order.destination_city_id = city_resolved.entity_id
         return order
 
     # Pattern: "go/move/travel to <city>" (implicit leader)
     match = re.search(r'^(?:go|move|travel)\s+to\s+(.+)', sentence)
     if match:
         city_name = match.group(1).strip()
-        city_result = resolve_city(city_name, game_state)
-        if not city_result:
-            order.warnings.append(f"City '{city_name}' not found")
+
+        if not parser.resolve_actor(order, None):  # Use leader
             return order
 
-        # Find player's leader (first character of faction)
-        faction = game_state.factions.get(player_id)
-        if not faction:
-            order.warnings.append("Faction not found")
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
             return order
 
-        # Find first character
-        leader = None
-        for char in game_state.characters.values():
-            if char.faction_id == player_id:
-                leader = char
-                break
-
-        if not leader:
-            order.warnings.append("No leader character found")
-            return order
-
-        order.actor_id = leader.id
-        order.destination_city_id = city_result[0]
+        order.destination_city_id = city_resolved.entity_id
         return order
 
     return None
 
 
 def parse_recruit_order(sentence: str, game_state: GameState, player_id: str) -> Optional[RecruitOrder]:
-    """
-    Parse a recruitment order.
-
-    Patterns:
-        - "have <char> recruit <num> <type> in <city>"
-        - "have <char> recruit <num> <type>" (implicit: current location)
-        - "recruit <num> <type> in <city>" (implicit leader)
-        - "recruit <num> <type>" (implicit leader, current location)
-    """
-    order = RecruitOrder(player_id=player_id, original_text=sentence)
+    """Parse a recruitment order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(RecruitOrder)
 
     # Pattern: "have <name> recruit <num> <type> [in <city>]"
     match = re.search(r'have\s+(.+?)\s+recruit\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
     if match:
-        char_name = match.group(1).strip()
+        actor_name = match.group(1).strip()
         count = int(match.group(2))
-        unit_type = match.group(3).strip().rstrip('s')  # Remove plural 's'
+        unit_type = match.group(3).strip().rstrip('s')  # Remove plural
         city_name = match.group(4).strip() if match.group(4) else None
 
-        char_result = resolve_character(char_name, game_state, player_id)
-        if not char_result:
-            order.warnings.append(f"Character '{char_name}' not found")
+        if not parser.resolve_actor(order, actor_name):
             return order
 
         # Validate unit type
         if unit_type not in [ut.value for ut in UnitType]:
-            order.warnings.append(f"Invalid unit type '{unit_type}'")
+            parser.add_warning(order, f"Invalid unit type '{unit_type}'")
             return order
 
-        order.actor_id = char_result[0]
         order.count = count
         order.unit_type = unit_type
 
-        # Resolve city (or use character's current location)
-        if city_name:
-            city_result = resolve_city(city_name, game_state)
-            if not city_result:
-                order.warnings.append(f"City '{city_name}' not found")
-                return order
-            order.city_id = city_result[0]
-        else:
-            # Use character's current location
-            char = game_state.characters.get(char_result[0])
-            if char:
-                order.city_id = char.location_city_id
+        if not parser.resolve_location(order, city_name):
+            return order
 
         return order
 
@@ -219,35 +256,19 @@ def parse_recruit_order(sentence: str, game_state: GameState, player_id: str) ->
         unit_type = match.group(2).strip().rstrip('s')
         city_name = match.group(3).strip() if match.group(3) else None
 
+        if not parser.resolve_actor(order, None):  # Use leader
+            return order
+
         # Validate unit type
         if unit_type not in [ut.value for ut in UnitType]:
-            order.warnings.append(f"Invalid unit type '{unit_type}'")
+            parser.add_warning(order, f"Invalid unit type '{unit_type}'")
             return order
 
-        # Find player's leader
-        leader = None
-        for char in game_state.characters.values():
-            if char.faction_id == player_id:
-                leader = char
-                break
-
-        if not leader:
-            order.warnings.append("No leader character found")
-            return order
-
-        order.actor_id = leader.id
         order.count = count
         order.unit_type = unit_type
 
-        # Resolve city (or use leader's current location)
-        if city_name:
-            city_result = resolve_city(city_name, game_state)
-            if not city_result:
-                order.warnings.append(f"City '{city_name}' not found")
-                return order
-            order.city_id = city_result[0]
-        else:
-            order.city_id = leader.location_city_id
+        if not parser.resolve_location(order, city_name):
+            return order
 
         return order
 
@@ -255,88 +276,54 @@ def parse_recruit_order(sentence: str, game_state: GameState, player_id: str) ->
 
 
 def parse_buy_ship_order(sentence: str, game_state: GameState, player_id: str) -> Optional[BuyShipOrder]:
-    """
-    Parse a ship purchase order.
+    """Parse a ship purchase order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(BuyShipOrder)
 
-    Patterns:
-        - "have <char> buy <num> galley in <city>"
-        - "have <char> buy <num> galley" (implicit: current location)
-        - "buy <num> galley in <city>" (implicit leader)
-    """
-    order = BuyShipOrder(player_id=player_id, original_text=sentence)
-
-    # Pattern: "have <name> buy <num> galley [in <city>]"
+    # Pattern: "have <name> buy <num> <ship_type> [in <city>]"
     match = re.search(r'have\s+(.+?)\s+buy\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
     if match:
-        char_name = match.group(1).strip()
+        actor_name = match.group(1).strip()
         count = int(match.group(2))
         ship_type = match.group(3).strip().rstrip('s')
         city_name = match.group(4).strip() if match.group(4) else None
 
-        char_result = resolve_character(char_name, game_state, player_id)
-        if not char_result:
-            order.warnings.append(f"Character '{char_name}' not found")
+        if not parser.resolve_actor(order, actor_name):
             return order
 
         # Validate ship type
         if ship_type not in [st.value for st in ShipType]:
-            order.warnings.append(f"Invalid ship type '{ship_type}'")
+            parser.add_warning(order, f"Invalid ship type '{ship_type}'")
             return order
 
-        order.actor_id = char_result[0]
         order.count = count
         order.ship_type = ship_type
 
-        # Resolve city (or use character's current location)
-        if city_name:
-            city_result = resolve_city(city_name, game_state)
-            if not city_result:
-                order.warnings.append(f"City '{city_name}' not found")
-                return order
-            order.city_id = city_result[0]
-        else:
-            char = game_state.characters.get(char_result[0])
-            if char:
-                order.city_id = char.location_city_id
+        if not parser.resolve_location(order, city_name):
+            return order
 
         return order
 
-    # Pattern: "buy <num> galley [in <city>]" (implicit leader)
+    # Pattern: "buy <num> <ship_type> [in <city>]" (implicit leader)
     match = re.search(r'^buy\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
     if match:
         count = int(match.group(1))
         ship_type = match.group(2).strip().rstrip('s')
         city_name = match.group(3).strip() if match.group(3) else None
 
+        if not parser.resolve_actor(order, None):  # Use leader
+            return order
+
         # Validate ship type
         if ship_type not in [st.value for st in ShipType]:
-            order.warnings.append(f"Invalid ship type '{ship_type}'")
+            parser.add_warning(order, f"Invalid ship type '{ship_type}'")
             return order
 
-        # Find player's leader
-        leader = None
-        for char in game_state.characters.values():
-            if char.faction_id == player_id:
-                leader = char
-                break
-
-        if not leader:
-            order.warnings.append("No leader character found")
-            return order
-
-        order.actor_id = leader.id
         order.count = count
         order.ship_type = ship_type
 
-        # Resolve city (or use leader's current location)
-        if city_name:
-            city_result = resolve_city(city_name, game_state)
-            if not city_result:
-                order.warnings.append(f"City '{city_name}' not found")
-                return order
-            order.city_id = city_result[0]
-        else:
-            order.city_id = leader.location_city_id
+        if not parser.resolve_location(order, city_name):
+            return order
 
         return order
 
@@ -344,47 +331,38 @@ def parse_buy_ship_order(sentence: str, game_state: GameState, player_id: str) -
 
 
 def parse_attack_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AttackOrder]:
-    """
-    Parse an attack order.
-
-    Patterns:
-        - "have <char> go to <city> and attack <target>"
-        - "have <char> attack <target>" (implicit: current location)
-        - "attack <target>" (implicit leader)
-    """
-    order = AttackOrder(player_id=player_id, original_text=sentence)
+    """Parse an attack order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(AttackOrder)
 
     # Pattern: "have <name> [go to <city> and] attack <target>"
     match = re.search(r'have\s+(.+?)\s+(?:go\s+to\s+(.+?)\s+and\s+)?attack\s+(.+)', sentence)
     if match:
-        char_name = match.group(1).strip()
+        actor_name = match.group(1).strip()
         city_name = match.group(2).strip() if match.group(2) else None
         target_name = match.group(3).strip()
 
-        char_result = resolve_character(char_name, game_state, player_id)
-        if not char_result:
-            order.warnings.append(f"Character '{char_name}' not found")
+        if not parser.resolve_actor(order, actor_name):
             return order
 
-        order.actor_id = char_result[0]
         order.target_name = target_name
 
-        # Resolve target (could be character or faction name)
-        target_result = resolve_character(target_name, game_state, None)
-        if target_result:
-            target_char = game_state.characters.get(target_result[0])
+        # Resolve target faction
+        target_resolved = resolve_character(target_name, game_state, None)
+        if target_resolved.found:
+            target_char = game_state.characters.get(target_resolved.entity_id)
             if target_char:
                 order.target_faction_id = target_char.faction_id
 
         # Resolve location
         if city_name:
-            city_result = resolve_city(city_name, game_state)
-            if city_result:
-                order.location_city_id = city_result[0]
+            city_resolved = resolve_city(city_name, game_state)
+            if city_resolved.found:
+                order.location_city_id = city_resolved.entity_id
         else:
-            char = game_state.characters.get(char_result[0])
-            if char:
-                order.location_city_id = char.location_city_id
+            actor = game_state.characters.get(order.actor_id)
+            if actor:
+                order.location_city_id = actor.location_city_id
 
         return order
 
@@ -393,27 +371,22 @@ def parse_attack_order(sentence: str, game_state: GameState, player_id: str) -> 
     if match:
         target_name = match.group(1).strip()
 
-        # Find player's leader
-        leader = None
-        for char in game_state.characters.values():
-            if char.faction_id == player_id:
-                leader = char
-                break
-
-        if not leader:
-            order.warnings.append("No leader character found")
+        if not parser.resolve_actor(order, None):
             return order
 
-        order.actor_id = leader.id
         order.target_name = target_name
-        order.location_city_id = leader.location_city_id
 
         # Resolve target
-        target_result = resolve_character(target_name, game_state, None)
-        if target_result:
-            target_char = game_state.characters.get(target_result[0])
+        target_resolved = resolve_character(target_name, game_state, None)
+        if target_resolved.found:
+            target_char = game_state.characters.get(target_resolved.entity_id)
             if target_char:
                 order.target_faction_id = target_char.faction_id
+
+        # Use leader's location
+        leader = get_player_leader(game_state, player_id)
+        if leader:
+            order.location_city_id = leader.location_city_id
 
         return order
 
@@ -421,14 +394,9 @@ def parse_attack_order(sentence: str, game_state: GameState, player_id: str) -> 
 
 
 def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TeleportOrder]:
-    """
-    Parse a teleport order.
-
-    Patterns:
-        - "have <wizard> teleport <target> to <city>"
-        - "teleport <target> to <city>" (implicit leader)
-    """
-    order = TeleportOrder(player_id=player_id, original_text=sentence)
+    """Parse a teleport order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(TeleportOrder)
 
     # Pattern: "have <wizard> teleport <target> to <city>"
     match = re.search(r'have\s+(.+?)\s+teleport\s+(.+?)\s+to\s+(.+)', sentence)
@@ -437,24 +405,24 @@ def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -
         target_name = match.group(2).strip()
         city_name = match.group(3).strip()
 
-        wizard_result = resolve_character(wizard_name, game_state, player_id)
-        if not wizard_result:
-            order.warnings.append(f"Character '{wizard_name}' not found")
+        wizard_resolved = resolve_character(wizard_name, game_state, player_id)
+        if not wizard_resolved.found:
+            parser.add_warning(order, f"Character '{wizard_name}' not found")
             return order
 
-        target_result = resolve_character(target_name, game_state, player_id)
-        if not target_result:
-            order.warnings.append(f"Target '{target_name}' not found")
+        target_resolved = resolve_character(target_name, game_state, player_id)
+        if not target_resolved.found:
+            parser.add_warning(order, f"Target '{target_name}' not found")
             return order
 
-        city_result = resolve_city(city_name, game_state)
-        if not city_result:
-            order.warnings.append(f"City '{city_name}' not found")
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
             return order
 
-        order.actor_id = wizard_result[0]
-        order.target_character_id = target_result[0]
-        order.destination_city_id = city_result[0]
+        order.actor_id = wizard_resolved.entity_id
+        order.target_character_id = target_resolved.entity_id
+        order.destination_city_id = city_resolved.entity_id
         order.target_name = target_name
         return order
 
@@ -464,30 +432,21 @@ def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -
         target_name = match.group(1).strip()
         city_name = match.group(2).strip()
 
-        # Find player's leader
-        leader = None
-        for char in game_state.characters.values():
-            if char.faction_id == player_id:
-                leader = char
-                break
-
-        if not leader:
-            order.warnings.append("No leader character found")
+        if not parser.resolve_actor(order, None):
             return order
 
-        target_result = resolve_character(target_name, game_state, player_id)
-        if not target_result:
-            order.warnings.append(f"Target '{target_name}' not found")
+        target_resolved = resolve_character(target_name, game_state, player_id)
+        if not target_resolved.found:
+            parser.add_warning(order, f"Target '{target_name}' not found")
             return order
 
-        city_result = resolve_city(city_name, game_state)
-        if not city_result:
-            order.warnings.append(f"City '{city_name}' not found")
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
             return order
 
-        order.actor_id = leader.id
-        order.target_character_id = target_result[0]
-        order.destination_city_id = city_result[0]
+        order.target_character_id = target_resolved.entity_id
+        order.destination_city_id = city_resolved.entity_id
         order.target_name = target_name
         return order
 
@@ -497,6 +456,16 @@ def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
+
+# Order detection keywords for optimization
+ORDER_KEYWORDS = {
+    'move': ['go', 'move', 'travel'],
+    'recruit': ['recruit'],
+    'buy': ['buy'],
+    'attack': ['attack'],
+    'teleport': ['teleport']
+}
+
 
 def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[Order]:
     """
@@ -514,8 +483,6 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         List of Order objects (may contain warnings)
     """
     orders = []
-
-    # Normalize and split into sentences
     normalized = normalize_text(raw_text)
     sentences = extract_sentences(normalized)
 
@@ -523,33 +490,28 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         if not sentence:
             continue
 
-        # Try each parser in sequence
         order = None
 
-        # Try movement
-        if any(word in sentence for word in ['go', 'move', 'travel']):
+        # Try each parser based on keywords (optimization)
+        if any(kw in sentence for kw in ORDER_KEYWORDS['move']):
             order = parse_move_order(sentence, game_state, player_id)
 
-        # Try recruit
-        if not order and 'recruit' in sentence:
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['recruit']):
             order = parse_recruit_order(sentence, game_state, player_id)
 
-        # Try buy ship
-        if not order and 'buy' in sentence and 'galley' in sentence:
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['buy']):
             order = parse_buy_ship_order(sentence, game_state, player_id)
 
-        # Try attack
-        if not order and 'attack' in sentence:
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['attack']):
             order = parse_attack_order(sentence, game_state, player_id)
 
-        # Try teleport
-        if not order and 'teleport' in sentence:
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['teleport']):
             order = parse_teleport_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)
         else:
-            # Create a generic order with warning
+            # Unparseable order - create placeholder with warning
             generic_order = MoveOrder(player_id=player_id, original_text=sentence)
             generic_order.warnings.append(f"Could not parse order: '{sentence}'")
             orders.append(generic_order)
