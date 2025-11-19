@@ -540,14 +540,54 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
             if city:
                 income += config.get_income_for_city(city.population_band)
 
-        # Add income
-        faction.treasury += income
+        # Calculate upkeep costs
+        upkeep = 0.0
 
+        # Unit upkeep
+        for stack in game_state.unit_stacks.values():
+            if stack.faction_id == faction.id:
+                unit_upkeep = config.UPKEEP_PER_UNIT.get(stack.unit_type, 0)
+                upkeep += unit_upkeep * stack.count
+
+        # Ship upkeep
+        for ship in game_state.ships.values():
+            if ship.faction_id == faction.id:
+                ship_upkeep = config.UPKEEP_PER_SHIP.get(ship.ship_type, 0)
+                upkeep += ship_upkeep
+
+        # Named character salaries (excluding leader)
+        character_count = 0
+        for char in game_state.characters.values():
+            if char.faction_id == faction.id:
+                character_count += 1
+                # Skip the first character (leader) - they don't get a salary
+                if character_count > 1:
+                    salary = config.calculate_character_salary(
+                        char.combat_skill, char.magic_skill
+                    )
+                    upkeep += salary
+
+        # Round upkeep to 1 decimal place
+        upkeep = round(upkeep, 1)
+
+        # Apply income and upkeep
+        faction.treasury += income
+        faction.treasury -= upkeep
+
+        # Log events
         if income > 0:
             turn_log.add("income", faction.id, "income",
                         f"Collected {income}g from controlled cities")
 
-        # TODO: Deduct upkeep (simplified to 0 in alpha)
+        if upkeep > 0:
+            turn_log.add("income", faction.id, "upkeep",
+                        f"Paid {upkeep}g in upkeep (units, ships, salaries)")
+
+        # Warn if treasury goes negative
+        if faction.treasury < 0:
+            turn_log.add("income", faction.id, "debt",
+                        f"WARNING: Treasury is negative ({faction.treasury}g)! Units may desert.",
+                        success=False)
 
 
 # ============================================================================

@@ -132,10 +132,13 @@ def test_recruit_phase(test_game_state):
     total_soldiers = sum(s.count for s in player1_stacks if s.unit_type == models.UnitType.SOLDIER)
     assert total_soldiers == 10
 
-    # Check that gold was deducted
+    # Check that gold was deducted (recruitment + upkeep)
     faction = updated_state.factions["player1"]
     cost = config.get_recruit_cost(models.UnitType.SOLDIER) * 10
-    assert faction.treasury == initial_treasury + config.get_income_for_city(models.PopulationBand.MEDIUM) - cost
+    upkeep = config.UPKEEP_PER_UNIT[models.UnitType.SOLDIER] * 10  # 10 soldiers upkeep
+    income = config.get_income_for_city(models.PopulationBand.MEDIUM)
+    expected = initial_treasury + income - cost - upkeep
+    assert abs(faction.treasury - expected) < 0.5  # Allow small rounding difference
 
 
 def test_buy_ship_phase(test_game_state):

@@ -63,17 +63,23 @@ SHIP_COST = {
     ShipType.GALLEY: 1000,
 }
 
-# Upkeep costs per turn (simplified from rules)
-# Rules: 1 gold per 2 months = ~0.1 gold per turn (assume 1 turn = ~1 week)
+# Upkeep costs per turn (based on rules)
+# Rules: 1 gold per 2 months for soldiers = ~0.125 gold per week
+# Assuming 1 turn = 1 week for the alpha
 UPKEEP_PER_UNIT = {
-    UnitType.SOLDIER: 0,  # Simplified: no upkeep in alpha
-    UnitType.SAILOR: 0,
-    UnitType.WORKER: 0,
+    UnitType.SOLDIER: 0.1,   # ~1g per 2.5 months
+    UnitType.SAILOR: 0.1,    # ~1g per 2.5 months
+    UnitType.WORKER: 0.025,  # ~1g per 10 months
 }
 
 UPKEEP_PER_SHIP = {
-    ShipType.GALLEY: 0,  # Simplified: no upkeep in alpha
+    ShipType.GALLEY: 2.0,  # Ship maintenance (crew, repairs)
 }
+
+# Named character salary formula (per turn)
+# Rules: 5 gold + effective_level per month, we divide by ~4 for weekly
+NAMED_CHARACTER_BASE_SALARY = 1.25  # 5g / 4 weeks
+NAMED_CHARACTER_SKILL_MULTIPLIER = 0.25  # per effective level / 4
 
 
 # ============================================================================
@@ -159,3 +165,16 @@ def get_recruit_cost(unit_type: UnitType) -> int:
 def get_ship_cost(ship_type: ShipType) -> int:
     """Get the gold cost to buy a ship."""
     return SHIP_COST.get(ship_type, 1000)
+
+
+def calculate_character_salary(combat_skill: int, magic_skill: int) -> float:
+    """
+    Calculate salary for a named character per turn.
+
+    Formula from rules: 5 + sqrt(combat^2 + magic^2) per month
+    Divided by 4 for weekly turns.
+    """
+    import math
+    effective_level = math.sqrt(combat_skill**2 + magic_skill**2)
+    monthly_salary = 5 + effective_level
+    return monthly_salary / 4  # Convert to per-turn (weekly)
