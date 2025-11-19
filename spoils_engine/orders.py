@@ -56,6 +56,24 @@ class MoveOrder(Order):
         return "MOVE"
 
 
+@dataclass
+class SailOrder(Order):
+    """
+    Order a character to sail a ship to a destination city via sea.
+
+    Attributes:
+        actor_id: Character ID who will be the captain
+        destination_city_id: Target city ID
+        ship_id: ID of ship to sail (optional, auto-selects if omitted)
+    """
+    actor_id: str = ""
+    destination_city_id: str = ""
+    ship_id: str = ""  # Optional: will auto-select a ship if empty
+
+    def order_type(self) -> str:
+        return "SAIL"
+
+
 # ============================================================================
 # RECRUITMENT & PURCHASE ORDERS
 # ============================================================================
@@ -148,6 +166,26 @@ class TeleportOrder(Order):
         return "TELEPORT"
 
 
+@dataclass
+class HealOrder(Order):
+    """
+    Order a healer to heal wounded characters.
+
+    Attributes:
+        actor_id: Healer who will cast the spell (religion skill required)
+        target_character_ids: List of character IDs to heal
+        heal_amounts: Dict mapping character_id -> heal amount
+        heal_to_levels: Dict mapping character_id -> target health level
+    """
+    actor_id: str = ""
+    target_character_ids: list[str] = field(default_factory=list)
+    heal_amounts: dict[str, int] = field(default_factory=dict)  # character_id -> heal by X points
+    heal_to_levels: dict[str, int] = field(default_factory=dict)  # character_id -> heal to level X
+
+    def order_type(self) -> str:
+        return "HEAL"
+
+
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
@@ -166,10 +204,12 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
     """
     order_map = {
         "MOVE": MoveOrder,
+        "SAIL": SailOrder,
         "RECRUIT": RecruitOrder,
         "BUY_SHIP": BuyShipOrder,
         "ATTACK": AttackOrder,
         "TELEPORT": TeleportOrder,
+        "HEAL": HealOrder,
     }
 
     order_class = order_map.get(order_type.upper())

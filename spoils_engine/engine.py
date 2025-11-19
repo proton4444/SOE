@@ -16,7 +16,7 @@ from spoils_engine.models import (
     UnitType, ShipType, RoadQuality
 )
 from spoils_engine.orders import (
-    Order, MoveOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder
+    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -116,6 +116,60 @@ def find_shortest_path(start_city_id: str, end_city_id: str, game_state: GameSta
     return ([], float('inf'))
 
 
+def find_sea_route(start_city_id: str, end_city_id: str, game_state: GameState) -> Tuple[List[str], float]:
+    """
+    Find shortest sea route between two cities using only sea lanes.
+
+    Returns:
+        Tuple of (path_as_city_ids, total_cost)
+    """
+    if start_city_id == end_city_id:
+        return ([start_city_id], 0.0)
+
+    # Dijkstra's algorithm (only using SEA roads)
+    distances = {start_city_id: 0.0}
+    previous = {}
+    pq = [(0.0, start_city_id)]
+    visited = set()
+
+    while pq:
+        current_dist, current_id = heapq.heappop(pq)
+
+        if current_id in visited:
+            continue
+        visited.add(current_id)
+
+        if current_id == end_city_id:
+            # Reconstruct path
+            path = []
+            node = end_city_id
+            while node in previous:
+                path.append(node)
+                node = previous[node]
+            path.append(start_city_id)
+            path.reverse()
+            return (path, current_dist)
+
+        # Check neighbors (only sea lanes)
+        for neighbor_city, road in game_state.world_map.neighbors(current_id):
+            if road.quality != RoadQuality.SEA:
+                continue  # Skip land routes
+
+            if neighbor_city.id in visited:
+                continue
+
+            cost = config.get_movement_cost(road.quality)
+            new_dist = current_dist + cost
+
+            if neighbor_city.id not in distances or new_dist < distances[neighbor_city.id]:
+                distances[neighbor_city.id] = new_dist
+                previous[neighbor_city.id] = current_id
+                heapq.heappush(pq, (new_dist, neighbor_city.id))
+
+    # No sea route found
+    return ([], float('inf'))
+
+
 # ============================================================================
 # PHASE 1: VALIDATION
 # ============================================================================
@@ -133,6 +187,24 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
         for order in orders:
             # Check MoveOrder
             if isinstance(order, MoveOrder):
+                if not order.actor_id:
+                    order.warnings.append("No actor specified")
+                    continue
+
+                actor = game_state.characters.get(order.actor_id)
+                if not actor:
+                    order.warnings.append(f"Character {order.actor_id} not found")
+                    continue
+
+                if actor.faction_id != player_id:
+                    order.warnings.append(f"Character does not belong to you")
+                    continue
+
+                if not game_state.world_map.cities.get(order.destination_city_id):
+                    order.warnings.append(f"Destination city not found")
+
+            # Check SailOrder
+            elif isinstance(order, SailOrder):
                 if not order.actor_id:
                     order.warnings.append("No actor specified")
                     continue
@@ -280,6 +352,101 @@ def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameS
                         location=end_city.id, character_id=actor.id)
 
 
+def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                 turn_log: TurnLog, rng: random.Random):
+    """Process all sailing orders."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, SailOrder):
+                continue
+
+            if order.warnings:
+                continue  # Skip invalid orders
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+
+            # Find a ship at the actor's location
+            ship = None
+            if order.ship_id:
+                ship = game_state.ships.get(order.ship_id)
+                if not ship or ship.faction_id != player_id:
+                    turn_log.add("sail", player_id, "sail_failed",
+                                f"{actor.name}: specified ship not found or not owned",
+                                character_id=actor.id, success=False)
+                    continue
+                if ship.location_city_id != actor.location_city_id:
+                    turn_log.add("sail", player_id, "sail_failed",
+                                f"{actor.name}: ship not at current location",
+                                character_id=actor.id, success=False)
+                    continue
+            else:
+                # Auto-select first available ship at location
+                for s in game_state.ships.values():
+                    if s.faction_id == player_id and s.location_city_id == actor.location_city_id:
+                        ship = s
+                        break
+
+            if not ship:
+                turn_log.add("sail", player_id, "sail_failed",
+                            f"{actor.name}: no ship available at current location",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Find sea route
+            path, cost = find_sea_route(actor.location_city_id, order.destination_city_id, game_state)
+
+            if not path or cost == float('inf'):
+                turn_log.add("sail", player_id, "sail_failed",
+                            f"{actor.name}: no sea route found to destination",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Count sailors and rowers at this location
+            sailors_count = 0
+            total_crew = 0  # Everyone except captain can row
+            for stack in game_state.unit_stacks.values():
+                if stack.faction_id == player_id and stack.location_city_id == actor.location_city_id:
+                    if stack.unit_type == UnitType.SAILOR:
+                        sailors_count += stack.count
+                    total_crew += stack.count
+
+            # Check crew requirements
+            MIN_SAILORS = 10
+            OPTIMAL_ROWERS = 40
+
+            if sailors_count < MIN_SAILORS:
+                turn_log.add("sail", player_id, "sail_failed",
+                            f"{actor.name}: insufficient sailors (need {MIN_SAILORS}, have {sailors_count})",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Calculate sailing efficiency based on crew
+            available_rowers = total_crew - MIN_SAILORS  # Subtract required sailors
+            rowing_efficiency = min(1.0, available_rowers / OPTIMAL_ROWERS) if OPTIMAL_ROWERS > 0 else 0.5
+
+            # Simplified: Sailing always succeeds if we have minimum crew and sea route exists
+            # In full implementation, would factor in captain's sailing skill and trip duration
+
+            # Move the ship and captain
+            start_city = game_state.world_map.cities[actor.location_city_id]
+            end_city = game_state.world_map.cities[order.destination_city_id]
+
+            ship.location_city_id = order.destination_city_id
+            actor.location_city_id = order.destination_city_id
+
+            # Move all units at the same location (simplified - assumes they're on the ship)
+            for stack in game_state.unit_stacks.values():
+                if stack.faction_id == player_id and stack.location_city_id == start_city.id:
+                    stack.location_city_id = order.destination_city_id
+
+            efficiency_note = f" (rowing efficiency: {rowing_efficiency * 100:.0f}%)" if rowing_efficiency < 1.0 else ""
+            turn_log.add("sail", player_id, "sail",
+                        f"{actor.name} sailed from {start_city.name} to {end_city.name}{efficiency_note}",
+                        location=end_city.id, character_id=actor.id)
+
+
 # ============================================================================
 # PHASE 3: RECRUIT & BUY
 # ============================================================================
@@ -398,43 +565,95 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
 
 def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                   turn_log: TurnLog, rng: random.Random):
-    """Process magic orders (simplified teleport)."""
+    """Process magic and healing orders."""
     for player_id, orders in orders_by_player.items():
         for order in orders:
-            if not isinstance(order, TeleportOrder):
-                continue
+            # Process Teleport
+            if isinstance(order, TeleportOrder):
+                if order.warnings:
+                    continue
 
-            if order.warnings:
-                continue
+                wizard = game_state.characters.get(order.actor_id)
+                target = game_state.characters.get(order.target_character_id)
+                dest_city = game_state.world_map.cities.get(order.destination_city_id)
 
-            wizard = game_state.characters.get(order.actor_id)
-            target = game_state.characters.get(order.target_character_id)
-            dest_city = game_state.world_map.cities.get(order.destination_city_id)
+                if not wizard or not target or not dest_city:
+                    continue
 
-            if not wizard or not target or not dest_city:
-                continue
+                # Calculate power cost (simplified: distance not calculated, use fixed cost)
+                # In full version, would calculate actual distance
+                power_cost = 5  # Simplified
 
-            # Calculate power cost (simplified: distance not calculated, use fixed cost)
-            # In full version, would calculate actual distance
-            power_cost = 5  # Simplified
+                if wizard.magic_power_current < power_cost:
+                    order.warnings.append(f"Insufficient magic power (need {power_cost}, have {wizard.magic_power_current})")
+                    turn_log.add("magic", player_id, "teleport_failed",
+                                f"{wizard.name} lacks magic power to teleport {target.name}",
+                                character_id=wizard.id, success=False)
+                    continue
 
-            if wizard.magic_power_current < power_cost:
-                order.warnings.append(f"Insufficient magic power (need {power_cost}, have {wizard.magic_power_current})")
-                turn_log.add("magic", player_id, "teleport_failed",
-                            f"{wizard.name} lacks magic power to teleport {target.name}",
-                            character_id=wizard.id, success=False)
-                continue
+                # Deduct magic power
+                wizard.magic_power_current -= power_cost
 
-            # Deduct magic power
-            wizard.magic_power_current -= power_cost
+                # Teleport target
+                old_city = game_state.world_map.cities[target.location_city_id]
+                target.location_city_id = order.destination_city_id
 
-            # Teleport target
-            old_city = game_state.world_map.cities[target.location_city_id]
-            target.location_city_id = order.destination_city_id
+                turn_log.add("magic", player_id, "teleport",
+                            f"{wizard.name} teleported {target.name} from {old_city.name} to {dest_city.name}",
+                            location=dest_city.id, character_id=wizard.id)
 
-            turn_log.add("magic", player_id, "teleport",
-                        f"{wizard.name} teleported {target.name} from {old_city.name} to {dest_city.name}",
-                        location=dest_city.id, character_id=wizard.id)
+            # Process Heal
+            elif isinstance(order, HealOrder):
+                if order.warnings:
+                    continue
+
+                healer = game_state.characters.get(order.actor_id)
+                if not healer or healer.religion_skill <= 0:
+                    turn_log.add("magic", player_id, "heal_failed",
+                                f"Healer has no religion skill",
+                                character_id=order.actor_id, success=False)
+                    continue
+
+                # Process each target
+                for target_id in order.target_character_ids:
+                    target = game_state.characters.get(target_id)
+                    if not target:
+                        continue
+
+                    # Check if at same location
+                    if target.location_city_id != healer.location_city_id:
+                        turn_log.add("magic", player_id, "heal_failed",
+                                    f"{healer.name}: {target.name} is not at the same location",
+                                    character_id=healer.id, success=False)
+                        continue
+
+                    # Calculate heal amount
+                    if target_id in order.heal_to_levels:
+                        desired_level = min(100, order.heal_to_levels[target_id])
+                        heal_amount = max(0, desired_level - target.health)
+                    elif target_id in order.heal_amounts:
+                        heal_amount = order.heal_amounts[target_id]
+                    else:
+                        heal_amount = 100 - target.health  # Heal to full
+
+                    # Check religious power
+                    if healer.religious_power_current < heal_amount:
+                        heal_amount = healer.religious_power_current
+
+                    if heal_amount <= 0:
+                        continue
+
+                    # Apply healing
+                    old_health = target.health
+                    target.health = min(100, target.health + heal_amount)
+                    healer.religious_power_current -= heal_amount
+
+                    if target.health > 0:
+                        target.is_dead = False
+
+                    turn_log.add("magic", player_id, "heal",
+                                f"{healer.name} healed {target.name} from {old_health} to {target.health}",
+                                location=healer.location_city_id, character_id=healer.id)
 
 
 # ============================================================================
@@ -600,9 +819,15 @@ def cleanup_turn(game_state: GameState):
     for char in game_state.characters.values():
         char.movement_points = config.CHARACTER_MOVEMENT_POINTS_PER_TURN
 
-    # Restore magic power
+    # Restore magic and religious power
     for char in game_state.characters.values():
         char.magic_power_current = char.max_magic_power
+        char.religious_power_current = char.max_religious_power
+
+    # Natural healing: 1 point per day, weekly turn = 7 points
+    for char in game_state.characters.values():
+        if not char.is_dead and char.health < 100:
+            char.health = min(100, char.health + 7)
 
     # Increment turn
     game_state.turn_number += 1
@@ -636,6 +861,9 @@ def run_turn(
 
     # Phase 2: Movement
     process_movement(orders_by_player, game_state, turn_log, rng)
+
+    # Phase 2b: Sailing
+    process_sail(orders_by_player, game_state, turn_log, rng)
 
     # Phase 3: Recruit & Buy
     process_recruit_and_buy(orders_by_player, game_state, turn_log, rng)

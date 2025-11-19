@@ -165,7 +165,10 @@ class Character:
         combat_skill: Combat skill level (0-100)
         magic_skill: Magic skill level (0-100)
         magic_power_current: Current magic power available
-        health: Health (0-100, always 100 in alpha)
+        religion_skill: Religion skill level (0-100)
+        religious_power_current: Current religious power available
+        health: Health (0-100, 100 = perfect health)
+        is_dead: Whether character is dead (health = 0)
     """
     id: str
     name: str
@@ -175,12 +178,26 @@ class Character:
     combat_skill: int = 0
     magic_skill: int = 0
     magic_power_current: int = 0  # Max = magic_skill
-    health: int = 100  # Always 100 in alpha
+    religion_skill: int = 0
+    religious_power_current: int = 0  # Max = religion_skill
+    health: int = 100  # 0-100, 0 = dead
+    is_dead: bool = False
 
     @property
     def max_magic_power(self) -> int:
         """Maximum magic power equals magic skill level."""
         return self.magic_skill
+
+    @property
+    def max_religious_power(self) -> int:
+        """Maximum religious power equals religion skill level."""
+        return self.religion_skill
+
+    def effective_skill(self, base_skill: int) -> int:
+        """Calculate effective skill based on current health."""
+        if self.health >= 100:
+            return base_skill
+        return int(base_skill * self.health / 100)
 
 
 @dataclass

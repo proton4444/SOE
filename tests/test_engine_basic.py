@@ -256,3 +256,69 @@ def test_turn_increment(test_game_state):
     updated_state, turn_log = engine.run_turn(test_game_state, {}, seed=42)
 
     assert updated_state.turn_number == initial_turn + 1
+
+
+def test_sail_phase(test_game_state):
+    """Test that factions can sail ships."""
+    # Setup: Create sea lane between cities
+    sea_lane = models.Road(
+        id="sea1",
+        from_city_id="city1",
+        to_city_id="city2",
+        quality=models.RoadQuality.SEA
+    )
+    test_game_state.world_map.roads["sea1"] = sea_lane
+
+    # Make city1 a port
+    test_game_state.world_map.cities["city1"].is_port = True
+
+    # Add a ship at city1
+    ship = models.Ship(
+        id="ship1",
+        faction_id="player1",
+        location_city_id="city1",
+        ship_type=models.ShipType.GALLEY
+    )
+    test_game_state.ships["ship1"] = ship
+
+    # Add sailors (need at least 10)
+    sailors = models.UnitStack(
+        id="sailors1",
+        faction_id="player1",
+        location_city_id="city1",
+        unit_type=models.UnitType.SAILOR,
+        count=50  # 10 required + 40 rowers = optimal
+    )
+    test_game_state.unit_stacks["sailors1"] = sailors
+
+    # Create sail order
+    sail_order = orders.SailOrder(
+        player_id="player1",
+        actor_id="char1",
+        destination_city_id="city2"
+    )
+
+    orders_by_player = {
+        "player1": [sail_order],
+        "player2": []
+    }
+
+    # Run turn
+    updated_state, turn_log = engine.run_turn(test_game_state, orders_by_player, seed=42)
+
+    # Check that ship moved
+    ship_after = updated_state.ships["ship1"]
+    assert ship_after.location_city_id == "city2"
+
+    # Check that captain moved
+    char = updated_state.characters["char1"]
+    assert char.location_city_id == "city2"
+
+    # Check that sailors moved with the ship
+    sailors_after = updated_state.unit_stacks["sailors1"]
+    assert sailors_after.location_city_id == "city2"
+
+    # Check sail event was logged
+    events = turn_log.get_player_events("player1")
+    sail_events = [e for e in events if e.event_type == "sail"]
+    assert len(sail_events) > 0

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
-    Order, MoveOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder
+    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder
 )
 
 
@@ -203,6 +203,46 @@ def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Op
 
     # Pattern: "go/move/travel to <city>" (implicit leader)
     match = re.search(r'^(?:go|move|travel)\s+to\s+(.+)', sentence)
+    if match:
+        city_name = match.group(1).strip()
+
+        if not parser.resolve_actor(order, None):  # Use leader
+            return order
+
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
+            return order
+
+        order.destination_city_id = city_resolved.entity_id
+        return order
+
+    return None
+
+
+def parse_sail_order(sentence: str, game_state: GameState, player_id: str) -> Optional[SailOrder]:
+    """Parse a sailing order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(SailOrder)
+
+    # Pattern: "have <name> sail to <city>"
+    match = re.search(r'have\s+(.+?)\s+sail\s+to\s+(.+)', sentence)
+    if match:
+        actor_name, city_name = match.group(1).strip(), match.group(2).strip()
+
+        if not parser.resolve_actor(order, actor_name):
+            return order
+
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
+            return order
+
+        order.destination_city_id = city_resolved.entity_id
+        return order
+
+    # Pattern: "sail to <city>" (implicit leader)
+    match = re.search(r'^sail\s+to\s+(.+)', sentence)
     if match:
         city_name = match.group(1).strip()
 
@@ -453,6 +493,55 @@ def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -
     return None
 
 
+def parse_heal_order(sentence: str, game_state: GameState, player_id: str) -> Optional[HealOrder]:
+    """Parse a heal/cure order (simplified version)."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(HealOrder)
+
+    # Simplified pattern: "heal <character>" or "have <healer> heal <character>"
+    # This is a basic implementation - full version would handle "to level X" and "by Y points"
+
+    # Pattern: "have <healer> heal/cure <target>"
+    match = re.search(r'have\s+(.+?)\s+(?:heal|cure)\s+(.+)', sentence)
+    if match:
+        healer_name = match.group(1).strip()
+        target_name = match.group(2).strip()
+
+        healer_resolved = resolve_character(healer_name, game_state, player_id)
+        if not healer_resolved.found:
+            parser.add_warning(order, f"Healer '{healer_name}' not found")
+            return order
+
+        target_resolved = resolve_character(target_name, game_state, player_id)
+        if not target_resolved.found:
+            parser.add_warning(order, f"Target '{target_name}' not found")
+            return order
+
+        order.actor_id = healer_resolved.entity_id
+        order.target_character_ids = [target_resolved.entity_id]
+        order.heal_to_levels = {target_resolved.entity_id: 100}  # Heal to full by default
+        return order
+
+    # Pattern: "heal/cure <target>" (implicit leader)
+    match = re.search(r'^(?:heal|cure)\s+(.+)', sentence)
+    if match:
+        target_name = match.group(1).strip()
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        target_resolved = resolve_character(target_name, game_state, player_id)
+        if not target_resolved.found:
+            parser.add_warning(order, f"Target '{target_name}' not found")
+            return order
+
+        order.target_character_ids = [target_resolved.entity_id]
+        order.heal_to_levels = {target_resolved.entity_id: 100}  # Heal to full by default
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -460,10 +549,12 @@ def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -
 # Order detection keywords for optimization
 ORDER_KEYWORDS = {
     'move': ['go', 'move', 'travel'],
+    'sail': ['sail'],
     'recruit': ['recruit'],
     'buy': ['buy'],
     'attack': ['attack'],
-    'teleport': ['teleport']
+    'teleport': ['teleport'],
+    'heal': ['heal', 'cure']
 }
 
 
@@ -496,6 +587,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         if any(kw in sentence for kw in ORDER_KEYWORDS['move']):
             order = parse_move_order(sentence, game_state, player_id)
 
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['sail']):
+            order = parse_sail_order(sentence, game_state, player_id)
+
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['recruit']):
             order = parse_recruit_order(sentence, game_state, player_id)
 
@@ -507,6 +601,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['teleport']):
             order = parse_teleport_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['heal']):
+            order = parse_heal_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)
