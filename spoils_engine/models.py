@@ -143,12 +143,18 @@ class Faction:
         id: Unique identifier (e.g., "player_1")
         name: Faction name (e.g., "The Golden Empire")
         controlled_city_ids: Set of city IDs under faction control
+        secured_city_ids: Set of city IDs this faction has secured
         treasury: Gold amount
+        allies: Set of faction IDs that are allies
+        enemies: Set of faction IDs that are enemies
     """
     id: str
     name: str
     controlled_city_ids: set[str] = field(default_factory=set)
+    secured_city_ids: set[str] = field(default_factory=set)
     treasury: int = 0
+    allies: set[str] = field(default_factory=set)
+    enemies: set[str] = field(default_factory=set)
 
 
 @dataclass

@@ -11,7 +11,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-## Features (Alpha v0.1.0)
+## Features (Alpha v0.2.0)
 
 ### Implemented
 
@@ -19,32 +19,59 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Cities with population bands (<10k, 10k-99k, 100k-999k, 1M+)
 - Roads and sea lanes with quality ratings
 - JSON-based map files
+- Port cities for ship construction
 
 ✅ **Factions & Characters**
-- Multiple player factions
-- Named characters with combat and magic skills
+- Multiple player factions with diplomacy support (allies/enemies)
+- Named characters with combat, magic, and religion skills
+- Character health system (0-100, affects skill effectiveness)
+- Character death and wounding in combat
 - Unit stacks (soldiers, sailors, workers)
 - Ships (galleys)
 
 ✅ **Core Orders**
-- Movement between cities
-- Recruiting units
-- Buying ships
-- Combat (simplified)
-- Teleportation (basic magic)
+- **Movement**: Land movement between cities (GO/MOVE/TRAVEL)
+- **Sailing**: Sea movement with ships (SAIL command)
+- **Recruiting**: Hire soldiers, sailors, and workers
+- **Buying ships**: Purchase galleys at ports
+- **Combat**: Simplified combat with character wounding/death
+- **Magic**: Teleportation spells
+- **Healing**: HEAL/CURE commands using religion skill
 
 ✅ **Turn Processing**
 - Validation phase
-- Movement phase
+- Movement phase (land)
+- Sailing phase (sea)
 - Recruit & buy phase
-- Magic phase
-- Combat phase
+- Magic phase (teleport + heal)
+- Combat phase (with character casualties)
 - Income & upkeep phase
+
+✅ **Economic System**
+- City income based on population
+- Unit and ship upkeep
+- Character salaries (formula-based)
+- Negative treasury warnings
+
+✅ **Health & Healing**
+- Character health (0-100)
+- Natural healing (7 points per turn)
+- Religious healing with HEAL/CURE commands
+- Health affects skill effectiveness
+- Character death at 0 health
+
+✅ **Naval System**
+- SAIL command for sea movement
+- Crew requirements (10 sailors minimum, 40 rowers optimal)
+- Sea lane pathfinding
+- Ship capacity and encumbrance tracking
+- Automatic unit transport on ships
 
 ✅ **Reporting**
 - Per-player detailed reports
-- Event logs
+- Event logs with combat results
 - Warning/error messages
+- Character casualty reports
 
 ✅ **CLI**
 - Game initialization
@@ -53,7 +80,19 @@ This is an alpha implementation of a turn-based engine that processes English-li
 
 ### Deferred to Future Versions
 
-⏸️ Advanced magic, religion, diplomacy, location control, complex combat, resource gathering, construction, and more. See `docs/alpha_scope.md` for full details.
+⏸️ **Still To Implement:**
+- SECURE command for location control
+- Diplomacy commands (ALLY/ENEMY/NEUTRAL)
+- FLY command for magical flight
+- SUMMON spells for magical creatures
+- Resource gathering (MINE/COLLECT)
+- Construction (BUILD command)
+- Religion system (PRAY/BLESS/CURSE)
+- Character resurrection
+- Complex combat mechanics (retreat, morale, armor)
+- Advanced economy (TAX command)
+
+See `docs/alpha_scope.md` for full details.
 
 ## Installation
 
@@ -132,9 +171,13 @@ python3 cli.py process-turn mygame --turn 2 --seed 123
 Orders use English-like commands. Examples:
 
 ```
-# Movement
+# Movement (Land)
 Have Emperor Marcus go to Kitesta.
 Go to Riverton.
+
+# Sailing (Sea)
+Have Captain Ahab sail to Island City.
+Sail to Port Town.
 
 # Recruiting
 Recruit 20 soldiers in Madegi Doy.
@@ -146,8 +189,12 @@ Buy 1 galley in Albatross City.
 # Combat
 Have Emperor Marcus attack Khan Tengri.
 
-# Magic
+# Magic (Teleport)
 Have Wizard Merlin teleport Emperor Marcus to Peshandi.
+
+# Healing
+Have Priest heal Hero One.
+Heal wounded soldiers.
 
 # Comments (ignored)
 # This is a comment

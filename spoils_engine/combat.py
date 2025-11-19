@@ -173,9 +173,22 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
     """
     Apply casualties to a faction's forces at a location.
 
-    Returns dict with counts of losses: {'units': X, 'ships': Y}
+    Returns dict with counts of losses: {'units': X, 'ships': Y, 'characters_wounded': Z, 'characters_killed': W}
     """
-    losses = {'units': 0, 'ships': 0}
+    losses = {'units': 0, 'ships': 0, 'characters_wounded': 0, 'characters_killed': 0}
+
+    # Apply to characters (damage proportional to casualty rate)
+    for char in game_state.characters.values():
+        if char.faction_id == faction_id and char.location_city_id == city_id and not char.is_dead:
+            # Damage: casualty_rate * 30 points (0.3 rate = ~9 damage, 0.1 rate = ~3 damage)
+            damage = int(casualty_rate * 30)
+            if damage > 0:
+                char.health = max(0, char.health - damage)
+                losses['characters_wounded'] += 1
+
+                if char.health <= 0:
+                    char.is_dead = True
+                    losses['characters_killed'] += 1
 
     # Apply to unit stacks
     for stack in list(game_state.unit_stacks.values()):
