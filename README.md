@@ -11,7 +11,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-## Features (Alpha v0.6.0)
+## Features (Alpha v0.7.0)
 
 ### Implemented
 
@@ -55,7 +55,8 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Teaching**: TEACH command for character-to-character training (free)
 - **Summoning**: SUMMON command to create magical creatures (costs magic power)
 - **Resource Gathering**: COLLECT/GATHER commands for wood and stone
-- **Construction**: BUILD/CONSTRUCT/MAKE commands to build ships from wood
+- **Mining**: MINE command to extract minerals (iron, gold, silver, copper, gems)
+- **Construction**: BUILD/CONSTRUCT/MAKE commands to build galleys, catapults, weapons, and armor
 
 ✅ **Turn Processing**
 - Phase 1: Validation
@@ -144,21 +145,34 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Resources stored in character inventory
 - Foundation for construction system
 
+✅ **Mining System**
+- MINE command to extract minerals from hills/mountains
+- 5 mineral types: iron, gold, silver, copper, gems
+- Worker-based yield rates (iron: 2/day, copper: 3/day, silver: 4/day, gold: 5/day, gems: 6/day)
+- Requires hills or mountains terrain
+- Workers required for mining operations
+- Resources stored in character inventory
+- Alpha: no richness variation (simplified)
+- Iron used for weapon/armor construction
+
 ✅ **Construction System**
 - BUILD/CONSTRUCT/MAKE commands to build items
-- Alpha: supports building galleys (ships)
-- Galleys require 200 wood each (1/5 of basic cost)
-- Must be at port city to build ships
+- Supports 4 item types:
+  - Galleys: 200 wood each (must be at port city)
+  - Catapults: 4 wood each
+  - Weapons: 1 iron each
+  - Armor: 1 iron each
+- All costs based on 1/5 of basic item cost
 - Instant construction (alpha simplification)
 - Resources consumed from character inventory
-- Future: catapults, weapons, armor, fortifications
+- Items stored in inventory (future: combat integration)
+- Future: fortifications, siege equipment, more item types
 
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
-- Advanced construction (BUILD catapults, weapons, armor)
 - Fortifications (FORTIFY/UNFORTIFY commands)
-- Mining for ore/iron (MINE command)
+- Combat integration for weapons/armor/catapults
 - Religion system (PRAY/BLESS/CURSE spells)
 - Character resurrection via PRAY
 - Complex combat mechanics (retreat, morale, armor, siege weapons)
@@ -324,10 +338,17 @@ Collect wood for 7 days.
 Gather stone.
 Have Engineer collect wood.
 
+# Mining
+Mine iron.
+Mine gold for 10 days.
+Have Miner mine silver.
+
 # Construction
 Build 1 galley.
 Have Engineer build 2 galleys.
-Construct 1 galley.
+Build 5 catapults.
+Have Blacksmith build 10 weapons.
+Make 20 armor.
 
 # Comments (ignored)
 # This is a comment
