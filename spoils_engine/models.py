@@ -56,9 +56,14 @@ class CreatureType(str, Enum):
 
 
 class ResourceType(str, Enum):
-    """Types of resources that can be gathered."""
+    """Types of resources that can be gathered or mined."""
     WOOD = "wood"      # Gathered in forests
     STONE = "stone"    # Gathered in hills/mountains
+    IRON = "iron"      # Mined in hills/mountains
+    GOLD = "gold"      # Mined in hills/mountains
+    SILVER = "silver"  # Mined in hills/mountains
+    COPPER = "copper"  # Mined in hills/mountains
+    GEMS = "gems"      # Mined in hills/mountains
 
 
 # ============================================================================

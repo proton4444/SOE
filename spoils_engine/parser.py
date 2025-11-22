@@ -14,7 +14,7 @@ from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder, MineOrder
 )
 
 
@@ -1308,6 +1308,51 @@ def parse_build_order(sentence: str, game_state: GameState, player_id: str) -> O
     return None
 
 
+def parse_mine_order(sentence: str, game_state: GameState, player_id: str) -> Optional[MineOrder]:
+    """
+    Parse a MINE order.
+
+    Examples:
+        - "Mine iron"
+        - "Mine gold for 10 days"
+        - "Have Miner mine silver"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(MineOrder)
+
+    # Pattern: "have <actor> mine <resource> [for <duration>]"
+    match = re.search(r'have\s+(.+?)\s+mine\s+(iron|gold|silver|copper|gems)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    if match:
+        actor_name = match.group(1).strip()
+        resource = match.group(2).strip().lower()
+        duration = int(match.group(3)) if match.group(3) else 7
+
+        actor_resolved = resolve_character(actor_name, game_state, player_id)
+        if not actor_resolved.found:
+            parser.add_warning(order, f"Actor '{actor_name}' not found")
+            return order
+
+        order.actor_id = actor_resolved.entity_id
+        order.resource_type = resource
+        order.duration_days = duration
+        return order
+
+    # Pattern: "mine <resource> [for <duration>]" (implicit actor)
+    match = re.search(r'mine\s+(iron|gold|silver|copper|gems)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    if match:
+        resource = match.group(1).strip().lower()
+        duration = int(match.group(2)) if match.group(2) else 7
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        order.resource_type = resource
+        order.duration_days = duration
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -1336,7 +1381,8 @@ ORDER_KEYWORDS = {
     'teach': ['teach'],
     'summon': ['summon'],
     'collect': ['collect', 'gather'],
-    'build': ['build', 'construct', 'make']
+    'build': ['build', 'construct', 'make'],
+    'mine': ['mine']
 }
 
 
@@ -1434,6 +1480,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['build']):
             order = parse_build_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['mine']):
+            order = parse_mine_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

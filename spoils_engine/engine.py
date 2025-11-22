@@ -18,7 +18,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder, MineOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -1400,6 +1400,74 @@ def process_build(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                             character_id=actor.id, success=False)
 
 
+def process_mine(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process MINE orders to extract minerals (iron, gold, silver, copper, gems)."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, MineOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            # Validate terrain - mining requires hills or mountains
+            resource_type = order.resource_type.lower()
+            if not ("hills" in city.terrain or "mountains" in city.terrain or "mountain" in city.terrain):
+                turn_log.add("mine", player_id, "mine_failed",
+                            f"{actor.name}: no hills/mountains available at {city.name} for mining",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Count workers at this location for this faction
+            worker_count = 0
+            for stack in game_state.unit_stacks.values():
+                if (stack.faction_id == player_id and
+                    stack.location_city_id == actor.location_city_id and
+                    stack.unit_type == UnitType.WORKER):
+                    worker_count += stack.count
+
+            if worker_count == 0:
+                turn_log.add("mine", player_id, "mine_failed",
+                            f"{actor.name}: no workers available to mine {resource_type}",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Calculate mining yield (alpha: simplified, no richness variation)
+            # Iron: 2 per worker per day (heaviest, hardest to extract)
+            # Copper: 3 per worker per day
+            # Silver: 4 per worker per day
+            # Gold: 5 per worker per day (rarest but easier to find when present)
+            # Gems: 6 per worker per day (smallest, easiest to gather)
+            yield_rates = {
+                "iron": 2,
+                "copper": 3,
+                "silver": 4,
+                "gold": 5,
+                "gems": 6
+            }
+
+            daily_rate = yield_rates.get(resource_type, 2)
+            resources_mined = worker_count * order.duration_days * daily_rate
+
+            # Add resources to character's inventory
+            if resource_type not in actor.resources:
+                actor.resources[resource_type] = 0
+            actor.resources[resource_type] += resources_mined
+
+            turn_log.add("mine", player_id, "mine_success",
+                        f"{actor.name}: mined {resources_mined} {resource_type} at {city.name} "
+                        f"({worker_count} workers, {order.duration_days} days)",
+                        character_id=actor.id)
+
+
 def process_capture(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog, rng):
     """Process CAPTURE orders to take prisoners."""
     for player_id, orders in orders_by_player.items():
@@ -1699,6 +1767,7 @@ def run_turn(
     process_promote(orders_by_player, game_state, turn_log)
     process_tax(orders_by_player, game_state, turn_log)
     process_collect(orders_by_player, game_state, turn_log)
+    process_mine(orders_by_player, game_state, turn_log)
     process_build(orders_by_player, game_state, turn_log)
     process_free(orders_by_player, game_state, turn_log)
     process_study(orders_by_player, game_state, turn_log, rng)

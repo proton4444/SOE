@@ -520,6 +520,26 @@ class BuildOrder(Order):
         return "BUILD"
 
 
+@dataclass
+class MineOrder(Order):
+    """
+    Mine for minerals (iron, gold, silver, copper, gems).
+
+    Attributes:
+        actor_id: Character supervising the mining (lead miner)
+        resource_type: Type of mineral to mine ("iron", "gold", "silver", "copper", "gems")
+        duration_days: Number of days to mine (default 7)
+        target_amount: Optional target amount to mine (0 = use duration)
+    """
+    actor_id: str = ""
+    resource_type: str = ""  # "iron", "gold", "silver", "copper", "gems"
+    duration_days: int = 7  # Default 1 week
+    target_amount: int = 0  # 0 means use duration instead
+
+    def order_type(self) -> str:
+        return "MINE"
+
+
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
@@ -567,6 +587,7 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "BUILD": BuildOrder,
         "CONSTRUCT": BuildOrder,  # CONSTRUCT is synonym for BUILD
         "MAKE": BuildOrder,  # MAKE is synonym for BUILD
+        "MINE": MineOrder,
     }
 
     order_class = order_map.get(order_type.upper())
