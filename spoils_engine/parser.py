@@ -14,7 +14,7 @@ from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder
 )
 
 
@@ -1046,6 +1046,98 @@ def parse_free_order(sentence: str, game_state: GameState, player_id: str) -> Op
     return None
 
 
+def parse_study_order(sentence: str, game_state: GameState, player_id: str) -> Optional[StudyOrder]:
+    """
+    Parse a STUDY order.
+
+    Examples:
+        - "Study magic"
+        - "Study combat for 3 weeks"
+        - "Have Joe study sailing to level 20"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(StudyOrder)
+
+    # Pattern: "have <actor> study <skill> [for <duration>] [to <level>]"
+    match = re.search(r'have\s+(.+?)\s+study\s+(combat|magic|religion|sailing)(?:\s+for\s+(\d+))?(?:\s+to\s+(?:level\s+)?(\d+))?', sentence, re.IGNORECASE)
+    if match:
+        actor_name = match.group(1).strip()
+        skill = match.group(2).strip().lower()
+        duration = int(match.group(3)) if match.group(3) else 1
+        target_level = int(match.group(4)) if match.group(4) else 0
+
+        actor_resolved = resolve_character(actor_name, game_state, player_id)
+        if not actor_resolved.found:
+            parser.add_warning(order, f"Actor '{actor_name}' not found")
+            return order
+
+        order.actor_id = actor_resolved.entity_id
+        order.skill_name = skill
+        order.duration_weeks = duration
+        order.target_level = target_level
+        return order
+
+    # Pattern: "study <skill> [for <duration>] [to <level>]" (implicit actor)
+    match = re.search(r'study\s+(combat|magic|religion|sailing)(?:\s+for\s+(\d+))?(?:\s+to\s+(?:level\s+)?(\d+))?', sentence, re.IGNORECASE)
+    if match:
+        skill = match.group(1).strip().lower()
+        duration = int(match.group(2)) if match.group(2) else 1
+        target_level = int(match.group(3)) if match.group(3) else 0
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        order.skill_name = skill
+        order.duration_weeks = duration
+        order.target_level = target_level
+        return order
+
+    return None
+
+
+def parse_teach_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TeachOrder]:
+    """
+    Parse a TEACH order.
+
+    Examples:
+        - "Have Joe teach combat to Mary"
+        - "Teach Mike magic to level 10"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(TeachOrder)
+
+    # Pattern: "have <teacher> teach <skill> to <student> [for <duration>] [to level <level>]"
+    match = re.search(r'have\s+(.+?)\s+teach\s+(combat|magic|religion|sailing)\s+to\s+(.+?)(?:\s+for\s+(\d+))?(?:\s+to\s+(?:level\s+)?(\d+))?$', sentence, re.IGNORECASE)
+    if match:
+        teacher_name = match.group(1).strip()
+        skill = match.group(2).strip().lower()
+        student_name = match.group(3).strip()
+        duration = int(match.group(4)) if match.group(4) else 1
+        target_level = int(match.group(5)) if match.group(5) else 0
+
+        # Remove punctuation from student name
+        student_name = re.sub(r'[.,;!?]+$', '', student_name)
+
+        teacher_resolved = resolve_character(teacher_name, game_state, player_id)
+        if not teacher_resolved.found:
+            parser.add_warning(order, f"Teacher '{teacher_name}' not found")
+            return order
+
+        student_resolved = resolve_character(student_name, game_state, player_id)
+        if not student_resolved.found:
+            parser.add_warning(order, f"Student '{student_name}' not found")
+            return order
+
+        order.teacher_id = teacher_resolved.entity_id
+        order.student_id = student_resolved.entity_id
+        order.skill_name = skill
+        order.duration_weeks = duration
+        order.target_level = target_level
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -1069,7 +1161,9 @@ ORDER_KEYWORDS = {
     'name': ['name'],
     'promote': ['promote'],
     'tax': ['tax'],
-    'free': ['free', 'release', 'discard', 'dismiss']
+    'free': ['free', 'release', 'discard', 'dismiss'],
+    'study': ['study'],
+    'teach': ['teach']
 }
 
 
@@ -1152,6 +1246,12 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['free']):
             order = parse_free_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['study']):
+            order = parse_study_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['teach']):
+            order = parse_teach_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)
