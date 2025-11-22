@@ -1343,8 +1343,6 @@ def process_build(orders_by_player: Dict[str, List[Order]], game_state: GameStat
             if not city:
                 continue
 
-            # Alpha: only support building galleys for now
-            # Future: catapults, weapons, armor, etc.
             item_type = order.item_type.lower()
 
             if item_type == "galley":
@@ -1389,10 +1387,85 @@ def process_build(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                             character_id=actor.id)
 
             elif item_type == "catapult":
-                # Future implementation: catapults require 4 wood each
-                turn_log.add("build", player_id, "build_failed",
-                            f"{actor.name}: building catapults not yet implemented in alpha",
-                            character_id=actor.id, success=False)
+                # Catapults require 4 wood each (basic cost 20, 1/5 = 4)
+                wood_per_catapult = 4
+                total_wood_needed = wood_per_catapult * order.count
+
+                # Check if actor has enough wood
+                wood_available = actor.resources.get("wood", 0)
+                if wood_available < total_wood_needed:
+                    turn_log.add("build", player_id, "build_failed",
+                                f"{actor.name}: insufficient wood to build {order.count} catapult(s) "
+                                f"(need {total_wood_needed}, have {wood_available})",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Consume wood
+                actor.resources["wood"] -= total_wood_needed
+
+                # Add catapults to inventory
+                if "catapult" not in actor.resources:
+                    actor.resources["catapult"] = 0
+                actor.resources["catapult"] += order.count
+
+                turn_log.add("build", player_id, "build_success",
+                            f"{actor.name}: built {order.count} catapult(s) at {city.name} "
+                            f"(consumed {total_wood_needed} wood)",
+                            character_id=actor.id)
+
+            elif item_type == "weapon" or item_type == "weapons":
+                # Weapons require 1 iron each (basic cost 5, 1/5 = 1)
+                iron_per_weapon = 1
+                total_iron_needed = iron_per_weapon * order.count
+
+                # Check if actor has enough iron
+                iron_available = actor.resources.get("iron", 0)
+                if iron_available < total_iron_needed:
+                    turn_log.add("build", player_id, "build_failed",
+                                f"{actor.name}: insufficient iron to build {order.count} weapon(s) "
+                                f"(need {total_iron_needed}, have {iron_available})",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Consume iron
+                actor.resources["iron"] -= total_iron_needed
+
+                # Add weapons to inventory
+                if "weapon" not in actor.resources:
+                    actor.resources["weapon"] = 0
+                actor.resources["weapon"] += order.count
+
+                turn_log.add("build", player_id, "build_success",
+                            f"{actor.name}: built {order.count} weapon(s) at {city.name} "
+                            f"(consumed {total_iron_needed} iron)",
+                            character_id=actor.id)
+
+            elif item_type == "armor":
+                # Armor requires 1 iron each (basic cost 5, 1/5 = 1)
+                iron_per_armor = 1
+                total_iron_needed = iron_per_armor * order.count
+
+                # Check if actor has enough iron
+                iron_available = actor.resources.get("iron", 0)
+                if iron_available < total_iron_needed:
+                    turn_log.add("build", player_id, "build_failed",
+                                f"{actor.name}: insufficient iron to build {order.count} armor "
+                                f"(need {total_iron_needed}, have {iron_available})",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Consume iron
+                actor.resources["iron"] -= total_iron_needed
+
+                # Add armor to inventory
+                if "armor" not in actor.resources:
+                    actor.resources["armor"] = 0
+                actor.resources["armor"] += order.count
+
+                turn_log.add("build", player_id, "build_success",
+                            f"{actor.name}: built {order.count} armor at {city.name} "
+                            f"(consumed {total_iron_needed} iron)",
+                            character_id=actor.id)
 
             else:
                 turn_log.add("build", player_id, "build_failed",

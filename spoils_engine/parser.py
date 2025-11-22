@@ -1268,7 +1268,7 @@ def parse_build_order(sentence: str, game_state: GameState, player_id: str) -> O
     order = parser.create_order(BuildOrder)
 
     # Pattern: "have <actor> build/construct/make <count> <item>"
-    match = re.search(r'have\s+(.+?)\s+(?:build|construct|make)\s+(\d+)\s+(galley|galleys|catapult|catapults)', sentence, re.IGNORECASE)
+    match = re.search(r'have\s+(.+?)\s+(?:build|construct|make)\s+(\d+)\s+(galley|galleys|catapult|catapults|weapon|weapons|armor|armors)', sentence, re.IGNORECASE)
     if match:
         actor_name = match.group(1).strip()
         count = int(match.group(2))
@@ -1289,7 +1289,7 @@ def parse_build_order(sentence: str, game_state: GameState, player_id: str) -> O
         return order
 
     # Pattern: "build/construct/make <count> <item>" (implicit actor)
-    match = re.search(r'(?:build|construct|make)\s+(\d+)\s+(galley|galleys|catapult|catapults)', sentence, re.IGNORECASE)
+    match = re.search(r'(?:build|construct|make)\s+(\d+)\s+(galley|galleys|catapult|catapults|weapon|weapons|armor|armors)', sentence, re.IGNORECASE)
     if match:
         count = int(match.group(1))
         item = match.group(2).strip().lower()
