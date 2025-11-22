@@ -11,7 +11,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-## Features (Alpha v0.4.0)
+## Features (Alpha v0.5.0)
 
 ### Implemented
 
@@ -29,6 +29,8 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Named characters with combat, magic, and religion skills
 - Character health system (0-100, affects skill effectiveness)
 - Character death and wounding in combat
+- Character prisoners (capture and release)
+- Character skill training (study and teach)
 - Unit stacks (soldiers, sailors, workers)
 - Ships (galleys)
 
@@ -39,6 +41,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Recruiting**: Hire soldiers, sailors, and workers
 - **Buying ships**: Purchase galleys at ports
 - **Combat**: Simplified combat with character wounding/death
+- **Capture**: CAPTURE command to take prisoners
 - **Magic**: Teleportation and flight spells
 - **Healing**: HEAL/CURE commands using religion skill
 - **Location Control**: SECURE command for territorial control
@@ -47,6 +50,9 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Character Management**: NAME command to convert units to characters
 - **Titles**: PROMOTE command to assign character titles
 - **Taxation**: TAX command to collect taxes from locations
+- **Prisoners**: FREE/RELEASE/DISCARD/DISMISS to release prisoners
+- **Training**: STUDY command to learn skills (costs gold)
+- **Teaching**: TEACH command for character-to-character training (free)
 
 ✅ **Turn Processing**
 - Phase 1: Validation
@@ -104,6 +110,21 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Secured cities tracked per faction
 - Foundation for taxation and access control
 
+✅ **Prisoner System**
+- CAPTURE command to take enemy characters prisoner
+- Success based on power ratio (50% base + power advantage)
+- Failed captures deal damage or kill targets
+- FREE/RELEASE/DISCARD/DISMISS to free prisoners
+- Prisoners tracked with captor_id
+
+✅ **Skill Training System**
+- STUDY command to learn/improve skills (1 gold/week)
+- TEACH command for faster skill gains (free, needs teacher)
+- Skills: combat, magic, religion, sailing
+- Random gains: STUDY (1-5 per week), TEACH (2-7 per week)
+- Teacher must have higher skill level
+- Skills capped at 100
+
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
@@ -113,11 +134,10 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Religion system (PRAY/BLESS/CURSE spells)
 - Character resurrection via PRAY
 - Complex combat mechanics (retreat, morale, armor, siege weapons)
-- Character training (STUDY/TEACH commands)
 - Trading system (BUY/SELL for goods beyond ships)
-- Prisoner system (CAPTURE, FREE)
 - Conditional orders (IF statements)
 - Advanced taxation (time-based accumulation, depletion tracking)
+- Escape mechanics for prisoners
 
 See `docs/alpha_scope.md` for full details.
 
@@ -253,6 +273,19 @@ Promote Joe Smith and Ken Jones to Captain.
 # Taxation
 Tax for 2 weeks.
 Have Captain Jones tax for 14 days.
+
+# Prisoners
+Capture Jamu Penda and Billy The Kid.
+Have Joe Flint capture Mary Tarrington.
+Free Wizard Yemishoka.
+Release all prisoners.
+
+# Skill Training
+Study magic.
+Study combat for 3 weeks.
+Have Joe study sailing to level 20.
+Have Master teach combat to Student.
+Teach Mike magic to level 10.
 
 # Comments (ignored)
 # This is a comment
