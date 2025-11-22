@@ -187,6 +187,78 @@ class HealOrder(Order):
 
 
 # ============================================================================
+# LOCATION CONTROL ORDERS
+# ============================================================================
+
+@dataclass
+class SecureOrder(Order):
+    """
+    Order a character to secure/control a location.
+
+    Attributes:
+        actor_id: Character ID who will secure the location
+        city_id: City to secure (usually actor's current location)
+    """
+    actor_id: str = ""
+    city_id: str = ""
+
+    def order_type(self) -> str:
+        return "SECURE"
+
+
+# ============================================================================
+# DIPLOMACY ORDERS
+# ============================================================================
+
+@dataclass
+class AllyOrder(Order):
+    """
+    Declare another faction as an ally.
+
+    Attributes:
+        target_faction_id: Faction ID to ally with
+        target_faction_name: Original faction name from text
+    """
+    target_faction_id: str = ""
+    target_faction_name: str = ""
+
+    def order_type(self) -> str:
+        return "ALLY"
+
+
+@dataclass
+class EnemyOrder(Order):
+    """
+    Declare another faction as an enemy.
+
+    Attributes:
+        target_faction_id: Faction ID to declare as enemy
+        target_faction_name: Original faction name from text
+    """
+    target_faction_id: str = ""
+    target_faction_name: str = ""
+
+    def order_type(self) -> str:
+        return "ENEMY"
+
+
+@dataclass
+class NeutralOrder(Order):
+    """
+    Set diplomatic stance to neutral with another faction.
+
+    Attributes:
+        target_faction_id: Faction ID to set neutral
+        target_faction_name: Original faction name from text
+    """
+    target_faction_id: str = ""
+    target_faction_name: str = ""
+
+    def order_type(self) -> str:
+        return "NEUTRAL"
+
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -210,6 +282,10 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "ATTACK": AttackOrder,
         "TELEPORT": TeleportOrder,
         "HEAL": HealOrder,
+        "SECURE": SecureOrder,
+        "ALLY": AllyOrder,
+        "ENEMY": EnemyOrder,
+        "NEUTRAL": NeutralOrder,
     }
 
     order_class = order_map.get(order_type.upper())

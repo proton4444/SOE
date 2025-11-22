@@ -12,7 +12,8 @@ from dataclasses import dataclass
 
 from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
-    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder
+    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder,
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder
 )
 
 
@@ -542,6 +543,99 @@ def parse_heal_order(sentence: str, game_state: GameState, player_id: str) -> Op
     return None
 
 
+def parse_secure_order(sentence: str, game_state: GameState, player_id: str) -> Optional[SecureOrder]:
+    """Parse a secure order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(SecureOrder)
+
+    # Pattern: "have <name> secure" or "secure" (location is implicit - actor's location)
+    match = re.search(r'have\s+(.+?)\s+secure', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        # city_id will be resolved during execution (actor's current location)
+        return order
+
+    # Pattern: "secure" (implicit leader)
+    if re.search(r'^secure', sentence):
+        if not parser.resolve_actor(order, None):  # Use leader
+            return order
+        return order
+
+    return None
+
+
+def parse_ally_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AllyOrder]:
+    """Parse an ally order (simplified)."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(AllyOrder)
+
+    # Pattern: "ally <faction_name>"
+    match = re.search(r'ally\s+(.+)', sentence)
+    if match:
+        faction_name = match.group(1).strip()
+        # Try to resolve faction by name
+        for faction in game_state.factions.values():
+            if faction.name.lower() == faction_name.lower():
+                order.target_faction_id = faction.id
+                order.target_faction_name = faction_name
+                return order
+
+        # If not found, still create order with warning
+        parser.add_warning(order, f"Faction '{faction_name}' not found")
+        order.target_faction_name = faction_name
+        return order
+
+    return None
+
+
+def parse_enemy_order(sentence: str, game_state: GameState, player_id: str) -> Optional[EnemyOrder]:
+    """Parse an enemy order (simplified)."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(EnemyOrder)
+
+    # Pattern: "enemy <faction_name>"
+    match = re.search(r'enemy\s+(.+)', sentence)
+    if match:
+        faction_name = match.group(1).strip()
+        # Try to resolve faction by name
+        for faction in game_state.factions.values():
+            if faction.name.lower() == faction_name.lower():
+                order.target_faction_id = faction.id
+                order.target_faction_name = faction_name
+                return order
+
+        parser.add_warning(order, f"Faction '{faction_name}' not found")
+        order.target_faction_name = faction_name
+        return order
+
+    return None
+
+
+def parse_neutral_order(sentence: str, game_state: GameState, player_id: str) -> Optional[NeutralOrder]:
+    """Parse a neutral order (simplified)."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(NeutralOrder)
+
+    # Pattern: "neutral <faction_name>"
+    match = re.search(r'neutral\s+(.+)', sentence)
+    if match:
+        faction_name = match.group(1).strip()
+        # Try to resolve faction by name
+        for faction in game_state.factions.values():
+            if faction.name.lower() == faction_name.lower():
+                order.target_faction_id = faction.id
+                order.target_faction_name = faction_name
+                return order
+
+        parser.add_warning(order, f"Faction '{faction_name}' not found")
+        order.target_faction_name = faction_name
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -554,7 +648,11 @@ ORDER_KEYWORDS = {
     'buy': ['buy'],
     'attack': ['attack'],
     'teleport': ['teleport'],
-    'heal': ['heal', 'cure']
+    'heal': ['heal', 'cure'],
+    'secure': ['secure'],
+    'ally': ['ally'],
+    'enemy': ['enemy'],
+    'neutral': ['neutral']
 }
 
 
@@ -604,6 +702,18 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['heal']):
             order = parse_heal_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['secure']):
+            order = parse_secure_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['ally']):
+            order = parse_ally_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['enemy']):
+            order = parse_enemy_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['neutral']):
+            order = parse_neutral_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

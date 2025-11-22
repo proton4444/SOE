@@ -16,7 +16,8 @@ from spoils_engine.models import (
     UnitType, ShipType, RoadQuality
 )
 from spoils_engine.orders import (
-    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder
+    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder,
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -810,7 +811,98 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
 
 
 # ============================================================================
-# PHASE 7: CLEANUP
+# PHASE 7: LOCATION CONTROL & DIPLOMACY
+# ============================================================================
+
+def process_secure(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process SECURE orders for location control."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, SecureOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+
+            # Get actor's current location
+            city_id = actor.location_city_id
+            city = game_state.world_map.cities.get(city_id)
+            if not city:
+                continue
+
+            faction = game_state.factions.get(player_id)
+            if not faction:
+                continue
+
+            # Check if location is already secured by someone else
+            for other_faction in game_state.factions.values():
+                if other_faction.id != player_id and city_id in other_faction.secured_city_ids:
+                    turn_log.add("secure", player_id, "secure_failed",
+                                f"{actor.name}: {city.name} already secured by {other_faction.name}",
+                                location=city_id, character_id=actor.id, success=False)
+                    continue
+
+            # Secure the location
+            faction.secured_city_ids.add(city_id)
+            turn_log.add("secure", player_id, "secure",
+                        f"{actor.name} secured {city.name}",
+                        location=city_id, character_id=actor.id)
+
+
+def process_diplomacy(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process ALLY, ENEMY, and NEUTRAL diplomacy orders."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            faction = game_state.factions.get(player_id)
+            if not faction:
+                continue
+
+            if isinstance(order, AllyOrder):
+                if order.warnings or not order.target_faction_id:
+                    continue
+
+                # Add to allies, remove from enemies
+                faction.allies.add(order.target_faction_id)
+                faction.enemies.discard(order.target_faction_id)
+
+                target_faction = game_state.factions.get(order.target_faction_id)
+                if target_faction:
+                    turn_log.add("diplomacy", player_id, "ally",
+                                f"Declared {target_faction.name} as ally")
+
+            elif isinstance(order, EnemyOrder):
+                if order.warnings or not order.target_faction_id:
+                    continue
+
+                # Add to enemies, remove from allies
+                faction.enemies.add(order.target_faction_id)
+                faction.allies.discard(order.target_faction_id)
+
+                target_faction = game_state.factions.get(order.target_faction_id)
+                if target_faction:
+                    turn_log.add("diplomacy", player_id, "enemy",
+                                f"Declared {target_faction.name} as enemy")
+
+            elif isinstance(order, NeutralOrder):
+                if order.warnings or not order.target_faction_id:
+                    continue
+
+                # Remove from both allies and enemies
+                faction.allies.discard(order.target_faction_id)
+                faction.enemies.discard(order.target_faction_id)
+
+                target_faction = game_state.factions.get(order.target_faction_id)
+                if target_faction:
+                    turn_log.add("diplomacy", player_id, "neutral",
+                                f"Set diplomatic stance to neutral with {target_faction.name}")
+
+
+# ============================================================================
+# PHASE 8: CLEANUP
 # ============================================================================
 
 def cleanup_turn(game_state: GameState):
@@ -877,7 +969,11 @@ def run_turn(
     # Phase 6: Income & Upkeep
     process_income_and_upkeep(game_state, turn_log)
 
-    # Phase 7: Cleanup
+    # Phase 7: Location Control & Diplomacy
+    process_secure(orders_by_player, game_state, turn_log)
+    process_diplomacy(orders_by_player, game_state, turn_log)
+
+    # Phase 8: Cleanup
     cleanup_turn(game_state)
 
     return (game_state, turn_log)
