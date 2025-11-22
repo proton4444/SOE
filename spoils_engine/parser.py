@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder
 )
 
 
@@ -680,6 +680,82 @@ def parse_neutral_order(sentence: str, game_state: GameState, player_id: str) ->
     return None
 
 
+def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AssignOrder]:
+    """Parse an assign/give order (simplified)."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(AssignOrder)
+
+    # Pattern: "have <donor> assign/give <quantity> <type> to <recipient>"
+    # Example: "have Joe give 100 soldiers to Bill"
+    match = re.search(r'have\s+(.+?)\s+(?:assign|give)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+to\s+(.+)', sentence)
+    if match:
+        donor_name = match.group(1).strip()
+        quantity = int(match.group(2))
+        unit_or_gold = match.group(3).strip().lower()
+        recipient_name = match.group(4).strip()
+
+        donor_resolved = resolve_character(donor_name, game_state, player_id)
+        if not donor_resolved.found:
+            parser.add_warning(order, f"Donor '{donor_name}' not found")
+            return order
+
+        recipient_resolved = resolve_character(recipient_name, game_state, player_id)
+        if not recipient_resolved.found:
+            parser.add_warning(order, f"Recipient '{recipient_name}' not found")
+            return order
+
+        order.donor_id = donor_resolved.entity_id
+        order.recipient_id = recipient_resolved.entity_id
+
+        if unit_or_gold == 'gold':
+            order.gold_amount = quantity
+        elif unit_or_gold == 'soldier':
+            order.unit_type = "SOLDIER"
+            order.unit_count = quantity
+        elif unit_or_gold == 'sailor':
+            order.unit_type = "SAILOR"
+            order.unit_count = quantity
+        elif unit_or_gold == 'worker':
+            order.unit_type = "WORKER"
+            order.unit_count = quantity
+
+        return order
+
+    # Pattern: "assign/give <quantity> <type> to <recipient>" (implicit leader as donor)
+    match = re.search(r'^(?:assign|give)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+to\s+(.+)', sentence)
+    if match:
+        quantity = int(match.group(1))
+        unit_or_gold = match.group(2).strip().lower()
+        recipient_name = match.group(3).strip()
+
+        if not parser.resolve_actor(order, None):  # Use leader as donor
+            return order
+        order.donor_id = order.player_id  # Will be resolved to leader in engine
+
+        recipient_resolved = resolve_character(recipient_name, game_state, player_id)
+        if not recipient_resolved.found:
+            parser.add_warning(order, f"Recipient '{recipient_name}' not found")
+            return order
+
+        order.recipient_id = recipient_resolved.entity_id
+
+        if unit_or_gold == 'gold':
+            order.gold_amount = quantity
+        elif unit_or_gold == 'soldier':
+            order.unit_type = "SOLDIER"
+            order.unit_count = quantity
+        elif unit_or_gold == 'sailor':
+            order.unit_type = "SAILOR"
+            order.unit_count = quantity
+        elif unit_or_gold == 'worker':
+            order.unit_type = "WORKER"
+            order.unit_count = quantity
+
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -697,7 +773,8 @@ ORDER_KEYWORDS = {
     'secure': ['secure'],
     'ally': ['ally'],
     'enemy': ['enemy'],
-    'neutral': ['neutral']
+    'neutral': ['neutral'],
+    'assign': ['assign', 'give']
 }
 
 
@@ -762,6 +839,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['neutral']):
             order = parse_neutral_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['assign']):
+            order = parse_assign_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

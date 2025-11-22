@@ -275,6 +275,32 @@ class NeutralOrder(Order):
 
 
 # ============================================================================
+# UNIT MANAGEMENT ORDERS
+# ============================================================================
+
+@dataclass
+class AssignOrder(Order):
+    """
+    Assign/Give units or gold to another character.
+
+    Attributes:
+        donor_id: Character giving the units/gold
+        recipient_id: Character receiving the units/gold
+        unit_type: Type of unit to transfer (soldier/sailor/worker) or None for gold
+        unit_count: Number of units to transfer
+        gold_amount: Amount of gold to transfer
+    """
+    donor_id: str = ""
+    recipient_id: str = ""
+    unit_type: str = ""  # UnitType or empty string
+    unit_count: int = 0
+    gold_amount: int = 0
+
+    def order_type(self) -> str:
+        return "ASSIGN"
+
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -303,6 +329,8 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "ALLY": AllyOrder,
         "ENEMY": EnemyOrder,
         "NEUTRAL": NeutralOrder,
+        "ASSIGN": AssignOrder,
+        "GIVE": AssignOrder,  # GIVE is synonym for ASSIGN
     }
 
     order_class = order_map.get(order_type.upper())

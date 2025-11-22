@@ -17,7 +17,7 @@ from spoils_engine.models import (
 )
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -933,6 +933,103 @@ def process_diplomacy(orders_by_player: Dict[str, List[Order]], game_state: Game
                                 f"Set diplomatic stance to neutral with {target_faction.name}")
 
 
+def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process ASSIGN/GIVE orders for unit/gold transfers."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, AssignOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            donor = game_state.characters.get(order.donor_id)
+            recipient = game_state.characters.get(order.recipient_id)
+
+            if not donor or not recipient:
+                continue
+
+            # Check same location
+            if donor.location_city_id != recipient.location_city_id:
+                turn_log.add("assign", player_id, "assign_failed",
+                            f"{donor.name}: {recipient.name} is not at the same location",
+                            character_id=donor.id, success=False)
+                continue
+
+            # Transfer gold
+            if order.gold_amount > 0:
+                faction = game_state.factions.get(player_id)
+                if faction and faction.treasury >= order.gold_amount:
+                    faction.treasury -= order.gold_amount
+                    # Note: In full version, would track gold per character
+                    # For alpha, just deduct from faction treasury
+                    turn_log.add("assign", player_id, "assign_gold",
+                                f"{donor.name} gave {order.gold_amount}g to {recipient.name}",
+                                character_id=donor.id)
+                else:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name}: insufficient gold",
+                                character_id=donor.id, success=False)
+                    continue
+
+            # Transfer units
+            if order.unit_count > 0 and order.unit_type:
+                # Find donor's unit stack
+                donor_stack = None
+                for stack in game_state.unit_stacks.values():
+                    if (stack.faction_id == player_id and
+                        stack.location_city_id == donor.location_city_id and
+                        stack.unit_type.name == order.unit_type):
+                        donor_stack = stack
+                        break
+
+                if not donor_stack:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name}: no {order.unit_type.lower()}s available",
+                                character_id=donor.id, success=False)
+                    continue
+
+                if donor_stack.count < order.unit_count:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name}: insufficient {order.unit_type.lower()}s (have {donor_stack.count}, need {order.unit_count})",
+                                character_id=donor.id, success=False)
+                    continue
+
+                # Transfer units
+                donor_stack.count -= order.unit_count
+
+                # Find or create recipient stack
+                recipient_stack = None
+                for stack in game_state.unit_stacks.values():
+                    if (stack.faction_id == player_id and
+                        stack.location_city_id == recipient.location_city_id and
+                        stack.unit_type.name == order.unit_type):
+                        recipient_stack = stack
+                        break
+
+                if recipient_stack:
+                    recipient_stack.count += order.unit_count
+                else:
+                    # Create new stack for recipient
+                    new_stack_id = f"stack_{len(game_state.unit_stacks) + 1}"
+                    new_stack = UnitStack(
+                        id=new_stack_id,
+                        faction_id=player_id,
+                        location_city_id=recipient.location_city_id,
+                        unit_type=UnitType[order.unit_type],
+                        count=order.unit_count
+                    )
+                    game_state.unit_stacks[new_stack_id] = new_stack
+
+                # Remove donor stack if empty
+                if donor_stack.count <= 0:
+                    del game_state.unit_stacks[donor_stack.id]
+
+                turn_log.add("assign", player_id, "assign_units",
+                            f"{donor.name} gave {order.unit_count} {order.unit_type.lower()}s to {recipient.name}",
+                            character_id=donor.id)
+
+
 # ============================================================================
 # PHASE 8: CLEANUP
 # ============================================================================
@@ -1001,9 +1098,10 @@ def run_turn(
     # Phase 6: Income & Upkeep
     process_income_and_upkeep(game_state, turn_log)
 
-    # Phase 7: Location Control & Diplomacy
+    # Phase 7: Location Control & Diplomacy & Unit Management
     process_secure(orders_by_player, game_state, turn_log)
     process_diplomacy(orders_by_player, game_state, turn_log)
+    process_assign(orders_by_player, game_state, turn_log)
 
     # Phase 8: Cleanup
     cleanup_turn(game_state)
