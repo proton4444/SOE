@@ -18,7 +18,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -1325,6 +1325,81 @@ def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                         character_id=actor.id)
 
 
+def process_build(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process BUILD/CONSTRUCT/MAKE orders to build items from resources."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, BuildOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            # Alpha: only support building galleys for now
+            # Future: catapults, weapons, armor, etc.
+            item_type = order.item_type.lower()
+
+            if item_type == "galley":
+                # Galleys require 200 wood each and must be built at a port
+                wood_per_galley = 200
+                total_wood_needed = wood_per_galley * order.count
+
+                # Check if at a port city
+                if not city.is_port:
+                    turn_log.add("build", player_id, "build_failed",
+                                f"{actor.name}: cannot build galleys at {city.name} (not a port city)",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Check if actor has enough wood
+                wood_available = actor.resources.get("wood", 0)
+                if wood_available < total_wood_needed:
+                    turn_log.add("build", player_id, "build_failed",
+                                f"{actor.name}: insufficient wood to build {order.count} galley(s) "
+                                f"(need {total_wood_needed}, have {wood_available})",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Consume wood
+                actor.resources["wood"] -= total_wood_needed
+
+                # Create galleys
+                for i in range(order.count):
+                    ship_id = f"ship_{len(game_state.ships) + 1}"
+                    new_ship = Ship(
+                        id=ship_id,
+                        faction_id=player_id,
+                        location_city_id=actor.location_city_id,
+                        ship_type=ShipType.GALLEY,
+                        capacity=550
+                    )
+                    game_state.ships[ship_id] = new_ship
+
+                turn_log.add("build", player_id, "build_success",
+                            f"{actor.name}: built {order.count} galley(s) at {city.name} "
+                            f"(consumed {total_wood_needed} wood)",
+                            character_id=actor.id)
+
+            elif item_type == "catapult":
+                # Future implementation: catapults require 4 wood each
+                turn_log.add("build", player_id, "build_failed",
+                            f"{actor.name}: building catapults not yet implemented in alpha",
+                            character_id=actor.id, success=False)
+
+            else:
+                turn_log.add("build", player_id, "build_failed",
+                            f"{actor.name}: unknown item type '{item_type}'",
+                            character_id=actor.id, success=False)
+
+
 def process_capture(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog, rng):
     """Process CAPTURE orders to take prisoners."""
     for player_id, orders in orders_by_player.items():
@@ -1624,6 +1699,7 @@ def run_turn(
     process_promote(orders_by_player, game_state, turn_log)
     process_tax(orders_by_player, game_state, turn_log)
     process_collect(orders_by_player, game_state, turn_log)
+    process_build(orders_by_player, game_state, turn_log)
     process_free(orders_by_player, game_state, turn_log)
     process_study(orders_by_player, game_state, turn_log, rng)
     process_teach(orders_by_player, game_state, turn_log, rng)

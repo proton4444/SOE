@@ -500,6 +500,26 @@ class CollectOrder(Order):
         return "COLLECT"
 
 
+@dataclass
+class BuildOrder(Order):
+    """
+    Build/construct items from raw materials.
+
+    Attributes:
+        actor_id: Character supervising the construction (lead engineer)
+        item_type: Type of item to build ("galley", "catapult", etc.)
+        count: Number of items to build
+        duration_days: Optional duration limit (0 = build until complete)
+    """
+    actor_id: str = ""
+    item_type: str = ""  # "galley", "catapult", etc.
+    count: int = 1
+    duration_days: int = 0  # 0 means no time limit (alpha: instant)
+
+    def order_type(self) -> str:
+        return "BUILD"
+
+
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
@@ -544,6 +564,9 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "SUMMON": SummonOrder,
         "COLLECT": CollectOrder,
         "GATHER": CollectOrder,  # GATHER is synonym for COLLECT
+        "BUILD": BuildOrder,
+        "CONSTRUCT": BuildOrder,  # CONSTRUCT is synonym for BUILD
+        "MAKE": BuildOrder,  # MAKE is synonym for BUILD
     }
 
     order_class = order_map.get(order_type.upper())

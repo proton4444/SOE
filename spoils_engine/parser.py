@@ -14,7 +14,7 @@ from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder
 )
 
 
@@ -1255,6 +1255,59 @@ def parse_collect_order(sentence: str, game_state: GameState, player_id: str) ->
     return None
 
 
+def parse_build_order(sentence: str, game_state: GameState, player_id: str) -> Optional[BuildOrder]:
+    """
+    Parse a BUILD/CONSTRUCT/MAKE order.
+
+    Examples:
+        - "Build 1 galley"
+        - "Have Engineer build 2 galleys"
+        - "Construct 5 catapults"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(BuildOrder)
+
+    # Pattern: "have <actor> build/construct/make <count> <item>"
+    match = re.search(r'have\s+(.+?)\s+(?:build|construct|make)\s+(\d+)\s+(galley|galleys|catapult|catapults)', sentence, re.IGNORECASE)
+    if match:
+        actor_name = match.group(1).strip()
+        count = int(match.group(2))
+        item = match.group(3).strip().lower()
+
+        # Normalize plural forms
+        if item.endswith('s'):
+            item = item[:-1]
+
+        actor_resolved = resolve_character(actor_name, game_state, player_id)
+        if not actor_resolved.found:
+            parser.add_warning(order, f"Actor '{actor_name}' not found")
+            return order
+
+        order.actor_id = actor_resolved.entity_id
+        order.item_type = item
+        order.count = count
+        return order
+
+    # Pattern: "build/construct/make <count> <item>" (implicit actor)
+    match = re.search(r'(?:build|construct|make)\s+(\d+)\s+(galley|galleys|catapult|catapults)', sentence, re.IGNORECASE)
+    if match:
+        count = int(match.group(1))
+        item = match.group(2).strip().lower()
+
+        # Normalize plural forms
+        if item.endswith('s'):
+            item = item[:-1]
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        order.item_type = item
+        order.count = count
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -1282,7 +1335,8 @@ ORDER_KEYWORDS = {
     'study': ['study'],
     'teach': ['teach'],
     'summon': ['summon'],
-    'collect': ['collect', 'gather']
+    'collect': ['collect', 'gather'],
+    'build': ['build', 'construct', 'make']
 }
 
 
@@ -1377,6 +1431,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['collect']):
             order = parse_collect_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['build']):
+            order = parse_build_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)
