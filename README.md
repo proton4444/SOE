@@ -11,7 +11,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-## Features (Alpha v0.2.0)
+## Features (Alpha v0.3.0)
 
 ### Implemented
 
@@ -20,9 +20,12 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Roads and sea lanes with quality ratings
 - JSON-based map files
 - Port cities for ship construction
+- Location security and access control
 
 ✅ **Factions & Characters**
-- Multiple player factions with diplomacy support (allies/enemies)
+- Multiple player factions with full diplomacy system
+- Ally/Enemy/Neutral diplomatic stances
+- Secured locations (territorial control)
 - Named characters with combat, magic, and religion skills
 - Character health system (0-100, affects skill effectiveness)
 - Character death and wounding in combat
@@ -32,20 +35,25 @@ This is an alpha implementation of a turn-based engine that processes English-li
 ✅ **Core Orders**
 - **Movement**: Land movement between cities (GO/MOVE/TRAVEL)
 - **Sailing**: Sea movement with ships (SAIL command)
+- **Flying**: Magical flight bypassing roads (FLY command)
 - **Recruiting**: Hire soldiers, sailors, and workers
 - **Buying ships**: Purchase galleys at ports
 - **Combat**: Simplified combat with character wounding/death
-- **Magic**: Teleportation spells
+- **Magic**: Teleportation and flight spells
 - **Healing**: HEAL/CURE commands using religion skill
+- **Location Control**: SECURE command for territorial control
+- **Diplomacy**: ALLY/ENEMY/NEUTRAL commands
 
 ✅ **Turn Processing**
-- Validation phase
-- Movement phase (land)
-- Sailing phase (sea)
-- Recruit & buy phase
-- Magic phase (teleport + heal)
-- Combat phase (with character casualties)
-- Income & upkeep phase
+- Phase 1: Validation
+- Phase 2: Movement (land)
+- Phase 2b: Sailing (sea)
+- Phase 3: Recruit & buy
+- Phase 4: Magic (teleport, fly, heal)
+- Phase 5: Combat (with character casualties)
+- Phase 6: Income & upkeep
+- Phase 7: Location control & diplomacy
+- Phase 8: Cleanup & natural healing
 
 ✅ **Economic System**
 - City income based on population
@@ -78,19 +86,35 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Turn processing
 - State inspection
 
+✅ **Diplomacy System**
+- ALLY command to declare allies
+- ENEMY command to declare enemies
+- NEUTRAL command to reset diplomatic stance
+- Diplomatic relationships tracked per faction
+- Foundation for access control based on alliances
+
+✅ **Location Control**
+- SECURE command to control locations
+- Only one faction can secure a location
+- Must attack to takeover secured locations
+- Secured cities tracked per faction
+- Foundation for taxation and access control
+
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
-- SECURE command for location control
-- Diplomacy commands (ALLY/ENEMY/NEUTRAL)
-- FLY command for magical flight
 - SUMMON spells for magical creatures
-- Resource gathering (MINE/COLLECT)
-- Construction (BUILD command)
-- Religion system (PRAY/BLESS/CURSE)
-- Character resurrection
-- Complex combat mechanics (retreat, morale, armor)
+- Resource gathering (MINE/COLLECT/GATHER)
+- Construction (BUILD/FORTIFY commands)
+- Religion system (PRAY/BLESS/CURSE spells)
+- Character resurrection via PRAY
+- Complex combat mechanics (retreat, morale, armor, siege weapons)
 - Advanced economy (TAX command)
+- Character training (STUDY/TEACH commands)
+- Unit management (ASSIGN/GIVE, NAME, PROMOTE)
+- Trading system (BUY/SELL for goods beyond ships)
+- Prisoner system (CAPTURE, FREE)
+- Conditional orders (IF statements)
 
 See `docs/alpha_scope.md` for full details.
 
@@ -179,6 +203,10 @@ Go to Riverton.
 Have Captain Ahab sail to Island City.
 Sail to Port Town.
 
+# Flying (Magic)
+Have Wizard Merlin fly to Distant City.
+Fly to Enemy Territory.
+
 # Recruiting
 Recruit 20 soldiers in Madegi Doy.
 Have Khan Tengri recruit 10 sailors.
@@ -195,6 +223,15 @@ Have Wizard Merlin teleport Emperor Marcus to Peshandi.
 # Healing
 Have Priest heal Hero One.
 Heal wounded soldiers.
+
+# Location Control
+Secure Madegi Doy.
+Have General secure this city.
+
+# Diplomacy
+Ally The Golden Empire.
+Enemy The Dark Kingdom.
+Neutral The Neutral Traders.
 
 # Comments (ignored)
 # This is a comment
