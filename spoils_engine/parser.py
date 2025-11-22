@@ -14,7 +14,7 @@ from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder
 )
 
 
@@ -1210,6 +1210,51 @@ def parse_summon_order(sentence: str, game_state: GameState, player_id: str) -> 
     return None
 
 
+def parse_collect_order(sentence: str, game_state: GameState, player_id: str) -> Optional[CollectOrder]:
+    """
+    Parse a COLLECT/GATHER order.
+
+    Examples:
+        - "Gather stone"
+        - "Collect wood for 5 days"
+        - "Have Engineer collect 40 wood"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(CollectOrder)
+
+    # Pattern: "have <actor> collect/gather <resource> [for <duration>]"
+    match = re.search(r'have\s+(.+?)\s+(?:collect|gather)\s+(wood|stone)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    if match:
+        actor_name = match.group(1).strip()
+        resource = match.group(2).strip().lower()
+        duration = int(match.group(3)) if match.group(3) else 7
+
+        actor_resolved = resolve_character(actor_name, game_state, player_id)
+        if not actor_resolved.found:
+            parser.add_warning(order, f"Actor '{actor_name}' not found")
+            return order
+
+        order.actor_id = actor_resolved.entity_id
+        order.resource_type = resource
+        order.duration_days = duration
+        return order
+
+    # Pattern: "collect/gather <resource> [for <duration>]" (implicit actor)
+    match = re.search(r'(?:collect|gather)\s+(wood|stone)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    if match:
+        resource = match.group(1).strip().lower()
+        duration = int(match.group(2)) if match.group(2) else 7
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        order.resource_type = resource
+        order.duration_days = duration
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -1236,7 +1281,8 @@ ORDER_KEYWORDS = {
     'free': ['free', 'release', 'discard', 'dismiss'],
     'study': ['study'],
     'teach': ['teach'],
-    'summon': ['summon']
+    'summon': ['summon'],
+    'collect': ['collect', 'gather']
 }
 
 
@@ -1328,6 +1374,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['summon']):
             order = parse_summon_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['collect']):
+            order = parse_collect_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

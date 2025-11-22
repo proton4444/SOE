@@ -477,6 +477,30 @@ class SummonOrder(Order):
 
 
 # ============================================================================
+# RESOURCE GATHERING ORDERS
+# ============================================================================
+
+@dataclass
+class CollectOrder(Order):
+    """
+    Collect/gather resources (wood or stone).
+
+    Attributes:
+        actor_id: Character supervising the gathering
+        resource_type: Type of resource to gather ("wood" or "stone")
+        duration_days: Number of days to gather (default 7)
+        target_amount: Optional target amount to gather (0 = use duration)
+    """
+    actor_id: str = ""
+    resource_type: str = ""  # "wood" or "stone"
+    duration_days: int = 7  # Default 1 week
+    target_amount: int = 0  # 0 means use duration instead
+
+    def order_type(self) -> str:
+        return "COLLECT"
+
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -518,6 +542,8 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "STUDY": StudyOrder,
         "TEACH": TeachOrder,
         "SUMMON": SummonOrder,
+        "COLLECT": CollectOrder,
+        "GATHER": CollectOrder,  # GATHER is synonym for COLLECT
     }
 
     order_class = order_map.get(order_type.upper())

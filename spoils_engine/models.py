@@ -55,6 +55,12 @@ class CreatureType(str, Enum):
     DEMON = "demon"          # 50 magic power
 
 
+class ResourceType(str, Enum):
+    """Types of resources that can be gathered."""
+    WOOD = "wood"      # Gathered in forests
+    STONE = "stone"    # Gathered in hills/mountains
+
+
 # ============================================================================
 # MAP & GEOGRAPHY
 # ============================================================================
@@ -191,6 +197,7 @@ class Character:
         religious_power_current: Current religious power available
         health: Health (0-100, 100 = perfect health)
         is_dead: Whether character is dead (health = 0)
+        resources: Dict mapping resource type to quantity (e.g., {"wood": 10, "stone": 5})
     """
     id: str
     name: str
@@ -208,6 +215,7 @@ class Character:
     religious_power_current: int = 0  # Max = religion_skill
     health: int = 100  # 0-100, 0 = dead
     is_dead: bool = False
+    resources: dict[str, int] = field(default_factory=dict)  # Resource inventory
 
     @property
     def max_magic_power(self) -> int:

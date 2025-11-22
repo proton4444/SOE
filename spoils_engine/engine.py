@@ -18,7 +18,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -1248,6 +1248,83 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                         character_id=actor.id)
 
 
+def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process COLLECT/GATHER orders to gather resources (wood, stone)."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, CollectOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            # Validate terrain for resource type
+            resource_type = order.resource_type.lower()
+            terrain_valid = False
+
+            if resource_type == "wood":
+                # Wood requires forest terrain
+                if "forest" in city.terrain or "woods" in city.terrain:
+                    terrain_valid = True
+                else:
+                    turn_log.add("collect", player_id, "collect_failed",
+                                f"{actor.name}: no forests available at {city.name} for wood gathering",
+                                character_id=actor.id, success=False)
+                    continue
+
+            elif resource_type == "stone":
+                # Stone requires hills or mountains
+                if "hills" in city.terrain or "mountains" in city.terrain or "mountain" in city.terrain:
+                    terrain_valid = True
+                else:
+                    turn_log.add("collect", player_id, "collect_failed",
+                                f"{actor.name}: no hills/mountains available at {city.name} for stone gathering",
+                                character_id=actor.id, success=False)
+                    continue
+
+            # Count workers at this location for this faction
+            worker_count = 0
+            for stack in game_state.unit_stacks.values():
+                if (stack.faction_id == player_id and
+                    stack.location_city_id == actor.location_city_id and
+                    stack.unit_type == UnitType.WORKER):
+                    worker_count += stack.count
+
+            if worker_count == 0:
+                turn_log.add("collect", player_id, "collect_failed",
+                            f"{actor.name}: no workers available to gather {resource_type}",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Calculate resource yield
+            # Wood: 3 per worker per day
+            # Stone: 2 per worker per day (harder work)
+            if resource_type == "wood":
+                daily_rate = 3
+            else:  # stone
+                daily_rate = 2
+
+            resources_gathered = worker_count * order.duration_days * daily_rate
+
+            # Add resources to character's inventory
+            if resource_type not in actor.resources:
+                actor.resources[resource_type] = 0
+            actor.resources[resource_type] += resources_gathered
+
+            turn_log.add("collect", player_id, "collect_success",
+                        f"{actor.name}: gathered {resources_gathered} {resource_type} at {city.name} "
+                        f"({worker_count} workers, {order.duration_days} days)",
+                        character_id=actor.id)
+
+
 def process_capture(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog, rng):
     """Process CAPTURE orders to take prisoners."""
     for player_id, orders in orders_by_player.items():
@@ -1546,6 +1623,7 @@ def run_turn(
     process_name(orders_by_player, game_state, turn_log)
     process_promote(orders_by_player, game_state, turn_log)
     process_tax(orders_by_player, game_state, turn_log)
+    process_collect(orders_by_player, game_state, turn_log)
     process_free(orders_by_player, game_state, turn_log)
     process_study(orders_by_player, game_state, turn_log, rng)
     process_teach(orders_by_player, game_state, turn_log, rng)
