@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
-    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder,
+    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder
 )
 
@@ -494,6 +494,50 @@ def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -
     return None
 
 
+def parse_fly_order(sentence: str, game_state: GameState, player_id: str) -> Optional[FlyOrder]:
+    """Parse a fly order (simplified)."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(FlyOrder)
+
+    # Pattern: "have <wizard> fly to <city>"
+    match = re.search(r'have\s+(.+?)\s+fly\s+to\s+(.+)', sentence)
+    if match:
+        wizard_name = match.group(1).strip()
+        city_name = match.group(2).strip()
+
+        wizard_resolved = resolve_character(wizard_name, game_state, player_id)
+        if not wizard_resolved.found:
+            parser.add_warning(order, f"Character '{wizard_name}' not found")
+            return order
+
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
+            return order
+
+        order.actor_id = wizard_resolved.entity_id
+        order.destination_city_id = city_resolved.entity_id
+        return order
+
+    # Pattern: "fly to <city>" (implicit leader)
+    match = re.search(r'^fly\s+to\s+(.+)', sentence)
+    if match:
+        city_name = match.group(1).strip()
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        city_resolved = resolve_city(city_name, game_state)
+        if not city_resolved.found:
+            parser.add_warning(order, f"City '{city_name}' not found")
+            return order
+
+        order.destination_city_id = city_resolved.entity_id
+        return order
+
+    return None
+
+
 def parse_heal_order(sentence: str, game_state: GameState, player_id: str) -> Optional[HealOrder]:
     """Parse a heal/cure order (simplified version)."""
     parser = OrderParserBase(game_state, player_id, sentence)
@@ -648,6 +692,7 @@ ORDER_KEYWORDS = {
     'buy': ['buy'],
     'attack': ['attack'],
     'teleport': ['teleport'],
+    'fly': ['fly'],
     'heal': ['heal', 'cure'],
     'secure': ['secure'],
     'ally': ['ally'],
@@ -699,6 +744,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['teleport']):
             order = parse_teleport_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['fly']):
+            order = parse_fly_order(sentence, game_state, player_id)
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['heal']):
             order = parse_heal_order(sentence, game_state, player_id)

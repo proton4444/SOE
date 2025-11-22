@@ -167,6 +167,22 @@ class TeleportOrder(Order):
 
 
 @dataclass
+class FlyOrder(Order):
+    """
+    Order a magic user to fly (self and group) to a destination.
+
+    Attributes:
+        actor_id: Magic user who will cast the spell (must be group leader)
+        destination_city_id: Destination city ID
+    """
+    actor_id: str = ""
+    destination_city_id: str = ""
+
+    def order_type(self) -> str:
+        return "FLY"
+
+
+@dataclass
 class HealOrder(Order):
     """
     Order a healer to heal wounded characters.
@@ -281,6 +297,7 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "BUY_SHIP": BuyShipOrder,
         "ATTACK": AttackOrder,
         "TELEPORT": TeleportOrder,
+        "FLY": FlyOrder,
         "HEAL": HealOrder,
         "SECURE": SecureOrder,
         "ALLY": AllyOrder,

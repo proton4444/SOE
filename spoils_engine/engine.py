@@ -16,7 +16,7 @@ from spoils_engine.models import (
     UnitType, ShipType, RoadQuality
 )
 from spoils_engine.orders import (
-    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, HealOrder,
+    Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder
 )
 from spoils_engine import config
@@ -601,6 +601,38 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
 
                 turn_log.add("magic", player_id, "teleport",
                             f"{wizard.name} teleported {target.name} from {old_city.name} to {dest_city.name}",
+                            location=dest_city.id, character_id=wizard.id)
+
+            # Process Fly
+            elif isinstance(order, FlyOrder):
+                if order.warnings:
+                    continue
+
+                wizard = game_state.characters.get(order.actor_id)
+                dest_city = game_state.world_map.cities.get(order.destination_city_id)
+
+                if not wizard or not dest_city:
+                    continue
+
+                # Simplified: Fixed cost for flight (ignores encumbrance for alpha)
+                power_cost = 10  # Simplified fixed cost
+
+                if wizard.magic_power_current < power_cost:
+                    order.warnings.append(f"Insufficient magic power (need {power_cost}, have {wizard.magic_power_current})")
+                    turn_log.add("magic", player_id, "fly_failed",
+                                f"{wizard.name} lacks magic power to fly",
+                                character_id=wizard.id, success=False)
+                    continue
+
+                # Deduct magic power
+                wizard.magic_power_current -= power_cost
+
+                # Fly the wizard
+                old_city = game_state.world_map.cities[wizard.location_city_id]
+                wizard.location_city_id = order.destination_city_id
+
+                turn_log.add("magic", player_id, "fly",
+                            f"{wizard.name} flew from {old_city.name} to {dest_city.name}",
                             location=dest_city.id, character_id=wizard.id)
 
             # Process Heal
