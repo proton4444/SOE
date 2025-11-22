@@ -343,6 +343,48 @@ class PromoteOrder(Order):
 
 
 # ============================================================================
+# PRISONER/COMBAT ORDERS
+# ============================================================================
+
+@dataclass
+class CaptureOrder(Order):
+    """
+    Attempt to capture enemy characters as prisoners.
+
+    Similar to ATTACK but tries to capture rather than kill.
+
+    Attributes:
+        actor_id: Character doing the capturing
+        target_ids: List of target character IDs to capture
+        target_names: Original names from text (for reporting)
+    """
+    actor_id: str = ""
+    target_ids: list[str] = field(default_factory=list)
+    target_names: list[str] = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "CAPTURE"
+
+
+@dataclass
+class FreeOrder(Order):
+    """
+    Free prisoners held by this character.
+
+    Attributes:
+        actor_id: Character freeing the prisoners
+        prisoner_ids: List of prisoner IDs to free
+        prisoner_names: Original names from text (for reporting)
+    """
+    actor_id: str = ""
+    prisoner_ids: list[str] = field(default_factory=list)
+    prisoner_names: list[str] = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "FREE"
+
+
+# ============================================================================
 # ECONOMIC ORDERS
 # ============================================================================
 
@@ -362,6 +404,56 @@ class TaxOrder(Order):
 
     def order_type(self) -> str:
         return "TAX"
+
+
+# ============================================================================
+# TRAINING ORDERS
+# ============================================================================
+
+@dataclass
+class StudyOrder(Order):
+    """
+    Study a skill to increase its level.
+
+    Costs 1 gold per week. Skills increase by 1-5 partial points per week.
+
+    Attributes:
+        actor_id: Character studying
+        skill_name: Skill to study (combat, magic, religion)
+        duration_weeks: Number of weeks to study (default 1)
+        target_level: Optional target level to reach
+    """
+    actor_id: str = ""
+    skill_name: str = ""  # "combat", "magic", "religion"
+    duration_weeks: int = 1
+    target_level: int = 0  # 0 means not set
+
+    def order_type(self) -> str:
+        return "STUDY"
+
+
+@dataclass
+class TeachOrder(Order):
+    """
+    Have one character teach another a skill.
+
+    No cost, but teacher must have higher skill level.
+
+    Attributes:
+        teacher_id: Character teaching
+        student_id: Character learning
+        skill_name: Skill to teach (combat, magic, religion)
+        duration_weeks: Number of weeks to teach (default 1)
+        target_level: Optional target level for student
+    """
+    teacher_id: str = ""
+    student_id: str = ""
+    skill_name: str = ""  # "combat", "magic", "religion"
+    duration_weeks: int = 1
+    target_level: int = 0  # 0 means not set
+
+    def order_type(self) -> str:
+        return "TEACH"
 
 
 # ============================================================================
@@ -386,6 +478,7 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "RECRUIT": RecruitOrder,
         "BUY_SHIP": BuyShipOrder,
         "ATTACK": AttackOrder,
+        "CAPTURE": CaptureOrder,
         "TELEPORT": TeleportOrder,
         "FLY": FlyOrder,
         "HEAL": HealOrder,
@@ -398,6 +491,12 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "NAME": NameOrder,
         "PROMOTE": PromoteOrder,
         "TAX": TaxOrder,
+        "FREE": FreeOrder,
+        "RELEASE": FreeOrder,  # RELEASE is synonym for FREE
+        "DISCARD": FreeOrder,  # DISCARD is synonym for FREE
+        "DISMISS": FreeOrder,  # DISMISS is synonym for FREE
+        "STUDY": StudyOrder,
+        "TEACH": TeachOrder,
     }
 
     order_class = order_map.get(order_type.upper())

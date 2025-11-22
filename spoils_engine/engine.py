@@ -17,7 +17,8 @@ from spoils_engine.models import (
 )
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
+    CaptureOrder, FreeOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -1188,6 +1189,99 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                         character_id=actor.id)
 
 
+def process_capture(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog, rng):
+    """Process CAPTURE orders to take prisoners."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, CaptureOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            # Simplified capture for alpha: if you have more power, you capture
+            # In full game: would do combat resolution with capture attempts
+            for i, target_id in enumerate(order.target_ids):
+                target = game_state.characters.get(target_id)
+                if not target or target.is_dead or target.is_prisoner:
+                    continue
+
+                # Check same location
+                if actor.location_city_id != target.location_city_id:
+                    turn_log.add("capture", player_id, "capture_failed",
+                                f"{actor.name}: {target.name} is not at this location",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Calculate power (simplified - use combat power calculation)
+                attacker_power = calculate_faction_power(game_state, player_id, actor.location_city_id)
+                defender_power = calculate_faction_power(game_state, target.faction_id, target.location_city_id)
+
+                # Capture check: 50% + power ratio bonus
+                capture_chance = 0.5 + (attacker_power / max(1, defender_power + attacker_power)) * 0.5
+
+                if rng.random() < capture_chance:
+                    # Successful capture
+                    target.is_prisoner = True
+                    target.captor_id = actor.id
+                    turn_log.add("capture", player_id, "capture_success",
+                                f"{actor.name}: captured {target.name}!",
+                                character_id=actor.id)
+                else:
+                    # Failed capture - minor damage to target
+                    damage = rng.randint(5, 15)
+                    target.health = max(0, target.health - damage)
+                    if target.health <= 0:
+                        target.is_dead = True
+                        turn_log.add("capture", player_id, "capture_killed",
+                                    f"{actor.name}: killed {target.name} during capture attempt",
+                                    character_id=actor.id)
+                    else:
+                        turn_log.add("capture", player_id, "capture_failed",
+                                    f"{actor.name}: failed to capture {target.name} (dealt {damage} damage)",
+                                    character_id=actor.id, success=False)
+
+
+def process_free(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process FREE/RELEASE orders to free prisoners."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, FreeOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            # Free all specified prisoners
+            for i, prisoner_id in enumerate(order.prisoner_ids):
+                prisoner = game_state.characters.get(prisoner_id)
+                if not prisoner:
+                    continue
+
+                # Check if this character is actually a prisoner held by this actor
+                if not prisoner.is_prisoner or prisoner.captor_id != actor.id:
+                    turn_log.add("free", player_id, "free_failed",
+                                f"{actor.name}: {prisoner.name} is not a prisoner held by you",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Free the prisoner
+                prisoner.is_prisoner = False
+                prisoner.captor_id = ""
+
+                turn_log.add("free", player_id, "free_success",
+                            f"{actor.name}: freed {prisoner.name}",
+                            character_id=actor.id)
+
+
 # ============================================================================
 # PHASE 8: CLEANUP
 # ============================================================================
@@ -1253,6 +1347,9 @@ def run_turn(
     # Phase 5: Combat
     process_combat(orders_by_player, game_state, turn_log, rng)
 
+    # Phase 5b: Capture (prisoner taking)
+    process_capture(orders_by_player, game_state, turn_log, rng)
+
     # Phase 6: Income & Upkeep
     process_income_and_upkeep(game_state, turn_log)
 
@@ -1263,6 +1360,7 @@ def run_turn(
     process_name(orders_by_player, game_state, turn_log)
     process_promote(orders_by_player, game_state, turn_log)
     process_tax(orders_by_player, game_state, turn_log)
+    process_free(orders_by_player, game_state, turn_log)
 
     # Phase 8: Cleanup
     cleanup_turn(game_state)

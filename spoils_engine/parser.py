@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
+    CaptureOrder, FreeOrder
 )
 
 
@@ -916,6 +917,135 @@ def parse_tax_order(sentence: str, game_state: GameState, player_id: str) -> Opt
     return None
 
 
+def parse_capture_order(sentence: str, game_state: GameState, player_id: str) -> Optional[CaptureOrder]:
+    """
+    Parse a CAPTURE order.
+
+    Examples:
+        - "Capture Jamu Penda"
+        - "Have Joe Flint capture Mary Tarrington and Billy The Kid"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(CaptureOrder)
+
+    # Pattern: "have <actor> capture <target(s)>"
+    # Example: "have Joe Flint capture Mary Tarrington"
+    match = re.search(r'have\s+(.+?)\s+capture\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        actor_name = match.group(1).strip()
+        targets_part = match.group(2).strip()
+
+        actor_resolved = resolve_character(actor_name, game_state, player_id)
+        if not actor_resolved.found:
+            parser.add_warning(order, f"Actor '{actor_name}' not found")
+            return order
+
+        order.actor_id = actor_resolved.entity_id
+
+        # Split targets by "and"
+        target_list = [n.strip() for n in re.split(r'\s+and\s+', targets_part, flags=re.IGNORECASE)]
+        for target_name in target_list:
+            # Remove trailing punctuation
+            target_name = re.sub(r'[.,;!?]+$', '', target_name)
+            target_resolved = resolve_character(target_name, game_state, player_id, enemy_ok=True)
+            if target_resolved.found:
+                order.target_ids.append(target_resolved.entity_id)
+                order.target_names.append(target_name)
+            else:
+                parser.add_warning(order, f"Target '{target_name}' not found")
+
+        return order
+
+    # Pattern: "capture <target(s)>" (implicit actor - use faction leader)
+    match = re.search(r'capture\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        targets_part = match.group(1).strip()
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        # Split targets by "and"
+        target_list = [n.strip() for n in re.split(r'\s+and\s+', targets_part, flags=re.IGNORECASE)]
+        for target_name in target_list:
+            # Remove trailing punctuation
+            target_name = re.sub(r'[.,;!?]+$', '', target_name)
+            target_resolved = resolve_character(target_name, game_state, player_id, enemy_ok=True)
+            if target_resolved.found:
+                order.target_ids.append(target_resolved.entity_id)
+                order.target_names.append(target_name)
+            else:
+                parser.add_warning(order, f"Target '{target_name}' not found")
+
+        return order
+
+    return None
+
+
+def parse_free_order(sentence: str, game_state: GameState, player_id: str) -> Optional[FreeOrder]:
+    """
+    Parse a FREE/RELEASE/DISCARD/DISMISS order.
+
+    Examples:
+        - "Free Wizard Yemishoka"
+        - "Have Joe Flint free 5 slaves"
+        - "Release all prisoners"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(FreeOrder)
+
+    # Pattern: "have <actor> free/release <prisoner(s)>"
+    # Example: "have Joe Flint free Mary"
+    match = re.search(r'have\s+(.+?)\s+(?:free|release|discard|dismiss)\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        actor_name = match.group(1).strip()
+        prisoners_part = match.group(2).strip()
+
+        actor_resolved = resolve_character(actor_name, game_state, player_id)
+        if not actor_resolved.found:
+            parser.add_warning(order, f"Actor '{actor_name}' not found")
+            return order
+
+        order.actor_id = actor_resolved.entity_id
+
+        # Split prisoners by "and"
+        prisoner_list = [n.strip() for n in re.split(r'\s+and\s+', prisoners_part, flags=re.IGNORECASE)]
+        for prisoner_name in prisoner_list:
+            # Remove trailing punctuation
+            prisoner_name = re.sub(r'[.,;!?]+$', '', prisoner_name)
+            prisoner_resolved = resolve_character(prisoner_name, game_state, player_id)
+            if prisoner_resolved.found:
+                order.prisoner_ids.append(prisoner_resolved.entity_id)
+                order.prisoner_names.append(prisoner_name)
+            else:
+                parser.add_warning(order, f"Prisoner '{prisoner_name}' not found")
+
+        return order
+
+    # Pattern: "free/release <prisoner(s)>" (implicit actor - use faction leader)
+    match = re.search(r'(?:free|release|discard|dismiss)\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        prisoners_part = match.group(1).strip()
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        # Split prisoners by "and"
+        prisoner_list = [n.strip() for n in re.split(r'\s+and\s+', prisoners_part, flags=re.IGNORECASE)]
+        for prisoner_name in prisoner_list:
+            # Remove trailing punctuation
+            prisoner_name = re.sub(r'[.,;!?]+$', '', prisoner_name)
+            prisoner_resolved = resolve_character(prisoner_name, game_state, player_id)
+            if prisoner_resolved.found:
+                order.prisoner_ids.append(prisoner_resolved.entity_id)
+                order.prisoner_names.append(prisoner_name)
+            else:
+                parser.add_warning(order, f"Prisoner '{prisoner_name}' not found")
+
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -927,6 +1057,7 @@ ORDER_KEYWORDS = {
     'recruit': ['recruit'],
     'buy': ['buy'],
     'attack': ['attack'],
+    'capture': ['capture'],
     'teleport': ['teleport'],
     'fly': ['fly'],
     'heal': ['heal', 'cure'],
@@ -937,7 +1068,8 @@ ORDER_KEYWORDS = {
     'assign': ['assign', 'give'],
     'name': ['name'],
     'promote': ['promote'],
-    'tax': ['tax']
+    'tax': ['tax'],
+    'free': ['free', 'release', 'discard', 'dismiss']
 }
 
 
@@ -1014,6 +1146,12 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['tax']):
             order = parse_tax_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['capture']):
+            order = parse_capture_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['free']):
+            order = parse_free_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

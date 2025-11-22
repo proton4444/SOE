@@ -169,6 +169,8 @@ class Character:
         location_city_id: Current location
         gender: Gender of character (male/female)
         title: Optional title (e.g., "primate", "bishop")
+        is_prisoner: Whether this character is a prisoner
+        captor_id: ID of character holding this prisoner (empty if not prisoner)
         movement_points: Movement remaining this turn
         combat_skill: Combat skill level (0-100)
         magic_skill: Magic skill level (0-100)
@@ -184,6 +186,8 @@ class Character:
     location_city_id: str
     gender: str = "male"  # "male" or "female"
     title: str = ""  # Optional title (e.g., "primate", "bishop")
+    is_prisoner: bool = False
+    captor_id: str = ""  # ID of character holding this prisoner
     movement_points: int = 10  # Reset each turn
     combat_skill: int = 0
     magic_skill: int = 0
