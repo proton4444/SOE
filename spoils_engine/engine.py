@@ -12,13 +12,13 @@ from collections import defaultdict
 import heapq
 
 from spoils_engine.models import (
-    GameState, Character, UnitStack, Ship, City,
-    UnitType, ShipType, RoadQuality
+    GameState, Character, UnitStack, Ship, City, SummonedCreature,
+    UnitType, ShipType, RoadQuality, CreatureType
 )
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -688,6 +688,65 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                     turn_log.add("magic", player_id, "heal",
                                 f"{healer.name} healed {target.name} from {old_health} to {target.health}",
                                 location=healer.location_city_id, character_id=healer.id)
+
+
+def process_summon(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process SUMMON orders to create magical creatures."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, SummonOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            summoner = game_state.characters.get(order.summoner_id)
+            if not summoner or summoner.is_dead:
+                continue
+
+            # Calculate total magic power needed
+            total_cost = 0
+            creature_costs = {
+                'skeleton': 1, 'zombie': 2, 'harpy': 5, 'minotaur': 10,
+                'griffin': 20, 'chimera': 30, 'dragon': 40, 'demon': 50
+            }
+
+            for creature_type, count in order.creature_counts.items():
+                cost_per = creature_costs.get(creature_type, 0)
+                total_cost += cost_per * count
+
+            # Check if summoner has enough magic power
+            if summoner.magic_power_current < total_cost:
+                turn_log.add("summon", player_id, "summon_failed",
+                            f"{summoner.name}: insufficient magic power (need {total_cost}, have {summoner.magic_power_current})",
+                            character_id=summoner.id, success=False)
+                continue
+
+            # Deduct magic power
+            summoner.magic_power_current -= total_cost
+
+            # Create creatures
+            for creature_type, count in order.creature_counts.items():
+                # Convert string to CreatureType enum
+                try:
+                    creature_enum = CreatureType[creature_type.upper()]
+                except KeyError:
+                    continue
+
+                creature_id = f"creature_{len(game_state.summoned_creatures) + 1}"
+                new_creature = SummonedCreature(
+                    id=creature_id,
+                    summoner_id=summoner.id,
+                    creature_type=creature_enum,
+                    count=count,
+                    expires_turn=0  # Alpha: never expires (simplified)
+                )
+
+                game_state.summoned_creatures[creature_id] = new_creature
+
+                turn_log.add("summon", player_id, "summon_success",
+                            f"{summoner.name}: summoned {count} {creature_type}(s) (cost {creature_costs.get(creature_type, 0) * count})",
+                            character_id=summoner.id)
 
 
 # ============================================================================
@@ -1467,8 +1526,9 @@ def run_turn(
     # Phase 3: Recruit & Buy
     process_recruit_and_buy(orders_by_player, game_state, turn_log, rng)
 
-    # Phase 4: Magic
+    # Phase 4: Magic & Summoning
     process_magic(orders_by_player, game_state, turn_log, rng)
+    process_summon(orders_by_player, game_state, turn_log)
 
     # Phase 5: Combat
     process_combat(orders_by_player, game_state, turn_log, rng)

@@ -14,7 +14,7 @@ from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder
+    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder
 )
 
 
@@ -1138,6 +1138,78 @@ def parse_teach_order(sentence: str, game_state: GameState, player_id: str) -> O
     return None
 
 
+def parse_summon_order(sentence: str, game_state: GameState, player_id: str) -> Optional[SummonOrder]:
+    """
+    Parse a SUMMON order.
+
+    Examples:
+        - "Summon 2 dragons"
+        - "Have Merlinus summon 1 demon and 2 griffins"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(SummonOrder)
+
+    # Creature types mapping
+    creature_types = ['skeleton', 'zombie', 'harpy', 'minotaur', 'griffin', 'chimera', 'dragon', 'demon']
+
+    # Pattern: "have <summoner> summon <creatures>"
+    match = re.search(r'have\s+(.+?)\s+summon\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        summoner_name = match.group(1).strip()
+        creatures_part = match.group(2).strip()
+
+        summoner_resolved = resolve_character(summoner_name, game_state, player_id)
+        if not summoner_resolved.found:
+            parser.add_warning(order, f"Summoner '{summoner_name}' not found")
+            return order
+
+        order.summoner_id = summoner_resolved.entity_id
+
+        # Parse creature list: "2 dragons and 1 griffin"
+        # Split by "and"
+        creature_phrases = [p.strip() for p in re.split(r'\s+and\s+', creatures_part, flags=re.IGNORECASE)]
+
+        for phrase in creature_phrases:
+            # Pattern: "<number> <creature_type>"
+            creature_match = re.search(r'(\d+)\s+(' + '|'.join(creature_types) + r')s?', phrase, re.IGNORECASE)
+            if creature_match:
+                count = int(creature_match.group(1))
+                creature_type = creature_match.group(2).strip().lower()
+                order.creature_counts[creature_type] = order.creature_counts.get(creature_type, 0) + count
+
+        if not order.creature_counts:
+            parser.add_warning(order, "No valid creatures specified")
+
+        return order
+
+    # Pattern: "summon <creatures>" (implicit summoner - use faction leader)
+    match = re.search(r'summon\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        creatures_part = match.group(1).strip()
+
+        if not parser.resolve_actor(order, None):
+            return order
+
+        order.summoner_id = order.actor_id  # Use the resolved actor as summoner
+
+        # Parse creature list
+        creature_phrases = [p.strip() for p in re.split(r'\s+and\s+', creatures_part, flags=re.IGNORECASE)]
+
+        for phrase in creature_phrases:
+            creature_match = re.search(r'(\d+)\s+(' + '|'.join(creature_types) + r')s?', phrase, re.IGNORECASE)
+            if creature_match:
+                count = int(creature_match.group(1))
+                creature_type = creature_match.group(2).strip().lower()
+                order.creature_counts[creature_type] = order.creature_counts.get(creature_type, 0) + count
+
+        if not order.creature_counts:
+            parser.add_warning(order, "No valid creatures specified")
+
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -1163,7 +1235,8 @@ ORDER_KEYWORDS = {
     'tax': ['tax'],
     'free': ['free', 'release', 'discard', 'dismiss'],
     'study': ['study'],
-    'teach': ['teach']
+    'teach': ['teach'],
+    'summon': ['summon']
 }
 
 
@@ -1252,6 +1325,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['teach']):
             order = parse_teach_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['summon']):
+            order = parse_summon_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

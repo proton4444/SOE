@@ -457,6 +457,26 @@ class TeachOrder(Order):
 
 
 # ============================================================================
+# MAGIC SUMMONING ORDERS
+# ============================================================================
+
+@dataclass
+class SummonOrder(Order):
+    """
+    Summon magical creatures.
+
+    Attributes:
+        summoner_id: Character summoning creatures
+        creature_counts: Dict mapping creature type name to count
+    """
+    summoner_id: str = ""
+    creature_counts: dict[str, int] = field(default_factory=dict)  # e.g., {"dragon": 2, "griffin": 1}
+
+    def order_type(self) -> str:
+        return "SUMMON"
+
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -497,6 +517,7 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "DISMISS": FreeOrder,  # DISMISS is synonym for FREE
         "STUDY": StudyOrder,
         "TEACH": TeachOrder,
+        "SUMMON": SummonOrder,
     }
 
     order_class = order_map.get(order_type.upper())

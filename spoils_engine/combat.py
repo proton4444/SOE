@@ -67,6 +67,12 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
         if ship.faction_id == faction_id and ship.location_city_id == city_id:
             base_power += ship.attack_value
 
+    # Add summoned creatures (they fight for their summoner)
+    for creature in game_state.summoned_creatures.values():
+        summoner = game_state.characters.get(creature.summoner_id)
+        if summoner and summoner.faction_id == faction_id and summoner.location_city_id == city_id:
+            base_power += creature.attack_value
+
     # Apply skill multiplier
     skill_multiplier = 1.0 + (best_combat_skill * config.COMBAT_SKILL_BONUS_PER_POINT)
     total_power = base_power * skill_multiplier

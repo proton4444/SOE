@@ -43,6 +43,18 @@ class ShipType(str, Enum):
     GALLEY = "galley"        # Basic war/transport ship
 
 
+class CreatureType(str, Enum):
+    """Types of summoned magical creatures."""
+    SKELETON = "skeleton"    # 1 magic power
+    ZOMBIE = "zombie"        # 2 magic power
+    HARPY = "harpy"          # 5 magic power
+    MINOTAUR = "minotaur"    # 10 magic power
+    GRIFFIN = "griffin"      # 20 magic power
+    CHIMERA = "chimera"      # 30 magic power
+    DRAGON = "dragon"        # 40 magic power
+    DEMON = "demon"          # 50 magic power
+
+
 # ============================================================================
 # MAP & GEOGRAPHY
 # ============================================================================
@@ -280,6 +292,72 @@ class Ship:
         return 0
 
 
+@dataclass
+class SummonedCreature:
+    """
+    A summoned magical creature.
+
+    Attributes:
+        id: Unique identifier
+        summoner_id: Character who summoned this creature
+        creature_type: Type of creature
+        count: Number of creatures
+        expires_turn: Turn number when creature(s) disappear (0 = never)
+    """
+    id: str
+    summoner_id: str
+    creature_type: CreatureType
+    count: int
+    expires_turn: int = 0  # 0 means never expires (for alpha simplification)
+
+    @property
+    def magic_cost(self) -> int:
+        """Magic power cost per creature."""
+        costs = {
+            CreatureType.SKELETON: 1,
+            CreatureType.ZOMBIE: 2,
+            CreatureType.HARPY: 5,
+            CreatureType.MINOTAUR: 10,
+            CreatureType.GRIFFIN: 20,
+            CreatureType.CHIMERA: 30,
+            CreatureType.DRAGON: 40,
+            CreatureType.DEMON: 50,
+        }
+        return costs.get(self.creature_type, 0)
+
+    @property
+    def attack_value(self) -> int:
+        """Total attack value of all creatures."""
+        # Creatures are powerful fighters
+        values = {
+            CreatureType.SKELETON: 2,
+            CreatureType.ZOMBIE: 3,
+            CreatureType.HARPY: 8,
+            CreatureType.MINOTAUR: 15,
+            CreatureType.GRIFFIN: 30,
+            CreatureType.CHIMERA: 45,
+            CreatureType.DRAGON: 60,
+            CreatureType.DEMON: 75,
+        }
+        return values.get(self.creature_type, 0) * self.count
+
+    @property
+    def defense_value(self) -> int:
+        """Total defense value of all creatures."""
+        # Creatures are hard to kill
+        values = {
+            CreatureType.SKELETON: 1,
+            CreatureType.ZOMBIE: 2,
+            CreatureType.HARPY: 6,
+            CreatureType.MINOTAUR: 12,
+            CreatureType.GRIFFIN: 25,
+            CreatureType.CHIMERA: 40,
+            CreatureType.DRAGON: 55,
+            CreatureType.DEMON: 70,
+        }
+        return values.get(self.creature_type, 0) * self.count
+
+
 # ============================================================================
 # GAME STATE
 # ============================================================================
@@ -298,6 +376,7 @@ class GameState:
         characters: Dict mapping character_id -> Character
         unit_stacks: Dict mapping unit_stack_id -> UnitStack
         ships: Dict mapping ship_id -> Ship
+        summoned_creatures: Dict mapping creature_id -> SummonedCreature
     """
     turn_number: int = 0
     world_map: WorldMap = field(default_factory=WorldMap)
@@ -305,6 +384,7 @@ class GameState:
     characters: dict[str, Character] = field(default_factory=dict)
     unit_stacks: dict[str, UnitStack] = field(default_factory=dict)
     ships: dict[str, Ship] = field(default_factory=dict)
+    summoned_creatures: dict[str, SummonedCreature] = field(default_factory=dict)
 
     def get_character_by_name(self, name: str, faction_id: Optional[str] = None) -> Optional[Character]:
         """
