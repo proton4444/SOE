@@ -17,7 +17,7 @@ from spoils_engine.models import (
 )
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -1030,6 +1030,164 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             character_id=donor.id)
 
 
+def process_name(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process NAME orders to convert units to named characters."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, NameOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            faction = game_state.factions.get(player_id)
+            if not faction:
+                continue
+
+            # Find a unit stack of the specified type for this faction
+            unit_stack = None
+            for stack in game_state.unit_stacks.values():
+                if (stack.faction_id == player_id and
+                    stack.unit_type.name == order.unit_type and
+                    stack.count > 0):
+                    unit_stack = stack
+                    break
+
+            if not unit_stack:
+                turn_log.add("name", player_id, "name_failed",
+                            f"No {order.unit_type.lower()}s available to name",
+                            success=False)
+                continue
+
+            # Check if name already exists
+            name_exists = any(char.name.lower() == order.new_name.lower()
+                            for char in game_state.characters.values())
+            if name_exists:
+                turn_log.add("name", player_id, "name_failed",
+                            f"Name '{order.new_name}' already exists",
+                            success=False)
+                continue
+
+            # Deduct 1 unit from stack
+            unit_stack.count -= 1
+
+            # Create new character
+            new_char_id = f"char_{len(game_state.characters) + 1}"
+            new_character = Character(
+                id=new_char_id,
+                name=order.new_name,
+                faction_id=player_id,
+                location_city_id=unit_stack.location_city_id,
+                gender=order.gender,
+                title="",  # No title by default
+                combat_skill=5,  # Basic skills for newly named units
+                magic_skill=0,
+                religion_skill=0,
+                health=100,
+                is_dead=False
+            )
+
+            game_state.characters[new_char_id] = new_character
+
+            # Remove stack if empty
+            if unit_stack.count <= 0:
+                del game_state.unit_stacks[unit_stack.id]
+
+            turn_log.add("name", player_id, "name_success",
+                        f"Named {order.gender} {order.unit_type.lower()} '{order.new_name}'",
+                        character_id=new_char_id)
+
+
+def process_promote(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process PROMOTE orders to change character titles."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, PromoteOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            # Promote all characters in the order
+            for i, char_id in enumerate(order.character_ids):
+                character = game_state.characters.get(char_id)
+                if not character:
+                    continue
+
+                old_title = character.title if character.title else "(untitled)"
+                character.title = order.new_title
+                new_title = order.new_title if order.new_title else "(untitled)"
+
+                turn_log.add("promote", player_id, "promote_success",
+                            f"{character.name}: promoted from {old_title} to {new_title}",
+                            character_id=char_id)
+
+
+def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process TAX orders to collect taxes from locations."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, TaxOrder):
+                continue
+
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+
+            city = game_state.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            # Check if location is secured by another faction
+            for faction in game_state.factions.values():
+                if (faction.id != player_id and
+                    actor.location_city_id in faction.secured_city_ids):
+                    turn_log.add("tax", player_id, "tax_failed",
+                                f"{actor.name}: {city.name} is secured by another faction",
+                                character_id=actor.id, success=False)
+                    continue
+
+            # Count soldiers at this location for this faction
+            soldier_count = 0
+            for stack in game_state.unit_stacks.values():
+                if (stack.faction_id == player_id and
+                    stack.location_city_id == actor.location_city_id and
+                    stack.unit_type == UnitType.SOLDIER):
+                    soldier_count += stack.count
+
+            if soldier_count == 0:
+                turn_log.add("tax", player_id, "tax_failed",
+                            f"{actor.name}: no soldiers available to collect taxes",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Calculate available taxes (simplified for alpha)
+            # Formula: ~1 gold per 4 residents per year, max 30 days accumulation
+            # = population / 4 / 365 * 30 = population * 0.0205
+            # Simplified: population / 50
+            available_taxes = max(1, city.population // 50)
+
+            # For alpha: simplified collection - instant, proportional to soldiers
+            # In full version: would be time-based
+            # Simple formula: each soldier can collect ~1 gold per 4 days
+            # For 1 week (7 days): soldier_count * 7 / 4 = soldier_count * 1.75
+            collection_rate = soldier_count * order.duration_days // 4
+            taxes_collected = min(available_taxes, max(1, collection_rate))
+
+            # Add to faction treasury
+            faction = game_state.factions.get(player_id)
+            if faction:
+                faction.treasury += taxes_collected
+
+            turn_log.add("tax", player_id, "tax_success",
+                        f"{actor.name}: collected {taxes_collected}g in taxes from {city.name} "
+                        f"({soldier_count} soldiers, {order.duration_days} days)",
+                        character_id=actor.id)
+
+
 # ============================================================================
 # PHASE 8: CLEANUP
 # ============================================================================
@@ -1098,10 +1256,13 @@ def run_turn(
     # Phase 6: Income & Upkeep
     process_income_and_upkeep(game_state, turn_log)
 
-    # Phase 7: Location Control & Diplomacy & Unit Management
+    # Phase 7: Location Control & Diplomacy & Unit Management & Economics
     process_secure(orders_by_player, game_state, turn_log)
     process_diplomacy(orders_by_player, game_state, turn_log)
     process_assign(orders_by_player, game_state, turn_log)
+    process_name(orders_by_player, game_state, turn_log)
+    process_promote(orders_by_player, game_state, turn_log)
+    process_tax(orders_by_player, game_state, turn_log)
 
     # Phase 8: Cleanup
     cleanup_turn(game_state)

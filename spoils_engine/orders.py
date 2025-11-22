@@ -301,6 +301,70 @@ class AssignOrder(Order):
 
 
 # ============================================================================
+# CHARACTER MANAGEMENT ORDERS
+# ============================================================================
+
+@dataclass
+class NameOrder(Order):
+    """
+    Name an unnamed unit, converting it to a character.
+
+    Attributes:
+        actor_id: Character issuing the order (group leader)
+        unit_type: Type of unit to name (soldier/sailor/worker)
+        gender: Gender of the new character (male/female)
+        new_name: Name to give the character (8-32 chars)
+    """
+    actor_id: str = ""
+    unit_type: str = ""  # UnitType
+    gender: str = ""  # male or female
+    new_name: str = ""
+
+    def order_type(self) -> str:
+        return "NAME"
+
+
+@dataclass
+class PromoteOrder(Order):
+    """
+    Promote/change the title of a named character.
+
+    Attributes:
+        character_ids: List of character IDs to promote
+        character_names: Original names from text (for reporting)
+        new_title: New title for the character(s)
+    """
+    character_ids: list[str] = field(default_factory=list)
+    character_names: list[str] = field(default_factory=list)
+    new_title: str = ""
+
+    def order_type(self) -> str:
+        return "PROMOTE"
+
+
+# ============================================================================
+# ECONOMIC ORDERS
+# ============================================================================
+
+@dataclass
+class TaxOrder(Order):
+    """
+    Collect taxes from a location.
+
+    Attributes:
+        actor_id: Character collecting taxes
+        city_id: City where taxes are collected (actor's location)
+        duration_days: Number of days to collect (alpha: simplified to 1 turn)
+    """
+    actor_id: str = ""
+    city_id: str = ""
+    duration_days: int = 7  # Default 1 week
+
+    def order_type(self) -> str:
+        return "TAX"
+
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -331,6 +395,9 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "NEUTRAL": NeutralOrder,
         "ASSIGN": AssignOrder,
         "GIVE": AssignOrder,  # GIVE is synonym for ASSIGN
+        "NAME": NameOrder,
+        "PROMOTE": PromoteOrder,
+        "TAX": TaxOrder,
     }
 
     order_class = order_map.get(order_type.upper())

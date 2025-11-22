@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder
+    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder
 )
 
 
@@ -756,6 +756,166 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
     return None
 
 
+def parse_name_order(sentence: str, game_state: GameState, player_id: str) -> Optional[NameOrder]:
+    """
+    Parse a NAME order.
+
+    Examples:
+        - "Name male soldier Joe Henley"
+        - "name female sailor Donna Majesti"
+        - "Have Jema Kendi recruit 1 sailor and name female sailor Donna Majesti"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(NameOrder)
+
+    # Pattern: "name <gender> <unit_type> <name>"
+    # Example: "name male soldier Joe Henley"
+    match = re.search(r'name\s+(male|female)\s+(soldier|sailor|worker)\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        gender = match.group(1).strip().lower()
+        unit_type = match.group(2).strip().lower()
+        new_name = match.group(3).strip()
+
+        # Remove punctuation at the end if any
+        new_name = re.sub(r'[.,;!?]+$', '', new_name)
+
+        # Validate name length (8-32 chars)
+        if len(new_name) < 8:
+            # Pad with random characters
+            import random
+            while len(new_name) < 8:
+                new_name += chr(random.randint(97, 122))  # a-z
+            parser.add_warning(order, f"Name too short, padded to: {new_name}")
+        elif len(new_name) > 32:
+            # Truncate
+            new_name = new_name[:32]
+            parser.add_warning(order, f"Name too long, truncated to: {new_name}")
+
+        # Find the group leader (actor is implicit - the faction's leader at some location)
+        # For simplicity, we'll use the player_id as actor and resolve in engine
+        order.actor_id = player_id
+        order.unit_type = unit_type.upper()
+        order.gender = gender
+        order.new_name = new_name
+
+        return order
+
+    return None
+
+
+def parse_promote_order(sentence: str, game_state: GameState, player_id: str) -> Optional[PromoteOrder]:
+    """
+    Parse a PROMOTE order.
+
+    Examples:
+        - "Promote Jim Thomas to Major"
+        - "Promote me to King"
+        - "Promote Joe Smith and Ken Jones to Captain"
+        - "Promote Jim Thomas to untitled"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(PromoteOrder)
+
+    # Pattern: "promote <name(s)> to <title>"
+    # Example: "promote Jim Thomas to Major"
+    # Also handles: "promote Joe Smith and Ken Jones to Captain"
+    match = re.search(r'promote\s+(.+?)\s+to\s+(.+)', sentence, re.IGNORECASE)
+    if match:
+        names_part = match.group(1).strip()
+        new_title = match.group(2).strip()
+
+        # Remove punctuation at the end
+        new_title = re.sub(r'[.,;!?]+$', '', new_title)
+
+        # Handle "untitled" as empty string
+        if new_title.lower() == "untitled":
+            new_title = ""
+
+        # Split names by "and" to handle multiple promotions
+        name_list = [n.strip() for n in re.split(r'\s+and\s+', names_part, flags=re.IGNORECASE)]
+
+        for name in name_list:
+            # Resolve character (can be "me" or a character name)
+            if name.lower() == "me":
+                # Find faction leader
+                leader = None
+                for char in game_state.characters.values():
+                    if char.faction_id == player_id:
+                        leader = char
+                        break
+                if leader:
+                    order.character_ids.append(leader.id)
+                    order.character_names.append(name)
+                else:
+                    parser.add_warning(order, f"Could not find faction leader")
+            else:
+                char_resolved = resolve_character(name, game_state, player_id)
+                if char_resolved.found:
+                    order.character_ids.append(char_resolved.entity_id)
+                    order.character_names.append(name)
+                else:
+                    parser.add_warning(order, f"Character '{name}' not found")
+
+        order.new_title = new_title
+        return order
+
+    return None
+
+
+def parse_tax_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TaxOrder]:
+    """
+    Parse a TAX order.
+
+    Examples:
+        - "tax"
+        - "tax for 2 weeks"
+        - "have Captain Jones tax for 14 days"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(TaxOrder)
+
+    # Pattern: "tax for <number> <unit>"
+    # Example: "tax for 2 weeks"
+    duration_days = 7  # Default 1 week
+
+    # Check for duration specification
+    duration_match = re.search(r'tax(?:\s+for\s+(\d+)\s+(day|days|week|weeks|hour|hours))?', sentence, re.IGNORECASE)
+    if duration_match and duration_match.group(1):
+        amount = int(duration_match.group(1))
+        unit = duration_match.group(2).lower()
+
+        if 'week' in unit:
+            duration_days = amount * 7
+        elif 'day' in unit:
+            duration_days = amount
+        elif 'hour' in unit:
+            # 12 daylight hours per day
+            duration_days = max(1, amount // 12)
+
+    # Pattern: "have <actor> tax..."
+    # Example: "have Captain Jones tax for 2 weeks"
+    match = re.search(r'have\s+(.+?)\s+tax', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        actor_resolved = resolve_character(actor_name, game_state, player_id)
+        if not actor_resolved.found:
+            parser.add_warning(order, f"Actor '{actor_name}' not found")
+            return order
+        order.actor_id = actor_resolved.entity_id
+        order.duration_days = duration_days
+        return order
+
+    # Pattern: "tax" (implicit actor - use faction leader)
+    if 'tax' in sentence:
+        # Use faction leader as implicit actor
+        if not parser.resolve_actor(order, None):
+            return order
+        order.duration_days = duration_days
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -774,7 +934,10 @@ ORDER_KEYWORDS = {
     'ally': ['ally'],
     'enemy': ['enemy'],
     'neutral': ['neutral'],
-    'assign': ['assign', 'give']
+    'assign': ['assign', 'give'],
+    'name': ['name'],
+    'promote': ['promote'],
+    'tax': ['tax']
 }
 
 
@@ -842,6 +1005,15 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['assign']):
             order = parse_assign_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['name']):
+            order = parse_name_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['promote']):
+            order = parse_promote_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['tax']):
+            order = parse_tax_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

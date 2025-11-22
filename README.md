@@ -11,7 +11,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-## Features (Alpha v0.3.0)
+## Features (Alpha v0.4.0)
 
 ### Implemented
 
@@ -43,6 +43,10 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Healing**: HEAL/CURE commands using religion skill
 - **Location Control**: SECURE command for territorial control
 - **Diplomacy**: ALLY/ENEMY/NEUTRAL commands
+- **Unit Transfers**: ASSIGN/GIVE commands for units and gold
+- **Character Management**: NAME command to convert units to characters
+- **Titles**: PROMOTE command to assign character titles
+- **Taxation**: TAX command to collect taxes from locations
 
 ✅ **Turn Processing**
 - Phase 1: Validation
@@ -109,12 +113,11 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Religion system (PRAY/BLESS/CURSE spells)
 - Character resurrection via PRAY
 - Complex combat mechanics (retreat, morale, armor, siege weapons)
-- Advanced economy (TAX command)
 - Character training (STUDY/TEACH commands)
-- Unit management (ASSIGN/GIVE, NAME, PROMOTE)
 - Trading system (BUY/SELL for goods beyond ships)
 - Prisoner system (CAPTURE, FREE)
 - Conditional orders (IF statements)
+- Advanced taxation (time-based accumulation, depletion tracking)
 
 See `docs/alpha_scope.md` for full details.
 
@@ -232,6 +235,24 @@ Have General secure this city.
 Ally The Golden Empire.
 Enemy The Dark Kingdom.
 Neutral The Neutral Traders.
+
+# Unit Transfers
+Have General give 100 soldiers to Captain.
+Assign 50 sailors to Admiral Jones.
+Give 500 gold to Lord Marcus.
+
+# Character Management
+Name male soldier Joe Henley.
+Name female sailor Donna Majesti.
+
+# Titles
+Promote Jim Thomas to Major.
+Promote me to King.
+Promote Joe Smith and Ken Jones to Captain.
+
+# Taxation
+Tax for 2 weeks.
+Have Captain Jones tax for 14 days.
 
 # Comments (ignored)
 # This is a comment
