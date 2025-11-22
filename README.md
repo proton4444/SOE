@@ -11,7 +11,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-## Features (Alpha v0.5.0)
+## Features (Alpha v0.6.0)
 
 ### Implemented
 
@@ -53,6 +53,9 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Prisoners**: FREE/RELEASE/DISCARD/DISMISS to release prisoners
 - **Training**: STUDY command to learn skills (costs gold)
 - **Teaching**: TEACH command for character-to-character training (free)
+- **Summoning**: SUMMON command to create magical creatures (costs magic power)
+- **Resource Gathering**: COLLECT/GATHER commands for wood and stone
+- **Construction**: BUILD/CONSTRUCT/MAKE commands to build ships from wood
 
 ✅ **Turn Processing**
 - Phase 1: Validation
@@ -125,12 +128,37 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Teacher must have higher skill level
 - Skills capped at 100
 
+✅ **Summoning System**
+- SUMMON command to create magical creatures
+- 8 creature types: skeleton, zombie, harpy, minotaur, griffin, chimera, dragon, demon
+- Magic power costs: 1-50 per creature (scales with power)
+- Creatures add to combat power (attack: 2-75, defense: 1-70)
+- Alpha: creatures never expire (simplified)
+- Creatures fight for their summoner
+
+✅ **Resource Gathering System**
+- COLLECT/GATHER commands for resources
+- Wood gathering: requires forest terrain (3/worker/day)
+- Stone gathering: requires hills/mountains (2/worker/day)
+- Workers required to gather resources
+- Resources stored in character inventory
+- Foundation for construction system
+
+✅ **Construction System**
+- BUILD/CONSTRUCT/MAKE commands to build items
+- Alpha: supports building galleys (ships)
+- Galleys require 200 wood each (1/5 of basic cost)
+- Must be at port city to build ships
+- Instant construction (alpha simplification)
+- Resources consumed from character inventory
+- Future: catapults, weapons, armor, fortifications
+
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
-- SUMMON spells for magical creatures
-- Resource gathering (MINE/COLLECT/GATHER)
-- Construction (BUILD/FORTIFY commands)
+- Advanced construction (BUILD catapults, weapons, armor)
+- Fortifications (FORTIFY/UNFORTIFY commands)
+- Mining for ore/iron (MINE command)
 - Religion system (PRAY/BLESS/CURSE spells)
 - Character resurrection via PRAY
 - Complex combat mechanics (retreat, morale, armor, siege weapons)
@@ -286,6 +314,20 @@ Study combat for 3 weeks.
 Have Joe study sailing to level 20.
 Have Master teach combat to Student.
 Teach Mike magic to level 10.
+
+# Summoning
+Summon 2 dragons.
+Have Wizard summon 5 skeletons and 3 zombies.
+
+# Resource Gathering
+Collect wood for 7 days.
+Gather stone.
+Have Engineer collect wood.
+
+# Construction
+Build 1 galley.
+Have Engineer build 2 galleys.
+Construct 1 galley.
 
 # Comments (ignored)
 # This is a comment
