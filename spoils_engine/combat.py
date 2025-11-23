@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-from spoils_engine.models import GameState, Character
+from spoils_engine.models import GameState, Character, Faction
 from spoils_engine import config
 
 
@@ -51,6 +51,10 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
     """
     base_power = 0.0
     best_combat_skill = 0
+    soldier_count = 0
+    weapon_count = 0
+    armor_count = 0
+    siege_power = 0
 
     # Add character combat skills (best one applies as multiplier)
     for char in game_state.characters.values():
@@ -61,6 +65,8 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
     for stack in game_state.unit_stacks.values():
         if stack.faction_id == faction_id and stack.location_city_id == city_id:
             base_power += stack.attack_value
+            if stack.unit_type.name == "SOLDIER":
+                soldier_count += stack.count
 
     # Add ship attack values
     for ship in game_state.ships.values():
@@ -74,8 +80,29 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
             base_power += creature.attack_value
 
     # Apply skill multiplier
+    # Apply equipment bonuses present on characters at this location
+    for char in game_state.characters.values():
+        if char.faction_id == faction_id and char.location_city_id == city_id:
+            weapon_count += char.resources.get("weapon", 0)
+            armor_count += char.resources.get("armor", 0)
+            siege_power += char.resources.get("catapult", 0)
+
+    if soldier_count > 0:
+        base_power += min(weapon_count, soldier_count) * 0.5
+        base_power += min(siege_power, soldier_count) * 3
+
     skill_multiplier = 1.0 + (best_combat_skill * config.COMBAT_SKILL_BONUS_PER_POINT)
-    total_power = base_power * skill_multiplier
+
+    blessing_bonus = 1.0 + (game_state.location_blessings.get(city_id, 0) / 100)
+    curse_penalty = 1.0 - (game_state.location_curses.get(city_id, 0) / 100)
+    city_fort_level = game_state.city_fortifications.get(city_id, 0)
+    fort_multiplier = 1.0 + (city_fort_level / 100)
+
+    total_power = base_power * skill_multiplier * blessing_bonus * max(0.5, curse_penalty)
+
+    # Fortifications only benefit defenders
+    if city_id in game_state.world_map.cities and city_id in game_state.factions.get(faction_id, Faction(faction_id, faction_id)).controlled_city_ids:
+        total_power *= fort_multiplier
 
     return total_power
 
@@ -182,6 +209,22 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
     Returns dict with counts of losses: {'units': X, 'ships': Y, 'characters_wounded': Z, 'characters_killed': W}
     """
     losses = {'units': 0, 'ships': 0, 'characters_wounded': 0, 'characters_killed': 0}
+
+    # Armor reduces casualties modestly
+    soldier_count = sum(
+        stack.count for stack in game_state.unit_stacks.values()
+        if stack.faction_id == faction_id and stack.location_city_id == city_id and stack.unit_type.name == "SOLDIER"
+    )
+    armor_available = sum(
+        char.resources.get("armor", 0) for char in game_state.characters.values()
+        if char.faction_id == faction_id and char.location_city_id == city_id
+    )
+    if soldier_count > 0:
+        armor_mitigation = 1 - min(armor_available, soldier_count) / (soldier_count * 4)
+    else:
+        armor_mitigation = 1
+
+    casualty_rate *= max(0.25, armor_mitigation)
 
     # Apply to characters (damage proportional to casualty rate)
     for char in game_state.characters.values():
