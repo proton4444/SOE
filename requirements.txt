@@ -1,0 +1,17 @@
+# Spoils of Empire - Core Dependencies
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Date/time handling
+python-dateutil>=2.8.2
+
+# Command parsing
+pyparsing>=3.1.0
