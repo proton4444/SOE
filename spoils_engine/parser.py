@@ -13,8 +13,10 @@ from dataclasses import dataclass
 from spoils_engine.models import GameState, UnitType, ShipType, Character
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder, MineOrder
+    SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder,
+    PromoteOrder, TaxOrder, CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder,
+    BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
+    RepeatOrder, ScryOrder
 )
 
 
@@ -588,6 +590,100 @@ def parse_heal_order(sentence: str, game_state: GameState, player_id: str) -> Op
     return None
 
 
+def parse_pray_order(sentence: str, game_state: GameState, player_id: str) -> Optional[PrayOrder]:
+    """Parse a pray order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(PrayOrder)
+
+    match = re.search(r'have\s+(.+?)\s+pray(?:\s+for\s+(.*))?', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        intent = match.group(2)
+        if intent:
+            order.intent = intent.strip()
+        return order
+
+    if re.search(r'^pray', sentence):
+        if not parser.resolve_actor(order, None):
+            return order
+        return order
+
+    return None
+
+
+def parse_bless_order(sentence: str, game_state: GameState, player_id: str) -> Optional[BlessOrder]:
+    """Parse a bless order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(BlessOrder)
+
+    match = re.search(r'have\s+(.+?)\s+bless\s+(.*)', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        city_resolved = resolve_city(match.group(2).strip(), game_state)
+        if city_resolved.found:
+            order.city_id = city_resolved.entity_id
+        return order
+
+    if re.search(r'^bless\s', sentence):
+        if not parser.resolve_actor(order, None):
+            return order
+        city_resolved = resolve_city(sentence.replace('bless', '').strip(), game_state)
+        if city_resolved.found:
+            order.city_id = city_resolved.entity_id
+        return order
+
+    return None
+
+
+def parse_curse_order(sentence: str, game_state: GameState, player_id: str) -> Optional[CurseOrder]:
+    """Parse a curse order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(CurseOrder)
+
+    match = re.search(r'have\s+(.+?)\s+curse\s+(.*)', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        city_resolved = resolve_city(match.group(2).strip(), game_state)
+        if city_resolved.found:
+            order.city_id = city_resolved.entity_id
+        return order
+
+    if re.search(r'^curse\s', sentence):
+        if not parser.resolve_actor(order, None):
+            return order
+        city_resolved = resolve_city(sentence.replace('curse', '').strip(), game_state)
+        if city_resolved.found:
+            order.city_id = city_resolved.entity_id
+        return order
+
+    return None
+
+
+def parse_resurrect_order(sentence: str, game_state: GameState, player_id: str) -> Optional[ResurrectOrder]:
+    """Parse a resurrection order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(ResurrectOrder)
+
+    match = re.search(r'resurrect\s+(.+)', sentence)
+    if match:
+        target_name = match.group(1).strip()
+        target_resolved = resolve_character(target_name, game_state)
+        order.target_name = target_name
+        order.target_id = target_resolved.entity_id
+        parser.resolve_actor(order, None)
+        if not target_resolved.found:
+            parser.add_warning(order, f"Target '{target_name}' not found")
+        return order
+
+    return None
+
+
 def parse_secure_order(sentence: str, game_state: GameState, player_id: str) -> Optional[SecureOrder]:
     """Parse a secure order."""
     parser = OrderParserBase(game_state, player_id, sentence)
@@ -605,6 +701,56 @@ def parse_secure_order(sentence: str, game_state: GameState, player_id: str) -> 
     # Pattern: "secure" (implicit leader)
     if re.search(r'^secure', sentence):
         if not parser.resolve_actor(order, None):  # Use leader
+            return order
+        return order
+
+    return None
+
+
+def parse_fortify_order(sentence: str, game_state: GameState, player_id: str) -> Optional[FortifyOrder]:
+    """Parse a fortify order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(FortifyOrder)
+
+    match = re.search(r'have\s+(.+?)\s+fortify(?:\s+(.*?))?$', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        target_city_text = match.group(2)
+        if target_city_text:
+            city_resolved = resolve_city(target_city_text, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+        return order
+
+    if re.search(r'^fortify', sentence):
+        if not parser.resolve_actor(order, None):
+            return order
+        return order
+
+    return None
+
+
+def parse_unfortify_order(sentence: str, game_state: GameState, player_id: str) -> Optional[UnfortifyOrder]:
+    """Parse an unfortify order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(UnfortifyOrder)
+
+    match = re.search(r'have\s+(.+?)\s+unfortify(?:\s+(.*?))?$', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        target_city_text = match.group(2)
+        if target_city_text:
+            city_resolved = resolve_city(target_city_text, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+        return order
+
+    if re.search(r'^unfortify', sentence):
+        if not parser.resolve_actor(order, None):
             return order
         return order
 
@@ -1353,6 +1499,90 @@ def parse_mine_order(sentence: str, game_state: GameState, player_id: str) -> Op
     return None
 
 
+def parse_trade_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TradeOrder]:
+    """Parse buy/sell trade orders."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(TradeOrder)
+
+    match = re.search(r'have\s+(.+?)\s+(buy|sell)\s+(\d+)\s+([a-z]+)', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        order.action = match.group(2)
+        order.amount = int(match.group(3))
+        order.resource_type = match.group(4)
+        return order
+
+    match = re.search(r'^(buy|sell)\s+(\d+)\s+([a-z]+)', sentence)
+    if match:
+        order.action = match.group(1)
+        order.amount = int(match.group(2))
+        order.resource_type = match.group(3)
+        parser.resolve_actor(order, None)
+        return order
+
+    return None
+
+
+def parse_await_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AwaitOrder]:
+    """Parse an await/wait order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(AwaitOrder)
+
+    match = re.search(r'(?:await|wait)\s+(\d+)', sentence)
+    if match:
+        parser.resolve_actor(order, None)
+        order.duration_days = int(match.group(1))
+        return order
+
+    return None
+
+
+def parse_repeat_order(sentence: str, game_state: GameState, player_id: str) -> Optional[RepeatOrder]:
+    """Parse a repeat order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(RepeatOrder)
+
+    match = re.search(r'repeat\s+(\d+)', sentence)
+    if match:
+        parser.resolve_actor(order, None)
+        order.times = int(match.group(1))
+        return order
+
+    if sentence.strip() == 'repeat':
+        parser.resolve_actor(order, None)
+        return order
+
+    return None
+
+
+def parse_scry_order(sentence: str, game_state: GameState, player_id: str) -> Optional[ScryOrder]:
+    """Parse a scry order."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(ScryOrder)
+
+    match = re.search(r'have\s+(.+?)\s+scry\s+(.*)', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        city_resolved = resolve_city(match.group(2).strip(), game_state)
+        if city_resolved.found:
+            order.city_id = city_resolved.entity_id
+        return order
+
+    match = re.search(r'^scry\s+(.*)', sentence)
+    if match:
+        parser.resolve_actor(order, None)
+        city_resolved = resolve_city(match.group(1).strip(), game_state)
+        if city_resolved.found:
+            order.city_id = city_resolved.entity_id
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -1368,7 +1598,13 @@ ORDER_KEYWORDS = {
     'teleport': ['teleport'],
     'fly': ['fly'],
     'heal': ['heal', 'cure'],
+    'pray': ['pray'],
+    'bless': ['bless'],
+    'curse': ['curse'],
+    'resurrect': ['resurrect'],
     'secure': ['secure'],
+    'fortify': ['fortify'],
+    'unfortify': ['unfortify'],
     'ally': ['ally'],
     'enemy': ['enemy'],
     'neutral': ['neutral'],
@@ -1376,6 +1612,10 @@ ORDER_KEYWORDS = {
     'name': ['name'],
     'promote': ['promote'],
     'tax': ['tax'],
+    'trade': ['buy', 'sell', 'trade'],
+    'await': ['await', 'wait'],
+    'repeat': ['repeat'],
+    'scry': ['scry'],
     'free': ['free', 'release', 'discard', 'dismiss'],
     'study': ['study'],
     'teach': ['teach'],
@@ -1436,8 +1676,26 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['heal']):
             order = parse_heal_order(sentence, game_state, player_id)
 
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['pray']):
+            order = parse_pray_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['bless']):
+            order = parse_bless_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['curse']):
+            order = parse_curse_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['resurrect']):
+            order = parse_resurrect_order(sentence, game_state, player_id)
+
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['secure']):
             order = parse_secure_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['fortify']):
+            order = parse_fortify_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['unfortify']):
+            order = parse_unfortify_order(sentence, game_state, player_id)
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['ally']):
             order = parse_ally_order(sentence, game_state, player_id)
@@ -1459,6 +1717,18 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['tax']):
             order = parse_tax_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['trade']):
+            order = parse_trade_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['await']):
+            order = parse_await_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['repeat']):
+            order = parse_repeat_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['scry']):
+            order = parse_scry_order(sentence, game_state, player_id)
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['capture']):
             order = parse_capture_order(sentence, game_state, player_id)

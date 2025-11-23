@@ -17,8 +17,10 @@ from spoils_engine.models import (
 )
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
-    SecureOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder, PromoteOrder, TaxOrder,
-    CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder, BuildOrder, MineOrder
+    SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder,
+    PromoteOrder, TaxOrder, CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder,
+    BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
+    RepeatOrder, ScryOrder
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -689,6 +691,25 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                                 f"{healer.name} healed {target.name} from {old_health} to {target.health}",
                                 location=healer.location_city_id, character_id=healer.id)
 
+            elif isinstance(order, ScryOrder):
+                seer = game_state.characters.get(order.actor_id)
+                target_city = game_state.world_map.cities.get(order.city_id)
+                if not seer or not target_city:
+                    continue
+
+                power_cost = 3
+                if seer.magic_power_current < power_cost:
+                    turn_log.add("magic", player_id, "scry_failed",
+                                f"{seer.name} lacks magic power to scry {target_city.name}",
+                                character_id=seer.id, success=False)
+                    continue
+
+                seer.magic_power_current -= power_cost
+                defenders = game_state.get_faction_units_at_city(seer.faction_id, target_city.id)
+                turn_log.add("magic", player_id, "scry",
+                            f"{seer.name} scried {target_city.name}: spotted {len(defenders)} friendly unit stacks",
+                            location=target_city.id, character_id=seer.id)
+
 
 def process_summon(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
     """Process SUMMON orders to create magical creatures."""
@@ -747,6 +768,62 @@ def process_summon(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                 turn_log.add("summon", player_id, "summon_success",
                             f"{summoner.name}: summoned {count} {creature_type}(s) (cost {creature_costs.get(creature_type, 0) * count})",
                             character_id=summoner.id)
+
+
+def process_religion(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog, rng: random.Random):
+    """Process PRAY/BLESS/CURSE/RESURRECT orders."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if isinstance(order, PrayOrder):
+                priest = game_state.characters.get(order.actor_id)
+                if not priest or priest.religion_skill <= 0:
+                    continue
+                tithe = max(1, priest.religion_skill // 5)
+                faction = game_state.factions.get(player_id)
+                if faction:
+                    faction.treasury += tithe
+                turn_log.add("religion", player_id, "pray",
+                            f"{priest.name} prayed for {order.intent or 'aid'} and received {tithe}g in donations",
+                            character_id=priest.id)
+
+            elif isinstance(order, BlessOrder):
+                priest = game_state.characters.get(order.actor_id)
+                if not priest or priest.religion_skill <= 0:
+                    continue
+                city_id = order.city_id or priest.location_city_id
+                game_state.location_blessings[city_id] = max(game_state.location_blessings.get(city_id, 0), order.bonus)
+                city_name = game_state.world_map.cities.get(city_id).name if city_id in game_state.world_map.cities else city_id
+                turn_log.add("religion", player_id, "bless",
+                            f"{priest.name} blessed {city_name} (+{order.bonus}% power)",
+                            location=city_id, character_id=priest.id)
+
+            elif isinstance(order, CurseOrder):
+                priest = game_state.characters.get(order.actor_id)
+                if not priest or priest.religion_skill <= 0:
+                    continue
+                city_id = order.city_id or priest.location_city_id
+                game_state.location_curses[city_id] = max(game_state.location_curses.get(city_id, 0), order.penalty)
+                city_name = game_state.world_map.cities.get(city_id).name if city_id in game_state.world_map.cities else city_id
+                turn_log.add("religion", player_id, "curse",
+                            f"{priest.name} cursed {city_name} (-{order.penalty}% enemy power)",
+                            location=city_id, character_id=priest.id)
+
+            elif isinstance(order, ResurrectOrder):
+                priest = game_state.characters.get(order.actor_id)
+                target = game_state.characters.get(order.target_id)
+                if not priest or not target or not target.is_dead:
+                    continue
+                chance = min(0.9, priest.religion_skill / 100)
+                if rng.random() <= chance:
+                    target.is_dead = False
+                    target.health = max(50, target.health)
+                    turn_log.add("religion", player_id, "resurrect",
+                                f"{priest.name} resurrected {target.name}",
+                                character_id=priest.id)
+                else:
+                    turn_log.add("religion", player_id, "resurrect_failed",
+                                f"{priest.name} failed to resurrect {target.name}",
+                                character_id=priest.id, success=False)
 
 
 # ============================================================================
@@ -845,12 +922,17 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
 def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
     """Award income and deduct upkeep."""
     for faction in game_state.factions.values():
-        # Calculate income from controlled cities
+        # Calculate income from controlled cities (goes to tax pools until collected)
         income = 0
         for city_id in faction.controlled_city_ids:
             city = game_state.world_map.cities.get(city_id)
             if city:
-                income += config.get_income_for_city(city.population_band)
+                base_income = config.get_income_for_city(city.population_band)
+                pool_key = city.id
+                pool_cap = base_income * 4  # roughly 30 days of income
+                new_pool = min(pool_cap, game_state.tax_pools.get(pool_key, 0) + base_income)
+                game_state.tax_pools[pool_key] = new_pool
+                income += base_income
 
         # Calculate upkeep costs
         upkeep = 0.0
@@ -882,14 +964,19 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
         # Round upkeep to 1 decimal place
         upkeep = round(upkeep, 1)
 
-        # Apply income and upkeep
-        faction.treasury += income
+        # Apply income directly to treasury while also storing it in the pool for TAX
+        # commands that draw from the same funds. Income is added before upkeep so that
+        # wages can be paid out of current earnings.
+        if income > 0:
+            faction.treasury += income
+
+        # Apply upkeep (deducted after income)
         faction.treasury -= upkeep
 
         # Log events
         if income > 0:
             turn_log.add("income", faction.id, "income",
-                        f"Collected {income}g from controlled cities")
+                        f"Earned {income}g income (added to treasury and tax pools)")
 
         if upkeep > 0:
             turn_log.add("income", faction.id, "upkeep",
@@ -943,6 +1030,46 @@ def process_secure(orders_by_player: Dict[str, List[Order]], game_state: GameSta
             turn_log.add("secure", player_id, "secure",
                         f"{actor.name} secured {city.name}",
                         location=city_id, character_id=actor.id)
+
+
+def process_fortifications(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process FORTIFY and UNFORTIFY orders that modify city defenses."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if isinstance(order, (FortifyOrder, UnfortifyOrder)):
+                actor = game_state.characters.get(order.actor_id)
+                if not actor:
+                    continue
+
+                city_id = order.city_id or actor.location_city_id
+                city = game_state.world_map.cities.get(city_id)
+                if not city:
+                    continue
+
+                current = game_state.city_fortifications.get(city_id, city.fortification_level)
+                stone_needed = max(1, order.percent)
+
+                if isinstance(order, FortifyOrder):
+                    available_stone = actor.resources.get("stone", 0)
+                    if available_stone < stone_needed:
+                        turn_log.add("fortify", player_id, "fortify_failed",
+                                    f"{actor.name}: insufficient stone to fortify {city.name}",
+                                    character_id=actor.id, success=False)
+                        continue
+
+                    actor.resources["stone"] = available_stone - stone_needed
+                    new_level = min(100, current + order.percent)
+                    game_state.city_fortifications[city_id] = new_level
+                    city.fortification_level = new_level
+                    turn_log.add("fortify", player_id, "fortify",
+                                f"{actor.name}: fortified {city.name} to {new_level}%", character_id=actor.id)
+
+                else:
+                    new_level = max(0, current - order.percent)
+                    game_state.city_fortifications[city_id] = new_level
+                    city.fortification_level = new_level
+                    turn_log.add("fortify", player_id, "unfortify",
+                                f"{actor.name}: reduced fortifications in {city.name} to {new_level}%", character_id=actor.id)
 
 
 def process_diplomacy(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
@@ -1197,7 +1324,7 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
             if not actor:
                 continue
 
-            city = game_state.cities.get(actor.location_city_id)
+            city = game_state.world_map.cities.get(actor.location_city_id)
             if not city:
                 continue
 
@@ -1224,18 +1351,18 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                             character_id=actor.id, success=False)
                 continue
 
-            # Calculate available taxes (simplified for alpha)
-            # Formula: ~1 gold per 4 residents per year, max 30 days accumulation
-            # = population / 4 / 365 * 30 = population * 0.0205
-            # Simplified: population / 50
-            available_taxes = max(1, city.population // 50)
+            pool_key = city.id
+            available_taxes = game_state.tax_pools.get(pool_key, 0)
 
-            # For alpha: simplified collection - instant, proportional to soldiers
-            # In full version: would be time-based
-            # Simple formula: each soldier can collect ~1 gold per 4 days
-            # For 1 week (7 days): soldier_count * 7 / 4 = soldier_count * 1.75
+            if available_taxes <= 0:
+                turn_log.add("tax", player_id, "tax_failed",
+                            f"{actor.name}: no taxes accumulated at {city.name}",
+                            character_id=actor.id, success=False)
+                continue
+
             collection_rate = soldier_count * order.duration_days // 4
             taxes_collected = min(available_taxes, max(1, collection_rate))
+            game_state.tax_pools[pool_key] = max(0, available_taxes - taxes_collected)
 
             # Add to faction treasury
             faction = game_state.factions.get(player_id)
@@ -1244,8 +1371,68 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
 
             turn_log.add("tax", player_id, "tax_success",
                         f"{actor.name}: collected {taxes_collected}g in taxes from {city.name} "
-                        f"({soldier_count} soldiers, {order.duration_days} days)",
+                        f"({soldier_count} soldiers, {order.duration_days} days, {game_state.tax_pools.get(pool_key, 0)}g remains)",
                         character_id=actor.id)
+
+
+def process_trade(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process TRADE orders to buy or sell resources with trading skill discounts."""
+    for player_id, orders in orders_by_player.items():
+        faction = game_state.factions.get(player_id)
+        for order in orders:
+            if not isinstance(order, TradeOrder):
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or not faction:
+                continue
+
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            unit_price = order.price or 5
+            unit_price = max(1, int(unit_price * (1 - actor.trading_skill / 200)))
+
+            if order.action == "buy":
+                total_cost = unit_price * order.amount
+                if faction.treasury < total_cost:
+                    turn_log.add("trade", player_id, "trade_failed",
+                                f"{actor.name}: insufficient gold to buy {order.amount} {order.resource_type}",
+                                character_id=actor.id, success=False)
+                    continue
+
+                faction.treasury -= total_cost
+                actor.resources[order.resource_type] = actor.resources.get(order.resource_type, 0) + order.amount
+                turn_log.add("trade", player_id, "buy",
+                            f"{actor.name} bought {order.amount} {order.resource_type} in {city.name} for {total_cost}g",
+                            character_id=actor.id)
+            else:
+                available = actor.resources.get(order.resource_type, 0)
+                if available < order.amount:
+                    turn_log.add("trade", player_id, "trade_failed",
+                                f"{actor.name}: not enough {order.resource_type} to sell",
+                                character_id=actor.id, success=False)
+                    continue
+
+                actor.resources[order.resource_type] = available - order.amount
+                revenue = unit_price * order.amount
+                faction.treasury += revenue
+                turn_log.add("trade", player_id, "sell",
+                            f"{actor.name} sold {order.amount} {order.resource_type} in {city.name} for {revenue}g",
+                            character_id=actor.id)
+
+
+def process_queueing(orders_by_player: Dict[str, List[Order]], turn_log: TurnLog):
+    """Process AWAIT and REPEAT orders for logging/sequencing."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if isinstance(order, AwaitOrder):
+                turn_log.add("queue", player_id, "await",
+                            f"Waiting {order.duration_days} days", character_id=order.actor_id)
+            elif isinstance(order, RepeatOrder):
+                turn_log.add("queue", player_id, "repeat",
+                            f"Repeating last order x{order.times}", character_id=order.actor_id)
 
 
 def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
@@ -1312,7 +1499,8 @@ def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameSt
             else:  # stone
                 daily_rate = 2
 
-            resources_gathered = worker_count * order.duration_days * daily_rate
+            richness = city.resource_richness.get(resource_type, 1.0)
+            resources_gathered = int(worker_count * order.duration_days * daily_rate * richness)
 
             # Add resources to character's inventory
             if resource_type not in actor.resources:
@@ -1528,7 +1716,8 @@ def process_mine(orders_by_player: Dict[str, List[Order]], game_state: GameState
             }
 
             daily_rate = yield_rates.get(resource_type, 2)
-            resources_mined = worker_count * order.duration_days * daily_rate
+            richness = city.resource_richness.get(resource_type, 1.0)
+            resources_mined = int(worker_count * order.duration_days * daily_rate * richness)
 
             # Add resources to character's inventory
             if resource_type not in actor.resources:
@@ -1570,8 +1759,8 @@ def process_capture(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                     continue
 
                 # Calculate power (simplified - use combat power calculation)
-                attacker_power = calculate_faction_power(game_state, player_id, actor.location_city_id)
-                defender_power = calculate_faction_power(game_state, target.faction_id, target.location_city_id)
+                attacker_power = calculate_faction_power(player_id, actor.location_city_id, game_state)
+                defender_power = calculate_faction_power(target.faction_id, target.location_city_id, game_state)
 
                 # Capture check: 50% + power ratio bonus
                 capture_chance = 0.5 + (attacker_power / max(1, defender_power + attacker_power)) * 0.5
@@ -1761,6 +1950,23 @@ def process_teach(orders_by_player: Dict[str, List[Order]], game_state: GameStat
 
 
 # ============================================================================
+# PRISONERS
+# ============================================================================
+
+def process_prisoner_escape(game_state: GameState, turn_log: TurnLog, rng: random.Random):
+    """Allow prisoners a small chance to escape each turn."""
+    for prisoner in game_state.characters.values():
+        if not prisoner.is_prisoner or prisoner.is_dead:
+            continue
+
+        if rng.random() < 0.1:
+            prisoner.is_prisoner = False
+            prisoner.captor_id = ""
+            turn_log.add("prisoner", prisoner.faction_id, "escape",
+                        f"{prisoner.name} escaped captivity", character_id=prisoner.id)
+
+
+# ============================================================================
 # PHASE 8: CLEANUP
 # ============================================================================
 
@@ -1822,6 +2028,7 @@ def run_turn(
     # Phase 4: Magic & Summoning
     process_magic(orders_by_player, game_state, turn_log, rng)
     process_summon(orders_by_player, game_state, turn_log)
+    process_religion(orders_by_player, game_state, turn_log, rng)
 
     # Phase 5: Combat
     process_combat(orders_by_player, game_state, turn_log, rng)
@@ -1834,19 +2041,23 @@ def run_turn(
 
     # Phase 7: Location Control & Diplomacy & Unit Management & Economics & Training
     process_secure(orders_by_player, game_state, turn_log)
+    process_fortifications(orders_by_player, game_state, turn_log)
     process_diplomacy(orders_by_player, game_state, turn_log)
     process_assign(orders_by_player, game_state, turn_log)
     process_name(orders_by_player, game_state, turn_log)
     process_promote(orders_by_player, game_state, turn_log)
     process_tax(orders_by_player, game_state, turn_log)
+    process_trade(orders_by_player, game_state, turn_log)
     process_collect(orders_by_player, game_state, turn_log)
     process_mine(orders_by_player, game_state, turn_log)
     process_build(orders_by_player, game_state, turn_log)
     process_free(orders_by_player, game_state, turn_log)
     process_study(orders_by_player, game_state, turn_log, rng)
     process_teach(orders_by_player, game_state, turn_log, rng)
+    process_queueing(orders_by_player, turn_log)
 
     # Phase 8: Cleanup
+    process_prisoner_escape(game_state, turn_log, rng)
     cleanup_turn(game_state)
 
     return (game_state, turn_log)

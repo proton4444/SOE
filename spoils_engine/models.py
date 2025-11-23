@@ -89,6 +89,8 @@ class City:
     terrain: set[str] = field(default_factory=set)
     region: Optional[str] = None
     is_port: bool = False
+    fortification_level: int = 0  # 0-100 defensive bonus
+    resource_richness: dict[str, float] = field(default_factory=dict)
 
     def __hash__(self):
         return hash(self.id)
@@ -178,6 +180,7 @@ class Faction:
     treasury: int = 0
     allies: set[str] = field(default_factory=set)
     enemies: set[str] = field(default_factory=set)
+    fortifications: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -218,6 +221,7 @@ class Character:
     magic_power_current: int = 0  # Max = magic_skill
     religion_skill: int = 0
     religious_power_current: int = 0  # Max = religion_skill
+    trading_skill: int = 0
     health: int = 100  # 0-100, 0 = dead
     is_dead: bool = False
     resources: dict[str, int] = field(default_factory=dict)  # Resource inventory
@@ -398,6 +402,10 @@ class GameState:
     unit_stacks: dict[str, UnitStack] = field(default_factory=dict)
     ships: dict[str, Ship] = field(default_factory=dict)
     summoned_creatures: dict[str, SummonedCreature] = field(default_factory=dict)
+    city_fortifications: dict[str, int] = field(default_factory=dict)
+    tax_pools: dict[str, float] = field(default_factory=dict)
+    location_blessings: dict[str, int] = field(default_factory=dict)
+    location_curses: dict[str, int] = field(default_factory=dict)
 
     def get_character_by_name(self, name: str, faction_id: Optional[str] = None) -> Optional[Character]:
         """

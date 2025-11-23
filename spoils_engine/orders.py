@@ -202,6 +202,53 @@ class HealOrder(Order):
         return "HEAL"
 
 
+@dataclass
+class PrayOrder(Order):
+    """Pray for divine intervention or donations."""
+
+    actor_id: str = ""
+    intent: str = ""  # donation, protection, miracle
+
+    def order_type(self) -> str:
+        return "PRAY"
+
+
+@dataclass
+class BlessOrder(Order):
+    """Bless allies at a location to improve their morale and combat."""
+
+    actor_id: str = ""
+    city_id: str = ""
+    bonus: int = 5
+
+    def order_type(self) -> str:
+        return "BLESS"
+
+
+@dataclass
+class CurseOrder(Order):
+    """Curse enemies at a location to weaken their combat."""
+
+    actor_id: str = ""
+    city_id: str = ""
+    penalty: int = 5
+
+    def order_type(self) -> str:
+        return "CURSE"
+
+
+@dataclass
+class ResurrectOrder(Order):
+    """Attempt to resurrect a fallen character."""
+
+    actor_id: str = ""
+    target_id: str = ""
+    target_name: str = ""
+
+    def order_type(self) -> str:
+        return "RESURRECT"
+
+
 # ============================================================================
 # LOCATION CONTROL ORDERS
 # ============================================================================
@@ -220,6 +267,30 @@ class SecureOrder(Order):
 
     def order_type(self) -> str:
         return "SECURE"
+
+
+@dataclass
+class FortifyOrder(Order):
+    """Build or improve fortifications at the current location."""
+
+    actor_id: str = ""
+    city_id: str = ""
+    percent: int = 10
+
+    def order_type(self) -> str:
+        return "FORTIFY"
+
+
+@dataclass
+class UnfortifyOrder(Order):
+    """Remove fortifications from a location."""
+
+    actor_id: str = ""
+    city_id: str = ""
+    percent: int = 10
+
+    def order_type(self) -> str:
+        return "UNFORTIFY"
 
 
 # ============================================================================
@@ -340,6 +411,43 @@ class PromoteOrder(Order):
 
     def order_type(self) -> str:
         return "PROMOTE"
+
+
+@dataclass
+class TradeOrder(Order):
+    """Buy or sell goods leveraging trading skill."""
+
+    actor_id: str = ""
+    city_id: str = ""
+    resource_type: str = ""
+    amount: int = 0
+    action: str = "buy"  # buy or sell
+    price: int = 0
+
+    def order_type(self) -> str:
+        return "TRADE"
+
+
+@dataclass
+class AwaitOrder(Order):
+    """Wait/hold further actions for a number of days."""
+
+    actor_id: str = ""
+    duration_days: int = 7
+
+    def order_type(self) -> str:
+        return "AWAIT"
+
+
+@dataclass
+class RepeatOrder(Order):
+    """Repeat the prior valid order to support queued commands."""
+
+    actor_id: str = ""
+    times: int = 1
+
+    def order_type(self) -> str:
+        return "REPEAT"
 
 
 # ============================================================================
@@ -476,6 +584,17 @@ class SummonOrder(Order):
         return "SUMMON"
 
 
+@dataclass
+class ScryOrder(Order):
+    """Use magic to scout a location and reveal information."""
+
+    actor_id: str = ""
+    city_id: str = ""
+
+    def order_type(self) -> str:
+        return "SCRY"
+
+
 # ============================================================================
 # RESOURCE GATHERING ORDERS
 # ============================================================================
@@ -582,12 +701,22 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "STUDY": StudyOrder,
         "TEACH": TeachOrder,
         "SUMMON": SummonOrder,
+        "SCRY": ScryOrder,
         "COLLECT": CollectOrder,
         "GATHER": CollectOrder,  # GATHER is synonym for COLLECT
         "BUILD": BuildOrder,
         "CONSTRUCT": BuildOrder,  # CONSTRUCT is synonym for BUILD
         "MAKE": BuildOrder,  # MAKE is synonym for BUILD
         "MINE": MineOrder,
+        "FORTIFY": FortifyOrder,
+        "UNFORTIFY": UnfortifyOrder,
+        "PRAY": PrayOrder,
+        "BLESS": BlessOrder,
+        "CURSE": CurseOrder,
+        "RESURRECT": ResurrectOrder,
+        "TRADE": TradeOrder,
+        "AWAIT": AwaitOrder,
+        "REPEAT": RepeatOrder,
     }
 
     order_class = order_map.get(order_type.upper())
