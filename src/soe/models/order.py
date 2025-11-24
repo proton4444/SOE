@@ -25,6 +25,7 @@ class OrderType(Enum):
     TRAVEL = "travel"
     FLY = "fly"
     SAIL = "sail"
+    TELEPORT = "teleport"
 
     # Character management
     NAME = "name"
@@ -39,7 +40,19 @@ class OrderType(Enum):
 
     # Combat
     ATTACK = "attack"
+    CAPTURE = "capture"
+    ENSLAVE = "enslave"
+    KILL = "kill"
+    EXECUTE = "execute"
     FORTIFY = "fortify"
+    UNFORTIFY = "unfortify"
+    SECURE = "secure"
+
+    # Status
+    COMBATANT = "combatant"
+    NONCOM = "noncom"
+    LURK = "lurk"
+    UNLURK = "unlurk"
 
     # Other
     HALT = "halt"

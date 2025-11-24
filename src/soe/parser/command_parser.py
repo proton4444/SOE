@@ -75,6 +75,12 @@ class CommandParser:
             return self._parse_promote(tokens)
         elif command_word in ["GO", "MOVE", "TRAVEL"]:
             return self._parse_go(tokens, default_character)
+        elif command_word == "FLY":
+            return self._parse_fly(tokens, default_character)
+        elif command_word == "SAIL":
+            return self._parse_sail(tokens, default_character)
+        elif command_word == "TELEPORT":
+            return self._parse_teleport(tokens, default_character)
         elif command_word in ["HALT", "STOP"]:
             return self._parse_halt(tokens, default_character)
         elif command_word == "ASSIGN":
@@ -85,6 +91,28 @@ class CommandParser:
             return self._parse_get(tokens, default_character)
         elif command_word == "TAKE":
             return self._parse_take(tokens, default_character)
+        elif command_word == "ATTACK":
+            return self._parse_attack(tokens, default_character)
+        elif command_word == "CAPTURE":
+            return self._parse_capture(tokens, default_character)
+        elif command_word == "ENSLAVE":
+            return self._parse_enslave(tokens, default_character)
+        elif command_word in ["KILL", "EXECUTE"]:
+            return self._parse_kill(tokens, default_character)
+        elif command_word == "FORTIFY":
+            return self._parse_fortify(tokens, default_character)
+        elif command_word == "UNFORTIFY":
+            return self._parse_unfortify(tokens, default_character)
+        elif command_word == "SECURE":
+            return self._parse_secure(tokens, default_character)
+        elif command_word == "COMBATANT":
+            return self._parse_combatant(tokens, default_character)
+        elif command_word == "NONCOM":
+            return self._parse_noncom(tokens, default_character)
+        elif command_word == "LURK":
+            return self._parse_lurk(tokens, default_character)
+        elif command_word == "UNLURK":
+            return self._parse_unlurk(tokens, default_character)
         elif command_word == "HAVE":
             # "HAVE <character> <command>"
             return self._parse_have(tokens)
@@ -356,4 +384,185 @@ class CommandParser:
             player_id=player_id,
             order_type=parsed.command_type,
             parameters=parsed.parameters
+        )
+
+    def _parse_fly(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse FLY command - same as GO but with FLY type"""
+        # Find "TO" keyword
+        try:
+            to_idx = [t.upper() for t in tokens].index("TO")
+        except ValueError:
+            destination = " ".join(tokens[1:])
+            if not destination:
+                return None
+            return ParsedCommand(
+                command_type=OrderType.FLY,
+                character_name=default_character,
+                parameters={"destination": destination}
+            )
+
+        destination = " ".join(tokens[to_idx + 1:])
+        if not destination:
+            return None
+
+        return ParsedCommand(
+            command_type=OrderType.FLY,
+            character_name=default_character,
+            parameters={"destination": destination}
+        )
+
+    def _parse_sail(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse SAIL command"""
+        try:
+            to_idx = [t.upper() for t in tokens].index("TO")
+        except ValueError:
+            destination = " ".join(tokens[1:])
+            if not destination:
+                return None
+            return ParsedCommand(
+                command_type=OrderType.SAIL,
+                character_name=default_character,
+                parameters={"destination": destination}
+            )
+
+        destination = " ".join(tokens[to_idx + 1:])
+        if not destination:
+            return None
+
+        return ParsedCommand(
+            command_type=OrderType.SAIL,
+            character_name=default_character,
+            parameters={"destination": destination}
+        )
+
+    def _parse_teleport(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse TELEPORT command"""
+        try:
+            to_idx = [t.upper() for t in tokens].index("TO")
+        except ValueError:
+            destination = " ".join(tokens[1:])
+            if not destination:
+                return None
+            return ParsedCommand(
+                command_type=OrderType.TELEPORT,
+                character_name=default_character,
+                parameters={"destination": destination}
+            )
+
+        destination = " ".join(tokens[to_idx + 1:])
+        if not destination:
+            return None
+
+        return ParsedCommand(
+            command_type=OrderType.TELEPORT,
+            character_name=default_character,
+            parameters={"destination": destination}
+        )
+
+    def _parse_attack(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse ATTACK command. Syntax: ATTACK <target>"""
+        if len(tokens) < 2:
+            return None
+
+        target_name = " ".join(tokens[1:])
+        return ParsedCommand(
+            command_type=OrderType.ATTACK,
+            character_name=default_character,
+            parameters={"target_name": target_name}
+        )
+
+    def _parse_capture(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse CAPTURE command. Syntax: CAPTURE <target>"""
+        if len(tokens) < 2:
+            return None
+
+        target_name = " ".join(tokens[1:])
+        return ParsedCommand(
+            command_type=OrderType.CAPTURE,
+            character_name=default_character,
+            parameters={"target_name": target_name}
+        )
+
+    def _parse_enslave(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse ENSLAVE command. Syntax: ENSLAVE <target>"""
+        if len(tokens) < 2:
+            return None
+
+        target_name = " ".join(tokens[1:])
+        return ParsedCommand(
+            command_type=OrderType.ENSLAVE,
+            character_name=default_character,
+            parameters={"target_name": target_name}
+        )
+
+    def _parse_kill(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse KILL/EXECUTE command. Syntax: KILL <target>"""
+        if len(tokens) < 2:
+            return None
+
+        target_name = " ".join(tokens[1:])
+        return ParsedCommand(
+            command_type=OrderType.KILL,
+            character_name=default_character,
+            parameters={"target_name": target_name}
+        )
+
+    def _parse_fortify(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse FORTIFY command. Syntax: FORTIFY"""
+        return ParsedCommand(
+            command_type=OrderType.FORTIFY,
+            character_name=default_character,
+            parameters={}
+        )
+
+    def _parse_unfortify(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse UNFORTIFY command. Syntax: UNFORTIFY"""
+        return ParsedCommand(
+            command_type=OrderType.UNFORTIFY,
+            character_name=default_character,
+            parameters={}
+        )
+
+    def _parse_secure(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse SECURE command. Syntax: SECURE [location]"""
+        location_name = None
+        if len(tokens) > 1:
+            location_name = " ".join(tokens[1:])
+
+        return ParsedCommand(
+            command_type=OrderType.SECURE,
+            character_name=default_character,
+            parameters={"location_name": location_name}
+        )
+
+    def _parse_combatant(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse COMBATANT command. Syntax: COMBATANT"""
+        return ParsedCommand(
+            command_type=OrderType.COMBATANT,
+            character_name=default_character,
+            parameters={}
+        )
+
+    def _parse_noncom(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse NONCOM command. Syntax: NONCOM"""
+        return ParsedCommand(
+            command_type=OrderType.NONCOM,
+            character_name=default_character,
+            parameters={}
+        )
+
+    def _parse_lurk(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse LURK command. Syntax: LURK"""
+        return ParsedCommand(
+            command_type=OrderType.LURK,
+            character_name=default_character,
+            parameters={}
+        )
+
+    def _parse_unlurk(self, tokens: List[str], default_character: Optional[str]) -> Optional[ParsedCommand]:
+        """Parse UNLURK command. Syntax: UNLURK"""
+        return ParsedCommand(
+            command_type=OrderType.UNLURK,
+            character_name=default_character,
+            parameters={}
         )
