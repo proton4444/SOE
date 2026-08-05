@@ -13,7 +13,7 @@ from collections import defaultdict
 import heapq
 
 from spoils_engine.models import (
-    GameState, Character, UnitStack, Ship, City, SummonedCreature,
+    GameState, Character, UnitStack, Ship, SummonedCreature,
     UnitType, ShipType, RoadQuality, CreatureType
 )
 from spoils_engine.orders import (
@@ -25,6 +25,7 @@ from spoils_engine.orders import (
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
+from spoils_engine.parser import get_player_leader
 
 
 # ============================================================================
@@ -227,6 +228,22 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                     if not destination.is_port:
                         order.warnings.append(f"{destination.name} is not a port")
 
+            elif isinstance(order, AttackOrder):
+                faction = game_state.factions.get(player_id)
+                target = game_state.factions.get(order.target_faction_id)
+                if faction and target and target.id in faction.allies:
+                    order.warnings.append(
+                        f"{target.name} is your ally - declare them an enemy first"
+                    )
+
+            elif isinstance(order, (AwaitOrder, RepeatOrder)):
+                # Parsed and understood, but there is no cross-turn order queue
+                # to hold them yet, so say so rather than reporting a success
+                # the engine never delivered.
+                order.warnings.append(
+                    "Queued orders are not executed yet (planned for v0.9)"
+                )
+
             elif isinstance(order, RecruitOrder):
                 if not game_state.world_map.cities.get(order.city_id):
                     order.warnings.append("City not found")
@@ -293,7 +310,7 @@ def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameS
             path, cost = find_shortest_path(actor.location_city_id, order.destination_city_id, game_state)
 
             if not path or cost == float('inf'):
-                order.warnings.append(f"No path found to destination")
+                order.warnings.append("No path found to destination")
                 turn_log.add("movement", player_id, "move_failed",
                             f"{actor.name} could not find path to destination",
                             character_id=actor.id, success=False)
@@ -637,7 +654,7 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                 healer = game_state.characters.get(order.actor_id)
                 if not healer or healer.religion_skill <= 0:
                     turn_log.add("magic", player_id, "heal_failed",
-                                f"Healer has no religion skill",
+                                "Healer has no religion skill",
                                 character_id=order.actor_id, success=False)
                     continue
 
@@ -824,6 +841,32 @@ def process_religion(orders_by_player: Dict[str, List[Order]], game_state: GameS
 # PHASE 5: COMBAT
 # ============================================================================
 
+def defending_side(defender_id: str, attacker_id: str, city_id: str,
+                   game_state: GameState) -> List[str]:
+    """
+    Factions that fight alongside the defender at a location.
+
+    An ally joins only if it actually has fighting strength present, so a lone
+    envoy is not dragged into a battle it cannot influence. A faction allied to
+    both combatants stays out rather than fighting itself.
+    """
+    side = [defender_id]
+    defender = game_state.factions.get(defender_id)
+    if not defender:
+        return side
+
+    for ally_id in sorted(defender.allies):
+        if ally_id in (defender_id, attacker_id):
+            continue
+        ally = game_state.factions.get(ally_id)
+        if not ally or attacker_id in ally.allies:
+            continue
+        if calculate_faction_power(ally_id, city_id, game_state) > 0:
+            side.append(ally_id)
+
+    return side
+
+
 def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                    turn_log: TurnLog, rng: random.Random):
     """Process combat orders using CombatResolver."""
@@ -857,9 +900,14 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             location=city_id, character_id=attacker.id, success=False)
                 continue
 
-            # Calculate powers
+            # Calculate powers. The defender's allies present at the location
+            # stand with them, so their strength counts and they share the
+            # losses.
+            side = defending_side(defender_faction_id, attacker_player_id, city_id, game_state)
             attacker_power = calculate_faction_power(attacker_player_id, city_id, game_state)
-            defender_power = calculate_faction_power(defender_faction_id, city_id, game_state)
+            defender_power = sum(
+                calculate_faction_power(fid, city_id, game_state) for fid in side
+            )
 
             # Validate engagement
             if defender_power == 0:
@@ -884,29 +932,35 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
             attacker_losses = apply_casualties(
                 attacker_player_id, city_id, result.attacker_casualties, game_state, rng
             )
-            defender_losses = apply_casualties(
-                defender_faction_id, city_id, result.defender_casualties, game_state, rng
-            )
+            defender_losses = {
+                fid: apply_casualties(fid, city_id, result.defender_casualties, game_state, rng)
+                for fid in side
+            }
 
             # Log results
+            allies = [game_state.factions[f].name for f in side[1:] if f in game_state.factions]
+            with_allies = f" (aided by {', '.join(allies)})" if allies else ""
+
             if result.winner_id == attacker_player_id:
                 turn_log.add("combat", attacker_player_id, "victory",
-                            f"{attacker.name} defeated {attack_order.target_name} in {city.name} "
-                            f"(lost {attacker_losses['units']} units)",
+                            f"{attacker.name} defeated {attack_order.target_name}{with_allies} "
+                            f"in {city.name} (lost {attacker_losses['units']} units)",
                             location=city_id, character_id=attacker.id)
-                turn_log.add("combat", defender_faction_id, "defeat",
-                            f"Your forces were defeated by {attacker.name} in {city.name} "
-                            f"(lost {defender_losses['units']} units)",
-                            location=city_id)
+                for fid in side:
+                    turn_log.add("combat", fid, "defeat",
+                                f"Your forces were defeated by {attacker.name} in {city.name} "
+                                f"(lost {defender_losses[fid]['units']} units)",
+                                location=city_id)
             else:
                 turn_log.add("combat", attacker_player_id, "defeat",
                             f"{attacker.name} was defeated in {city.name} "
                             f"(lost {attacker_losses['units']} units)",
                             location=city_id, character_id=attacker.id)
-                turn_log.add("combat", defender_faction_id, "victory",
-                            f"Your forces successfully defended {city.name} "
-                            f"(lost {defender_losses['units']} units)",
-                            location=city_id)
+                for fid in side:
+                    turn_log.add("combat", fid, "victory",
+                                f"Your forces successfully defended {city.name} "
+                                f"(lost {defender_losses[fid]['units']} units)",
+                                location=city_id)
 
 
 # ============================================================================
@@ -943,17 +997,15 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
                 ship_upkeep = config.UPKEEP_PER_SHIP.get(ship.ship_type, 0)
                 upkeep += ship_upkeep
 
-        # Named character salaries (excluding leader)
-        character_count = 0
+        # Named character salaries. The leader draws none. Which character that
+        # is comes from the is_leader flag rather than iteration order, so
+        # adding or removing characters no longer silently moves the exemption.
+        leader = get_player_leader(game_state, faction.id)
         for char in game_state.characters.values():
-            if char.faction_id == faction.id:
-                character_count += 1
-                # Skip the first character (leader) - they don't get a salary
-                if character_count > 1:
-                    salary = config.calculate_character_salary(
-                        char.combat_skill, char.magic_skill
-                    )
-                    upkeep += salary
+            if char.faction_id == faction.id and char is not leader:
+                upkeep += config.calculate_character_salary(
+                    char.combat_skill, char.magic_skill
+                )
 
         # Round upkeep to 1 decimal place
         upkeep = round(upkeep, 1)
@@ -1040,7 +1092,7 @@ def process_fortifications(orders_by_player: Dict[str, List[Order]], game_state:
                 if not city:
                     continue
 
-                current = game_state.city_fortifications.get(city_id, city.fortification_level)
+                current = city.fortification_level
                 stone_needed = max(1, order.percent)
 
                 if isinstance(order, FortifyOrder):
@@ -1053,14 +1105,12 @@ def process_fortifications(orders_by_player: Dict[str, List[Order]], game_state:
 
                     actor.resources["stone"] = available_stone - stone_needed
                     new_level = min(100, current + order.percent)
-                    game_state.city_fortifications[city_id] = new_level
                     city.fortification_level = new_level
                     turn_log.add("fortify", player_id, "fortify",
                                 f"{actor.name}: fortified {city.name} to {new_level}%", character_id=actor.id)
 
                 else:
                     new_level = max(0, current - order.percent)
-                    game_state.city_fortifications[city_id] = new_level
                     city.fortification_level = new_level
                     turn_log.add("fortify", player_id, "unfortify",
                                 f"{actor.name}: reduced fortifications in {city.name} to {new_level}%", character_id=actor.id)
@@ -1476,13 +1526,10 @@ def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameSt
 
             # Validate terrain for resource type
             resource_type = order.resource_type.lower()
-            terrain_valid = False
 
             if resource_type == "wood":
                 # Wood requires forest terrain
-                if "forest" in city.terrain or "woods" in city.terrain:
-                    terrain_valid = True
-                else:
+                if not ("forest" in city.terrain or "woods" in city.terrain):
                     turn_log.add("collect", player_id, "collect_failed",
                                 f"{actor.name}: no forests available at {city.name} for wood gathering",
                                 character_id=actor.id, success=False)
@@ -1490,9 +1537,7 @@ def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameSt
 
             elif resource_type == "stone":
                 # Stone requires hills or mountains
-                if "hills" in city.terrain or "mountains" in city.terrain or "mountain" in city.terrain:
-                    terrain_valid = True
-                else:
+                if not city.terrain & {"hills", "mountains", "mountain"}:
                     turn_log.add("collect", player_id, "collect_failed",
                                 f"{actor.name}: no hills/mountains available at {city.name} for stone gathering",
                                 character_id=actor.id, success=False)

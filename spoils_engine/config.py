@@ -118,9 +118,19 @@ RESOURCE_MARKET_SPREAD = 0.4
 # faction_power = sum(unit_attack) * (1 + best_combat_skill/100)
 # winner if attacker_power > defender_power (with some randomness)
 
-# Casualty rates (% of losing side destroyed)
+# Casualty rates at parity. These are the rates for an evenly matched fight;
+# a lopsided battle scales them by the margin of victory (see combat.py).
 COMBAT_CASUALTY_RATE_WINNER = 0.1   # 10% casualties for winner
 COMBAT_CASUALTY_RATE_LOSER = 0.3    # 30% casualties for loser
+
+# Margin scaling. margin = winning roll / losing roll, clamped to
+# [1, COMBAT_MARGIN_CAP]. The winner's losses fall as the margin grows; the
+# loser's rise. Without this a 10:1 rout cost the winner exactly as much as a
+# coin-flip battle.
+COMBAT_MARGIN_CAP = 10.0            # Beyond this, extra advantage changes nothing
+COMBAT_CASUALTY_MIN_WINNER = 0.01   # A rout still costs the winner something
+COMBAT_CASUALTY_MAX_LOSER = 0.95    # A rout still leaves a few survivors
+COMBAT_LOSER_MARGIN_EXPONENT = 0.5  # Loser rate grows with sqrt(margin)
 
 # Combat skill bonus: each point of combat skill adds 1% to faction power
 COMBAT_SKILL_BONUS_PER_POINT = 0.01

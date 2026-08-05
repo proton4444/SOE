@@ -85,7 +85,8 @@ and are covered by tests.
 
 - **Fortifications & location defense** — `FORTIFY`/`UNFORTIFY` spend stone to
   raise or tear down city defenses; the holding faction gains a combat
-  multiplier. (`orders.py`, `engine.process_fortifications`, `combat.py`)
+  multiplier. The level belongs to the city, so it stays with the walls when the
+  city changes hands. (`orders.py`, `engine.process_fortifications`, `combat.py`)
 - **Equipment effects in combat** — weapons, armor and catapults from `BUILD`
   add attack power and reduce casualties. (`combat.py`)
 - **Religion** — `PRAY`, `BLESS`, `CURSE` and `RESURRECT` spend religious power
@@ -108,15 +109,14 @@ and are covered by tests.
 
 ## Partial
 
-- **`AWAIT` and `REPEAT`** are parsed and written to the turn log, but nothing
-  executes them. There is no cross-turn order queue, which the rules'
-  asynchronous design ultimately requires. Treat these as accepted-but-inert.
-- **Diplomacy** tracks ally/enemy/neutral stances, but stance does not yet
-  affect combat sides, movement rights or support.
-- **Fortification state** is stored in three overlapping places
-  (`City.fortification_level`, `Faction.fortifications`,
-  `GameState.city_fortifications`); combat reads the last. These should be
-  collapsed into one.
+- **`AWAIT` and `REPEAT`** are parsed but rejected at validation with a warning
+  saying they are not executed yet. There is no cross-turn order queue, which
+  the rules' asynchronous design ultimately requires.
+- **Diplomacy** decides combat sides — an ally cannot be attacked, and a
+  defender's allies present at the battle fight and share the casualties. Stance
+  still does not affect movement rights or non-combat support.
+- **Gold** is held per faction. The rules give each character a purse, so `GIVE`
+  currently moves gold between treasuries rather than between characters.
 
 ## Not implemented
 
@@ -127,4 +127,5 @@ and are covered by tests.
 - Religion's `PREACH` donations and the wider miracle table.
 - Named-character hiring, education and the starting-character creation phase.
 
-See [`audit_2025-11.md`](audit_2025-11.md) for defects fixed in v0.7.1.
+See [`audit_2025-11.md`](audit_2025-11.md) for the defects fixed in v0.7.1 and
+the design debt closed in v0.7.2.

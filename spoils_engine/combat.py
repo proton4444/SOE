@@ -6,9 +6,8 @@ Handles all combat-related calculations and resolution.
 
 import random
 from dataclasses import dataclass
-from typing import Optional
 
-from spoils_engine.models import GameState, Character, Faction, UnitType
+from spoils_engine.models import GameState, UnitType
 from spoils_engine import config
 
 
@@ -95,15 +94,14 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
 
     blessing_bonus = 1.0 + (game_state.location_blessings.get(city_id, 0) / 100)
     curse_penalty = 1.0 - (game_state.location_curses.get(city_id, 0) / 100)
-    city_fort_level = game_state.city_fortifications.get(city_id, 0)
-    fort_multiplier = 1.0 + (city_fort_level / 100)
 
     total_power = base_power * skill_multiplier * blessing_bonus * max(0.5, curse_penalty)
 
     # Fortifications only benefit the faction holding the city
+    city = game_state.world_map.cities.get(city_id)
     faction = game_state.factions.get(faction_id)
-    if faction and city_id in game_state.world_map.cities and city_id in faction.controlled_city_ids:
-        total_power *= fort_multiplier
+    if city and faction and city_id in faction.controlled_city_ids:
+        total_power *= 1.0 + (city.fortification_level / 100)
 
     return total_power
 
@@ -143,6 +141,34 @@ def get_faction_forces(faction_id: str, city_id: str, game_state: GameState) -> 
 # COMBAT RESOLUTION
 # ============================================================================
 
+def casualty_rates(winning_roll: float, losing_roll: float) -> tuple[float, float]:
+    """
+    Casualty rates for both sides, scaled by the margin of victory.
+
+    The rolls (not the raw powers) decide this, so an upset — a weaker force
+    that wins on a lucky roll — is correctly costly, while a rout is cheap for
+    the winner and near-annihilation for the loser. At parity the rates are
+    exactly the config baselines, so an even fight behaves as it always has.
+
+    Returns:
+        (winner_rate, loser_rate)
+    """
+    if losing_roll <= 0:
+        margin = config.COMBAT_MARGIN_CAP
+    else:
+        margin = max(1.0, min(config.COMBAT_MARGIN_CAP, winning_roll / losing_roll))
+
+    winner_rate = max(
+        config.COMBAT_CASUALTY_MIN_WINNER,
+        config.COMBAT_CASUALTY_RATE_WINNER / margin,
+    )
+    loser_rate = min(
+        config.COMBAT_CASUALTY_MAX_LOSER,
+        config.COMBAT_CASUALTY_RATE_LOSER * (margin ** config.COMBAT_LOSER_MARGIN_EXPONENT),
+    )
+    return winner_rate, loser_rate
+
+
 class CombatResolver:
     """Handles combat resolution between two factions."""
 
@@ -171,12 +197,12 @@ class CombatResolver:
         # Determine winner
         if attacker_roll > defender_roll:
             winner_id, loser_id = attacker_id, defender_id
-            winner_casualties = config.COMBAT_CASUALTY_RATE_WINNER
-            loser_casualties = config.COMBAT_CASUALTY_RATE_LOSER
+            winning_roll, losing_roll = attacker_roll, defender_roll
         else:
             winner_id, loser_id = defender_id, attacker_id
-            winner_casualties = config.COMBAT_CASUALTY_RATE_WINNER
-            loser_casualties = config.COMBAT_CASUALTY_RATE_LOSER
+            winning_roll, losing_roll = defender_roll, attacker_roll
+
+        winner_casualties, loser_casualties = casualty_rates(winning_roll, losing_roll)
 
         # Swap if defender won (to track attacker/defender casualties)
         if winner_id == defender_id:

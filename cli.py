@@ -87,6 +87,7 @@ def init_game(
                 name=leader_name,
                 faction_id=player_id,
                 location_city_id=start_city_id or list(world_map.cities.keys())[0],
+                is_leader=True,
                 combat_skill=config.STARTING_COMBAT_SKILL,
                 magic_skill=config.STARTING_MAGIC_SKILL,
                 magic_power_current=config.STARTING_MAGIC_SKILL
@@ -117,6 +118,7 @@ def init_game(
                 name=f"Leader {i+1}",
                 faction_id=player_id,
                 location_city_id=city_ids[i % len(city_ids)],
+                is_leader=True,
                 combat_skill=config.STARTING_COMBAT_SKILL,
                 magic_skill=config.STARTING_MAGIC_SKILL,
                 magic_power_current=config.STARTING_MAGIC_SKILL
@@ -185,7 +187,7 @@ def process_turn(
     # Load game state
     game_state = storage.load_game_state(game_dir)
     if not game_state:
-        typer.echo(f"Error: Could not load game state", err=True)
+        typer.echo("Error: Could not load game state", err=True)
         raise typer.Exit(1)
 
     # Turns must run in sequence. Re-running an already-processed turn applies
@@ -220,7 +222,7 @@ def process_turn(
                 orders_by_player[faction_id] = []
     else:
         typer.echo(f"  Orders directory not found: {orders_dir}")
-        typer.echo(f"  Processing turn with no orders...")
+        typer.echo("  Processing turn with no orders...")
 
     # Run turn
     typer.echo(f"\nProcessing turn with seed {seed}...")
@@ -228,10 +230,10 @@ def process_turn(
 
     # Save updated state
     storage.save_game_state(game_state, game_dir)
-    typer.echo(f"  Game state saved")
+    typer.echo("  Game state saved")
 
     # Generate reports
-    typer.echo(f"\nGenerating reports...")
+    typer.echo("\nGenerating reports...")
     reports_dir = game_dir / "reports"
     reports_dir.mkdir(exist_ok=True)
 

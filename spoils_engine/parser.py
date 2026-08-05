@@ -7,7 +7,7 @@ interface is designed to be replaceable with an LLM-based parser.
 """
 
 import re
-from typing import Optional, Tuple, Type
+from typing import Optional, Type
 from dataclasses import dataclass
 
 from spoils_engine.models import GameState, UnitType, ShipType, Character
@@ -109,11 +109,23 @@ def resolve_city(name_text: str, game_state: GameState) -> ResolvedEntity:
 
 
 def get_player_leader(game_state: GameState, player_id: str) -> Optional[Character]:
-    """Get the first character (leader) for a faction."""
+    """
+    Get the leader of a faction.
+
+    The leader is marked by Character.is_leader. Saves written before that flag
+    existed are migrated on load (see storage._migrate); the fallback here only
+    covers game states built directly in code, such as in tests, and reproduces
+    the old behaviour of taking whichever character iterates first.
+    """
+    fallback = None
     for char in game_state.characters.values():
-        if char.faction_id == player_id:
+        if char.faction_id != player_id:
+            continue
+        if char.is_leader:
             return char
-    return None
+        if fallback is None:
+            fallback = char
+    return fallback
 
 
 # ============================================================================
@@ -1010,7 +1022,7 @@ def parse_promote_order(sentence: str, game_state: GameState, player_id: str) ->
                     order.character_ids.append(leader.id)
                     order.character_names.append(name)
                 else:
-                    parser.add_warning(order, f"Could not find faction leader")
+                    parser.add_warning(order, "Could not find faction leader")
             else:
                 char_resolved = resolve_character(name, game_state, player_id)
                 if char_resolved.found:

@@ -6,7 +6,6 @@ Maps define the world geography: cities, roads, and sea lanes.
 
 import json
 from pathlib import Path
-from typing import Optional
 
 from spoils_engine.models import WorldMap, City, Road, PopulationBand, RoadQuality
 

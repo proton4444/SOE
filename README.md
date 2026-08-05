@@ -11,13 +11,15 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-> **v0.7.1 — repository consolidated.** `main` now holds this engine
-> (`spoils_engine/`) as the single source of truth. An earlier parallel
-> prototype under `src/soe/` has been retired; see
-> [`docs/audit_2025-11.md`](docs/audit_2025-11.md) for the consolidation notes
-> and the list of defects fixed in this release.
+> **v0.7.2 — design debt cleared.** `main` holds this engine
+> (`spoils_engine/`) as the single source of truth; an earlier parallel
+> prototype under `src/soe/` has been retired. The accepted limitations left
+> over from the v0.7.1 audit are now closed: fortifications have one store,
+> casualties scale with the margin of victory, the faction leader is an
+> explicit flag, and diplomatic stance affects combat. See
+> [`docs/audit_2025-11.md`](docs/audit_2025-11.md).
 
-## Features (Alpha v0.7.1)
+## Features (Alpha v0.7.2)
 
 ### Implemented
 
@@ -66,14 +68,14 @@ This is an alpha implementation of a turn-based engine that processes English-li
 
 ✅ **Turn Processing**
 - Phase 1: Validation
-- Phase 2: Movement (land)
-- Phase 2b: Sailing (sea)
+- Phase 2: Movement (land), then sailing (sea)
 - Phase 3: Recruit & buy
-- Phase 4: Magic (teleport, fly, heal)
-- Phase 5: Combat (with character casualties)
+- Phase 4: Magic (teleport, fly, heal), summoning, religion
+- Phase 5: Combat (with character casualties), then capture
 - Phase 6: Income & upkeep
-- Phase 7: Location control & diplomacy
-- Phase 8: Cleanup & natural healing
+- Phase 7: Location control, diplomacy, taxation, trade, gathering, mining,
+  construction, transfers, naming, promotion, prisoner release, study & teach
+- Phase 8: Cleanup — prisoner escape and natural healing
 
 ✅ **Economic System**
 - City income based on population
@@ -177,17 +179,17 @@ This is an alpha implementation of a turn-based engine that processes English-li
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
-- Fortifications (FORTIFY/UNFORTIFY commands)
-- Combat integration for weapons/armor/catapults
-- Religion system (PRAY/BLESS/CURSE spells)
-- Character resurrection via PRAY
-- Complex combat mechanics (retreat, morale, armor, siege weapons)
-- Trading system (BUY/SELL for goods beyond ships)
-- Conditional orders (IF statements)
-- Advanced taxation (time-based accumulation, depletion tracking)
-- Escape mechanics for prisoners
+- Conditional orders (`IF`) and the rest of the order language — these wait on
+  the cross-turn order queue
+- Retreat and morale in combat
+- Per-character gold (gold is currently held per faction)
+- Fog of war
+- Resource depletion (accumulation and its cap are in; depletion is not)
+- 48 of the 89 command verbs in `rules.md`
 
-See `docs/alpha_scope.md` for full details.
+[`docs/rules_gap.md`](docs/rules_gap.md) has the command-by-command breakdown
+and [`docs/alpha_scope.md`](docs/alpha_scope.md) records what the alpha
+deliberately left out.
 
 ## Installation
 
@@ -434,7 +436,8 @@ SOE/
 │   ├── test_parser.py
 │   ├── test_engine_basic.py
 │   ├── test_upkeep.py
-│   └── test_regressions.py  # Pins the defects fixed in the v0.7.1 audit
+│   ├── test_regressions.py  # Pins the defects fixed in the v0.7.1 audit
+│   └── test_gap_closures.py # Pins the design debt closed in v0.7.2
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -451,7 +454,7 @@ SOE/
 ├── docs/
 │   ├── alpha_scope.md     # Detailed alpha scope document
 │   ├── rules_gap.md       # Coverage of rules.md mechanics
-│   └── audit_2025-11.md   # Consolidation + defect audit (v0.7.1)
+│   └── audit_2025-11.md   # Consolidation, defect audit, design debt
 ├── rules.md               # Official game rules (authoritative)
 ├── pyproject.toml         # Package configuration
 ├── requirements.txt       # Dependencies
@@ -573,8 +576,11 @@ full breakdown, including which commands are missing and why.
 
 The largest divergence is structural: the rules describe an **asynchronous**
 game where orders queue and execute as game time passes, while the engine runs
-fixed synchronous turns. That gap is why `AWAIT` and `REPEAT` parse but do
-nothing.
+fixed synchronous turns. That gap is why `AWAIT` and `REPEAT` are accepted but
+report that they will not run until v0.9 brings the queue.
+
+Engine-internal design debt is clear as of v0.7.2. What remains is rules
+coverage, not cleanup.
 
 ## Future Roadmap
 
@@ -610,9 +616,10 @@ The structural change everything else waits on:
 
 ### Also outstanding
 
-Design debt recorded in [`docs/audit_2025-11.md`](docs/audit_2025-11.md):
-collapse the three overlapping fortification stores, scale casualties by power
-ratio, make "leader" an explicit flag, and track gold per character.
+Two model changes that are features rather than cleanup, and are sized into the
+phases above: **per-character gold** (the rules give each character a purse; the
+engine holds gold per faction) lands with the v0.8 finance commands, and **fog
+of war** with v1.0.
 
 ## Contributing
 

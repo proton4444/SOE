@@ -67,13 +67,13 @@ def test_save_load_preserves_every_field():
                                            quality=models.RoadQuality.SEA)
     gs.factions["p1"] = models.Faction(
         id="p1", name="Empire", controlled_city_ids={"c1"}, secured_city_ids={"c1"},
-        treasury=750, allies={"p2"}, enemies={"p3"}, fortifications={"c1": 30},
+        treasury=750, allies={"p2"}, enemies={"p3"},
     )
     gs.characters["ch1"] = models.Character(
         id="ch1", name="Marcus", faction_id="p1", location_city_id="c1",
-        gender="female", title="primate", is_prisoner=True, captor_id="ch2",
-        religion_skill=40, religious_power_current=12, trading_skill=7,
-        health=55, resources={"wood": 12, "armor": 3},
+        is_leader=True, gender="female", title="primate", is_prisoner=True,
+        captor_id="ch2", religion_skill=40, religious_power_current=12,
+        trading_skill=7, health=55, resources={"wood": 12, "armor": 3},
     )
     gs.unit_stacks["u1"] = models.UnitStack(id="u1", faction_id="p1", location_city_id="c1",
                                             unit_type=models.UnitType.SAILOR, count=30)
@@ -83,7 +83,6 @@ def test_save_load_preserves_every_field():
         id="sc1", summoner_id="ch1", creature_type=models.CreatureType.DRAGON,
         count=2, expires_turn=9,
     )
-    gs.city_fortifications["c1"] = 30
     gs.tax_pools["c1"] = 133.5
     gs.location_blessings["c1"] = 20
     gs.location_curses["c1"] = 5
@@ -420,7 +419,7 @@ def test_every_phase_skips_orders_that_failed_validation(two_faction_state):
     gs.characters["c1"].religion_skill = 50
     gs.characters["c1"].resources["stone"] = 100
     treasury_before = gs.factions["p1"].treasury
-    forts_before = dict(gs.city_fortifications)
+    forts_before = {c.id: c.fortification_level for c in gs.world_map.cities.values()}
 
     # Orders naming another faction's character -- all must be refused
     pray = orders.PrayOrder(player_id="p1", actor_id="c2")
@@ -435,7 +434,7 @@ def test_every_phase_skips_orders_that_failed_validation(two_faction_state):
 
     # No PRAY tithe, no trade spend: treasury moved only by upkeep (none here)
     assert gs.factions["p1"].treasury == treasury_before
-    assert gs.city_fortifications == forts_before
+    assert {c.id: c.fortification_level for c in gs.world_map.cities.values()} == forts_before
 
 
 # ============================================================================

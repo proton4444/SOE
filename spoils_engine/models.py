@@ -6,7 +6,7 @@ characters, units, ships, and the overall game state.
 """
 
 from dataclasses import dataclass, field
-from typing import Literal, Optional
+from typing import Optional
 from enum import Enum
 
 
@@ -174,6 +174,9 @@ class Faction:
             would drift noticeably over a long game.
         allies: Set of faction IDs that are allies
         enemies: Set of faction IDs that are enemies
+
+    Fortifications are *not* stored here. They belong to the city and are held
+    on City.fortification_level, so they survive the city changing hands.
     """
     id: str
     name: str
@@ -182,7 +185,6 @@ class Faction:
     treasury: float = 0.0
     allies: set[str] = field(default_factory=set)
     enemies: set[str] = field(default_factory=set)
-    fortifications: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -195,6 +197,9 @@ class Character:
         name: Character name (must be unique across game)
         faction_id: Owning faction
         location_city_id: Current location
+        is_leader: Whether this character is the faction leader. The leader
+            draws no salary and receives orders that name no actor. Exactly one
+            character per faction should carry this flag.
         gender: Gender of character (male/female)
         title: Optional title (e.g., "primate", "bishop")
         is_prisoner: Whether this character is a prisoner
@@ -213,6 +218,7 @@ class Character:
     name: str
     faction_id: str
     location_city_id: str
+    is_leader: bool = False
     gender: str = "male"  # "male" or "female"
     title: str = ""  # Optional title (e.g., "primate", "bishop")
     is_prisoner: bool = False
@@ -404,7 +410,6 @@ class GameState:
     unit_stacks: dict[str, UnitStack] = field(default_factory=dict)
     ships: dict[str, Ship] = field(default_factory=dict)
     summoned_creatures: dict[str, SummonedCreature] = field(default_factory=dict)
-    city_fortifications: dict[str, int] = field(default_factory=dict)
     tax_pools: dict[str, float] = field(default_factory=dict)
     location_blessings: dict[str, int] = field(default_factory=dict)
     location_curses: dict[str, int] = field(default_factory=dict)

@@ -128,7 +128,7 @@ def decode_game_state(data: dict) -> GameState:
         roads=_rebuild_registry(world_map_data, 'roads', Road),
     )
 
-    return GameState(
+    game_state = GameState(
         turn_number=data.get('turn_number', 0),
         world_map=world_map,
         factions=_rebuild_registry(data, 'factions', Faction),
@@ -136,11 +136,44 @@ def decode_game_state(data: dict) -> GameState:
         unit_stacks=_rebuild_registry(data, 'unit_stacks', UnitStack),
         ships=_rebuild_registry(data, 'ships', Ship),
         summoned_creatures=_rebuild_registry(data, 'summoned_creatures', SummonedCreature),
-        city_fortifications=dict(data.get('city_fortifications') or {}),
         tax_pools={k: float(v) for k, v in (data.get('tax_pools') or {}).items()},
         location_blessings=dict(data.get('location_blessings') or {}),
         location_curses=dict(data.get('location_curses') or {}),
     )
+    _migrate(game_state, data)
+    return game_state
+
+
+def _migrate(game_state: GameState, data: dict) -> None:
+    """
+    Bring a save written by an older version up to the current model.
+
+    Kept separate from decoding so each migration is one readable block that can
+    be deleted once no save that old is plausibly still in play.
+    """
+    # v0.7.1 and earlier kept fortification levels in up to three places:
+    # GameState.city_fortifications, Faction.fortifications and
+    # City.fortification_level. The city is now the only store; fold the others
+    # in, taking the highest level any of them claimed.
+    legacy: dict[str, int] = {}
+    for city_id, level in (data.get('city_fortifications') or {}).items():
+        legacy[city_id] = max(legacy.get(city_id, 0), int(level))
+    for faction_data in (data.get('factions') or {}).values():
+        for city_id, level in (faction_data.get('fortifications') or {}).items():
+            legacy[city_id] = max(legacy.get(city_id, 0), int(level))
+
+    for city_id, level in legacy.items():
+        city = game_state.world_map.cities.get(city_id)
+        if city:
+            city.fortification_level = max(city.fortification_level, level)
+
+    # Character.is_leader did not exist before v0.7.2; the leader was whichever
+    # character happened to iterate first. Preserve that character's status so
+    # an in-flight game does not suddenly change who draws a salary.
+    for faction_id in game_state.factions:
+        members = [c for c in game_state.characters.values() if c.faction_id == faction_id]
+        if members and not any(c.is_leader for c in members):
+            members[0].is_leader = True
 
 
 # ============================================================================

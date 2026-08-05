@@ -7,8 +7,8 @@ Generates per-player human-readable reports from game state and turn logs.
 from typing import Dict
 from collections import defaultdict
 
-from spoils_engine.models import GameState, Character
-from spoils_engine.engine import TurnLog, TurnEvent
+from spoils_engine.models import GameState
+from spoils_engine.engine import TurnLog
 
 
 # Preferred ordering for turn-event sections. Phases not listed here are still
