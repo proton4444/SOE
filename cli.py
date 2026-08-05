@@ -167,6 +167,7 @@ def process_turn(
     game_id: str = typer.Argument(..., help="Game ID"),
     turn: int = typer.Option(..., "--turn", "-t", help="Turn number to process"),
     seed: int = typer.Option(..., "--seed", "-s", help="Random seed for determinism"),
+    force: bool = typer.Option(False, "--force", help="Process even if the turn number is out of sequence"),
 ):
     """
     Process a game turn.
@@ -185,6 +186,18 @@ def process_turn(
     game_state = storage.load_game_state(game_dir)
     if not game_state:
         typer.echo(f"Error: Could not load game state", err=True)
+        raise typer.Exit(1)
+
+    # Turns must run in sequence. Re-running an already-processed turn applies
+    # its orders a second time to the state they already produced.
+    expected_turn = game_state.turn_number + 1
+    if turn != expected_turn and not force:
+        typer.echo(
+            f"Error: game '{game_id}' is at turn {game_state.turn_number}, so the next "
+            f"turn to process is {expected_turn}, not {turn}.\n"
+            f"       Re-run with --force only if you intend to process out of sequence.",
+            err=True,
+        )
         raise typer.Exit(1)
 
     # Read order files

@@ -3,41 +3,113 @@ Storage system for persisting game state to/from disk.
 
 Uses JSON for human-readable persistence. All game state is saved
 to a single state.json file in the game directory.
+
+Serialization is driven by the dataclass field definitions in `models`,
+so a field added to a model is persisted automatically. This matters for a
+PBEM game: every turn is a save/load cycle, so a field that the decoder
+forgets is a field that silently resets to its default every turn.
 """
 
 import json
+import os
+import tempfile
+import types
+from dataclasses import asdict, fields, is_dataclass
+from enum import Enum
 from pathlib import Path
-from typing import Optional
-from dataclasses import asdict, is_dataclass
+from typing import Any, Optional, Union, get_args, get_origin
 
 from spoils_engine.models import (
     GameState, WorldMap, Faction, Character, UnitStack, Ship,
-    City, Road, PopulationBand, RoadQuality, UnitType, ShipType
+    City, Road, SummonedCreature
 )
 
 
 # ============================================================================
-# CUSTOM JSON ENCODER/DECODER
+# CUSTOM JSON ENCODER
 # ============================================================================
 
 class GameStateEncoder(json.JSONEncoder):
     """Custom JSON encoder for game state objects."""
 
     def default(self, obj):
-        """Convert dataclasses and enums to JSON-serializable formats."""
-        if is_dataclass(obj):
-            # Convert dataclass to dict
-            data = asdict(obj)
-            # Add type information for reconstruction
-            data['__type__'] = obj.__class__.__name__
-            return data
-        elif isinstance(obj, (PopulationBand, RoadQuality, UnitType, ShipType)):
-            # Enums: just use their value
+        """Convert dataclasses, enums and sets to JSON-serializable formats."""
+        if is_dataclass(obj) and not isinstance(obj, type):
+            return asdict(obj)
+        if isinstance(obj, Enum):
             return obj.value
-        elif isinstance(obj, set):
-            # Sets to lists
-            return list(obj)
+        if isinstance(obj, (set, frozenset)):
+            # Sorted so saved files diff cleanly between turns.
+            return sorted(obj)
         return super().default(obj)
+
+
+# ============================================================================
+# GENERIC DATACLASS RECONSTRUCTION
+# ============================================================================
+
+def _coerce(value: Any, target_type: Any) -> Any:
+    """
+    Coerce a JSON-decoded value back into the type declared on a dataclass field.
+
+    Handles the type forms actually used by the models: enums, sets, dicts,
+    lists, Optional[...] and plain scalars.
+    """
+    origin = get_origin(target_type)
+
+    # Optional[X] / Union[X, None] -- both the typing and PEP 604 (`X | None`) spellings
+    if origin is Union or origin is types.UnionType:
+        args = [a for a in get_args(target_type) if a is not type(None)]
+        if value is None:
+            return None
+        return _coerce(value, args[0]) if len(args) == 1 else value
+
+    # set[X] -- JSON has no sets, so they round-trip as lists
+    if origin in (set, frozenset):
+        item_args = get_args(target_type)
+        item_type = item_args[0] if item_args else Any
+        return {_coerce(v, item_type) for v in (value or [])}
+
+    if origin is list:
+        item_args = get_args(target_type)
+        item_type = item_args[0] if item_args else Any
+        return [_coerce(v, item_type) for v in (value or [])]
+
+    if origin is dict:
+        dict_args = get_args(target_type)
+        val_type = dict_args[1] if len(dict_args) == 2 else Any
+        return {k: _coerce(v, val_type) for k, v in (value or {}).items()}
+
+    # Enum members are stored by value
+    if isinstance(target_type, type) and issubclass(target_type, Enum):
+        return target_type(value)
+
+    if is_dataclass(target_type) and isinstance(value, dict):
+        return rebuild_dataclass(target_type, value)
+
+    return value
+
+
+def rebuild_dataclass(cls: type, data: dict) -> Any:
+    """
+    Rebuild a dataclass instance from a plain dict.
+
+    Fields missing from `data` fall back to the dataclass default, and unknown
+    keys are ignored, so old save files stay loadable as the models evolve.
+    """
+    kwargs = {}
+    for f in fields(cls):
+        if f.name in data:
+            kwargs[f.name] = _coerce(data[f.name], f.type)
+    return cls(**kwargs)
+
+
+def _rebuild_registry(data: dict, key: str, cls: type) -> dict:
+    """Rebuild a dict of id -> dataclass from the saved payload."""
+    return {
+        entity_id: rebuild_dataclass(cls, entity_data)
+        for entity_id, entity_data in (data.get(key) or {}).items()
+    }
 
 
 def decode_game_state(data: dict) -> GameState:
@@ -50,85 +122,24 @@ def decode_game_state(data: dict) -> GameState:
     Returns:
         Reconstructed GameState
     """
-    # Reconstruct WorldMap
-    world_map_data = data.get('world_map', {})
-    cities = {}
-    for city_id, city_data in world_map_data.get('cities', {}).items():
-        cities[city_id] = City(
-            id=city_data['id'],
-            name=city_data['name'],
-            population_band=PopulationBand(city_data['population_band']),
-            terrain=set(city_data.get('terrain', [])),
-            region=city_data.get('region'),
-            is_port=city_data.get('is_port', False)
-        )
-
-    roads = {}
-    for road_id, road_data in world_map_data.get('roads', {}).items():
-        roads[road_id] = Road(
-            id=road_data['id'],
-            from_city_id=road_data['from_city_id'],
-            to_city_id=road_data['to_city_id'],
-            quality=RoadQuality(road_data['quality']),
-            bidirectional=road_data.get('bidirectional', True)
-        )
-
-    world_map = WorldMap(cities=cities, roads=roads)
-
-    # Reconstruct Factions
-    factions = {}
-    for faction_id, faction_data in data.get('factions', {}).items():
-        factions[faction_id] = Faction(
-            id=faction_data['id'],
-            name=faction_data['name'],
-            controlled_city_ids=set(faction_data.get('controlled_city_ids', [])),
-            treasury=faction_data.get('treasury', 0)
-        )
-
-    # Reconstruct Characters
-    characters = {}
-    for char_id, char_data in data.get('characters', {}).items():
-        characters[char_id] = Character(
-            id=char_data['id'],
-            name=char_data['name'],
-            faction_id=char_data['faction_id'],
-            location_city_id=char_data['location_city_id'],
-            movement_points=char_data.get('movement_points', 10),
-            combat_skill=char_data.get('combat_skill', 0),
-            magic_skill=char_data.get('magic_skill', 0),
-            magic_power_current=char_data.get('magic_power_current', 0),
-            health=char_data.get('health', 100)
-        )
-
-    # Reconstruct UnitStacks
-    unit_stacks = {}
-    for stack_id, stack_data in data.get('unit_stacks', {}).items():
-        unit_stacks[stack_id] = UnitStack(
-            id=stack_data['id'],
-            faction_id=stack_data['faction_id'],
-            location_city_id=stack_data['location_city_id'],
-            unit_type=UnitType(stack_data['unit_type']),
-            count=stack_data['count']
-        )
-
-    # Reconstruct Ships
-    ships = {}
-    for ship_id, ship_data in data.get('ships', {}).items():
-        ships[ship_id] = Ship(
-            id=ship_data['id'],
-            faction_id=ship_data['faction_id'],
-            location_city_id=ship_data['location_city_id'],
-            ship_type=ShipType(ship_data['ship_type']),
-            capacity=ship_data.get('capacity', 550)
-        )
+    world_map_data = data.get('world_map') or {}
+    world_map = WorldMap(
+        cities=_rebuild_registry(world_map_data, 'cities', City),
+        roads=_rebuild_registry(world_map_data, 'roads', Road),
+    )
 
     return GameState(
         turn_number=data.get('turn_number', 0),
         world_map=world_map,
-        factions=factions,
-        characters=characters,
-        unit_stacks=unit_stacks,
-        ships=ships
+        factions=_rebuild_registry(data, 'factions', Faction),
+        characters=_rebuild_registry(data, 'characters', Character),
+        unit_stacks=_rebuild_registry(data, 'unit_stacks', UnitStack),
+        ships=_rebuild_registry(data, 'ships', Ship),
+        summoned_creatures=_rebuild_registry(data, 'summoned_creatures', SummonedCreature),
+        city_fortifications=dict(data.get('city_fortifications') or {}),
+        tax_pools={k: float(v) for k, v in (data.get('tax_pools') or {}).items()},
+        location_blessings=dict(data.get('location_blessings') or {}),
+        location_curses=dict(data.get('location_curses') or {}),
     )
 
 
@@ -140,6 +151,10 @@ def save_game_state(game_state: GameState, game_dir: Path) -> None:
     """
     Save game state to disk.
 
+    The write is atomic: the state is written to a temporary file in the same
+    directory and then moved into place, so an interrupted save cannot leave a
+    half-written state.json behind.
+
     Args:
         game_state: The game state to save
         game_dir: Directory for the game (e.g., games/my_game/)
@@ -148,8 +163,16 @@ def save_game_state(game_state: GameState, game_dir: Path) -> None:
     game_dir.mkdir(parents=True, exist_ok=True)
 
     state_file = game_dir / "state.json"
-    with open(state_file, 'w') as f:
-        json.dump(asdict(game_state), f, cls=GameStateEncoder, indent=2)
+    payload = json.dumps(asdict(game_state), cls=GameStateEncoder, indent=2)
+
+    fd, tmp_path = tempfile.mkstemp(dir=str(game_dir), prefix=".state-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(payload)
+        os.replace(tmp_path, state_file)
+    except BaseException:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise
 
 
 def load_game_state(game_dir: Path) -> Optional[GameState]:
@@ -168,7 +191,7 @@ def load_game_state(game_dir: Path) -> Optional[GameState]:
     if not state_file.exists():
         return None
 
-    with open(state_file, 'r') as f:
+    with open(state_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     return decode_game_state(data)

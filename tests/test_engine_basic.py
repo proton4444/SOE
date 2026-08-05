@@ -24,7 +24,8 @@ def test_game_state():
     city2 = models.City(
         id="city2",
         name="City Two",
-        population_band=models.PopulationBand.SMALL
+        population_band=models.PopulationBand.SMALL,
+        is_port=True  # ships can only dock at ports
     )
     game_state.world_map.cities["city1"] = city1
     game_state.world_map.cities["city2"] = city2
@@ -132,12 +133,12 @@ def test_recruit_phase(test_game_state):
     total_soldiers = sum(s.count for s in player1_stacks if s.unit_type == models.UnitType.SOLDIER)
     assert total_soldiers == 10
 
-    # Check that gold was deducted (recruitment + upkeep)
+    # Check that gold was deducted (recruitment + upkeep). City income does not
+    # reach the treasury automatically -- it waits in the tax pool for a TAX order.
     faction = updated_state.factions["player1"]
     cost = config.get_recruit_cost(models.UnitType.SOLDIER) * 10
     upkeep = config.UPKEEP_PER_UNIT[models.UnitType.SOLDIER] * 10  # 10 soldiers upkeep
-    income = config.get_income_for_city(models.PopulationBand.MEDIUM)
-    expected = initial_treasury + income - cost - upkeep
+    expected = initial_treasury - cost - upkeep
     assert abs(faction.treasury - expected) < 0.5  # Allow small rounding difference
 
 
@@ -212,16 +213,51 @@ def test_combat_phase(test_game_state):
 
 
 def test_income_phase(test_game_state):
-    """Test that factions receive income from controlled cities."""
+    """Income accrues to a city's tax pool, not straight to the treasury."""
     initial_treasury = test_game_state.factions["player1"].treasury
 
     # Run turn with no orders
     updated_state, turn_log = engine.run_turn(test_game_state, {}, seed=42)
 
-    # Check that income was received
-    faction = updated_state.factions["player1"]
     expected_income = config.get_income_for_city(models.PopulationBand.MEDIUM)
-    assert faction.treasury == initial_treasury + expected_income
+
+    # The gold waits in the city until a character collects it with TAX
+    assert updated_state.tax_pools["city1"] == expected_income
+
+    # ...and is not also handed to the treasury, which would pay it out twice
+    faction = updated_state.factions["player1"]
+    assert faction.treasury == initial_treasury
+
+
+def test_income_is_not_double_counted(test_game_state):
+    """A turn's income either stays in the pool or moves to the treasury, never both."""
+    treasury_before = test_game_state.factions["player1"].treasury
+    assert test_game_state.tax_pools.get("city1", 0) == 0
+
+    # Station soldiers so the TAX order can be carried out
+    test_game_state.unit_stacks["stack_tax"] = models.UnitStack(
+        id="stack_tax",
+        faction_id="player1",
+        location_city_id="city1",
+        unit_type=models.UnitType.SOLDIER,
+        count=40,
+    )
+    tax_order = orders.TaxOrder(player_id="player1", actor_id="char1",
+                                city_id="city1", duration_days=7)
+
+    updated_state, _ = engine.run_turn(test_game_state, {"player1": [tax_order]}, seed=42)
+
+    income = config.get_income_for_city(models.PopulationBand.MEDIUM)
+    upkeep = 40 * config.UPKEEP_PER_UNIT[models.UnitType.SOLDIER]
+
+    # Whatever is no longer in the pool is what the TAX order collected
+    collected = income - updated_state.tax_pools["city1"]
+    assert collected > 0
+
+    # Treasury gains exactly that, less upkeep. Before the fix the treasury also
+    # received the full income automatically, paying the same gold out twice.
+    assert abs(updated_state.factions["player1"].treasury
+               - (treasury_before + collected - upkeep)) < 0.5
 
 
 def test_deterministic_execution(test_game_state):

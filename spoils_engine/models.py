@@ -169,7 +169,9 @@ class Faction:
         name: Faction name (e.g., "The Golden Empire")
         controlled_city_ids: Set of city IDs under faction control
         secured_city_ids: Set of city IDs this faction has secured
-        treasury: Gold amount
+        treasury: Gold amount. Fractional because per-unit upkeep is
+            fractional (a soldier costs 0.1g/turn), so rounding each turn
+            would drift noticeably over a long game.
         allies: Set of faction IDs that are allies
         enemies: Set of faction IDs that are enemies
     """
@@ -177,7 +179,7 @@ class Faction:
     name: str
     controlled_city_ids: set[str] = field(default_factory=set)
     secured_city_ids: set[str] = field(default_factory=set)
-    treasury: int = 0
+    treasury: float = 0.0
     allies: set[str] = field(default_factory=set)
     enemies: set[str] = field(default_factory=set)
     fortifications: dict[str, int] = field(default_factory=dict)

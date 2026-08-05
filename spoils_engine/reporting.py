@@ -11,6 +11,16 @@ from spoils_engine.models import GameState, Character
 from spoils_engine.engine import TurnLog, TurnEvent
 
 
+# Preferred ordering for turn-event sections. Phases not listed here are still
+# reported -- they are appended alphabetically after these.
+PHASE_ORDER = [
+    "movement", "sail", "recruit", "buy_ship", "magic", "summon", "religion",
+    "combat", "capture", "prisoner", "income", "tax", "trade", "secure",
+    "fortify", "diplomacy", "assign", "name", "promote", "collect", "mine",
+    "build", "free", "study", "teach", "queue",
+]
+
+
 def generate_player_reports(game_state: GameState, turn_log: TurnLog,
                             orders_by_player: Dict[str, list]) -> Dict[str, str]:
     """
@@ -40,7 +50,7 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
         report_lines.append("=" * 70)
         report_lines.append("FACTION SUMMARY")
         report_lines.append("=" * 70)
-        report_lines.append(f"Treasury: {faction.treasury} gold")
+        report_lines.append(f"Treasury: {faction.treasury:,.1f} gold")
         report_lines.append(f"Controlled Cities: {len(faction.controlled_city_ids)}")
 
         if faction.controlled_city_ids:
@@ -138,14 +148,21 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
             for event in player_events:
                 events_by_phase[event.phase].append(event)
 
-            for phase in ["movement", "recruit", "buy_ship", "magic", "combat", "income"]:
-                if phase in events_by_phase:
-                    phase_name = phase.replace("_", " ").title()
-                    report_lines.append(f"\n{phase_name}:")
+            # Render every phase the engine emitted. PHASE_ORDER fixes the
+            # sequence of the familiar ones; anything else follows in a stable
+            # order. Listing phases explicitly used to silently drop tax,
+            # trade, construction, religion and most other results from the
+            # player's report.
+            ordered = [p for p in PHASE_ORDER if p in events_by_phase]
+            ordered += sorted(p for p in events_by_phase if p not in PHASE_ORDER)
 
-                    for event in events_by_phase[phase]:
-                        status = "✓" if event.success else "✗"
-                        report_lines.append(f"  {status} {event.description}")
+            for phase in ordered:
+                phase_name = phase.replace("_", " ").title()
+                report_lines.append(f"\n{phase_name}:")
+
+                for event in events_by_phase[phase]:
+                    status = "✓" if event.success else "✗"
+                    report_lines.append(f"  {status} {event.description}")
 
         report_lines.append("")
 
@@ -201,7 +218,7 @@ def generate_summary_report(game_state: GameState) -> str:
     lines.append("FACTIONS:")
     for faction in game_state.factions.values():
         lines.append(f"  {faction.name} ({faction.id})")
-        lines.append(f"    Treasury: {faction.treasury}g")
+        lines.append(f"    Treasury: {faction.treasury:,.1f}g")
         lines.append(f"    Cities: {len(faction.controlled_city_ids)}")
         lines.append(f"    Characters: {len([c for c in game_state.characters.values() if c.faction_id == faction.id])}")
         lines.append(f"    Units: {sum(s.count for s in game_state.unit_stacks.values() if s.faction_id == faction.id)}")

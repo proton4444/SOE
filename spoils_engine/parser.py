@@ -54,25 +54,36 @@ class ResolvedEntity:
 
 
 def resolve_character(name_text: str, game_state: GameState,
-                     player_id: Optional[str] = None) -> ResolvedEntity:
+                     player_id: Optional[str] = None,
+                     enemy_ok: bool = False) -> ResolvedEntity:
     """
     Resolve a character name to ID.
 
     Args:
         name_text: Character name from order text
         game_state: Current game state
-        player_id: Player issuing the order (None = search all)
+        player_id: Player issuing the order (None = search all factions)
+        enemy_ok: If True, fall back to other factions when the name does not
+            match one of the player's own characters. Use this for *targets*
+            (attack, capture, freeing a prisoner) only.
 
     Returns:
         ResolvedEntity with id and name (found=False if not found)
+
+    Note:
+        With a player_id and enemy_ok=False the search is confined to that
+        player's characters. Anything that becomes an order's `actor_id` must
+        resolve this way -- otherwise naming an opponent's character in an
+        order binds them as your actor and lets you act on their behalf.
     """
-    # Try player's faction first if specified
     if player_id:
         char = game_state.get_character_by_name(name_text, faction_id=player_id)
         if char:
             return ResolvedEntity(char.id, char.name)
+        if not enemy_ok:
+            return ResolvedEntity("", name_text, found=False)
 
-    # Try all factions
+    # Search all factions (targets, or no issuing player given)
     char = game_state.get_character_by_name(name_text)
     if char:
         return ResolvedEntity(char.id, char.name)
@@ -673,7 +684,8 @@ def parse_resurrect_order(sentence: str, game_state: GameState, player_id: str) 
     match = re.search(r'resurrect\s+(.+)', sentence)
     if match:
         target_name = match.group(1).strip()
-        target_resolved = resolve_character(target_name, game_state)
+        # You may only resurrect your own dead, not an opponent's.
+        target_resolved = resolve_character(target_name, game_state, player_id)
         order.target_name = target_name
         order.target_id = target_resolved.entity_id
         parser.resolve_actor(order, None)
@@ -846,7 +858,8 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
             parser.add_warning(order, f"Donor '{donor_name}' not found")
             return order
 
-        recipient_resolved = resolve_character(recipient_name, game_state, player_id)
+        # GIVE may target another faction's character; the donor may not.
+        recipient_resolved = resolve_character(recipient_name, game_state, player_id, enemy_ok=True)
         if not recipient_resolved.found:
             parser.add_warning(order, f"Recipient '{recipient_name}' not found")
             return order
@@ -875,11 +888,14 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
         unit_or_gold = match.group(2).strip().lower()
         recipient_name = match.group(3).strip()
 
-        if not parser.resolve_actor(order, None):  # Use leader as donor
+        leader = get_player_leader(game_state, player_id)
+        if not leader:
+            parser.add_warning(order, "No leader character found")
             return order
-        order.donor_id = order.player_id  # Will be resolved to leader in engine
+        order.donor_id = leader.id
 
-        recipient_resolved = resolve_character(recipient_name, game_state, player_id)
+        # GIVE may target another faction's character; the donor may not.
+        recipient_resolved = resolve_character(recipient_name, game_state, player_id, enemy_ok=True)
         if not recipient_resolved.found:
             parser.add_warning(order, f"Recipient '{recipient_name}' not found")
             return order
@@ -1158,7 +1174,9 @@ def parse_free_order(sentence: str, game_state: GameState, player_id: str) -> Op
         for prisoner_name in prisoner_list:
             # Remove trailing punctuation
             prisoner_name = re.sub(r'[.,;!?]+$', '', prisoner_name)
-            prisoner_resolved = resolve_character(prisoner_name, game_state, player_id)
+            # Prisoners keep their original faction, so they must be looked up
+            # across factions; the engine verifies the actor is their captor.
+            prisoner_resolved = resolve_character(prisoner_name, game_state, player_id, enemy_ok=True)
             if prisoner_resolved.found:
                 order.prisoner_ids.append(prisoner_resolved.entity_id)
                 order.prisoner_names.append(prisoner_name)
@@ -1180,7 +1198,9 @@ def parse_free_order(sentence: str, game_state: GameState, player_id: str) -> Op
         for prisoner_name in prisoner_list:
             # Remove trailing punctuation
             prisoner_name = re.sub(r'[.,;!?]+$', '', prisoner_name)
-            prisoner_resolved = resolve_character(prisoner_name, game_state, player_id)
+            # Prisoners keep their original faction, so they must be looked up
+            # across factions; the engine verifies the actor is their captor.
+            prisoner_resolved = resolve_character(prisoner_name, game_state, player_id, enemy_ok=True)
             if prisoner_resolved.found:
                 order.prisoner_ids.append(prisoner_resolved.entity_id)
                 order.prisoner_names.append(prisoner_name)

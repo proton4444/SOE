@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-from spoils_engine.models import GameState, Character, Faction
+from spoils_engine.models import GameState, Character, Faction, UnitType
 from spoils_engine import config
 
 
@@ -65,7 +65,7 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
     for stack in game_state.unit_stacks.values():
         if stack.faction_id == faction_id and stack.location_city_id == city_id:
             base_power += stack.attack_value
-            if stack.unit_type.name == "SOLDIER":
+            if stack.unit_type == UnitType.SOLDIER:
                 soldier_count += stack.count
 
     # Add ship attack values
@@ -100,8 +100,9 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
 
     total_power = base_power * skill_multiplier * blessing_bonus * max(0.5, curse_penalty)
 
-    # Fortifications only benefit defenders
-    if city_id in game_state.world_map.cities and city_id in game_state.factions.get(faction_id, Faction(faction_id, faction_id)).controlled_city_ids:
+    # Fortifications only benefit the faction holding the city
+    faction = game_state.factions.get(faction_id)
+    if faction and city_id in game_state.world_map.cities and city_id in faction.controlled_city_ids:
         total_power *= fort_multiplier
 
     return total_power
@@ -213,16 +214,17 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
     # Armor reduces casualties modestly
     soldier_count = sum(
         stack.count for stack in game_state.unit_stacks.values()
-        if stack.faction_id == faction_id and stack.location_city_id == city_id and stack.unit_type.name == "SOLDIER"
+        if stack.faction_id == faction_id and stack.location_city_id == city_id
+        and stack.unit_type == UnitType.SOLDIER
     )
     armor_available = sum(
         char.resources.get("armor", 0) for char in game_state.characters.values()
         if char.faction_id == faction_id and char.location_city_id == city_id
     )
     if soldier_count > 0:
-        armor_mitigation = 1 - min(armor_available, soldier_count) / (soldier_count * 4)
+        armor_mitigation = 1.0 - min(armor_available, soldier_count) / (soldier_count * 4)
     else:
-        armor_mitigation = 1
+        armor_mitigation = 1.0
 
     casualty_rate *= max(0.25, armor_mitigation)
 

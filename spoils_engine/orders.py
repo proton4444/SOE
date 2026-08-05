@@ -415,14 +415,19 @@ class PromoteOrder(Order):
 
 @dataclass
 class TradeOrder(Order):
-    """Buy or sell goods leveraging trading skill."""
+    """
+    Buy or sell goods leveraging trading skill.
+
+    Note there is deliberately no price field: unit prices are set by
+    `config.RESOURCE_BASE_PRICE` and adjusted by the trader's skill. Letting an
+    order carry its own price would let a player name what their goods sell for.
+    """
 
     actor_id: str = ""
     city_id: str = ""
     resource_type: str = ""
     amount: int = 0
     action: str = "buy"  # buy or sell
-    price: int = 0
 
     def order_type(self) -> str:
         return "TRADE"

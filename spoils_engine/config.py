@@ -83,6 +83,34 @@ NAMED_CHARACTER_SKILL_MULTIPLIER = 0.25  # per effective level / 4
 
 
 # ============================================================================
+# TRADE
+# ============================================================================
+
+# Base market value per unit of a resource, in gold.
+# Prices are set here rather than taken from the order text so that a player
+# cannot name the price at which their own goods are bought or sold.
+RESOURCE_BASE_PRICE = {
+    "wood": 4,
+    "stone": 5,
+    "iron": 8,
+    "copper": 10,
+    "silver": 25,
+    "gold": 40,
+    "gems": 60,
+    "weapon": 15,
+    "armor": 20,
+    "catapult": 120,
+}
+
+RESOURCE_DEFAULT_PRICE = 5
+
+# Gap between the market's buy and sell quotes, as a fraction of base price.
+# Trading skill narrows this spread but never closes it, so round-tripping a
+# purchase through a sale always loses a little gold.
+RESOURCE_MARKET_SPREAD = 0.4
+
+
+# ============================================================================
 # COMBAT
 # ============================================================================
 
@@ -165,6 +193,11 @@ def get_recruit_cost(unit_type: UnitType) -> int:
 def get_ship_cost(ship_type: ShipType) -> int:
     """Get the gold cost to buy a ship."""
     return SHIP_COST.get(ship_type, 1000)
+
+
+def get_resource_price(resource_type: str) -> int:
+    """Get the base market value of one unit of a resource."""
+    return RESOURCE_BASE_PRICE.get(resource_type, RESOURCE_DEFAULT_PRICE)
 
 
 def calculate_character_salary(combat_skill: int, magic_skill: int) -> float:

@@ -59,13 +59,15 @@ def test_upkeep_system(test_game_state):
     # Run turn with no orders
     updated_state, turn_log = engine.run_turn(test_game_state, {}, seed=42)
 
-    # Check upkeep was deducted
+    # Check upkeep was deducted. Income goes to the city's tax pool, so it does
+    # not offset upkeep until someone collects it with a TAX order.
     faction = updated_state.factions["player1"]
     expected_income = config.get_income_for_city(models.PopulationBand.MEDIUM)  # city1 income
     expected_upkeep = 100 * config.UPKEEP_PER_UNIT[models.UnitType.SOLDIER]  # 100 soldiers
 
-    expected_treasury = initial_treasury + expected_income - expected_upkeep
+    expected_treasury = initial_treasury - expected_upkeep
     assert abs(faction.treasury - expected_treasury) < 0.5  # Allow small rounding diff
+    assert updated_state.tax_pools["city1"] == expected_income
 
     # Check upkeep event was logged
     events = turn_log.get_player_events("player1")

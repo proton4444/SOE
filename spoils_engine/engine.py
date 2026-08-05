@@ -5,6 +5,7 @@ Processes orders in deterministic phases and updates game state.
 All randomness is controlled by a seeded RNG for reproducibility.
 """
 
+import math
 import random
 from typing import Dict, List, Tuple
 from dataclasses import dataclass, field
@@ -66,12 +67,69 @@ class TurnLog:
 
 
 # ============================================================================
+# SHARED HELPERS
+# ============================================================================
+
+def allocate_id(registry: Dict[str, object], prefix: str) -> str:
+    """
+    Allocate an entity id that is not already used in `registry`.
+
+    Sizing an id off len(registry) alone collides once anything has been
+    removed -- e.g. a stack wiped out in combat frees its number and the next
+    allocation silently overwrites a live entity.
+    """
+    n = len(registry) + 1
+    while f"{prefix}_{n}" in registry:
+        n += 1
+    return f"{prefix}_{n}"
+
+
+def actor_can_act(order: Order, player_id: str, game_state: GameState,
+                  actor_attr: str = "actor_id") -> bool:
+    """
+    Check the preconditions every acting character must satisfy.
+
+    The actor must exist, belong to the issuing player, be alive, and not be
+    held prisoner. Appends a warning to the order and returns False on failure.
+    """
+    actor_id = getattr(order, actor_attr, "")
+    if not actor_id:
+        order.warnings.append("No actor specified")
+        return False
+
+    actor = game_state.characters.get(actor_id)
+    if not actor:
+        order.warnings.append(f"Character {actor_id} not found")
+        return False
+
+    if actor.faction_id != player_id:
+        order.warnings.append("Character does not belong to you")
+        return False
+
+    if actor.is_dead:
+        order.warnings.append(f"{actor.name} is dead and cannot act")
+        return False
+
+    if actor.is_prisoner:
+        order.warnings.append(f"{actor.name} is a prisoner and cannot act")
+        return False
+
+    return True
+
+
+# ============================================================================
 # PATHFINDING
 # ============================================================================
 
-def find_shortest_path(start_city_id: str, end_city_id: str, game_state: GameState) -> Tuple[List[str], float]:
+def _dijkstra(start_city_id: str, end_city_id: str, game_state: GameState,
+              sea_only: bool) -> Tuple[List[str], float]:
     """
-    Find shortest path between two cities using Dijkstra's algorithm.
+    Shortest path between two cities over the road graph.
+
+    Args:
+        sea_only: If True, traverse only sea lanes; if False, traverse only
+            land roads. The two networks are disjoint -- land movement may not
+            cross a sea lane and a ship may not sail up a road.
 
     Returns:
         Tuple of (path_as_city_ids, total_cost)
@@ -79,7 +137,6 @@ def find_shortest_path(start_city_id: str, end_city_id: str, game_state: GameSta
     if start_city_id == end_city_id:
         return ([start_city_id], 0.0)
 
-    # Dijkstra's algorithm
     distances = {start_city_id: 0.0}
     previous = {}
     pq = [(0.0, start_city_id)]
@@ -103,8 +160,11 @@ def find_shortest_path(start_city_id: str, end_city_id: str, game_state: GameSta
             path.reverse()
             return (path, current_dist)
 
-        # Check neighbors
         for neighbor_city, road in game_state.world_map.neighbors(current_id):
+            is_sea_lane = road.quality == RoadQuality.SEA
+            if is_sea_lane != sea_only:
+                continue
+
             if neighbor_city.id in visited:
                 continue
 
@@ -120,58 +180,14 @@ def find_shortest_path(start_city_id: str, end_city_id: str, game_state: GameSta
     return ([], float('inf'))
 
 
+def find_shortest_path(start_city_id: str, end_city_id: str, game_state: GameState) -> Tuple[List[str], float]:
+    """Find the shortest overland route between two cities."""
+    return _dijkstra(start_city_id, end_city_id, game_state, sea_only=False)
+
+
 def find_sea_route(start_city_id: str, end_city_id: str, game_state: GameState) -> Tuple[List[str], float]:
-    """
-    Find shortest sea route between two cities using only sea lanes.
-
-    Returns:
-        Tuple of (path_as_city_ids, total_cost)
-    """
-    if start_city_id == end_city_id:
-        return ([start_city_id], 0.0)
-
-    # Dijkstra's algorithm (only using SEA roads)
-    distances = {start_city_id: 0.0}
-    previous = {}
-    pq = [(0.0, start_city_id)]
-    visited = set()
-
-    while pq:
-        current_dist, current_id = heapq.heappop(pq)
-
-        if current_id in visited:
-            continue
-        visited.add(current_id)
-
-        if current_id == end_city_id:
-            # Reconstruct path
-            path = []
-            node = end_city_id
-            while node in previous:
-                path.append(node)
-                node = previous[node]
-            path.append(start_city_id)
-            path.reverse()
-            return (path, current_dist)
-
-        # Check neighbors (only sea lanes)
-        for neighbor_city, road in game_state.world_map.neighbors(current_id):
-            if road.quality != RoadQuality.SEA:
-                continue  # Skip land routes
-
-            if neighbor_city.id in visited:
-                continue
-
-            cost = config.get_movement_cost(road.quality)
-            new_dist = current_dist + cost
-
-            if neighbor_city.id not in distances or new_dist < distances[neighbor_city.id]:
-                distances[neighbor_city.id] = new_dist
-                previous[neighbor_city.id] = current_id
-                heapq.heappush(pq, (new_dist, neighbor_city.id))
-
-    # No sea route found
-    return ([], float('inf'))
+    """Find the shortest route between two cities using only sea lanes."""
+    return _dijkstra(start_city_id, end_city_id, game_state, sea_only=True)
 
 
 # ============================================================================
@@ -182,90 +198,48 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
     """
     Validate all orders and mark invalid ones with warnings.
 
-    This phase checks:
-    - Actor exists and belongs to player
-    - Cities/targets exist
-    - Basic preconditions (e.g., only ports can build ships)
+    Every order carrying an actor goes through `actor_can_act`, so ownership,
+    death and imprisonment are enforced uniformly rather than per order type.
+    Order-specific preconditions (destinations, ports, skills) are checked on
+    top of that.
     """
     for player_id, orders in orders_by_player.items():
         for order in orders:
-            # Check MoveOrder
-            if isinstance(order, MoveOrder):
-                if not order.actor_id:
-                    order.warnings.append("No actor specified")
+            # Universal actor preconditions. A few order types name their
+            # actor with a role-specific field instead of `actor_id`.
+            actor_attr = {
+                AssignOrder: "donor_id",
+                SummonOrder: "summoner_id",
+                TeachOrder: "teacher_id",
+            }.get(type(order), "actor_id")
+            if hasattr(order, actor_attr):
+                if not actor_can_act(order, player_id, game_state, actor_attr):
                     continue
 
-                actor = game_state.characters.get(order.actor_id)
-                if not actor:
-                    order.warnings.append(f"Character {order.actor_id} not found")
-                    continue
+            actor = game_state.characters.get(getattr(order, actor_attr, ""))
 
-                if actor.faction_id != player_id:
-                    order.warnings.append(f"Character does not belong to you")
-                    continue
-
+            # Order-specific preconditions
+            if isinstance(order, (MoveOrder, SailOrder)):
                 if not game_state.world_map.cities.get(order.destination_city_id):
-                    order.warnings.append(f"Destination city not found")
+                    order.warnings.append("Destination city not found")
+                elif isinstance(order, SailOrder):
+                    destination = game_state.world_map.cities[order.destination_city_id]
+                    if not destination.is_port:
+                        order.warnings.append(f"{destination.name} is not a port")
 
-            # Check SailOrder
-            elif isinstance(order, SailOrder):
-                if not order.actor_id:
-                    order.warnings.append("No actor specified")
-                    continue
-
-                actor = game_state.characters.get(order.actor_id)
-                if not actor:
-                    order.warnings.append(f"Character {order.actor_id} not found")
-                    continue
-
-                if actor.faction_id != player_id:
-                    order.warnings.append(f"Character does not belong to you")
-                    continue
-
-                if not game_state.world_map.cities.get(order.destination_city_id):
-                    order.warnings.append(f"Destination city not found")
-
-            # Check RecruitOrder
             elif isinstance(order, RecruitOrder):
-                if not order.actor_id:
-                    order.warnings.append("No actor specified")
-                    continue
-
-                actor = game_state.characters.get(order.actor_id)
-                if not actor:
-                    order.warnings.append(f"Character {order.actor_id} not found")
-                    continue
-
-                if actor.faction_id != player_id:
-                    order.warnings.append(f"Character does not belong to you")
-                    continue
-
                 if not game_state.world_map.cities.get(order.city_id):
-                    order.warnings.append(f"City not found")
+                    order.warnings.append("City not found")
 
                 try:
                     UnitType(order.unit_type)
                 except ValueError:
                     order.warnings.append(f"Invalid unit type '{order.unit_type}'")
 
-            # Check BuyShipOrder
             elif isinstance(order, BuyShipOrder):
-                if not order.actor_id:
-                    order.warnings.append("No actor specified")
-                    continue
-
-                actor = game_state.characters.get(order.actor_id)
-                if not actor:
-                    order.warnings.append(f"Character {order.actor_id} not found")
-                    continue
-
-                if actor.faction_id != player_id:
-                    order.warnings.append(f"Character does not belong to you")
-                    continue
-
                 city = game_state.world_map.cities.get(order.city_id)
                 if not city:
-                    order.warnings.append(f"City not found")
+                    order.warnings.append("City not found")
                 elif not city.is_port:
                     order.warnings.append(f"City {city.name} is not a port")
 
@@ -274,38 +248,26 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                 except ValueError:
                     order.warnings.append(f"Invalid ship type '{order.ship_type}'")
 
-            # Check AttackOrder
-            elif isinstance(order, AttackOrder):
-                if not order.actor_id:
-                    order.warnings.append("No actor specified")
-                    continue
+            elif isinstance(order, (TeleportOrder, FlyOrder, SummonOrder, ScryOrder)):
+                if actor and actor.magic_skill <= 0:
+                    order.warnings.append("Character has no magic skill")
 
-                actor = game_state.characters.get(order.actor_id)
-                if not actor:
-                    order.warnings.append(f"Character {order.actor_id} not found")
-                    continue
+            elif isinstance(order, (PrayOrder, BlessOrder, CurseOrder, ResurrectOrder)):
+                if actor and actor.religion_skill <= 0:
+                    order.warnings.append("Character has no religion skill")
 
-                if actor.faction_id != player_id:
-                    order.warnings.append(f"Character does not belong to you")
-                    continue
+            elif isinstance(order, AssignOrder):
+                recipient = game_state.characters.get(order.recipient_id)
+                if not recipient:
+                    order.warnings.append("Recipient not found")
+                elif recipient.is_dead:
+                    order.warnings.append(f"{recipient.name} is dead")
 
-            # Check TeleportOrder
-            elif isinstance(order, TeleportOrder):
-                if not order.actor_id:
-                    order.warnings.append("No actor specified")
-                    continue
-
-                actor = game_state.characters.get(order.actor_id)
-                if not actor:
-                    order.warnings.append(f"Character {order.actor_id} not found")
-                    continue
-
-                if actor.faction_id != player_id:
-                    order.warnings.append(f"Character does not belong to you")
-                    continue
-
-                if actor.magic_skill <= 0:
-                    order.warnings.append(f"Character has no magic skill")
+            elif isinstance(order, TradeOrder):
+                if order.amount <= 0:
+                    order.warnings.append("Trade amount must be positive")
+                if order.action not in ("buy", "sell"):
+                    order.warnings.append(f"Unknown trade action '{order.action}'")
 
 
 # ============================================================================
@@ -349,7 +311,10 @@ def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameS
             start_city = game_state.world_map.cities[actor.location_city_id]
             end_city = game_state.world_map.cities[order.destination_city_id]
             actor.location_city_id = order.destination_city_id
-            actor.movement_points -= int(cost)
+            # Round up: truncating made every sub-1.0 hop (excellent roads cost
+            # 0.5) free, so a character could cross the map without ever
+            # spending a movement point.
+            actor.movement_points -= max(1, math.ceil(cost))
 
             turn_log.add("movement", player_id, "move",
                         f"{actor.name} moved from {start_city.name} to {end_city.name} (cost: {cost:.1f})",
@@ -440,12 +405,38 @@ def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState
             ship.location_city_id = order.destination_city_id
             actor.location_city_id = order.destination_city_id
 
-            # Move all units at the same location (simplified - assumes they're on the ship)
-            for stack in game_state.unit_stacks.values():
-                if stack.faction_id == player_id and stack.location_city_id == start_city.id:
+            # Load units onto the ship, up to its capacity. Previously every
+            # stack in the port sailed along regardless of capacity, so a
+            # single galley could ferry an unlimited army.
+            berths = ship.capacity
+            embarked = 0
+            for stack in sorted(game_state.unit_stacks.values(), key=lambda s: s.id):
+                if stack.faction_id != player_id or stack.location_city_id != start_city.id:
+                    continue
+                if berths <= 0:
+                    break
+
+                if stack.count <= berths:
                     stack.location_city_id = order.destination_city_id
+                    berths -= stack.count
+                    embarked += stack.count
+                else:
+                    # Split the stack: only `berths` units fit aboard
+                    boarding = berths
+                    stack.count -= boarding
+                    new_stack_id = allocate_id(game_state.unit_stacks, "stack")
+                    game_state.unit_stacks[new_stack_id] = UnitStack(
+                        id=new_stack_id,
+                        faction_id=stack.faction_id,
+                        location_city_id=order.destination_city_id,
+                        unit_type=stack.unit_type,
+                        count=boarding,
+                    )
+                    berths = 0
+                    embarked += boarding
 
             efficiency_note = f" (rowing efficiency: {rowing_efficiency * 100:.0f}%)" if rowing_efficiency < 1.0 else ""
+            efficiency_note += f" carrying {embarked} units" if embarked else ""
             turn_log.add("sail", player_id, "sail",
                         f"{actor.name} sailed from {start_city.name} to {end_city.name}{efficiency_note}",
                         location=end_city.id, character_id=actor.id)
@@ -506,7 +497,7 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                 faction.treasury -= cost
 
                 # Create unit stack
-                stack_id = f"stack_{player_id}_{len(game_state.unit_stacks)}_{rng.randint(1000, 9999)}"
+                stack_id = allocate_id(game_state.unit_stacks, f"stack_{player_id}")
                 new_stack = UnitStack(
                     id=stack_id,
                     faction_id=player_id,
@@ -549,7 +540,7 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
 
                 # Create ships
                 for i in range(order.count):
-                    ship_id = f"ship_{player_id}_{len(game_state.ships)}_{rng.randint(1000, 9999)}"
+                    ship_id = allocate_id(game_state.ships, f"ship_{player_id}")
                     new_ship = Ship(
                         id=ship_id,
                         faction_id=player_id,
@@ -754,7 +745,7 @@ def process_summon(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                 except KeyError:
                     continue
 
-                creature_id = f"creature_{len(game_state.summoned_creatures) + 1}"
+                creature_id = allocate_id(game_state.summoned_creatures, "creature")
                 new_creature = SummonedCreature(
                     id=creature_id,
                     summoner_id=summoner.id,
@@ -774,6 +765,9 @@ def process_religion(orders_by_player: Dict[str, List[Order]], game_state: GameS
     """Process PRAY/BLESS/CURSE/RESURRECT orders."""
     for player_id, orders in orders_by_player.items():
         for order in orders:
+            if order.warnings:
+                continue  # Skip invalid orders
+
             if isinstance(order, PrayOrder):
                 priest = game_state.characters.get(order.actor_id)
                 if not priest or priest.religion_skill <= 0:
@@ -964,19 +958,16 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
         # Round upkeep to 1 decimal place
         upkeep = round(upkeep, 1)
 
-        # Apply income directly to treasury while also storing it in the pool for TAX
-        # commands that draw from the same funds. Income is added before upkeep so that
-        # wages can be paid out of current earnings.
-        if income > 0:
-            faction.treasury += income
-
-        # Apply upkeep (deducted after income)
+        # Income accrues to the per-city tax pools ONLY. It reaches the treasury
+        # when a character collects it with a TAX order. Crediting the treasury
+        # here as well double-counted every gold piece: once automatically, and
+        # again when the same pool was taxed.
         faction.treasury -= upkeep
 
         # Log events
         if income > 0:
             turn_log.add("income", faction.id, "income",
-                        f"Earned {income}g income (added to treasury and tax pools)")
+                        f"{income}g accrued in tax pools (use TAX to collect)")
 
         if upkeep > 0:
             turn_log.add("income", faction.id, "upkeep",
@@ -1037,6 +1028,9 @@ def process_fortifications(orders_by_player: Dict[str, List[Order]], game_state:
     for player_id, orders in orders_by_player.items():
         for order in orders:
             if isinstance(order, (FortifyOrder, UnfortifyOrder)):
+                if order.warnings:
+                    continue  # Skip invalid orders
+
                 actor = game_state.characters.get(order.actor_id)
                 if not actor:
                     continue
@@ -1148,8 +1142,12 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                 faction = game_state.factions.get(player_id)
                 if faction and faction.treasury >= order.gold_amount:
                     faction.treasury -= order.gold_amount
-                    # Note: In full version, would track gold per character
-                    # For alpha, just deduct from faction treasury
+                    # Credit the recipient's faction. Gold is tracked per
+                    # faction rather than per character in the alpha; without
+                    # this the amount was simply destroyed on transfer.
+                    recipient_faction = game_state.factions.get(recipient.faction_id)
+                    if recipient_faction:
+                        recipient_faction.treasury += order.gold_amount
                     turn_log.add("assign", player_id, "assign_gold",
                                 f"{donor.name} gave {order.gold_amount}g to {recipient.name}",
                                 character_id=donor.id)
@@ -1185,10 +1183,11 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                 # Transfer units
                 donor_stack.count -= order.unit_count
 
-                # Find or create recipient stack
+                # Find or create recipient stack. Units join the recipient's
+                # faction -- GIVE may cross faction lines.
                 recipient_stack = None
                 for stack in game_state.unit_stacks.values():
-                    if (stack.faction_id == player_id and
+                    if (stack.faction_id == recipient.faction_id and
                         stack.location_city_id == recipient.location_city_id and
                         stack.unit_type.name == order.unit_type):
                         recipient_stack = stack
@@ -1198,10 +1197,10 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                     recipient_stack.count += order.unit_count
                 else:
                     # Create new stack for recipient
-                    new_stack_id = f"stack_{len(game_state.unit_stacks) + 1}"
+                    new_stack_id = allocate_id(game_state.unit_stacks, "stack")
                     new_stack = UnitStack(
                         id=new_stack_id,
-                        faction_id=player_id,
+                        faction_id=recipient.faction_id,
                         location_city_id=recipient.location_city_id,
                         unit_type=UnitType[order.unit_type],
                         count=order.unit_count
@@ -1259,7 +1258,7 @@ def process_name(orders_by_player: Dict[str, List[Order]], game_state: GameState
             unit_stack.count -= 1
 
             # Create new character
-            new_char_id = f"char_{len(game_state.characters) + 1}"
+            new_char_id = allocate_id(game_state.characters, "char")
             new_character = Character(
                 id=new_char_id,
                 name=order.new_name,
@@ -1328,14 +1327,19 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
             if not city:
                 continue
 
-            # Check if location is secured by another faction
-            for faction in game_state.factions.values():
-                if (faction.id != player_id and
-                    actor.location_city_id in faction.secured_city_ids):
-                    turn_log.add("tax", player_id, "tax_failed",
-                                f"{actor.name}: {city.name} is secured by another faction",
-                                character_id=actor.id, success=False)
-                    continue
+            # Check if location is secured by another faction.
+            # (The `continue` used here previously only advanced the inner
+            # faction loop, so the order went ahead and taxed anyway.)
+            blocked_by = next(
+                (f for f in game_state.factions.values()
+                 if f.id != player_id and actor.location_city_id in f.secured_city_ids),
+                None
+            )
+            if blocked_by:
+                turn_log.add("tax", player_id, "tax_failed",
+                            f"{actor.name}: {city.name} is secured by {blocked_by.name}",
+                            character_id=actor.id, success=False)
+                continue
 
             # Count soldiers at this location for this faction
             soldier_count = 0
@@ -1383,6 +1387,9 @@ def process_trade(orders_by_player: Dict[str, List[Order]], game_state: GameStat
             if not isinstance(order, TradeOrder):
                 continue
 
+            if order.warnings:
+                continue  # Skip invalid orders
+
             actor = game_state.characters.get(order.actor_id)
             if not actor or not faction:
                 continue
@@ -1391,8 +1398,19 @@ def process_trade(orders_by_player: Dict[str, List[Order]], game_state: GameStat
             if not city:
                 continue
 
-            unit_price = order.price or 5
-            unit_price = max(1, int(unit_price * (1 - actor.trading_skill / 200)))
+            # Prices come from config, never from the order: a player-supplied
+            # price would let a faction name its own sale value and mint gold.
+            #
+            # The market quotes a buy price above and a sell price below the
+            # base value. Trading skill narrows that spread in the trader's
+            # favour but never inverts it, so buying and selling in the same
+            # city is always a small loss rather than an arbitrage loop.
+            base_price = config.get_resource_price(order.resource_type)
+            spread = config.RESOURCE_MARKET_SPREAD * (1 - actor.trading_skill / 200)
+            if order.action == "buy":
+                unit_price = max(1, round(base_price * (1 + spread / 2)))
+            else:
+                unit_price = max(1, round(base_price * (1 - spread / 2)))
 
             if order.action == "buy":
                 total_cost = unit_price * order.amount
@@ -1427,6 +1445,9 @@ def process_queueing(orders_by_player: Dict[str, List[Order]], turn_log: TurnLog
     """Process AWAIT and REPEAT orders for logging/sequencing."""
     for player_id, orders in orders_by_player.items():
         for order in orders:
+            if order.warnings:
+                continue  # Skip invalid orders
+
             if isinstance(order, AwaitOrder):
                 turn_log.add("queue", player_id, "await",
                             f"Waiting {order.duration_days} days", character_id=order.actor_id)
@@ -1559,7 +1580,7 @@ def process_build(orders_by_player: Dict[str, List[Order]], game_state: GameStat
 
                 # Create galleys
                 for i in range(order.count):
-                    ship_id = f"ship_{len(game_state.ships) + 1}"
+                    ship_id = allocate_id(game_state.ships, "ship")
                     new_ship = Ship(
                         id=ship_id,
                         faction_id=player_id,

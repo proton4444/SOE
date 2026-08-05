@@ -11,7 +11,13 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-## Features (Alpha v0.7.0)
+> **v0.7.1 — repository consolidated.** `main` now holds this engine
+> (`spoils_engine/`) as the single source of truth. An earlier parallel
+> prototype under `src/soe/` has been retired; see
+> [`docs/audit_2025-11.md`](docs/audit_2025-11.md) for the consolidation notes
+> and the list of defects fixed in this release.
+
+## Features (Alpha v0.7.1)
 
 ### Implemented
 
@@ -426,7 +432,9 @@ SOE/
 ├── cli.py                 # CLI entrypoint
 ├── tests/                 # Test suite
 │   ├── test_parser.py
-│   └── test_engine_basic.py
+│   ├── test_engine_basic.py
+│   ├── test_upkeep.py
+│   └── test_regressions.py  # Pins the defects fixed in the v0.7.1 audit
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -441,7 +449,9 @@ SOE/
 │       └── reports/
 │           └── player_*_turn*.txt
 ├── docs/
-│   └── alpha_scope.md     # Detailed alpha scope document
+│   ├── alpha_scope.md     # Detailed alpha scope document
+│   ├── rules_gap.md       # Coverage of rules.md mechanics
+│   └── audit_2025-11.md   # Consolidation + defect audit (v0.7.1)
 ├── rules.md               # Official game rules (authoritative)
 ├── pyproject.toml         # Package configuration
 ├── requirements.txt       # Dependencies
@@ -456,12 +466,21 @@ Cities have **population bands** that determine:
 - **Income per turn**: <10k=10g, 10k-99k=50g, 100k-999k=200g, 1M+=500g
 - **Recruit cap per turn**: <10k=10, 10k-99k=50, 100k-999k=200, 1M+=500
 
+Income is **not** paid straight into the treasury. It accumulates in a per-city
+tax pool (capped at four turns' worth) and reaches your treasury only when a
+character with soldiers present issues a `TAX` order. Upkeep, by contrast, is
+deducted from the treasury every turn — so an empire that never taxes goes broke.
+
 Roads have **quality** affecting movement cost:
 - Excellent: 0.5x cost
 - Good: 1.0x cost
 - Fair: 1.5x cost
 - Poor: 2.0x cost
-- Sea: 1.0x (requires ship)
+- Sea: 1.0x (requires ship, sea lanes only)
+
+Land and sea form **separate networks**: a marching character cannot cross a sea
+lane, and a ship cannot sail up a road. Every hop costs at least one movement
+point regardless of road quality.
 
 ### Characters
 
