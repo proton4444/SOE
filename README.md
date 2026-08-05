@@ -565,30 +565,54 @@ See `docs/alpha_scope.md` for comprehensive mapping.
 5. **Deterministic**: No hidden state, no non-reproducible randomness
 6. **File-based**: Human-readable state, easy to inspect/debug
 
+## Where we are
+
+**41 of 89 command verbs (46%)** from `rules.md` are recognised, and 2 of its 9
+order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
+full breakdown, including which commands are missing and why.
+
+The largest divergence is structural: the rules describe an **asynchronous**
+game where orders queue and execute as game time passes, while the engine runs
+fixed synchronous turns. That gap is why `AWAIT` and `REPEAT` parse but do
+nothing.
+
 ## Future Roadmap
 
-### Beta (v0.2.0)
+### v0.8 — Close the cheap gaps
 
-- Full SAIL command
-- SECURE command (location control)
-- TAX command (detailed mechanics)
-- Expanded magic (SUMMON, FLY)
-- Health and character progression
+Commands that need no new machinery, only phases and parsing:
 
-### v0.3.0
+- Prisoner operations: `ENSLAVE`, `KILL`/`EXECUTE`, `INTERROGATE`
+- Status and stealth: `COMBATANT`/`NONCOM`, `LURK`/`UNLURK`
+- Inventory: `GET`/`OBTAIN`/`TAKE`, `TRANSFER`, `UNLOAD`
+- Finance: `PAY`, `HIRE`, `BORROW`/`REPAY`
 
-- Full combat system (retreats, morale, armor/weapons)
-- Diplomacy (ALLY/ENEMY, messaging)
-- Religion system
-- Resource gathering (MINE, COLLECT)
+### v0.9 — The order queue
 
-### v1.0.0
+The structural change everything else waits on:
 
-- Construction (BUILD all item types)
-- Advanced magic (conjure, magical items)
-- Conditional orders (IF statements)
-- Order queuing
-- Complete feature parity with `rules.md`
+- Persistent order queue surviving across turns, with game-time costs per order
+- `HALT`/`STOP` to cancel orders in progress
+- Make `AWAIT` and `REPEAT` actually execute
+- `UNTIL`, `REPEATEDLY`, `IMMEDIATELY` adverbs
+- `THEN` sequencing and `and`-chained commands
+
+### v1.0 — Rules fidelity
+
+- `IF` conditional orders (needs the queue)
+- Communication: `SAY`/`TELL`, `POST`, `ADDRESS`, `REPORT`, `QUERY`
+- Exploration and intel: `EXPLORE`, `SCAN`, `SEARCH`, `PROBE`
+- Magical items: `CONJURE`, `CREATE`, `CHARGE`/`RECHARGE`, `ABSORB`
+- Groups and group leaders: `JOIN`, `COME`, `SUPPORT`
+- Fog of war
+- Retire or justify the five non-rules verbs (`TRADE`, `SCRY`, `RESURRECT`,
+  `REPEAT`, `WAIT`)
+
+### Also outstanding
+
+Design debt recorded in [`docs/audit_2025-11.md`](docs/audit_2025-11.md):
+collapse the three overlapping fortification stores, scale casualties by power
+ratio, make "leader" an explicit flag, and track gold per character.
 
 ## Contributing
 

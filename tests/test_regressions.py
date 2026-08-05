@@ -141,8 +141,8 @@ def test_save_is_atomic(two_faction_state):
 def test_capture_order_parses(two_faction_state):
     """
     parse_capture_order passed enemy_ok= to a resolver that had no such
-    parameter, so any CAPTURE/ENSLAVE order raised TypeError and took the whole
-    turn down with it.
+    parameter, so any CAPTURE order raised TypeError and took the whole turn
+    down with it.
     """
     parsed = parser.parse_orders("Have Marcus capture Tengri.", two_faction_state, "p1")
 
