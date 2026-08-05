@@ -76,8 +76,8 @@ def test_upkeep_system(test_game_state):
 
 
 def test_negative_treasury_warning(test_game_state):
-    """Test that negative treasury generates a warning."""
-    # Set low treasury and add expensive units
+    """Unpaid upkeep becomes wage debt and is reported."""
+    # Set low funds and add expensive units
     test_game_state.factions["player1"].treasury = 5
     test_game_state.factions["player1"].controlled_city_ids = set()  # No income
 
@@ -94,9 +94,10 @@ def test_negative_treasury_warning(test_game_state):
     # Run turn
     updated_state, turn_log = engine.run_turn(test_game_state, {}, seed=42)
 
-    # Treasury should be negative
+    # Available gold is spent; shortfall becomes wage debt
     faction = updated_state.factions["player1"]
-    assert faction.treasury < 0
+    assert faction.treasury == 0
+    assert faction.wage_debt > 0
 
     # Should have debt warning
     events = turn_log.get_player_events("player1")

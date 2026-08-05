@@ -7,7 +7,7 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **41 of 89 (46%)** |
+| Command verbs recognised | **58 of 89 (65%)** |
 | Order-language features | **2 of 9** (`HAVE` delegation, `and` target lists) |
 | Turn model | Synchronous fixed turns; the rules specify an **asynchronous order queue** |
 
@@ -15,27 +15,27 @@ Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
 engine has a phase for it — not that every sub-rule of that command is honoured.
 
-## Commands implemented (41)
+## Commands implemented (58)
 
 ALLY, ENEMY, NEUTRAL, ASSIGN, GIVE, ATTACK, AWAIT, BLESS, BUILD, CONSTRUCT,
 MAKE, BUY, CAPTURE, COLLECT, GATHER, CURE, CURSE, DISCARD, DISMISS, FREE,
 RELEASE, FLY, FORTIFY, UNFORTIFY, GO, MOVE, TRAVEL, HEAL, MINE, NAME, PRAY,
-PROMOTE, RECRUIT, SAIL, SECURE, SELL, STUDY, SUMMON, TAX, TEACH, TELEPORT
+PROMOTE, RECRUIT, HIRE, SAIL, SECURE, SELL, STUDY, SUMMON, TAX, TEACH, TELEPORT,
+ENSLAVE, KILL, EXECUTE, INTERROGATE, COMBATANT, NONCOM, LURK, UNLURK,
+GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY
 
-## Commands not implemented (48)
+## Commands not implemented (31)
 
 Grouped by the subsystem they belong to, which is roughly the order they should
 be tackled in:
 
-- **Prisoner & execution** — ENSLAVE, KILL, EXECUTE, INTERROGATE
-- **Status & stealth** — COMBATANT, NONCOM, LURK, UNLURK
-- **Order control** — HALT, STOP, WAIT FOR, WAIT UNTIL
-- **Inventory** — GET, OBTAIN, TAKE, TRANSFER, UNLOAD, WORK
+- **Order control** — HALT, STOP, WAIT FOR, WAIT UNTIL (needs v0.9 queue)
+- **Inventory** — WORK
 - **Communication** — SAY, TELL, ADDRESS, POST, REPORT, QUERY, PASSWORD
-- **Finance** — BORROW, REPAY, PAY, INVEST, OFFER, HIRE, PURCHASE, BUY PASSAGE
+- **Finance** — INVEST, OFFER, PURCHASE, BUY PASSAGE
 - **Exploration & intel** — EXPLORE, SCAN, SEARCH, PROBE
 - **Magical items** — CONJURE, CREATE, CHARGE, RECHARGE, ABSORB
-- **Groups** — JOIN, COME, SUPPORT
+- **Groups** — JOIN, COME, SUPPORT (UNLOAD is a thin alpha placeholder)
 - **Religion & training** — PREACH, TRAIN
 - **Naming** — UNNAME
 
@@ -115,8 +115,12 @@ and are covered by tests.
 - **Diplomacy** decides combat sides — an ally cannot be attacked, and a
   defender's allies present at the battle fight and share the casualties. Stance
   still does not affect movement rights or non-combat support.
-- **Gold** is held per faction. The rules give each character a purse, so `GIVE`
-  currently moves gold between treasuries rather than between characters.
+- **Gold** is held per character as of v0.8. Legacy `Faction.treasury` still
+  acts as a spend fall-back and migrates onto the leader when an old save is
+  loaded. Full group-level possession and multi-item GET lists remain simplified.
+- **UNLOAD / groups** — UNLOAD logs independence but there is no full group-
+  leader model yet (JOIN/COME/SUPPORT are still open).
+- **LURK** stores a flag and reports it; detection odds need fog of war (v1.0).
 
 ## Not implemented
 

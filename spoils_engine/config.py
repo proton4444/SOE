@@ -55,6 +55,7 @@ RECRUIT_COST = {
     UnitType.SOLDIER: 1,
     UnitType.SAILOR: 1,
     UnitType.WORKER: 1,  # Simplified from 0.25 for alpha
+    UnitType.SLAVE: 0,   # Created by ENSLAVE, not recruited
 }
 
 # Ship costs (gold per ship)
@@ -70,7 +71,25 @@ UPKEEP_PER_UNIT = {
     UnitType.SOLDIER: 0.1,   # ~1g per 2.5 months
     UnitType.SAILOR: 0.1,    # ~1g per 2.5 months
     UnitType.WORKER: 0.025,  # ~1g per 10 months
+    UnitType.SLAVE: 0.01,    # Cheaper labour; still needs food
 }
+
+# Banking guild: TRANSFER fee = fixed + percent of principal (rounded up)
+TRANSFER_FEE_FIXED = 10
+TRANSFER_FEE_PERCENT = 0.01
+
+# BORROW: alpha success odds and interest
+BORROW_BASE_CHANCE = 0.55
+BORROW_INTEREST_RATE = 0.01  # 1% of balance per turn (game week)
+BORROW_GRACE_TURNS = 4
+BORROW_MIN_PAYMENT_FRACTION = 0.10
+BORROW_MAX_AMOUNT = 500  # Cap when amount is omitted
+
+
+def transfer_fee(principal: float) -> int:
+    """Banking guild fee: fixed + 1% of principal, rounded up."""
+    import math
+    return TRANSFER_FEE_FIXED + math.ceil(principal * TRANSFER_FEE_PERCENT)
 
 UPKEEP_PER_SHIP = {
     ShipType.GALLEY: 2.0,  # Ship maintenance (crew, repairs)

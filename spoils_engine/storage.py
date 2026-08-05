@@ -175,6 +175,26 @@ def _migrate(game_state: GameState, data: dict) -> None:
         if members and not any(c.is_leader for c in members):
             members[0].is_leader = True
 
+    # v0.8: gold is per character. Legacy saves only had Faction.treasury and
+    # never wrote a Character.gold field. Detect that case from the raw JSON
+    # (not the rebuilt defaults) so a deliberate treasury buffer in a v0.8
+    # save is left alone.
+    raw_chars = data.get("characters") or {}
+    legacy_gold = bool(raw_chars) and all(
+        "gold" not in (cdata or {}) for cdata in raw_chars.values()
+    )
+    if legacy_gold:
+        for faction_id, faction in game_state.factions.items():
+            if faction.treasury <= 0:
+                continue
+            members = [c for c in game_state.characters.values()
+                       if c.faction_id == faction_id]
+            if not members:
+                continue
+            leader = next((c for c in members if c.is_leader), members[0])
+            leader.gold += faction.treasury
+            faction.treasury = 0.0
+
 
 # ============================================================================
 # SAVE/LOAD FUNCTIONS

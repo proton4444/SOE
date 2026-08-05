@@ -70,11 +70,11 @@ def init_game(
             player_name = player_data.get('name', f"Player {i+1}")
             start_city_id = player_data.get('start_city')
 
-            # Create faction
+            # Create faction (starting gold sits on the leader's purse)
             faction = models.Faction(
                 id=player_id,
                 name=player_name,
-                treasury=config.STARTING_TREASURY,
+                treasury=0,
                 controlled_city_ids={start_city_id} if start_city_id else set()
             )
             game_state.factions[player_id] = faction
@@ -88,6 +88,7 @@ def init_game(
                 faction_id=player_id,
                 location_city_id=start_city_id or list(world_map.cities.keys())[0],
                 is_leader=True,
+                gold=float(config.STARTING_TREASURY),
                 combat_skill=config.STARTING_COMBAT_SKILL,
                 magic_skill=config.STARTING_MAGIC_SKILL,
                 magic_power_current=config.STARTING_MAGIC_SKILL
@@ -106,7 +107,7 @@ def init_game(
             faction = models.Faction(
                 id=player_id,
                 name=f"Faction {i+1}",
-                treasury=config.STARTING_TREASURY,
+                treasury=0,
                 controlled_city_ids={city_ids[i % len(city_ids)]}
             )
             game_state.factions[player_id] = faction
@@ -119,6 +120,7 @@ def init_game(
                 faction_id=player_id,
                 location_city_id=city_ids[i % len(city_ids)],
                 is_leader=True,
+                gold=float(config.STARTING_TREASURY),
                 combat_skill=config.STARTING_COMBAT_SKILL,
                 magic_skill=config.STARTING_MAGIC_SKILL,
                 magic_power_current=config.STARTING_MAGIC_SKILL

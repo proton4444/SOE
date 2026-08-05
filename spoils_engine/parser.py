@@ -16,7 +16,8 @@ from spoils_engine.orders import (
     SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder,
     PromoteOrder, TaxOrder, CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder,
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
-    RepeatOrder, ScryOrder
+    RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
+    GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
 )
 
 
@@ -292,8 +293,8 @@ def parse_recruit_order(sentence: str, game_state: GameState, player_id: str) ->
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(RecruitOrder)
 
-    # Pattern: "have <name> recruit <num> <type> [in <city>]"
-    match = re.search(r'have\s+(.+?)\s+recruit\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
+    # Pattern: "have <name> recruit|hire <num> <type> [in <city>]"
+    match = re.search(r'have\s+(.+?)\s+(?:recruit|hire)\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
     if match:
         actor_name = match.group(1).strip()
         count = int(match.group(2))
@@ -316,8 +317,8 @@ def parse_recruit_order(sentence: str, game_state: GameState, player_id: str) ->
 
         return order
 
-    # Pattern: "recruit <num> <type> [in <city>]" (implicit leader)
-    match = re.search(r'^recruit\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
+    # Pattern: "recruit|hire <num> <type> [in <city>]" (implicit leader)
+    match = re.search(r'^(?:recruit|hire)\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
     if match:
         count = int(match.group(1))
         unit_type = match.group(2).strip().rstrip('s')
@@ -1615,6 +1616,320 @@ def parse_scry_order(sentence: str, game_state: GameState, player_id: str) -> Op
     return None
 
 
+def _parse_prisoner_list_order(sentence: str, game_state: GameState, player_id: str,
+                               order_cls, verbs: str):
+    """Shared parse for FREE-like prisoner-target orders (kill, enslave, interrogate)."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(order_cls)
+
+    match = re.search(
+        rf'have\s+(.+?)\s+(?:{verbs})\s+(.+?)(?:\s+for\s+(\d+))?\s*$',
+        sentence,
+    )
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        targets_part = match.group(2).strip()
+        if match.group(3) and hasattr(order, 'duration_days'):
+            order.duration_days = int(match.group(3))
+    else:
+        match = re.search(rf'^(?:{verbs})\s+(.+?)(?:\s+for\s+(\d+))?\s*$', sentence)
+        if not match:
+            return None
+        if not parser.resolve_actor(order, None):
+            return order
+        targets_part = match.group(1).strip()
+        if match.group(2) and hasattr(order, 'duration_days'):
+            order.duration_days = int(match.group(2))
+
+    for name in re.split(r'\s+and\s+', targets_part, flags=re.IGNORECASE):
+        name = re.sub(r'[.,;!?]+$', '', name.strip())
+        if not name:
+            continue
+        resolved = resolve_character(name, game_state, player_id, enemy_ok=True)
+        ids_attr = 'prisoner_ids' if hasattr(order, 'prisoner_ids') else 'target_ids'
+        names_attr = 'prisoner_names' if hasattr(order, 'prisoner_names') else 'target_names'
+        if resolved.found:
+            getattr(order, ids_attr).append(resolved.entity_id)
+            getattr(order, names_attr).append(name)
+        else:
+            parser.add_warning(order, f"Target '{name}' not found")
+    return order
+
+
+def parse_kill_order(sentence: str, game_state: GameState, player_id: str) -> Optional[KillOrder]:
+    return _parse_prisoner_list_order(sentence, game_state, player_id, KillOrder, r'kill|execute')
+
+
+def parse_enslave_order(sentence: str, game_state: GameState, player_id: str) -> Optional[EnslaveOrder]:
+    return _parse_prisoner_list_order(sentence, game_state, player_id, EnslaveOrder, r'enslave')
+
+
+def parse_interrogate_order(sentence: str, game_state: GameState, player_id: str) -> Optional[InterrogateOrder]:
+    return _parse_prisoner_list_order(
+        sentence, game_state, player_id, InterrogateOrder, r'interrogate'
+    )
+
+
+def parse_noncom_order(sentence: str, game_state: GameState, player_id: str) -> Optional[NoncomOrder]:
+    """Parse NONCOM / COMBATANT status orders."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    set_noncom = bool(re.search(r'\bnoncom\b', sentence))
+    if not set_noncom and not re.search(r'\bcombatant\b', sentence):
+        return None
+    order = parser.create_order(NoncomOrder)
+    order.set_noncom = set_noncom
+
+    match = re.search(r'(?:noncom|combatant)\s+(.+)', sentence)
+    if not match:
+        parser.add_warning(order, "No characters named")
+        return order
+
+    for name in re.split(r'\s+and\s+', match.group(1).strip(), flags=re.IGNORECASE):
+        name = re.sub(r'[.,;!?]+$', '', name.strip())
+        if not name:
+            continue
+        resolved = resolve_character(name, game_state, player_id)
+        if resolved.found:
+            order.character_ids.append(resolved.entity_id)
+            order.character_names.append(name)
+        else:
+            parser.add_warning(order, f"Character '{name}' not found")
+    return order
+
+
+def parse_lurk_order(sentence: str, game_state: GameState, player_id: str) -> Optional[LurkOrder]:
+    parser = OrderParserBase(game_state, player_id, sentence)
+    set_lurking = not bool(re.search(r'\bunlurk\b', sentence))
+    if set_lurking and not re.search(r'\blurk\b', sentence):
+        return None
+    order = parser.create_order(LurkOrder)
+    order.set_lurking = set_lurking
+
+    match = re.search(r'have\s+(.+?)\s+(?:un)?lurk\b', sentence)
+    if match:
+        parser.resolve_actor(order, match.group(1).strip())
+        return order
+
+    match = re.search(r'^(?:un)?lurk\b(?:\s+(.+))?', sentence)
+    if match and match.group(1):
+        # "lurk major johnson" style — named actor
+        parser.resolve_actor(order, match.group(1).strip())
+        return order
+
+    parser.resolve_actor(order, None)
+    return order
+
+
+def parse_get_order(sentence: str, game_state: GameState, player_id: str) -> Optional[GetOrder]:
+    """Parse GET/TAKE/OBTAIN — inverse of GIVE."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(GetOrder)
+
+    # have X take N gold|units from Y
+    match = re.search(
+        r'have\s+(.+?)\s+(?:get|take|obtain)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+from\s+(.+)',
+        sentence,
+    )
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        qty = int(match.group(2))
+        kind = match.group(3).strip().lower()
+        donor = resolve_character(match.group(4).strip(), game_state, player_id, enemy_ok=True)
+        if not donor.found:
+            parser.add_warning(order, f"Donor '{match.group(4).strip()}' not found")
+            return order
+        order.donor_id = donor.entity_id
+        if kind == 'gold':
+            order.gold_amount = qty
+        else:
+            order.unit_type = kind.upper()
+            order.unit_count = qty
+        return order
+
+    # take N gold|units from Y (leader is recipient)
+    match = re.search(
+        r'^(?:get|take|obtain)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+from\s+(.+)',
+        sentence,
+    )
+    if match:
+        if not parser.resolve_actor(order, None):
+            return order
+        qty = int(match.group(1))
+        kind = match.group(2).strip().lower()
+        donor = resolve_character(match.group(3).strip(), game_state, player_id, enemy_ok=True)
+        if not donor.found:
+            parser.add_warning(order, f"Donor '{match.group(3).strip()}' not found")
+            return order
+        order.donor_id = donor.entity_id
+        if kind == 'gold':
+            order.gold_amount = qty
+        else:
+            order.unit_type = kind.upper()
+            order.unit_count = qty
+        return order
+
+    # get Joe and Tom — characters join actor (same faction only)
+    match = re.search(r'(?:have\s+(.+?)\s+)?(?:get|take|obtain)\s+(.+)', sentence)
+    if match and ' from ' not in sentence:
+        actor_name = match.group(1).strip() if match.group(1) else None
+        if not parser.resolve_actor(order, actor_name):
+            return order
+        # Without "from", treat remaining as character names to obtain (no units)
+        names = match.group(2).strip()
+        # Skip if it looks like a quantity transfer we failed to parse
+        if re.match(r'^\d+\s+', names):
+            return None
+        # Use first named character as "donor" of themselves — engine joins them
+        for name in re.split(r'\s+and\s+', names, flags=re.IGNORECASE):
+            name = re.sub(r'[.,;!?]+$', '', name.strip())
+            if not name:
+                continue
+            resolved = resolve_character(name, game_state, player_id)
+            if resolved.found:
+                # Encode as zero-resource transfer with donor = joined character
+                order.donor_id = resolved.entity_id
+                break
+            parser.add_warning(order, f"Character '{name}' not found")
+        return order if order.donor_id else order
+
+    return None
+
+
+def parse_transfer_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TransferOrder]:
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(TransferOrder)
+
+    match = re.search(
+        r'have\s+(.+?)\s+transfer\s+(\d+)\s*(?:gold)?\s+to\s+(.+)',
+        sentence,
+    )
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        order.gold_amount = int(match.group(2))
+        recip = resolve_character(match.group(3).strip(), game_state, player_id, enemy_ok=True)
+        if not recip.found:
+            parser.add_warning(order, f"Recipient '{match.group(3).strip()}' not found")
+            return order
+        order.recipient_id = recip.entity_id
+        return order
+
+    match = re.search(r'^transfer\s+(\d+)\s*(?:gold)?\s+to\s+(.+)', sentence)
+    if match:
+        if not parser.resolve_actor(order, None):
+            return order
+        order.gold_amount = int(match.group(1))
+        recip = resolve_character(match.group(2).strip(), game_state, player_id, enemy_ok=True)
+        if not recip.found:
+            parser.add_warning(order, f"Recipient '{match.group(2).strip()}' not found")
+            return order
+        order.recipient_id = recip.entity_id
+        return order
+
+    return None
+
+
+def parse_unload_order(sentence: str, game_state: GameState, player_id: str) -> Optional[UnloadOrder]:
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(UnloadOrder)
+
+    match = re.search(r'have\s+(.+?)\s+unload\s+(.+)', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        targets = match.group(2).strip()
+    else:
+        match = re.search(r'^unload\s+(.+)', sentence)
+        if not match:
+            return None
+        if not parser.resolve_actor(order, None):
+            return order
+        targets = match.group(1).strip()
+
+    for name in re.split(r'\s+and\s+', targets, flags=re.IGNORECASE):
+        name = re.sub(r'[.,;!?]+$', '', name.strip())
+        if not name:
+            continue
+        resolved = resolve_character(name, game_state, player_id)
+        if resolved.found:
+            order.target_ids.append(resolved.entity_id)
+            order.target_names.append(name)
+        else:
+            parser.add_warning(order, f"Character '{name}' not found")
+    return order
+
+
+def parse_pay_order(sentence: str, game_state: GameState, player_id: str) -> Optional[PayOrder]:
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(PayOrder)
+
+    match = re.search(r'have\s+(.+?)\s+pay(?:\s+(\d+))?\s*(?:gold)?\s*$', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        if match.group(2):
+            order.gold_amount = int(match.group(2))
+        return order
+
+    match = re.search(r'^pay(?:\s+(\d+))?\s*(?:gold)?\s*$', sentence)
+    if match:
+        if not parser.resolve_actor(order, None):
+            return order
+        if match.group(1):
+            order.gold_amount = int(match.group(1))
+        return order
+
+    return None
+
+
+def parse_borrow_order(sentence: str, game_state: GameState, player_id: str) -> Optional[BorrowOrder]:
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(BorrowOrder)
+
+    match = re.search(r'have\s+(.+?)\s+borrow(?:\s+(\d+))?\s*(?:gold)?\s*$', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        if match.group(2):
+            order.gold_amount = int(match.group(2))
+        return order
+
+    match = re.search(r'^borrow(?:\s+(\d+))?\s*(?:gold)?\s*$', sentence)
+    if match:
+        if not parser.resolve_actor(order, None):
+            return order
+        if match.group(1):
+            order.gold_amount = int(match.group(1))
+        return order
+
+    return None
+
+
+def parse_repay_order(sentence: str, game_state: GameState, player_id: str) -> Optional[RepayOrder]:
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(RepayOrder)
+
+    match = re.search(r'have\s+(.+?)\s+repay(?:\s+(\d+))?\s*(?:gold)?\s*$', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        if match.group(2):
+            order.gold_amount = int(match.group(2))
+        return order
+
+    match = re.search(r'^repay(?:\s+(\d+))?\s*(?:gold)?\s*$', sentence)
+    if match:
+        if not parser.resolve_actor(order, None):
+            return order
+        if match.group(1):
+            order.gold_amount = int(match.group(1))
+        return order
+
+    return None
+
+
 # ============================================================================
 # MAIN PARSER FUNCTION
 # ============================================================================
@@ -1623,7 +1938,7 @@ def parse_scry_order(sentence: str, game_state: GameState, player_id: str) -> Op
 ORDER_KEYWORDS = {
     'move': ['go', 'move', 'travel'],
     'sail': ['sail'],
-    'recruit': ['recruit'],
+    'recruit': ['recruit', 'hire'],
     'buy': ['buy'],
     'attack': ['attack'],
     'capture': ['capture'],
@@ -1654,7 +1969,18 @@ ORDER_KEYWORDS = {
     'summon': ['summon'],
     'collect': ['collect', 'gather'],
     'build': ['build', 'construct', 'make'],
-    'mine': ['mine']
+    'mine': ['mine'],
+    'kill': ['kill', 'execute'],
+    'enslave': ['enslave'],
+    'interrogate': ['interrogate'],
+    'noncom': ['noncom', 'combatant'],
+    'lurk': ['lurk', 'unlurk'],
+    'get': ['get', 'take', 'obtain'],
+    'transfer': ['transfer'],
+    'unload': ['unload'],
+    'pay': ['pay'],
+    'borrow': ['borrow'],
+    'repay': ['repay'],
 }
 
 
@@ -1785,6 +2111,40 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['mine']):
             order = parse_mine_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['kill']):
+            order = parse_kill_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['enslave']):
+            order = parse_enslave_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['interrogate']):
+            order = parse_interrogate_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['noncom']):
+            order = parse_noncom_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['lurk']):
+            order = parse_lurk_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['get']):
+            order = parse_get_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['transfer']):
+            order = parse_transfer_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['unload']):
+            order = parse_unload_order(sentence, game_state, player_id)
+
+        # repay before pay: "repay" contains the substring "pay"
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['repay']):
+            order = parse_repay_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['borrow']):
+            order = parse_borrow_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['pay']):
+            order = parse_pay_order(sentence, game_state, player_id)
 
         if order:
             orders.append(order)

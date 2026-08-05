@@ -317,19 +317,18 @@ def test_tax_blocked_in_city_secured_by_another_faction(two_faction_state):
 
 
 def test_give_gold_credits_the_recipient(two_faction_state):
-    """Gold was deducted from the donor and never credited anywhere."""
+    """Gold moves between character purses (was once destroyed on transfer)."""
     gs = two_faction_state
     gs.characters["c2"].location_city_id = "city1"  # same location required
-
-    p1_before = gs.factions["p1"].treasury
-    p2_before = gs.factions["p2"].treasury
+    gs.characters["c1"].gold = 200
+    gs.characters["c2"].gold = 0
 
     order = orders.AssignOrder(player_id="p1", donor_id="c1", recipient_id="c2",
                                gold_amount=100)
     engine.run_turn(gs, {"p1": [order]}, seed=1)
 
-    assert gs.factions["p1"].treasury == p1_before - 100
-    assert gs.factions["p2"].treasury == p2_before + 100
+    assert gs.characters["c1"].gold == 100
+    assert gs.characters["c2"].gold == 100
 
 
 def test_trade_prices_come_from_config_not_the_order(two_faction_state):
@@ -339,7 +338,7 @@ def test_trade_prices_come_from_config_not_the_order(two_faction_state):
     """
     gs = two_faction_state
     gs.characters["c1"].resources["gems"] = 10
-    treasury_before = gs.factions["p1"].treasury
+    gold_before = gs.characters["c1"].gold
 
     order = orders.TradeOrder(player_id="p1", actor_id="c1", city_id="city1",
                               resource_type="gems", amount=10, action="sell")
@@ -348,7 +347,7 @@ def test_trade_prices_come_from_config_not_the_order(two_faction_state):
     engine.run_turn(gs, {"p1": [order]}, seed=1)
 
     # Sold at the configured gems price (minus spread), not an arbitrary one
-    gained = gs.factions["p1"].treasury - treasury_before
+    gained = gs.characters["c1"].gold - gold_before
     assert 0 < gained <= config.get_resource_price("gems") * 10
     assert gs.characters["c1"].resources["gems"] == 0
 
@@ -358,7 +357,8 @@ def test_trading_the_same_goods_back_is_not_profitable(two_faction_state):
     for skill in (0, 50, 100):
         gs = copy.deepcopy(two_faction_state)
         gs.characters["c1"].trading_skill = skill
-        start = gs.factions["p1"].treasury
+        gs.characters["c1"].gold = 1000
+        start = gs.characters["c1"].gold
 
         buy = orders.TradeOrder(player_id="p1", actor_id="c1", city_id="city1",
                                 resource_type="iron", amount=10, action="buy")
@@ -366,7 +366,7 @@ def test_trading_the_same_goods_back_is_not_profitable(two_faction_state):
                                  resource_type="iron", amount=10, action="sell")
         engine.run_turn(gs, {"p1": [buy, sell]}, seed=1)
 
-        assert gs.factions["p1"].treasury <= start, f"arbitrage at skill {skill}"
+        assert gs.characters["c1"].gold <= start, f"arbitrage at skill {skill}"
 
 
 # ============================================================================

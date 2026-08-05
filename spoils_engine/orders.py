@@ -497,6 +497,145 @@ class FreeOrder(Order):
         return "FREE"
 
 
+@dataclass
+class KillOrder(Order):
+    """Kill / execute a prisoner held by the actor."""
+
+    actor_id: str = ""
+    prisoner_ids: list[str] = field(default_factory=list)
+    prisoner_names: list[str] = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "KILL"
+
+
+@dataclass
+class EnslaveOrder(Order):
+    """Convert a prisoner into an unnamed slave labour unit."""
+
+    actor_id: str = ""
+    prisoner_ids: list[str] = field(default_factory=list)
+    prisoner_names: list[str] = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "ENSLAVE"
+
+
+@dataclass
+class InterrogateOrder(Order):
+    """Torture a prisoner for information about their faction / leader."""
+
+    actor_id: str = ""
+    prisoner_ids: list[str] = field(default_factory=list)
+    prisoner_names: list[str] = field(default_factory=list)
+    duration_days: int = 7
+
+    def order_type(self) -> str:
+        return "INTERROGATE"
+
+
+@dataclass
+class NoncomOrder(Order):
+    """Mark characters as non-combatants (or restore combatant status)."""
+
+    character_ids: list[str] = field(default_factory=list)
+    character_names: list[str] = field(default_factory=list)
+    set_noncom: bool = True  # False => COMBATANT
+
+    def order_type(self) -> str:
+        return "NONCOM" if self.set_noncom else "COMBATANT"
+
+
+@dataclass
+class LurkOrder(Order):
+    """Start or stop lurking (stealth)."""
+
+    actor_id: str = ""
+    set_lurking: bool = True  # False => UNLURK
+
+    def order_type(self) -> str:
+        return "LURK" if self.set_lurking else "UNLURK"
+
+
+@dataclass
+class GetOrder(Order):
+    """
+    Take gold/units from a donor (inverse of ASSIGN/GIVE).
+
+    Actor is the recipient. Donor must be the same faction (or a prisoner
+    under the actor's control).
+    """
+    actor_id: str = ""  # recipient
+    donor_id: str = ""
+    unit_type: str = ""
+    unit_count: int = 0
+    gold_amount: int = 0
+
+    def order_type(self) -> str:
+        return "GET"
+
+
+@dataclass
+class TransferOrder(Order):
+    """Transfer gold via the banking guild (fee applied)."""
+
+    actor_id: str = ""
+    recipient_id: str = ""
+    gold_amount: int = 0  # 0 means transfer all
+
+    def order_type(self) -> str:
+        return "TRANSFER"
+
+
+@dataclass
+class UnloadOrder(Order):
+    """
+    Detach a co-located character so they act as their own group leader.
+
+    Full group mechanics are still thin in alpha; this records independence
+    for reporting and future queue work.
+    """
+    actor_id: str = ""
+    target_ids: list[str] = field(default_factory=list)
+    target_names: list[str] = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "UNLOAD"
+
+
+@dataclass
+class PayOrder(Order):
+    """Pay down wage debt (or create a surplus credit)."""
+
+    actor_id: str = ""
+    gold_amount: int = 0  # 0 means pay as much debt as gold allows
+
+    def order_type(self) -> str:
+        return "PAY"
+
+
+@dataclass
+class BorrowOrder(Order):
+    """Borrow gold from the bankers guild."""
+
+    actor_id: str = ""
+    gold_amount: int = 0  # 0 means borrow as much as possible (alpha cap)
+
+    def order_type(self) -> str:
+        return "BORROW"
+
+
+@dataclass
+class RepayOrder(Order):
+    """Repay bankers-guild debt."""
+
+    actor_id: str = ""
+    gold_amount: int = 0  # 0 means repay as much as gold allows
+
+    def order_type(self) -> str:
+        return "REPAY"
+
+
 # ============================================================================
 # ECONOMIC ORDERS
 # ============================================================================
@@ -722,6 +861,23 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "TRADE": TradeOrder,
         "AWAIT": AwaitOrder,
         "REPEAT": RepeatOrder,
+        "KILL": KillOrder,
+        "EXECUTE": KillOrder,
+        "ENSLAVE": EnslaveOrder,
+        "INTERROGATE": InterrogateOrder,
+        "NONCOM": NoncomOrder,
+        "COMBATANT": NoncomOrder,
+        "LURK": LurkOrder,
+        "UNLURK": LurkOrder,
+        "GET": GetOrder,
+        "OBTAIN": GetOrder,
+        "TAKE": GetOrder,
+        "TRANSFER": TransferOrder,
+        "UNLOAD": UnloadOrder,
+        "PAY": PayOrder,
+        "BORROW": BorrowOrder,
+        "REPAY": RepayOrder,
+        "HIRE": RecruitOrder,
     }
 
     order_class = order_map.get(order_type.upper())

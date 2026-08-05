@@ -36,6 +36,7 @@ class UnitType(str, Enum):
     SOLDIER = "soldier"      # Combat skill 1
     SAILOR = "sailor"        # Sailing skill 1
     WORKER = "worker"        # No skills
+    SLAVE = "slave"          # Former prisoner; labour only
 
 
 class ShipType(str, Enum):
@@ -169,9 +170,12 @@ class Faction:
         name: Faction name (e.g., "The Golden Empire")
         controlled_city_ids: Set of city IDs under faction control
         secured_city_ids: Set of city IDs this faction has secured
-        treasury: Gold amount. Fractional because per-unit upkeep is
-            fractional (a soldier costs 0.1g/turn), so rounding each turn
-            would drift noticeably over a long game.
+        treasury: Legacy faction-level gold pool. New gold lives on
+            Character.gold; this field is kept so old saves and dual-debit
+            spending still work until fully migrated.
+        wage_debt: Unpaid wages owed to subordinates (settled with PAY).
+        loan_balance: Outstanding bankers-guild debt (BORROW / REPAY).
+        loan_grace_turns: Turns remaining before minimum repayments are due.
         allies: Set of faction IDs that are allies
         enemies: Set of faction IDs that are enemies
 
@@ -183,6 +187,9 @@ class Faction:
     controlled_city_ids: set[str] = field(default_factory=set)
     secured_city_ids: set[str] = field(default_factory=set)
     treasury: float = 0.0
+    wage_debt: float = 0.0
+    loan_balance: float = 0.0
+    loan_grace_turns: int = 0
     allies: set[str] = field(default_factory=set)
     enemies: set[str] = field(default_factory=set)
 
@@ -204,6 +211,9 @@ class Character:
         title: Optional title (e.g., "primate", "bishop")
         is_prisoner: Whether this character is a prisoner
         captor_id: ID of character holding this prisoner (empty if not prisoner)
+        gold: Personal purse. Rules track gold per character, not per faction.
+        is_noncom: If True, stays out of combat unless named in ATTACK/CAPTURE.
+        is_lurking: If True, trying to avoid detection (full FOW is v1.0).
         movement_points: Movement remaining this turn
         combat_skill: Combat skill level (0-100)
         magic_skill: Magic skill level (0-100)
@@ -223,6 +233,9 @@ class Character:
     title: str = ""  # Optional title (e.g., "primate", "bishop")
     is_prisoner: bool = False
     captor_id: str = ""  # ID of character holding this prisoner
+    gold: float = 0.0
+    is_noncom: bool = False
+    is_lurking: bool = False
     movement_points: int = 10  # Reset each turn
     combat_skill: int = 0
     magic_skill: int = 0
@@ -249,6 +262,61 @@ class Character:
         if self.health >= 100:
             return base_skill
         return int(base_skill * self.health / 100)
+
+
+def available_gold(character: Optional["Character"], faction: Optional["Faction"]) -> float:
+    """
+    Spendable gold for an action.
+
+    Character purse first; faction.treasury remains as a legacy fall-back so
+    saves and tests that only funded the treasury still work.
+    """
+    total = 0.0
+    if character is not None:
+        total += character.gold
+    if faction is not None:
+        total += faction.treasury
+    return total
+
+
+def debit_gold(character: Optional["Character"], faction: Optional["Faction"],
+               amount: float) -> bool:
+    """
+    Spend `amount` gold from the character purse, then the faction treasury.
+
+    Returns False without changing balances if there is not enough combined
+    gold. Amounts are not rounded here; callers that care about display
+    rounding should do it themselves.
+    """
+    if amount <= 0:
+        return True
+    if available_gold(character, faction) < amount - 1e-9:
+        return False
+
+    remaining = amount
+    if character is not None and character.gold > 0:
+        take = min(character.gold, remaining)
+        character.gold -= take
+        remaining -= take
+    if remaining > 1e-9 and faction is not None:
+        faction.treasury -= remaining
+    return True
+
+
+def credit_gold(character: Optional["Character"], amount: float,
+                faction: Optional["Faction"] = None) -> None:
+    """
+    Credit gold to a character's purse.
+
+    If no character is given (should be rare), fall back to the faction
+    treasury so gold is never destroyed silently.
+    """
+    if amount <= 0:
+        return
+    if character is not None:
+        character.gold += amount
+    elif faction is not None:
+        faction.treasury += amount
 
 
 @dataclass

@@ -230,8 +230,11 @@ def test_income_phase(test_game_state):
 
 
 def test_income_is_not_double_counted(test_game_state):
-    """A turn's income either stays in the pool or moves to the treasury, never both."""
-    treasury_before = test_game_state.factions["player1"].treasury
+    """A turn's income either stays in the pool or moves to a purse, never both."""
+    # Fund the leader so upkeep is paid from the purse; tax also lands there.
+    char = test_game_state.characters["char1"]
+    char.gold = 1000
+    gold_before = char.gold
     assert test_game_state.tax_pools.get("city1", 0) == 0
 
     # Station soldiers so the TAX order can be carried out
@@ -254,10 +257,10 @@ def test_income_is_not_double_counted(test_game_state):
     collected = income - updated_state.tax_pools["city1"]
     assert collected > 0
 
-    # Treasury gains exactly that, less upkeep. Before the fix the treasury also
-    # received the full income automatically, paying the same gold out twice.
-    assert abs(updated_state.factions["player1"].treasury
-               - (treasury_before + collected - upkeep)) < 0.5
+    # Actor purse gains exactly that, less upkeep. Income never also hits the
+    # faction treasury automatically (that would pay the same gold out twice).
+    assert abs(updated_state.characters["char1"].gold
+               - (gold_before + collected - upkeep)) < 0.5
 
 
 def test_deterministic_execution(test_game_state):

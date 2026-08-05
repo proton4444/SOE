@@ -15,7 +15,9 @@ from spoils_engine.engine import TurnLog
 # reported -- they are appended alphabetically after these.
 PHASE_ORDER = [
     "movement", "sail", "recruit", "buy_ship", "magic", "summon", "religion",
-    "combat", "capture", "prisoner", "income", "tax", "trade", "secure",
+    "combat", "capture", "prisoner", "kill", "enslave", "interrogate",
+    "status", "get", "transfer", "unload", "pay", "borrow", "repay",
+    "income", "tax", "trade", "secure",
     "fortify", "diplomacy", "assign", "name", "promote", "collect", "mine",
     "build", "free", "study", "teach", "queue",
 ]
@@ -50,7 +52,17 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
         report_lines.append("=" * 70)
         report_lines.append("FACTION SUMMARY")
         report_lines.append("=" * 70)
-        report_lines.append(f"Treasury: {faction.treasury:,.1f} gold")
+        total_purse = sum(
+            c.gold for c in game_state.characters.values() if c.faction_id == faction_id
+        )
+        report_lines.append(f"Character gold (total): {total_purse:,.1f}g")
+        if faction.treasury:
+            report_lines.append(f"Legacy treasury: {faction.treasury:,.1f}g")
+        if faction.wage_debt:
+            label = "Wage debt" if faction.wage_debt > 0 else "Wage surplus"
+            report_lines.append(f"{label}: {abs(faction.wage_debt):,.1f}g")
+        if faction.loan_balance:
+            report_lines.append(f"Bank loan: {faction.loan_balance:,.1f}g")
         report_lines.append(f"Controlled Cities: {len(faction.controlled_city_ids)}")
 
         if faction.controlled_city_ids:
@@ -77,8 +89,19 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
                 city = game_state.world_map.cities.get(char.location_city_id)
                 city_name = city.name if city else "Unknown"
 
-                report_lines.append(f"\n{char.name} (ID: {char.id})")
+                flags = []
+                if char.is_leader:
+                    flags.append("leader")
+                if char.is_noncom:
+                    flags.append("noncom")
+                if char.is_lurking:
+                    flags.append("lurking")
+                if char.is_prisoner:
+                    flags.append("prisoner")
+                flag_s = f" [{', '.join(flags)}]" if flags else ""
+                report_lines.append(f"\n{char.name} (ID: {char.id}){flag_s}")
                 report_lines.append(f"  Location: {city_name}")
+                report_lines.append(f"  Gold: {char.gold:,.1f}g")
                 report_lines.append(f"  Combat Skill: {char.combat_skill}")
                 report_lines.append(f"  Magic Skill: {char.magic_skill} (Power: {char.magic_power_current}/{char.max_magic_power})")
                 report_lines.append(f"  Movement Points: {char.movement_points}")

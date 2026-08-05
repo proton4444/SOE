@@ -14,14 +14,16 @@ import heapq
 
 from spoils_engine.models import (
     GameState, Character, UnitStack, Ship, SummonedCreature,
-    UnitType, ShipType, RoadQuality, CreatureType
+    UnitType, ShipType, RoadQuality, CreatureType,
+    available_gold, debit_gold, credit_gold,
 )
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder,
     PromoteOrder, TaxOrder, CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder,
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
-    RepeatOrder, ScryOrder
+    RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
+    GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
 )
 from spoils_engine import config
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
@@ -499,19 +501,17 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                                     location=city.id, character_id=actor.id, success=False)
                         continue
 
-                # Check cost
+                # Check cost (spent from the actor's purse / legacy treasury)
                 unit_type_enum = UnitType(order.unit_type)
                 cost = config.get_recruit_cost(unit_type_enum) * order.count
 
-                if faction.treasury < cost:
-                    order.warnings.append(f"Insufficient gold (need {cost}, have {faction.treasury})")
+                if not debit_gold(actor, faction, cost):
+                    have = available_gold(actor, faction)
+                    order.warnings.append(f"Insufficient gold (need {cost}, have {have})")
                     turn_log.add("recruit", player_id, "recruit_failed",
                                 f"Insufficient gold to recruit {order.count} {order.unit_type}",
                                 location=city.id, character_id=actor.id, success=False)
                     continue
-
-                # Deduct gold
-                faction.treasury -= cost
 
                 # Create unit stack
                 stack_id = allocate_id(game_state.unit_stacks, f"stack_{player_id}")
@@ -545,15 +545,13 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                 ship_type_enum = ShipType(order.ship_type)
                 cost = config.get_ship_cost(ship_type_enum) * order.count
 
-                if faction.treasury < cost:
-                    order.warnings.append(f"Insufficient gold (need {cost}, have {faction.treasury})")
+                if not debit_gold(actor, faction, cost):
+                    have = available_gold(actor, faction)
+                    order.warnings.append(f"Insufficient gold (need {cost}, have {have})")
                     turn_log.add("buy_ship", player_id, "buy_failed",
                                 f"Insufficient gold to buy {order.count} {order.ship_type}",
                                 location=city.id, character_id=actor.id, success=False)
                     continue
-
-                # Deduct gold
-                faction.treasury -= cost
 
                 # Create ships
                 for i in range(order.count):
@@ -790,9 +788,7 @@ def process_religion(orders_by_player: Dict[str, List[Order]], game_state: GameS
                 if not priest or priest.religion_skill <= 0:
                     continue
                 tithe = max(1, priest.religion_skill // 5)
-                faction = game_state.factions.get(player_id)
-                if faction:
-                    faction.treasury += tithe
+                credit_gold(priest, tithe)
                 turn_log.add("religion", player_id, "pray",
                             f"{priest.name} prayed for {order.intent or 'aid'} and received {tithe}g in donations",
                             character_id=priest.id)
@@ -1010,11 +1006,25 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
         # Round upkeep to 1 decimal place
         upkeep = round(upkeep, 1)
 
-        # Income accrues to the per-city tax pools ONLY. It reaches the treasury
-        # when a character collects it with a TAX order. Crediting the treasury
-        # here as well double-counted every gold piece: once automatically, and
-        # again when the same pool was taxed.
-        faction.treasury -= upkeep
+        # Income accrues to the per-city tax pools ONLY. It reaches a character
+        # purse when collected with TAX. Upkeep is paid from the leader's gold
+        # (legacy treasury as fall-back); shortfall becomes wage debt for PAY.
+        paid = 0.0
+        if upkeep > 0 and leader:
+            can_pay = min(upkeep, available_gold(leader, faction))
+            if can_pay > 0:
+                debit_gold(leader, faction, can_pay)
+                paid = can_pay
+            shortfall = round(upkeep - paid, 1)
+            if shortfall > 0:
+                faction.wage_debt = round(faction.wage_debt + shortfall, 1)
+
+        # Bankers guild: interest on outstanding loans each turn
+        if faction.loan_balance > 0:
+            interest = round(faction.loan_balance * config.BORROW_INTEREST_RATE, 2)
+            faction.loan_balance = round(faction.loan_balance + interest, 2)
+            if faction.loan_grace_turns > 0:
+                faction.loan_grace_turns -= 1
 
         # Log events
         if income > 0:
@@ -1023,13 +1033,19 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
 
         if upkeep > 0:
             turn_log.add("income", faction.id, "upkeep",
-                        f"Paid {upkeep}g in upkeep (units, ships, salaries)")
+                        f"Paid {paid}g in upkeep (units, ships, salaries)"
+                        + (f"; {round(upkeep - paid, 1)}g added to wage debt" if paid < upkeep else ""))
 
-        # Warn if treasury goes negative
-        if faction.treasury < 0:
+        if faction.wage_debt > 0:
             turn_log.add("income", faction.id, "debt",
-                        f"WARNING: Treasury is negative ({faction.treasury}g)! Units may desert.",
+                        f"Wage debt: {faction.wage_debt}g (use PAY to settle)",
                         success=False)
+
+        if faction.loan_balance > 0:
+            turn_log.add("income", faction.id, "loan",
+                        f"Bank loan: {faction.loan_balance}g"
+                        + (f" (grace {faction.loan_grace_turns} turns)" if faction.loan_grace_turns else
+                           " (minimum repayments due)"))
 
 
 # ============================================================================
@@ -1187,17 +1203,11 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             character_id=donor.id, success=False)
                 continue
 
-            # Transfer gold
+            # Transfer gold between character purses (legacy treasury as fall-back)
             if order.gold_amount > 0:
                 faction = game_state.factions.get(player_id)
-                if faction and faction.treasury >= order.gold_amount:
-                    faction.treasury -= order.gold_amount
-                    # Credit the recipient's faction. Gold is tracked per
-                    # faction rather than per character in the alpha; without
-                    # this the amount was simply destroyed on transfer.
-                    recipient_faction = game_state.factions.get(recipient.faction_id)
-                    if recipient_faction:
-                        recipient_faction.treasury += order.gold_amount
+                if debit_gold(donor, faction, order.gold_amount):
+                    credit_gold(recipient, order.gold_amount)
                     turn_log.add("assign", player_id, "assign_gold",
                                 f"{donor.name} gave {order.gold_amount}g to {recipient.name}",
                                 character_id=donor.id)
@@ -1418,10 +1428,7 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
             taxes_collected = min(available_taxes, max(1, collection_rate))
             game_state.tax_pools[pool_key] = max(0, available_taxes - taxes_collected)
 
-            # Add to faction treasury
-            faction = game_state.factions.get(player_id)
-            if faction:
-                faction.treasury += taxes_collected
+            credit_gold(actor, taxes_collected)
 
             turn_log.add("tax", player_id, "tax_success",
                         f"{actor.name}: collected {taxes_collected}g in taxes from {city.name} "
@@ -1464,13 +1471,12 @@ def process_trade(orders_by_player: Dict[str, List[Order]], game_state: GameStat
 
             if order.action == "buy":
                 total_cost = unit_price * order.amount
-                if faction.treasury < total_cost:
+                if not debit_gold(actor, faction, total_cost):
                     turn_log.add("trade", player_id, "trade_failed",
                                 f"{actor.name}: insufficient gold to buy {order.amount} {order.resource_type}",
                                 character_id=actor.id, success=False)
                     continue
 
-                faction.treasury -= total_cost
                 actor.resources[order.resource_type] = actor.resources.get(order.resource_type, 0) + order.amount
                 turn_log.add("trade", player_id, "buy",
                             f"{actor.name} bought {order.amount} {order.resource_type} in {city.name} for {total_cost}g",
@@ -1485,7 +1491,7 @@ def process_trade(orders_by_player: Dict[str, List[Order]], game_state: GameStat
 
                 actor.resources[order.resource_type] = available - order.amount
                 revenue = unit_price * order.amount
-                faction.treasury += revenue
+                credit_gold(actor, revenue)
                 turn_log.add("trade", player_id, "sell",
                             f"{actor.name} sold {order.amount} {order.resource_type} in {city.name} for {revenue}g",
                             character_id=actor.id)
@@ -1889,6 +1895,455 @@ def process_free(orders_by_player: Dict[str, List[Order]], game_state: GameState
                             character_id=actor.id)
 
 
+def _prisoner_held_by(prisoner: Character, actor: Character) -> bool:
+    return bool(prisoner and prisoner.is_prisoner and prisoner.captor_id == actor.id)
+
+
+def process_kill(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process KILL/EXECUTE orders against held prisoners."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, KillOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+            for prisoner_id in order.prisoner_ids:
+                prisoner = game_state.characters.get(prisoner_id)
+                if not prisoner:
+                    continue
+                if not _prisoner_held_by(prisoner, actor):
+                    turn_log.add("kill", player_id, "kill_failed",
+                                f"{actor.name}: {prisoner.name} is not your prisoner",
+                                character_id=actor.id, success=False)
+                    continue
+                prisoner.is_dead = True
+                prisoner.health = 0
+                prisoner.is_prisoner = False
+                prisoner.captor_id = ""
+                turn_log.add("kill", player_id, "kill_success",
+                            f"{actor.name}: executed {prisoner.name}",
+                            character_id=actor.id)
+
+
+def process_enslave(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Convert prisoners into unnamed slave labour units."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, EnslaveOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+            for prisoner_id in list(order.prisoner_ids):
+                prisoner = game_state.characters.get(prisoner_id)
+                if not prisoner:
+                    continue
+                if not _prisoner_held_by(prisoner, actor):
+                    turn_log.add("enslave", player_id, "enslave_failed",
+                                f"{actor.name}: {prisoner.name} is not your prisoner",
+                                character_id=actor.id, success=False)
+                    continue
+
+                # Valuables on the prisoner are lost (rules warn to TAKE first)
+                lost_gold = prisoner.gold
+                prisoner.gold = 0
+
+                # Add one slave unit at the actor's location for the captors
+                stack = next(
+                    (s for s in game_state.unit_stacks.values()
+                     if s.faction_id == player_id
+                     and s.location_city_id == actor.location_city_id
+                     and s.unit_type == UnitType.SLAVE),
+                    None,
+                )
+                if stack:
+                    stack.count += 1
+                else:
+                    sid = allocate_id(game_state.unit_stacks, "stack")
+                    game_state.unit_stacks[sid] = UnitStack(
+                        id=sid,
+                        faction_id=player_id,
+                        location_city_id=actor.location_city_id,
+                        unit_type=UnitType.SLAVE,
+                        count=1,
+                    )
+
+                # Named identity is gone — remove the character
+                name = prisoner.name
+                del game_state.characters[prisoner_id]
+                msg = f"{actor.name}: enslaved {name} (now 1 slave)"
+                if lost_gold:
+                    msg += f"; {lost_gold}g of their purse was lost"
+                turn_log.add("enslave", player_id, "enslave_success", msg,
+                            character_id=actor.id)
+
+
+def process_interrogate(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                        turn_log: TurnLog, rng: random.Random):
+    """Extract faction / leader intel from a prisoner."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, InterrogateOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+            for prisoner_id in order.prisoner_ids:
+                prisoner = game_state.characters.get(prisoner_id)
+                if not prisoner:
+                    continue
+                if not _prisoner_held_by(prisoner, actor):
+                    turn_log.add("interrogate", player_id, "interrogate_failed",
+                                f"{actor.name}: {prisoner.name} is not your prisoner",
+                                character_id=actor.id, success=False)
+                    continue
+
+                actor_level = actor.combat_skill + actor.magic_skill + actor.religion_skill
+                victim_level = prisoner.combat_skill + prisoner.magic_skill + prisoner.religion_skill
+                chance = 0.35 + (actor_level - victim_level) / 200
+                chance = max(0.1, min(0.9, chance))
+
+                # Higher-level victims more likely to die under torture
+                death_chance = 0.05 + victim_level / 400
+                if rng.random() < death_chance:
+                    prisoner.is_dead = True
+                    prisoner.health = 0
+                    prisoner.is_prisoner = False
+                    prisoner.captor_id = ""
+                    turn_log.add("interrogate", player_id, "interrogate_killed",
+                                f"{actor.name}: {prisoner.name} died under interrogation",
+                                character_id=actor.id, success=False)
+                    continue
+
+                if rng.random() < chance:
+                    fac = game_state.factions.get(prisoner.faction_id)
+                    fac_name = fac.name if fac else prisoner.faction_id
+                    leader = get_player_leader(game_state, prisoner.faction_id)
+                    leader_name = leader.name if leader else "unknown"
+                    turn_log.add("interrogate", player_id, "interrogate_success",
+                                f"{actor.name}: {prisoner.name} revealed faction '{fac_name}', "
+                                f"leader '{leader_name}'",
+                                character_id=actor.id)
+                else:
+                    damage = rng.randint(5, 20)
+                    prisoner.health = max(1, prisoner.health - damage)
+                    turn_log.add("interrogate", player_id, "interrogate_failed",
+                                f"{actor.name}: {prisoner.name} revealed nothing "
+                                f"(took {damage} damage)",
+                                character_id=actor.id, success=False)
+
+
+def process_status_orders(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                          turn_log: TurnLog):
+    """Process NONCOM/COMBATANT and LURK/UNLURK status flags."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if isinstance(order, NoncomOrder):
+                if order.warnings:
+                    continue
+                for cid, cname in zip(order.character_ids, order.character_names):
+                    char = game_state.characters.get(cid)
+                    if not char or char.faction_id != player_id:
+                        turn_log.add("status", player_id, "status_failed",
+                                    f"Cannot set status for {cname}", success=False)
+                        continue
+                    char.is_noncom = order.set_noncom
+                    label = "non-combatant" if order.set_noncom else "combatant"
+                    turn_log.add("status", player_id, "noncom",
+                                f"{char.name} is now a {label}",
+                                character_id=char.id)
+
+            elif isinstance(order, LurkOrder):
+                if order.warnings:
+                    continue
+                actor = game_state.characters.get(order.actor_id)
+                if not actor:
+                    continue
+                actor.is_lurking = order.set_lurking
+                turn_log.add("status", player_id, "lurk",
+                            f"{actor.name} {'starts lurking' if order.set_lurking else 'stops lurking'}",
+                            character_id=actor.id)
+
+
+def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Process GET/TAKE/OBTAIN — inverse of ASSIGN/GIVE."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, GetOrder) or order.warnings:
+                continue
+            recipient = game_state.characters.get(order.actor_id)
+            donor = game_state.characters.get(order.donor_id)
+            if not recipient or not donor:
+                continue
+
+            # Cannot take from another player's free character
+            donor_is_prisoner = donor.is_prisoner and donor.captor_id == recipient.id
+            if donor.faction_id != player_id and not donor_is_prisoner:
+                turn_log.add("get", player_id, "get_failed",
+                            f"{recipient.name}: cannot take from {donor.name} (not under your control)",
+                            character_id=recipient.id, success=False)
+                continue
+
+            if recipient.location_city_id != donor.location_city_id:
+                turn_log.add("get", player_id, "get_failed",
+                            f"{recipient.name}: {donor.name} is not at the same location",
+                            character_id=recipient.id, success=False)
+                continue
+
+            # Character-join form: no gold/units — just co-locate (already true)
+            if order.gold_amount <= 0 and order.unit_count <= 0:
+                turn_log.add("get", player_id, "get_join",
+                            f"{donor.name} joined {recipient.name}",
+                            character_id=recipient.id)
+                continue
+
+            if order.gold_amount > 0:
+                donor_faction = game_state.factions.get(donor.faction_id)
+                if debit_gold(donor, donor_faction if donor.faction_id == player_id else None,
+                              order.gold_amount):
+                    credit_gold(recipient, order.gold_amount)
+                    turn_log.add("get", player_id, "get_gold",
+                                f"{recipient.name} took {order.gold_amount}g from {donor.name}",
+                                character_id=recipient.id)
+                else:
+                    turn_log.add("get", player_id, "get_failed",
+                                f"{recipient.name}: {donor.name} has insufficient gold",
+                                character_id=recipient.id, success=False)
+                    continue
+
+            if order.unit_count > 0 and order.unit_type:
+                donor_stack = next(
+                    (s for s in game_state.unit_stacks.values()
+                     if s.faction_id == donor.faction_id
+                     and s.location_city_id == donor.location_city_id
+                     and s.unit_type.name == order.unit_type),
+                    None,
+                )
+                if not donor_stack or donor_stack.count < order.unit_count:
+                    turn_log.add("get", player_id, "get_failed",
+                                f"{recipient.name}: not enough {order.unit_type.lower()}s to take",
+                                character_id=recipient.id, success=False)
+                    continue
+                donor_stack.count -= order.unit_count
+                recip_stack = next(
+                    (s for s in game_state.unit_stacks.values()
+                     if s.faction_id == recipient.faction_id
+                     and s.location_city_id == recipient.location_city_id
+                     and s.unit_type.name == order.unit_type),
+                    None,
+                )
+                if recip_stack:
+                    recip_stack.count += order.unit_count
+                else:
+                    sid = allocate_id(game_state.unit_stacks, "stack")
+                    game_state.unit_stacks[sid] = UnitStack(
+                        id=sid,
+                        faction_id=recipient.faction_id,
+                        location_city_id=recipient.location_city_id,
+                        unit_type=UnitType[order.unit_type],
+                        count=order.unit_count,
+                    )
+                if donor_stack.count <= 0:
+                    del game_state.unit_stacks[donor_stack.id]
+                turn_log.add("get", player_id, "get_units",
+                            f"{recipient.name} took {order.unit_count} "
+                            f"{order.unit_type.lower()}s from {donor.name}",
+                            character_id=recipient.id)
+
+
+def process_transfer(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Banking-guild gold transfer with fee."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, TransferOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            recipient = game_state.characters.get(order.recipient_id)
+            if not actor or not recipient:
+                continue
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                turn_log.add("transfer", player_id, "transfer_failed",
+                            f"{actor.name}: no banking office here",
+                            character_id=actor.id, success=False)
+                continue
+
+            faction = game_state.factions.get(player_id)
+            amount = order.gold_amount
+            if amount <= 0:
+                amount = int(available_gold(actor, faction))
+            if amount <= 0:
+                turn_log.add("transfer", player_id, "transfer_failed",
+                            f"{actor.name}: nothing to transfer",
+                            character_id=actor.id, success=False)
+                continue
+
+            fee = config.transfer_fee(amount)
+            total = amount + fee
+            if not debit_gold(actor, faction, total):
+                turn_log.add("transfer", player_id, "transfer_failed",
+                            f"{actor.name}: need {total}g ({amount}g + {fee}g fee)",
+                            character_id=actor.id, success=False)
+                continue
+
+            credit_gold(recipient, amount)
+            turn_log.add("transfer", player_id, "transfer_success",
+                        f"{actor.name} transferred {amount}g to {recipient.name} "
+                        f"(fee {fee}g)",
+                        character_id=actor.id)
+
+
+def process_unload(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Mark co-located characters as independent group leaders (alpha)."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, UnloadOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+            for tid, tname in zip(order.target_ids, order.target_names):
+                target = game_state.characters.get(tid)
+                if not target or target.faction_id != player_id:
+                    turn_log.add("unload", player_id, "unload_failed",
+                                f"{actor.name}: cannot unload {tname}",
+                                character_id=actor.id, success=False)
+                    continue
+                if target.location_city_id != actor.location_city_id:
+                    turn_log.add("unload", player_id, "unload_failed",
+                                f"{actor.name}: {target.name} is not co-located",
+                                character_id=actor.id, success=False)
+                    continue
+                # No full group model yet; success is recorded for order language.
+                turn_log.add("unload", player_id, "unload_success",
+                            f"{actor.name}: unloaded {target.name} as independent",
+                            character_id=actor.id)
+
+
+def process_pay(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Pay down wage debt from the actor's purse."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, PayOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            faction = game_state.factions.get(player_id)
+            if not actor or not faction:
+                continue
+
+            if order.gold_amount > 0:
+                amount = float(order.gold_amount)
+            else:
+                # Pay off debt only (no surplus) when amount omitted
+                amount = min(faction.wage_debt, available_gold(actor, faction))
+
+            if amount <= 0:
+                turn_log.add("pay", player_id, "pay_failed",
+                            f"{actor.name}: nothing to pay",
+                            character_id=actor.id, success=False)
+                continue
+            if not debit_gold(actor, faction, amount):
+                turn_log.add("pay", player_id, "pay_failed",
+                            f"{actor.name}: insufficient gold",
+                            character_id=actor.id, success=False)
+                continue
+
+            faction.wage_debt = round(faction.wage_debt - amount, 1)
+            # Negative debt = surplus credit (rules allow this)
+            label = "debt" if faction.wage_debt >= 0 else "surplus"
+            turn_log.add("pay", player_id, "pay_success",
+                        f"{actor.name} paid {amount}g toward wages "
+                        f"({label} now {abs(faction.wage_debt)}g)",
+                        character_id=actor.id)
+
+
+def process_borrow(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                   turn_log: TurnLog, rng: random.Random):
+    """Borrow gold from the bankers guild."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, BorrowOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            faction = game_state.factions.get(player_id)
+            if not actor or not faction:
+                continue
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            amount = order.gold_amount or config.BORROW_MAX_AMOUNT
+            # Chance scales with city size and character impressiveness
+            band_bonus = {
+                "TINY": -0.15, "SMALL": 0.0, "MEDIUM": 0.1, "LARGE": 0.2,
+            }
+            # PopulationBand is enum with values like "< 10k" — use name
+            band_name = city.population_band.name if hasattr(city.population_band, "name") else "SMALL"
+            impress = (actor.combat_skill + actor.magic_skill + actor.religion_skill
+                       + actor.trading_skill) / 200
+            debt_penalty = min(0.4, faction.loan_balance / 2000)
+            chance = config.BORROW_BASE_CHANCE + band_bonus.get(band_name, 0) + impress - debt_penalty
+            chance = max(0.05, min(0.95, chance))
+
+            if rng.random() > chance:
+                turn_log.add("borrow", player_id, "borrow_failed",
+                            f"{actor.name}: loan of {amount}g refused in {city.name}",
+                            character_id=actor.id, success=False)
+                continue
+
+            credit_gold(actor, amount)
+            faction.loan_balance = round(faction.loan_balance + amount, 2)
+            faction.loan_grace_turns = max(faction.loan_grace_turns, config.BORROW_GRACE_TURNS)
+            turn_log.add("borrow", player_id, "borrow_success",
+                        f"{actor.name} borrowed {amount}g in {city.name} "
+                        f"(balance {faction.loan_balance}g)",
+                        character_id=actor.id)
+
+
+def process_repay(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """Repay bankers-guild debt."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, RepayOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            faction = game_state.factions.get(player_id)
+            if not actor or not faction:
+                continue
+
+            if faction.loan_balance <= 0:
+                turn_log.add("repay", player_id, "repay_failed",
+                            f"{actor.name}: no outstanding loan",
+                            character_id=actor.id, success=False)
+                continue
+
+            if order.gold_amount > 0:
+                amount = min(float(order.gold_amount), faction.loan_balance)
+            else:
+                amount = min(faction.loan_balance, available_gold(actor, faction))
+
+            if amount <= 0:
+                turn_log.add("repay", player_id, "repay_failed",
+                            f"{actor.name}: nothing to repay with",
+                            character_id=actor.id, success=False)
+                continue
+            if not debit_gold(actor, faction, amount):
+                turn_log.add("repay", player_id, "repay_failed",
+                            f"{actor.name}: insufficient gold",
+                            character_id=actor.id, success=False)
+                continue
+
+            faction.loan_balance = round(faction.loan_balance - amount, 2)
+            if faction.loan_balance <= 0:
+                faction.loan_balance = 0.0
+                faction.loan_grace_turns = 0
+            turn_log.add("repay", player_id, "repay_success",
+                        f"{actor.name} repaid {amount}g "
+                        f"(loan balance {faction.loan_balance}g)",
+                        character_id=actor.id)
+
+
 def process_study(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog, rng):
     """Process STUDY orders for character skill training."""
     for player_id, orders in orders_by_player.items():
@@ -1909,14 +2364,11 @@ def process_study(orders_by_player: Dict[str, List[Order]], game_state: GameStat
 
             # Cost: 1 gold per week
             cost = order.duration_weeks
-            if faction.treasury < cost:
+            if not debit_gold(actor, faction, cost):
                 turn_log.add("study", player_id, "study_failed",
                             f"{actor.name}: insufficient gold to study (need {cost}g)",
                             character_id=actor.id, success=False)
                 continue
-
-            # Deduct cost
-            faction.treasury -= cost
 
             # Get current skill level
             if order.skill_name == "combat":
@@ -2118,6 +2570,16 @@ def run_turn(
     process_mine(orders_by_player, game_state, turn_log)
     process_build(orders_by_player, game_state, turn_log)
     process_free(orders_by_player, game_state, turn_log)
+    process_kill(orders_by_player, game_state, turn_log)
+    process_enslave(orders_by_player, game_state, turn_log)
+    process_interrogate(orders_by_player, game_state, turn_log, rng)
+    process_status_orders(orders_by_player, game_state, turn_log)
+    process_get(orders_by_player, game_state, turn_log)
+    process_transfer(orders_by_player, game_state, turn_log)
+    process_unload(orders_by_player, game_state, turn_log)
+    process_pay(orders_by_player, game_state, turn_log)
+    process_borrow(orders_by_player, game_state, turn_log, rng)
+    process_repay(orders_by_player, game_state, turn_log)
     process_study(orders_by_player, game_state, turn_log, rng)
     process_teach(orders_by_player, game_state, turn_log, rng)
     process_queueing(orders_by_player, turn_log)

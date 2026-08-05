@@ -11,15 +11,12 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-> **v0.7.2 — design debt cleared.** `main` holds this engine
-> (`spoils_engine/`) as the single source of truth; an earlier parallel
-> prototype under `src/soe/` has been retired. The accepted limitations left
-> over from the v0.7.1 audit are now closed: fortifications have one store,
-> casualties scale with the margin of victory, the faction leader is an
-> explicit flag, and diplomatic stance affects combat. See
-> [`docs/audit_2025-11.md`](docs/audit_2025-11.md).
+> **v0.8.0 — cheap gaps closed.** Prisoner ops, status/stealth, inventory
+> transfers, finance (`PAY`/`HIRE`/`BORROW`/`REPAY`), and per-character gold
+> land on top of the v0.7.2 design-debt cleanup. The order queue (`AWAIT`/
+> `REPEAT` execution) remains v0.9. See [`docs/rules_gap.md`](docs/rules_gap.md).
 
-## Features (Alpha v0.7.2)
+## Features (Alpha v0.8.0)
 
 ### Implemented
 
@@ -39,26 +36,31 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Character death and wounding in combat
 - Character prisoners (capture and release)
 - Character skill training (study and teach)
-- Unit stacks (soldiers, sailors, workers)
+- Unit stacks (soldiers, sailors, workers, slaves)
+- Per-character gold purses (legacy faction treasury migrates on load)
 - Ships (galleys)
+- Non-combatant and lurking status flags
 
 ✅ **Core Orders**
 - **Movement**: Land movement between cities (GO/MOVE/TRAVEL)
 - **Sailing**: Sea movement with ships (SAIL command)
 - **Flying**: Magical flight bypassing roads (FLY command)
-- **Recruiting**: Hire soldiers, sailors, and workers
+- **Recruiting**: RECRUIT/HIRE soldiers, sailors, and workers
 - **Buying ships**: Purchase galleys at ports
 - **Combat**: Simplified combat with character wounding/death
 - **Capture**: CAPTURE command to take prisoners
+- **Prisoner ops**: FREE/RELEASE, KILL/EXECUTE, ENSLAVE, INTERROGATE
+- **Status**: NONCOM/COMBATANT, LURK/UNLURK
 - **Magic**: Teleportation and flight spells
 - **Healing**: HEAL/CURE commands using religion skill
 - **Location Control**: SECURE command for territorial control
 - **Diplomacy**: ALLY/ENEMY/NEUTRAL commands
-- **Unit Transfers**: ASSIGN/GIVE commands for units and gold
+- **Unit/Gold Transfers**: ASSIGN/GIVE, GET/TAKE/OBTAIN, TRANSFER (bank fee)
+- **UNLOAD**: detach a co-located character as independent (group model thin)
+- **Finance**: PAY (wage debt), BORROW/REPAY (bankers guild)
 - **Character Management**: NAME command to convert units to characters
 - **Titles**: PROMOTE command to assign character titles
-- **Taxation**: TAX command to collect taxes from locations
-- **Prisoners**: FREE/RELEASE/DISCARD/DISMISS to release prisoners
+- **Taxation**: TAX command to collect taxes into the actor's purse
 - **Training**: STUDY command to learn skills (costs gold)
 - **Teaching**: TEACH command for character-to-character training (free)
 - **Summoning**: SUMMON command to create magical creatures (costs magic power)
@@ -72,9 +74,10 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Phase 3: Recruit & buy
 - Phase 4: Magic (teleport, fly, heal), summoning, religion
 - Phase 5: Combat (with character casualties), then capture
-- Phase 6: Income & upkeep
+- Phase 6: Income & upkeep (wage debt + loan interest)
 - Phase 7: Location control, diplomacy, taxation, trade, gathering, mining,
-  construction, transfers, naming, promotion, prisoner release, study & teach
+  construction, transfers, get/unload, naming, promotion, prisoner ops,
+  status flags, finance, study & teach
 - Phase 8: Cleanup — prisoner escape and natural healing
 
 ✅ **Economic System**
@@ -437,7 +440,8 @@ SOE/
 │   ├── test_engine_basic.py
 │   ├── test_upkeep.py
 │   ├── test_regressions.py  # Pins the defects fixed in the v0.7.1 audit
-│   └── test_gap_closures.py # Pins the design debt closed in v0.7.2
+│   ├── test_gap_closures.py # Pins the design debt closed in v0.7.2
+│   └── test_v08.py          # Cheap-gap commands and per-character gold
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -584,14 +588,15 @@ coverage, not cleanup.
 
 ## Future Roadmap
 
-### v0.8 — Close the cheap gaps
+### v0.8 — Close the cheap gaps ✅
 
-Commands that need no new machinery, only phases and parsing:
+Shipped in this release:
 
 - Prisoner operations: `ENSLAVE`, `KILL`/`EXECUTE`, `INTERROGATE`
 - Status and stealth: `COMBATANT`/`NONCOM`, `LURK`/`UNLURK`
 - Inventory: `GET`/`OBTAIN`/`TAKE`, `TRANSFER`, `UNLOAD`
-- Finance: `PAY`, `HIRE`, `BORROW`/`REPAY`
+- Finance: `PAY`, `HIRE` (synonym of `RECRUIT`), `BORROW`/`REPAY`
+- Per-character gold purses (legacy treasury migrates to the leader on load)
 
 ### v0.9 — The order queue
 
@@ -616,10 +621,7 @@ The structural change everything else waits on:
 
 ### Also outstanding
 
-Two model changes that are features rather than cleanup, and are sized into the
-phases above: **per-character gold** (the rules give each character a purse; the
-engine holds gold per faction) lands with the v0.8 finance commands, and **fog
-of war** with v1.0.
+**Fog of war** remains a v1.0 feature. Per-character gold shipped with v0.8.
 
 ## Contributing
 

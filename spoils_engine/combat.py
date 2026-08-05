@@ -55,9 +55,12 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
     armor_count = 0
     siege_power = 0
 
-    # Add character combat skills (best one applies as multiplier)
+    # Add character combat skills (best one applies as multiplier).
+    # Non-combatants stay out unless the fight is forced elsewhere; they do
+    # not contribute leadership or personal equipment to the power total.
     for char in game_state.characters.values():
-        if char.faction_id == faction_id and char.location_city_id == city_id:
+        if (char.faction_id == faction_id and char.location_city_id == city_id
+                and not char.is_dead and not getattr(char, "is_noncom", False)):
             best_combat_skill = max(best_combat_skill, char.combat_skill)
 
     # Add unit attack values
@@ -79,9 +82,10 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
             base_power += creature.attack_value
 
     # Apply skill multiplier
-    # Apply equipment bonuses present on characters at this location
+    # Apply equipment bonuses present on combatant characters at this location
     for char in game_state.characters.values():
-        if char.faction_id == faction_id and char.location_city_id == city_id:
+        if (char.faction_id == faction_id and char.location_city_id == city_id
+                and not char.is_dead and not getattr(char, "is_noncom", False)):
             weapon_count += char.resources.get("weapon", 0)
             armor_count += char.resources.get("armor", 0)
             siege_power += char.resources.get("catapult", 0)
