@@ -50,10 +50,12 @@ class MoveOrder(Order):
     Attributes:
         actor_id: Character ID who will move
         destination_city_id: Target city ID
+        destination_position: inside / outside / near on arrival
         path: Optional explicit path (list of city IDs)
     """
     actor_id: str = ""
     destination_city_id: str = ""
+    destination_position: str = "inside"  # LocationPosition value
     path: list[str] = field(default_factory=list)
 
     def order_type(self) -> str:
@@ -650,6 +652,54 @@ class LurkOrder(Order):
 
 
 @dataclass
+class ProbeOrder(Order):
+    """
+    Magically learn a full report of another player's character.
+
+    Costs 25 magic power whether it succeeds or not. Base success chance is
+    the caster's magic skill; the target resists with their effective skill.
+    """
+    actor_id: str = ""
+    target_id: str = ""
+    target_name: str = ""
+
+    def order_type(self) -> str:
+        return "PROBE"
+
+
+@dataclass
+class SearchOrder(Order):
+    """
+    Search/explore uninhabited ruins at the actor's current location.
+
+    EXPLORE is a synonym. Duration is recorded for future sub-turn time; the
+    alpha engine treats every search as one turn of effort.
+    """
+    actor_id: str = ""
+    duration_days: int = 7
+
+    def order_type(self) -> str:
+        return "SEARCH"
+
+
+@dataclass
+class ScanOrder(Order):
+    """
+    Use a magical orb to report who is at a distant city.
+
+    Orbs are not yet modelled as inventory items; the engine currently rejects
+    SCAN with a clear warning until magical items ship.
+    """
+    actor_id: str = ""
+    city_ids: list[str] = field(default_factory=list)
+    city_names: list[str] = field(default_factory=list)
+    orb_name: str = ""
+
+    def order_type(self) -> str:
+        return "SCAN"
+
+
+@dataclass
 class GetOrder(Order):
     """
     Take gold/units from a donor (inverse of ASSIGN/GIVE).
@@ -967,6 +1017,10 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "COMBATANT": NoncomOrder,
         "LURK": LurkOrder,
         "UNLURK": LurkOrder,
+        "PROBE": ProbeOrder,
+        "SEARCH": SearchOrder,
+        "EXPLORE": SearchOrder,
+        "SCAN": ScanOrder,
         "GET": GetOrder,
         "OBTAIN": GetOrder,
         "TAKE": GetOrder,

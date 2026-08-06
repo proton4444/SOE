@@ -23,7 +23,7 @@ turn processor.
 
 from typing import List, Optional
 
-from spoils_engine.models import Character, GameState, UnitStack
+from spoils_engine.models import Character, GameState, LocationPosition, UnitStack
 
 # A group nested deeper than this is either a cycle or a mistake; either way,
 # stop walking rather than looping.
@@ -166,13 +166,16 @@ def attach(character: Character, leader: Character,
 
 
 def move_group(leader: Character, destination_city_id: str,
-               game_state: GameState) -> List[Character]:
+               game_state: GameState,
+               position: Optional[LocationPosition] = None) -> List[Character]:
     """
     Move everyone travelling with this character, and their units.
 
     Only members standing where the leader started come along; anyone the
-    leader had already sent elsewhere stays where they are. Returns the members
-    that moved, not counting the leader.
+    leader had already sent elsewhere stays where they are. When `position`
+    is given (inside/outside/near), the whole travelling party adopts it —
+    a group arrives together at the same band of the city. Returns the
+    members that moved, not counting the leader.
     """
     origin = leader.location_city_id
     travelling = [m for m in group_members(leader.id, game_state)
@@ -181,6 +184,8 @@ def move_group(leader: Character, destination_city_id: str,
 
     for member in travelling:
         member.location_city_id = destination_city_id
+        if position is not None:
+            member.location_position = position
 
     for owner in [leader] + travelling:
         for stack in owned_stacks(owner.id, game_state):

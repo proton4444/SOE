@@ -23,6 +23,7 @@ PHASE_ORDER = [
     "income", "tax", "trade", "secure",
     "fortify", "diplomacy", "assign", "name", "promote", "collect", "mine",
     "build", "free", "study", "teach",
+    "intel", "sighting",
 ]
 
 
@@ -102,8 +103,10 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
                 if char.is_prisoner:
                     flags.append("prisoner")
                 flag_s = f" [{', '.join(flags)}]" if flags else ""
+                pos = getattr(char, "location_position", None)
+                pos_s = f" ({pos.value})" if pos and pos.value != "inside" else ""
                 report_lines.append(f"\n{char.name} (ID: {char.id}){flag_s}")
-                report_lines.append(f"  Location: {city_name}")
+                report_lines.append(f"  Location: {city_name}{pos_s}")
                 report_lines.append(f"  Gold: {char.gold:,.1f}g")
                 report_lines.append(f"  Combat Skill: {char.combat_skill}")
                 report_lines.append(f"  Magic Skill: {char.magic_skill} (Power: {char.magic_power_current}/{char.max_magic_power})")

@@ -14,7 +14,7 @@ import heapq
 
 from spoils_engine.models import (
     GameState, Character, UnitStack, Ship, SummonedCreature,
-    UnitType, ShipType, RoadQuality, CreatureType,
+    UnitType, ShipType, RoadQuality, CreatureType, LocationPosition,
     available_gold, debit_gold, credit_gold,
 )
 from spoils_engine.orders import (
@@ -23,10 +23,11 @@ from spoils_engine.orders import (
     PromoteOrder, TaxOrder, CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder,
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder,
     ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
+    ProbeOrder, SearchOrder, ScanOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     JoinOrder, SupportOrder, actor_field, actor_id_of,
 )
-from spoils_engine import config, groups, order_queue
+from spoils_engine import config, fog, groups, order_queue
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
 from spoils_engine.parser import get_player_leader
 
@@ -444,11 +445,19 @@ def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameS
                 continue
 
             # Move character, and whoever is travelling with them. rules.md:
-            # a group goes where its leader goes.
+            # a group goes where its leader goes. Position (inside/outside/near)
+            # is shared by the travelling party.
             start_city = game_state.world_map.cities[actor.location_city_id]
             end_city = game_state.world_map.cities[order.destination_city_id]
-            travelled = groups.move_group(actor, order.destination_city_id, game_state)
+            try:
+                arrive_pos = LocationPosition(order.destination_position or "inside")
+            except ValueError:
+                arrive_pos = LocationPosition.INSIDE
+            travelled = groups.move_group(
+                actor, order.destination_city_id, game_state, position=arrive_pos
+            )
             actor.location_city_id = order.destination_city_id
+            actor.location_position = arrive_pos
             # Round up: truncating made every sub-1.0 hop (excellent roads cost
             # 0.5) free, so a character could cross the map without ever
             # spending a movement point.
@@ -457,9 +466,10 @@ def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameS
                 member.movement_points -= max(1, math.ceil(cost))
 
             escort = groups.describe_escort(travelled, actor, game_state)
+            pos_note = "" if arrive_pos == LocationPosition.INSIDE else f" ({arrive_pos.value})"
             turn_log.add("movement", player_id, "move",
                         f"{actor.name} moved from {start_city.name} to {end_city.name}"
-                        f"{escort} (cost: {cost:.1f})",
+                        f"{pos_note}{escort} (cost: {cost:.1f})",
                         location=end_city.id, character_id=actor.id)
 
 
@@ -2280,6 +2290,162 @@ def process_status_orders(orders_by_player: Dict[str, List[Order]], game_state: 
                             character_id=actor.id)
 
 
+def process_probe(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                  turn_log: TurnLog, rng: random.Random):
+    """
+    Magically report on another player's character.
+
+    rules.md: costs 25 power always; success chance = caster magic skill %;
+    target resists with effective skill %; on resist the target is told an
+    attempt was made but not by whom.
+    """
+    PROBE_COST = 25
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, ProbeOrder) or order.warnings:
+                continue
+            caster = game_state.characters.get(order.actor_id)
+            target = game_state.characters.get(order.target_id)
+            if not caster or not target:
+                turn_log.add("intel", player_id, "probe_failed",
+                            "PROBE: caster or target missing", success=False)
+                continue
+            if caster.magic_power_current < PROBE_COST:
+                turn_log.add("intel", player_id, "probe_failed",
+                            f"{caster.name} lacks magic power to probe "
+                            f"(need {PROBE_COST}, have {caster.magic_power_current})",
+                            character_id=caster.id, success=False)
+                continue
+
+            caster.magic_power_current -= PROBE_COST
+            # Base success: magic skill as a percentage.
+            success_roll = rng.random() * 100.0
+            if success_roll >= caster.magic_skill:
+                turn_log.add("intel", player_id, "probe_failed",
+                            f"{caster.name} failed to probe {target.name} "
+                            f"(magic skill {caster.magic_skill})",
+                            character_id=caster.id, success=False)
+                continue
+
+            resist = fog.effective_skill_level(target)
+            if rng.random() * 100.0 < resist:
+                turn_log.add("intel", player_id, "probe_resisted",
+                            f"{caster.name}'s probe of {target.name} was resisted",
+                            character_id=caster.id, success=False)
+                # Target learns only that an attempt was made.
+                turn_log.add("intel", target.faction_id, "probe_detected",
+                            f"{target.name} felt a magical probe attempt",
+                            character_id=target.id, success=True)
+                continue
+
+            city = game_state.world_map.cities.get(target.location_city_id)
+            city_name = city.name if city else "unknown"
+            pos = target.location_position.value
+            soldiers = groups.group_soldier_count(target, game_state)
+            report = (
+                f"{caster.name} probed {target.name}: at {city_name} ({pos}), "
+                f"combat {target.combat_skill}, magic {target.magic_skill}, "
+                f"religion {target.religion_skill}, trading {target.trading_skill}, "
+                f"health {target.health}, gold {target.gold:.0f}, "
+                f"~{soldiers} soldiers in their group"
+                f"{', lurking' if target.is_lurking else ''}"
+            )
+            turn_log.add("intel", player_id, "probe", report,
+                        location=target.location_city_id, character_id=caster.id)
+
+
+def process_search(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                   turn_log: TurnLog, rng: random.Random):
+    """
+    SEARCH/EXPLORE uninhabited ruins at the actor's current location.
+
+    rules.md: must be *inside* a ruin; outside/near and inhabited cities find
+    nothing. Magical items are not fully modelled yet — a successful dig yields
+    a small gold find as a placeholder, and the chance scales with duration.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, SearchOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            if actor.location_position != LocationPosition.INSIDE:
+                turn_log.add("intel", player_id, "search_failed",
+                            f"{actor.name} must be inside the ruins to search "
+                            f"(currently {actor.location_position.value})",
+                            character_id=actor.id, location=city.id, success=False)
+                continue
+            if not city.is_ruin:
+                turn_log.add("intel", player_id, "search_failed",
+                            f"{actor.name} found nothing of value at {city.name} "
+                            f"(not uninhabited ruins)",
+                            character_id=actor.id, location=city.id, success=False)
+                continue
+
+            # Longer searches help a little; default week ≈ 25% base chance.
+            days = max(1, order.duration_days)
+            chance = min(0.75, 0.10 + 0.02 * min(days, 30))
+            if rng.random() < chance:
+                gold = round(5 + rng.random() * 20, 1)
+                credit_gold(actor, gold)
+                turn_log.add("intel", player_id, "search",
+                            f"{actor.name} searched the ruins of {city.name} "
+                            f"and recovered {gold:.1f}g "
+                            f"(magical items not yet modelled)",
+                            character_id=actor.id, location=city.id)
+            else:
+                turn_log.add("intel", player_id, "search",
+                            f"{actor.name} searched the ruins of {city.name} "
+                            f"and found nothing",
+                            character_id=actor.id, location=city.id)
+
+
+def process_scan(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                 turn_log: TurnLog):
+    """
+    SCAN a distant city with a magical orb.
+
+    Orbs are not inventory items yet, so every SCAN fails with a clear message
+    until magical items ship. The parser and order type are already in place.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, ScanOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            name = actor.name if actor else "scanner"
+            orb = order.orb_name or "an orb"
+            turn_log.add("intel", player_id, "scan_failed",
+                        f"{name} cannot SCAN with {orb}: magical orbs are not "
+                        f"modelled yet",
+                        character_id=order.actor_id, success=False)
+
+
+def process_sightings(game_state: GameState, turn_log: TurnLog, rng: random.Random):
+    """
+    End-of-turn fog of war: each faction's living characters try to notice
+    others at the same city under the position and LURK rules.
+    """
+    for faction_id in sorted(game_state.factions.keys()):
+        # Independent stream per faction so adding a player does not reshuffle
+        # everyone else's sightings under the same turn seed.
+        faction_rng = random.Random(rng.randint(0, 2**31 - 1))
+        for sighting in fog.collect_sightings(game_state, faction_id, faction_rng):
+            turn_log.add(
+                "sighting",
+                faction_id,
+                "spotted",
+                fog.format_sighting(sighting),
+                location=sighting.city_id,
+                character_id=sighting.observer_id,
+            )
+
+
 def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
     """Process GET/TAKE/OBTAIN — inverse of ASSIGN/GIVE."""
     for player_id, orders in orders_by_player.items():
@@ -2823,9 +2989,16 @@ def run_turn(
     process_repay(orders_by_player, game_state, turn_log)
     process_study(orders_by_player, game_state, turn_log, rng)
     process_teach(orders_by_player, game_state, turn_log, rng)
+    process_probe(orders_by_player, game_state, turn_log, rng)
+    process_search(orders_by_player, game_state, turn_log, rng)
+    process_scan(orders_by_player, game_state, turn_log)
     report_pending_orders(game_state, turn_log)
 
-    # Phase 8: Cleanup
+    # Phase 8: Fog of war — who noticed whom after all movement and status
+    # changes for the turn have settled.
+    process_sightings(game_state, turn_log, rng)
+
+    # Phase 9: Cleanup
     expire_support(game_state, turn_log)
     process_prisoner_escape(game_state, turn_log, rng)
     cleanup_turn(game_state)

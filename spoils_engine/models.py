@@ -69,6 +69,18 @@ class ResourceType(str, Enum):
     GEMS = "gems"      # Mined in hills/mountains
 
 
+class LocationPosition(str, Enum):
+    """
+    Where a character stands relative to a city's gates.
+
+    rules.md: inside (default), outside the gates, or near (hiding in the
+    countryside). Visibility between people depends on both positions.
+    """
+    INSIDE = "inside"
+    OUTSIDE = "outside"
+    NEAR = "near"
+
+
 # ============================================================================
 # MAP & GEOGRAPHY
 # ============================================================================
@@ -92,6 +104,7 @@ class City:
     terrain: set[str] = field(default_factory=set)
     region: Optional[str] = None
     is_port: bool = False
+    is_ruin: bool = False  # Uninhabited ruins: SEARCH/EXPLORE may find items
     fortification_level: int = 0  # 0-100 defensive bonus
     resource_richness: dict[str, float] = field(default_factory=dict)
 
@@ -220,7 +233,8 @@ class Character:
             `support_until_turn` is the turn that agreement lapses.
         gold: Personal purse. Rules track gold per character, not per faction.
         is_noncom: If True, stays out of combat unless named in ATTACK/CAPTURE.
-        is_lurking: If True, trying to avoid detection (full FOW is v1.0).
+        is_lurking: If True, trying to avoid detection; odds live in `fog`.
+        location_position: inside / outside / near the current city.
         movement_points: Movement remaining this turn
         combat_skill: Combat skill level (0-100)
         magic_skill: Magic skill level (0-100)
@@ -246,6 +260,7 @@ class Character:
     gold: float = 0.0
     is_noncom: bool = False
     is_lurking: bool = False
+    location_position: LocationPosition = LocationPosition.INSIDE
     movement_points: int = 10  # Reset each turn
     combat_skill: int = 0
     magic_skill: int = 0

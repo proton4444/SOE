@@ -11,14 +11,14 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-> **v1.0.0a — groups and group leaders.** Characters are no longer loose atoms.
-> A character is either assigned to somebody or leads their own group; a group
-> travels together, and a direct order promotes its target to group leader.
-> `JOIN`, `COME` and `SUPPORT` land, and `UNLOAD` finally does something. This
-> is the first slice of v1.0; fog of war, communication, exploration and
-> magical items are still ahead. See [`docs/rules_gap.md`](docs/rules_gap.md).
+> **v1.0.0b — fog of war.** Characters stand *inside*, *outside*, or *near* a
+> city; end-of-turn sightings only report people your side can actually notice.
+> `LURK` finally changes those odds (×¼). `PROBE`, `SEARCH`/`EXPLORE` ship;
+> `SCAN` parses but waits on magical orbs. Groups (v1.0.0a) still travel as a
+> party and arrive at the same position band. Communication, magical items,
+> `IF`, and sub-turn time remain. See [`docs/rules_gap.md`](docs/rules_gap.md).
 
-## Features (Alpha v1.0.0a)
+## Features (Alpha v1.0.0b)
 
 ### Implemented
 
@@ -80,6 +80,17 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - A direct order (the `HAVE` form) promotes its target to group leader
 - `LURK` covers the whole group, as the rules require
 - `SUPPORT` puts a character into somebody else's battle without merging groups
+
+✅ **Fog of War & Intel**
+- Position bands: *inside* (default), *outside*, *near* — `go to outside Rome`
+- Visibility matrix from the rules (inside sees outside, near is hard to spot, …)
+- End-of-turn sightings: co-located enemies appear in the turn report only when
+  noticed; LURK multiplies detection chance by ¼; larger groups are harder to hide
+- `PROBE` — magical report of another player's character (25 power, skill vs
+  effective skill resistance)
+- `SEARCH`/`EXPLORE` — dig uninhabited ruins (must be inside; gold placeholder
+  until magical items exist)
+- `SCAN` — parsed, fails cleanly until orbs are inventory items
 
 ✅ **Order Queue**
 - Orders persist on a per-character queue across turns and through save/load
@@ -483,6 +494,7 @@ SOE/
 │   ├── parser.py          # English-like order parser
 │   ├── order_queue.py     # Per-character order queue (AWAIT/REPEAT/HALT/STOP)
 │   ├── groups.py          # Groups and group leaders (JOIN/ASSIGN/UNLOAD)
+│   ├── fog.py             # Fog of war (position, LURK odds, sightings)
 │   ├── engine.py          # Turn processing engine
 │   ├── reporting.py       # Report generation
 │   ├── storage.py         # Save/load game state
@@ -496,7 +508,8 @@ SOE/
 │   ├── test_gap_closures.py # Pins the design debt closed in v0.7.2
 │   ├── test_v08.py          # Cheap-gap commands and per-character gold
 │   ├── test_v09.py          # The persistent order queue
-│   └── test_v10_groups.py   # Groups and group leaders
+│   ├── test_v10_groups.py   # Groups and group leaders
+│   └── test_v10_fog.py      # Fog of war, PROBE, SEARCH, SCAN
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -629,7 +642,7 @@ See `docs/alpha_scope.md` for comprehensive mapping.
 
 ## Where we are
 
-**65 of 89 command verbs (73%)** from `rules.md` are recognised, and 4 of its 9
+**69 of 89 command verbs (78%)** from `rules.md` are recognised, and 4 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
 full breakdown, including which commands are missing and why.
 
@@ -673,23 +686,20 @@ day both cost a turn), `until <date>` as a loop terminator, `THEN` sequencing,
 **Groups and group leaders ✅** — shipped: `JOIN`, `COME`, `SUPPORT`, a real
 `UNLOAD`, group travel, unit ownership, and the `HAVE`-promotes-to-leader rule.
 
+**Fog of war ✅** — position bands, end-of-turn sightings, real `LURK` odds,
+`PROBE`, `SEARCH`/`EXPLORE`. `SCAN` waits on magical orbs.
+
 Still ahead, in no fixed order:
 
-- Fog of war, and with it `EXPLORE`, `SCAN`, `SEARCH`, `PROBE` and real `LURK`
-  detection odds
 - Communication: `SAY`/`TELL`, `POST`, `ADDRESS`, `REPORT`, `QUERY`, `PASSWORD`
-- Magical items: `CONJURE`, `CREATE`, `CHARGE`/`RECHARGE`, `ABSORB`
+- Magical items: `CONJURE`, `CREATE`, `CHARGE`/`RECHARGE`, `ABSORB` (and real
+  `SCAN` once orbs exist; ruins finds become items rather than gold stubs)
 - `IF` conditional orders (the queue they needed now exists)
 - Sub-turn game time, so a wait can cost hours rather than a whole turn
 - Group-level possession of ships, resources and gold, and combat resolved
   group by group rather than by faction total
 - Retire or justify the three remaining non-rules verbs (`TRADE`, `SCRY`,
   `RESURRECT`)
-
-### Also outstanding
-
-**Fog of war** remains a v1.0 feature. Per-character gold shipped with v0.8, and
-the order queue with v0.9.
 
 ## Contributing
 

@@ -11,17 +11,19 @@ import re
 from typing import Optional, Type
 from dataclasses import dataclass
 
-from spoils_engine.models import GameState, UnitType, ShipType, Character
+from spoils_engine.models import GameState, UnitType, ShipType, Character, LocationPosition
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder,
     PromoteOrder, TaxOrder, CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder,
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
     RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
+    ProbeOrder, SearchOrder, ScanOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     HaltOrder, StopOrder, JoinOrder, SupportOrder,
 )
 from spoils_engine import config
+from spoils_engine.fog import parse_position_prefix
 
 
 # ============================================================================
@@ -213,6 +215,27 @@ class OrderParserBase:
 # ORDER PARSERS (REFACTORED)
 # ============================================================================
 
+def _resolve_destination(city_phrase: str, game_state: GameState,
+                         order: MoveOrder, parser: "OrderParserBase") -> bool:
+    """
+    Resolve "outside Riverton" / "near Kitesta" / "Rome" onto a MoveOrder.
+
+    Sets destination_city_id and destination_position. Returns False when the
+    city cannot be found (a warning is already on the order).
+    """
+    position, city_name = parse_position_prefix(city_phrase)
+    if not city_name:
+        parser.add_warning(order, "No destination city given")
+        return False
+    city_resolved = resolve_city(city_name, game_state)
+    if not city_resolved.found:
+        parser.add_warning(order, f"City '{city_name}' not found")
+        return False
+    order.destination_city_id = city_resolved.entity_id
+    order.destination_position = position.value
+    return True
+
+
 def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Optional[MoveOrder]:
     """Parse a movement order."""
     parser = OrderParserBase(game_state, player_id, sentence)
@@ -227,12 +250,7 @@ def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Op
         if not parser.resolve_actor(order, actor_name):
             return order
 
-        city_resolved = resolve_city(city_name, game_state)
-        if not city_resolved.found:
-            parser.add_warning(order, f"City '{city_name}' not found")
-            return order
-
-        order.destination_city_id = city_resolved.entity_id
+        _resolve_destination(city_name, game_state, order, parser)
         return order
 
     # Pattern: "go/move/travel/come to <city>" (implicit leader)
@@ -243,12 +261,7 @@ def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Op
         if not parser.resolve_actor(order, None):  # Use leader
             return order
 
-        city_resolved = resolve_city(city_name, game_state)
-        if not city_resolved.found:
-            parser.add_warning(order, f"City '{city_name}' not found")
-            return order
-
-        order.destination_city_id = city_resolved.entity_id
+        _resolve_destination(city_name, game_state, order, parser)
         return order
 
     return None
@@ -1921,6 +1934,101 @@ def parse_noncom_order(sentence: str, game_state: GameState, player_id: str) -> 
     return order
 
 
+def parse_probe_order(sentence: str, game_state: GameState, player_id: str) -> Optional[ProbeOrder]:
+    """Parse PROBE <character> / have X probe Y."""
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(ProbeOrder)
+
+    match = re.search(r'have\s+(.+?)\s+probe\s+(.+)', sentence)
+    if match:
+        actor_name = match.group(1).strip()
+        target_name = match.group(2).strip()
+        if not parser.resolve_actor(order, actor_name):
+            return order
+    else:
+        match = re.search(r'^probe\s+(.+)', sentence)
+        if not match:
+            return None
+        target_name = match.group(1).strip()
+        if not parser.resolve_actor(order, None):
+            return order
+
+    target = resolve_character(target_name, game_state)
+    if not target.found:
+        parser.add_warning(order, f"Character '{target_name}' not found")
+        return order
+    order.target_id = target.entity_id
+    order.target_name = target.entity_name
+    return order
+
+
+def parse_search_order(sentence: str, game_state: GameState, player_id: str) -> Optional[SearchOrder]:
+    """Parse SEARCH / EXPLORE (optional 'for N days/weeks')."""
+    if not re.search(r'\b(?:search|explore)\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(SearchOrder)
+
+    match = re.search(r'have\s+(.+?)\s+(?:search|explore)\b', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+    else:
+        if not parser.resolve_actor(order, None):
+            return order
+
+    weeks = re.search(r'for\s+(\d+)\s+weeks?', sentence)
+    days = re.search(r'for\s+(\d+)\s+days?', sentence)
+    if weeks:
+        order.duration_days = int(weeks.group(1)) * 7
+    elif days:
+        order.duration_days = int(days.group(1))
+    else:
+        order.duration_days = 7
+    return order
+
+
+def parse_scan_order(sentence: str, game_state: GameState, player_id: str) -> Optional[ScanOrder]:
+    """Parse SCAN <cities> using/with <orb>."""
+    if not re.search(r'\bscan\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(ScanOrder)
+
+    match = re.search(r'have\s+(.+?)\s+scan\s+(.+)', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        rest = match.group(2).strip()
+    else:
+        match = re.search(r'^scan\s+(.+)', sentence)
+        if not match:
+            return None
+        if not parser.resolve_actor(order, None):
+            return order
+        rest = match.group(1).strip()
+
+    orb_match = re.search(r'\b(?:using|with)\s+(.+)$', rest)
+    if orb_match:
+        order.orb_name = orb_match.group(1).strip()
+        rest = rest[:orb_match.start()].strip()
+
+    city_parts = re.split(r'\s+and\s+', rest)
+    for part in city_parts:
+        part = part.strip()
+        if not part:
+            continue
+        resolved = resolve_city(part, game_state)
+        if not resolved.found:
+            parser.add_warning(order, f"City '{part}' not found")
+            continue
+        order.city_ids.append(resolved.entity_id)
+        order.city_names.append(resolved.entity_name)
+    if not order.city_ids and not order.warnings:
+        parser.add_warning(order, "No cities to scan")
+    return order
+
+
 def parse_lurk_order(sentence: str, game_state: GameState, player_id: str) -> Optional[LurkOrder]:
     parser = OrderParserBase(game_state, player_id, sentence)
     set_lurking = not bool(re.search(r'\bunlurk\b', sentence))
@@ -2198,6 +2306,9 @@ ORDER_KEYWORDS = {
     'interrogate': ['interrogate'],
     'noncom': ['noncom', 'combatant'],
     'lurk': ['lurk', 'unlurk'],
+    'probe': ['probe'],
+    'search': ['search', 'explore'],
+    'scan': ['scan'],
     'get': ['get', 'take', 'obtain'],
     'transfer': ['transfer'],
     'unload': ['unload'],
@@ -2385,6 +2496,15 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['lurk']):
             order = parse_lurk_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['probe']):
+            order = parse_probe_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['search']):
+            order = parse_search_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['scan']):
+            order = parse_scan_order(sentence, game_state, player_id)
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['get']):
             order = parse_get_order(sentence, game_state, player_id)

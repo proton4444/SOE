@@ -7,7 +7,7 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **65 of 89 (73%)** |
+| Command verbs recognised | **69 of 89 (78%)** |
 | Order-language features | **4 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups) |
 | Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
@@ -15,7 +15,7 @@ Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
 engine has a phase for it — not that every sub-rule of that command is honoured.
 
-## Commands implemented (65)
+## Commands implemented (69)
 
 ALLY, ENEMY, NEUTRAL, ASSIGN, GIVE, ATTACK, AWAIT, BLESS, BUILD, CONSTRUCT,
 MAKE, BUY, CAPTURE, COLLECT, GATHER, CURE, CURSE, DISCARD, DISMISS, FREE,
@@ -23,9 +23,10 @@ RELEASE, FLY, FORTIFY, UNFORTIFY, GO, MOVE, TRAVEL, HEAL, MINE, NAME, PRAY,
 PROMOTE, RECRUIT, HIRE, SAIL, SECURE, SELL, STUDY, SUMMON, TAX, TEACH, TELEPORT,
 ENSLAVE, KILL, EXECUTE, INTERROGATE, COMBATANT, NONCOM, LURK, UNLURK,
 GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY,
-HALT, STOP, WAIT FOR, WAIT UNTIL, JOIN, COME, SUPPORT
+HALT, STOP, WAIT FOR, WAIT UNTIL, JOIN, COME, SUPPORT,
+PROBE, SEARCH, EXPLORE, SCAN
 
-## Commands not implemented (24)
+## Commands not implemented (20)
 
 Grouped by the subsystem they belong to, which is roughly the order they should
 be tackled in:
@@ -33,8 +34,8 @@ be tackled in:
 - **Inventory** — WORK
 - **Communication** — SAY, TELL, ADDRESS, POST, REPORT, QUERY, PASSWORD
 - **Finance** — INVEST, OFFER, PURCHASE, BUY PASSAGE
-- **Exploration & intel** — EXPLORE, SCAN, SEARCH, PROBE
 - **Magical items** — CONJURE, CREATE, CHARGE, RECHARGE, ABSORB
+  (`SCAN` is recognised but needs orbs from this list to do anything)
 - **Religion & training** — PREACH, TRAIN
 - **Naming** — UNNAME
 
@@ -125,6 +126,14 @@ and are covered by tests.
   pass per turn; `HALT` drops the backlog at once and `STOP` does so in
   sequence. A character with nothing in front of them still resolves their whole
   submission in the turn they gave it. (`order_queue.py`, `engine.run_turn`)
+- **Fog of war** — each character has a position band (`inside` / `outside` /
+  `near`) relative to their city. End-of-turn sightings only report people that
+  a living non-prisoner of the faction can notice under the rules' position
+  matrix. `LURK` multiplies detection chance by ¼ and still covers the whole
+  group. `PROBE` spends 25 magic power for a full character report (magic skill
+  vs target effective skill). `SEARCH`/`EXPLORE` dig ruins marked `City.is_ruin`
+  when the actor is inside. (`fog.py`, `engine.process_sightings`,
+  `process_probe`, `process_search`)
 
 ## Partial
 
@@ -141,18 +150,23 @@ and are covered by tests.
   gold are still held by their character rather than travelling with a group as
   a single pool, and combat still totals a faction's strength at a location
   rather than resolving group by group.
-- **LURK** applies to the whole group as the rules require, but the flag has no
-  detection odds behind it yet; that needs fog of war.
+- **SCAN** parses and routes, but orbs are not inventory items yet, so the
+  phase always fails with a clear message.
+- **SEARCH** on ruins can yield a small gold find as a stand-in; the rules'
+  magical-item loot table is not modelled.
+- **Population-based security** (how hard it is to lurk under enemy SECURE) is
+  approximated by city population band only; SECURE does not yet raise local
+  detection odds beyond making the securer visible from outside.
 
 ## Not implemented
 
-- Fog of war — reports are scoped per faction, but the engine models no notion
-  of what a faction can observe.
 - Sub-turn game time, and with it the rules' partial-progress accounting for a
   BUILD or FORTIFY interrupted part-way through.
-- Encumbrance, item weight and the full magical-item system.
+- Encumbrance, item weight and the full magical-item system (blocks real SCAN
+  and ruin treasure).
 - Religion's `PREACH` donations and the wider miracle table.
 - Named-character hiring, education and the starting-character creation phase.
+- Communication verbs (SAY/TELL, POST, ADDRESS, REPORT, QUERY, PASSWORD).
 
 See [`audit_2025-11.md`](audit_2025-11.md) for the defects fixed in v0.7.1 and
 the design debt closed in v0.7.2.
