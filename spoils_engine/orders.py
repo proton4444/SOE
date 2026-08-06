@@ -713,6 +713,95 @@ class ScanOrder(Order):
 
 
 @dataclass
+class MessageOrder(Order):
+    """
+    SAY or TELL: give a message to other players.
+
+    The two verbs differ only in word order -- `tell <who> "..."` against
+    `say "..." to <who>` -- so they share one order type. A message may go to
+    named characters of any faction, to everyone at a city, or to every player
+    in the game.
+
+    Attributes:
+        message: The text, exactly as the player typed it. Quoted spans are
+            protected from the parser's lowercasing, so case survives.
+        recipient_ids: Named characters, who may belong to any faction.
+        recipient_city_id: Set when the message is broadcast to a town.
+        to_everyone: Set by the `everyone` form, which reaches all players.
+    """
+    actor_id: str = ""
+    message: str = ""
+    recipient_ids: list[str] = field(default_factory=list)
+    recipient_names: list[str] = field(default_factory=list)
+    recipient_city_id: str = ""
+    recipient_city_name: str = ""
+    to_everyone: bool = False
+
+    def order_type(self) -> str:
+        return "SAY"
+
+
+@dataclass
+class PostOrder(Order):
+    """
+    Nail a message to the gates of a city your faction has secured.
+
+    An empty message takes the posting down, which is the rules' way of
+    clearing one. The posting also lapses on its own when the faction stops
+    securing the location.
+    """
+    actor_id: str = ""
+    message: str = ""
+
+    def order_type(self) -> str:
+        return "POST"
+
+
+@dataclass
+class ReportOrder(Order):
+    """
+    REPORT or QUERY: ask a character what they can see.
+
+    rules.md: QUERY does exactly what REPORT does, except that it reaches a
+    subordinate who is busy -- so `immediate` is what separates the two verbs.
+    `brief` is the `briefly` adverb, which drops skills and the list of other
+    people at the location.
+    """
+    actor_id: str = ""
+    subject_ids: list[str] = field(default_factory=list)
+    subject_names: list[str] = field(default_factory=list)
+    brief: bool = False
+    immediate: bool = False
+
+    def order_type(self) -> str:
+        return "QUERY" if self.immediate else "REPORT"
+
+
+@dataclass
+class AddressOrder(Order):
+    """Change where this player's reports are sent."""
+    address: str = ""
+
+    def order_type(self) -> str:
+        return "ADDRESS"
+
+
+@dataclass
+class PasswordOrder(Order):
+    """
+    Change this player's password.
+
+    rules.md: between 8 and 64 characters. Anything shorter is replaced by a
+    generated one, and anything longer is truncated.
+    """
+    password: str = ""
+    generated: bool = False
+
+    def order_type(self) -> str:
+        return "PASSWORD"
+
+
+@dataclass
 class ConjureOrder(Order):
     """
     Attempt to conjure a magical item for temporary use.
@@ -1106,6 +1195,13 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "SEARCH": SearchOrder,
         "EXPLORE": SearchOrder,
         "SCAN": ScanOrder,
+        "SAY": MessageOrder,
+        "TELL": MessageOrder,
+        "POST": PostOrder,
+        "REPORT": ReportOrder,
+        "QUERY": ReportOrder,
+        "ADDRESS": AddressOrder,
+        "PASSWORD": PasswordOrder,
         "CONJURE": ConjureOrder,
         "CHARGE": ChargeOrder,
         "RECHARGE": ChargeOrder,

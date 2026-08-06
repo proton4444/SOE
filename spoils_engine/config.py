@@ -189,6 +189,21 @@ MAGIC_POWER_REGEN_PER_TURN = 0  # Simplified: magic refills to max each turn
 
 
 # ============================================================================
+# COMMUNICATION
+# ============================================================================
+
+# rules.md: a message is "limited to a maximum of 2500 bytes (about 1 full page
+# of dense print)"; a posting at the gates to 256 characters.
+MESSAGE_MAX_LENGTH = 2500
+POST_MAX_LENGTH = 256
+
+# rules.md: "A password must contain between 8 and 64 characters". Shorter and
+# the computer generates one for you; longer and it is truncated.
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 64
+
+
+# ============================================================================
 # MAGICAL ITEMS
 # ============================================================================
 

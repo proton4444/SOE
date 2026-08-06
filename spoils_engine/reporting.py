@@ -25,6 +25,9 @@ PHASE_ORDER = [
     "fortify", "diplomacy", "assign", "name", "promote", "collect", "mine",
     "build", "free", "study", "teach",
     "intel", "sighting",
+    # Messages and reports last: they are what the player reads for news, and
+    # they describe the world as it stands after everything above has resolved.
+    "message", "report",
 ]
 
 

@@ -170,6 +170,7 @@ def decode_game_state(data: dict) -> GameState:
         tax_pools={k: float(v) for k, v in (data.get('tax_pools') or {}).items()},
         location_blessings=dict(data.get('location_blessings') or {}),
         location_curses=dict(data.get('location_curses') or {}),
+        posted_messages=dict(data.get('posted_messages') or {}),
         order_queues={
             actor_id: _rebuild_queue(entries)
             for actor_id, entries in (data.get('order_queues') or {}).items()

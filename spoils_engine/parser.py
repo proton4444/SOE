@@ -9,7 +9,7 @@ interface is designed to be replaceable with an LLM-based parser.
 import math
 import re
 from typing import Optional, Type
-from dataclasses import dataclass
+from dataclasses import dataclass, fields as dc_fields
 
 from spoils_engine.models import GameState, UnitType, ShipType, Character, LocationPosition
 from spoils_engine.orders import (
@@ -20,6 +20,7 @@ from spoils_engine.orders import (
     RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
     ProbeOrder, SearchOrder, ScanOrder,
     ConjureOrder, ChargeOrder, AbsorbOrder, ItemPowerTransfer,
+    MessageOrder, PostOrder, ReportOrder, AddressOrder, PasswordOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     HaltOrder, StopOrder, JoinOrder, SupportOrder,
 )
@@ -46,6 +47,62 @@ def extract_sentences(text: str) -> list[str]:
     """Split text into sentences (periods delimit sentences)."""
     sentences = [s.strip() for s in text.split('.') if s.strip()]
     return sentences
+
+
+# A placeholder standing in for a quoted message while the order text is
+# normalised. It has to survive lowercasing, comma stripping and the split on
+# periods, so it is bare lowercase letters and digits and nothing else.
+_QUOTE_TOKEN = "zqz{}zqz"
+_QUOTE_TOKEN_RE = re.compile(r"zqz(\d+)zqz")
+
+
+def protect_quotes(raw_text: str) -> tuple[str, list[str]]:
+    """
+    Lift double-quoted message bodies out of the raw order text.
+
+    A message is the one place in an order where the player's exact characters
+    matter. Everything else is lowercased, has its commas stripped and is split
+    into sentences on periods -- all three of which would wreck
+
+        Have Joe Flint post "Welcome to Madegi Doy. Recruiting is forbidden."
+
+    So quoted spans come out first, each replaced by a placeholder, and go back
+    in once parsing is done. This also keeps pronoun resolution out of message
+    text, so a message that says "meet me at dawn" still says `me`.
+
+    Returns the text with placeholders, and the quoted strings in order.
+    """
+    quoted: list[str] = []
+
+    def take(match: re.Match) -> str:
+        quoted.append(match.group(1))
+        return _QUOTE_TOKEN.format(len(quoted) - 1)
+
+    # Tabs are removed from messages per rules.md; the rest is left verbatim.
+    return re.sub(r'"([^"]*)"', take, raw_text).replace("\t", " "), quoted
+
+
+def restore_quotes(text: str, quoted: list[str]) -> str:
+    """Put the original message text back where a placeholder stands."""
+    def give(match: re.Match) -> str:
+        index = int(match.group(1))
+        return quoted[index] if index < len(quoted) else ""
+    return _QUOTE_TOKEN_RE.sub(give, text)
+
+
+def restore_order_quotes(order: Order, quoted: list[str]) -> None:
+    """
+    Put message text back into every string field of a parsed order.
+
+    Done generically rather than per order type so that a new field carrying
+    player text cannot quietly ship with a placeholder still in it.
+    """
+    if not quoted:
+        return
+    for f in dc_fields(order):
+        value = getattr(order, f.name, None)
+        if isinstance(value, str) and "zqz" in value:
+            setattr(order, f.name, restore_quotes(value, quoted))
 
 
 def strip_wand(sentence: str, game_state: GameState) -> tuple[str, str]:
@@ -2075,6 +2132,219 @@ def parse_scan_order(sentence: str, game_state: GameState, player_id: str) -> Op
     return order
 
 
+def _resolve_recipients(text: str, order, game_state: GameState,
+                        parser: "OrderParserBase") -> None:
+    """
+    Work out who a SAY or TELL is addressed to.
+
+    rules.md allows three kinds of addressee, and they are told apart by what
+    the name matches: `everyone` reaches every player, a town's name reaches
+    everyone in it, and anything else must be a named character — of any
+    faction, since messaging an opponent is the point of the verb.
+    """
+    for part in re.split(r'\s+and\s+', text):
+        part = part.strip().rstrip('.')
+        if not part:
+            continue
+        if part == "everyone":
+            order.to_everyone = True
+            continue
+
+        city = resolve_city(part, game_state)
+        if city.found:
+            order.recipient_city_id = city.entity_id
+            order.recipient_city_name = city.entity_name
+            continue
+
+        # enemy_ok: a message is not an order, so it may name anybody.
+        person = resolve_character(part, game_state, parser.player_id,
+                                   enemy_ok=True)
+        if not person.found:
+            parser.add_warning(order, f"No character or town called '{part}'")
+            continue
+        order.recipient_ids.append(person.entity_id)
+        order.recipient_names.append(person.entity_name)
+
+
+def parse_message_order(sentence: str, game_state: GameState,
+                        player_id: str) -> Optional[MessageOrder]:
+    """
+    Parse SAY and TELL.
+
+    rules.md: "With SAY, the name of the recipient must follow the preposition
+    to which, in turn, follows the message. With TELL, the order is reversed
+    and the preposition to is not used."
+
+        Have Joe Flint say "Not on your life!" to King Bodo Bunji.
+        Tell everyone "Emperor John May has declared himself ruler!"
+    """
+    if not re.search(r'\b(?:say|tell)\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(MessageOrder)
+
+    match = re.search(r'have\s+(.+?)\s+(say|tell)\b\s*(.*)$', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        verb, rest = match.group(2), match.group(3).strip()
+    else:
+        match = re.search(r'\b(say|tell)\b\s*(.*)$', sentence)
+        if not match:
+            return None
+        if not parser.resolve_actor(order, None):
+            return order
+        verb, rest = match.group(1), match.group(2).strip()
+
+    body = _QUOTE_TOKEN_RE.search(rest)
+    if not body:
+        return parser.add_warning(
+            order, f"{verb.upper()} needs a message in double quotes")
+    order.message = body.group(0)
+
+    if verb == "say":
+        # say "<message>" to <who>
+        tail = rest[body.end():].strip()
+        recipients = re.sub(r'^to\s+', '', tail).strip()
+    else:
+        # tell <who> "<message>"
+        recipients = rest[:body.start()].strip()
+        # Anything after the message means the player forgot the period that
+        # ends the sentence, so the next order ran into this one. Say so
+        # rather than dropping it: a swallowed order is invisible otherwise.
+        trailing = rest[body.end():].strip()
+        if trailing:
+            parser.add_warning(
+                order,
+                f"'{trailing}' follows the message and was ignored — put a "
+                f"period after the closing quote to start a new order")
+
+    if not recipients:
+        return parser.add_warning(order, f"{verb.upper()} names no recipient")
+    _resolve_recipients(recipients, order, game_state, parser)
+    return order
+
+
+def parse_post_order(sentence: str, game_state: GameState,
+                     player_id: str) -> Optional[PostOrder]:
+    """Parse POST "<message>" — a notice at the gates of a secured town."""
+    if not re.search(r'\bpost\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(PostOrder)
+
+    match = re.search(r'have\s+(.+?)\s+post\b\s*(.*)$', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        rest = match.group(2).strip()
+    else:
+        match = re.search(r'\bpost\b\s*(.*)$', sentence)
+        if not match:
+            return None
+        if not parser.resolve_actor(order, None):
+            return order
+        rest = match.group(1).strip()
+
+    body = _QUOTE_TOKEN_RE.search(rest)
+    if not body:
+        return parser.add_warning(
+            order, 'POST needs a message in double quotes (use "" to take one down)')
+    order.message = body.group(0)
+    return order
+
+
+def parse_report_order(sentence: str, game_state: GameState,
+                       player_id: str) -> Optional[ReportOrder]:
+    """
+    Parse REPORT and QUERY, with the optional `briefly` adverb.
+
+        Report.
+        Query Bill Johnson and Joe Flint.
+        Have Jane Edwards go to Nodim and briefly report.
+    """
+    match = re.search(r'\b(report|query)\b', sentence)
+    if not match:
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(ReportOrder)
+    order.immediate = match.group(1) == "query"
+    order.brief = bool(re.search(r'\bbriefly\b', sentence))
+
+    have = re.search(r'have\s+(.+?)\s+(?:briefly\s+)?(?:report|query)\b', sentence)
+    if have:
+        if not parser.resolve_actor(order, have.group(1).strip()):
+            return order
+    elif not parser.resolve_actor(order, None):
+        return order
+
+    # Anything after the verb names the characters being asked. With nothing
+    # there, the actor reports on themselves.
+    tail = sentence[match.end():].strip().rstrip('.')
+    tail = re.sub(r'^(?:on|about|from)\s+', '', tail).strip()
+    if not tail or tail.startswith("my "):
+        order.subject_ids = [order.actor_id]
+        subject = game_state.characters.get(order.actor_id)
+        order.subject_names = [subject.name] if subject else []
+        return order
+
+    for part in re.split(r'\s+and\s+', tail):
+        part = part.strip()
+        if not part:
+            continue
+        person = resolve_character(part, game_state, player_id)
+        if not person.found:
+            parser.add_warning(order, f"Character '{part}' not found")
+            continue
+        order.subject_ids.append(person.entity_id)
+        order.subject_names.append(person.entity_name)
+
+    if not order.subject_ids and not order.warnings:
+        order.subject_ids = [order.actor_id]
+    return order
+
+
+def parse_address_order(sentence: str, game_state: GameState,
+                        player_id: str) -> Optional[AddressOrder]:
+    """Parse ADDRESS "<email>"."""
+    if not re.search(r'\baddress\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(AddressOrder)
+
+    body = _QUOTE_TOKEN_RE.search(sentence)
+    if not body:
+        return parser.add_warning(
+            order, "ADDRESS needs an email address in double quotes")
+    order.address = body.group(0)
+    return order
+
+
+def parse_password_order(sentence: str, game_state: GameState,
+                         player_id: str) -> Optional[PasswordOrder]:
+    """
+    Parse PASSWORD, quoted or bare.
+
+    rules.md accepts `Password SerendipityDoDah` as well as the quoted form,
+    and requires quotes only when the password contains spaces or punctuation.
+    """
+    match = re.search(r'\bpassword\b\s*(.*)$', sentence)
+    if not match:
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(PasswordOrder)
+
+    rest = match.group(1).strip().rstrip('.')
+    body = _QUOTE_TOKEN_RE.search(rest)
+    if body:
+        order.password = body.group(0)
+    elif rest:
+        order.password = rest
+    else:
+        return parser.add_warning(order, "PASSWORD needs a password")
+    return order
+
+
 def parse_conjure_order(sentence: str, game_state: GameState,
                         player_id: str) -> Optional[ConjureOrder]:
     """
@@ -2524,6 +2794,11 @@ ORDER_KEYWORDS = {
     'probe': ['probe'],
     'search': ['search', 'explore'],
     'scan': ['scan'],
+    'message': ['say', 'tell'],
+    'post': ['post'],
+    'report': ['report', 'query'],
+    'address': ['address'],
+    'password': ['password'],
     'conjure': ['conjure'],
     'charge': ['charge', 'recharge'],
     'absorb': ['absorb'],
@@ -2582,7 +2857,10 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         List of Order objects (may contain warnings)
     """
     orders = []
-    normalized = normalize_text(raw_text)
+    # Quoted message bodies come out before anything touches the text, and go
+    # back into the finished orders at the end.
+    protected, quoted = protect_quotes(raw_text)
+    normalized = normalize_text(protected)
     sentences = extract_sentences(normalized)
 
     # Pronoun referents carry from one sentence to the next within a single
@@ -2732,6 +3010,21 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['scan']):
             order = parse_scan_order(sentence, game_state, player_id)
 
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['password']):
+            order = parse_password_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['address']):
+            order = parse_address_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['message']):
+            order = parse_message_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['post']):
+            order = parse_post_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['report']):
+            order = parse_report_order(sentence, game_state, player_id)
+
         # conjure before charge: "a wand of conjuring" would otherwise be read
         # as a CHARGE by the bare substring test below.
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['conjure']):
@@ -2790,5 +3083,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
             generic_order = MoveOrder(player_id=player_id, original_text=sentence)
             generic_order.warnings.append(f"Could not parse order: '{sentence}'")
             orders.append(generic_order)
+
+    # Put the players' own words back where the placeholders stand.
+    for order in orders:
+        restore_order_quotes(order, quoted)
 
     return orders

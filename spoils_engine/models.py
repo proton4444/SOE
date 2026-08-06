@@ -208,6 +208,10 @@ class Faction:
         loan_grace_turns: Turns remaining before minimum repayments are due.
         allies: Set of faction IDs that are allies
         enemies: Set of faction IDs that are enemies
+        email: Where reports are sent. Changed with ADDRESS.
+        password: Proves a submission really came from this player. Changed
+            with PASSWORD. Stored as given; the rules make it case-insensitive,
+            so comparisons must fold case rather than this field.
 
     Fortifications are *not* stored here. They belong to the city and are held
     on City.fortification_level, so they survive the city changing hands.
@@ -222,6 +226,8 @@ class Faction:
     loan_grace_turns: int = 0
     allies: set[str] = field(default_factory=set)
     enemies: set[str] = field(default_factory=set)
+    email: str = ""
+    password: str = ""
 
 
 @dataclass
@@ -576,6 +582,9 @@ class GameState:
         unit_stacks: Dict mapping unit_stack_id -> UnitStack
         ships: Dict mapping ship_id -> Ship
         summoned_creatures: Dict mapping creature_id -> SummonedCreature
+        posted_messages: Dict mapping city_id -> the message posted at its
+            gates. Only a faction that has secured the city may post, and the
+            posting lapses when they lose it. See `engine.process_post`.
         magical_items: Dict mapping item_id -> MagicalItem. Items are held here
             rather than on the character so that an item keeps its identity
             across owners, and so unfound items can sit in a ruin with no
@@ -591,6 +600,7 @@ class GameState:
     ships: dict[str, Ship] = field(default_factory=dict)
     summoned_creatures: dict[str, SummonedCreature] = field(default_factory=dict)
     magical_items: dict[str, MagicalItem] = field(default_factory=dict)
+    posted_messages: dict[str, str] = field(default_factory=dict)
     tax_pools: dict[str, float] = field(default_factory=dict)
     location_blessings: dict[str, int] = field(default_factory=dict)
     location_curses: dict[str, int] = field(default_factory=dict)

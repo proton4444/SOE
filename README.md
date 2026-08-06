@@ -57,6 +57,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Magic**: Teleportation and flight spells
 - **Magical items**: CONJURE, CHARGE/RECHARGE, ABSORB, SCAN with an orb
 - **Pronouns**: `me`/`I`/`you`, `him`/`her`, `it`, `them` and the reflexives
+- **Communication**: SAY/TELL, POST, REPORT/QUERY, ADDRESS, PASSWORD
 - **Healing**: HEAL/CURE commands using religion skill
 - **Location Control**: SECURE command for territorial control
 - **Diplomacy**: ALLY/ENEMY/NEUTRAL commands
@@ -226,7 +227,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Encumbrance and item weight
 - Group-level possession of ships, resources and gold
 - Resource depletion (accumulation and its cap are in; depletion is not)
-- 16 of the 89 command verbs in `rules.md`
+- 9 of the 89 command verbs in `rules.md`
 
 [`docs/rules_gap.md`](docs/rules_gap.md) has the command-by-command breakdown
 and [`docs/alpha_scope.md`](docs/alpha_scope.md) records what the alpha
@@ -434,6 +435,19 @@ Scan Kitesta using *Anomba*.             # an orb spends its own power on distan
 Have McCoy teleport Joe Flint to Kitesta using *Opistama*.
 Give *Wameka* to Joe Flint.
 
+# Communication (a message keeps its exact text, case and punctuation)
+Have Joe Flint say "Not on your life!" to John May.
+Tell John May "Here is the gold I promised you."
+Tell everyone "John May has declared himself ruler of the world!"
+Tell Madegi Doy "All are welcome here."   # a town name broadcasts to everyone in it
+Have Joe Flint post "Recruiting is forbidden here.".  # notice at a secured town
+Have Joe Flint post "".                   # take the notice down
+Report.                                   # what can my leader see?
+Query Bill Johnson and Joe Flint.
+Have Jane Edwards briefly report.
+Address "player@example.com"
+Password "a good long password"
+
 # Pronouns (referents carry from one sentence to the next)
 Have Joe Flint give me 100 gold.   # me/I/you are always your leader
 Have Mark Bolton study combat.
@@ -468,6 +482,9 @@ Have Hero go to City.  # End-of-line comment
 - Pronouns resolve against what you named in earlier sentences of the same
   submission. `him`/`her` never mean your leader (use `me` or `you`) and never
   mean the character acting in that same order.
+- Text in double quotes is left exactly as you typed it — case, commas and
+  periods included — and pronouns inside a message are never rewritten. Put the
+  sentence-ending period *after* the closing quote, as the rules' examples do.
 
 ## CLI Commands
 
@@ -546,7 +563,8 @@ SOE/
 │   ├── test_v10_groups.py   # Groups and group leaders
 │   ├── test_v10_fog.py      # Fog of war, PROBE, SEARCH, SCAN
 │   ├── test_v10_items.py    # Magical items, CONJURE/CHARGE/ABSORB, SCAN
-│   └── test_v10_pronouns.py # Pronoun resolution
+│   ├── test_v10_pronouns.py # Pronoun resolution
+│   └── test_v10_communication.py # SAY/TELL, POST, REPORT/QUERY, ADDRESS
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -666,7 +684,7 @@ This alpha implements a **simplified subset** of the official `rules.md`:
 | Equipment | Armor/Weapons | ✅ Partial | BUILD output affects combat |
 | Construction | BUILD | ✅ Implemented | No partial progress if interrupted |
 | Resources | MINE/COLLECT | ✅ Implemented | Yields scale with city richness |
-| Communication | SAY/TELL/POST | ⏸️ Deferred | |
+| Communication | SAY/TELL/POST | ✅ Implemented | QUERY not yet more immediate than REPORT |
 | Elite troops | CREATE | ⏸️ Deferred | |
 
 [`docs/rules_gap.md`](docs/rules_gap.md) is the authoritative and current
@@ -683,7 +701,7 @@ breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
 
 ## Where we are
 
-**73 of 89 command verbs (82%)** from `rules.md` are recognised, and 5 of its 9
+**80 of 89 command verbs (90%)** from `rules.md` are recognised, and 5 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
 full breakdown, including which commands are missing and why.
 
@@ -730,6 +748,14 @@ day both cost a turn), `until <date>` as a loop terminator, `THEN` sequencing,
 **Fog of war ✅** — position bands, end-of-turn sightings, real `LURK` odds,
 `PROBE`, `SEARCH`/`EXPLORE`.
 
+**Pronouns ✅** — shipped: `me`/`I`/`you`, `him`/`her`, `it`, `them` and the
+reflexives, resolved before verb dispatch with referents carrying between the
+sentences of a submission.
+
+**Communication ✅** — shipped: `SAY`/`TELL` to a person, a town or everyone,
+`POST` at the gates of a secured town, `REPORT`/`QUERY` with the `briefly`
+form, and `ADDRESS`/`PASSWORD`. Quoted message bodies keep their exact text.
+
 **Magical items ✅** — shipped: all five kinds from the rules (amulet, crystal,
 orb, ring, wand), `CONJURE`, `CHARGE`/`RECHARGE`, `ABSORB`, a real `SCAN` that
 spends orb power, ruins that yield permanent items instead of gold stubs, and
@@ -738,13 +764,13 @@ given by name: `Give *Wameka* to Joe Flint`.
 
 Still ahead, in no fixed order:
 
-- Communication: `SAY`/`TELL`, `POST`, `ADDRESS`, `REPORT`, `QUERY`, `PASSWORD`
 - `CREATE` elite troop units — continuously training named units that cannot
   TAX, SECURE or work. (Previously listed here under magical items by mistake;
   the rules put it with recruitment.)
 - `IF` conditional orders (the queue they needed now exists)
-- Pronouns (`me`, `him`, `it`), which magical items made conspicuous: the rules
-  write `Charge Ampu to 75 power and give it to Merlinus`
+- `and`-chained commands and `THEN` sequencing, which would let one sentence
+  carry several orders — the rules write `Charge Ampu to 75 power and give it
+  to Merlinus`, which today needs two sentences
 - Encumbrance and item weight, so `FLY` and `TELEPORT` cost what is carried
 - Sub-turn game time, so a wait can cost hours rather than a whole turn
 - Group-level possession of ships, resources and gold, and combat resolved

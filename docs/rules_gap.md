@@ -7,7 +7,7 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **73 of 89 (82%)** |
+| Command verbs recognised | **80 of 89 (90%)** |
 | Order-language features | **5 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns) |
 | Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
@@ -15,7 +15,7 @@ Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
 engine has a phase for it — not that every sub-rule of that command is honoured.
 
-## Commands implemented (73)
+## Commands implemented (80)
 
 ALLY, ENEMY, NEUTRAL, ASSIGN, GIVE, ATTACK, AWAIT, BLESS, BUILD, CONSTRUCT,
 MAKE, BUY, CAPTURE, COLLECT, GATHER, CURE, CURSE, DISCARD, DISMISS, FREE,
@@ -25,15 +25,15 @@ ENSLAVE, KILL, EXECUTE, INTERROGATE, COMBATANT, NONCOM, LURK, UNLURK,
 GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY,
 HALT, STOP, WAIT FOR, WAIT UNTIL, JOIN, COME, SUPPORT,
 PROBE, SEARCH, EXPLORE, SCAN,
-CONJURE, CHARGE, RECHARGE, ABSORB
+CONJURE, CHARGE, RECHARGE, ABSORB,
+SAY, TELL, POST, REPORT, QUERY, ADDRESS, PASSWORD
 
-## Commands not implemented (16)
+## Commands not implemented (9)
 
 Grouped by the subsystem they belong to, which is roughly the order they should
 be tackled in:
 
 - **Inventory** — WORK
-- **Communication** — SAY, TELL, ADDRESS, POST, REPORT, QUERY, PASSWORD
 - **Finance** — INVEST, OFFER, PURCHASE, BUY PASSAGE
 - **Elite troops** — CREATE. This was previously filed under magical items by
   mistake: `rules.md` defines CREATE as forming a named elite troop unit that
@@ -153,6 +153,20 @@ and are covered by tests.
   show on status reports in the rules' format. (`items.py`,
   `engine.process_conjure`, `process_charge`, `process_absorb`, `process_scan`,
   `process_search`, `process_item_upkeep`, `combat.apply_casualties`)
+- **Communication** — `SAY` and `TELL` carry a message to named characters of
+  any faction, to everyone at a town, or to every player (`everyone`); there is
+  no cost and no distance limit, per the rules' "inexpensive and readily
+  available magic", and a message sent to a prisoner reaches their own player.
+  `POST` nails a notice to the gates of a town the faction has secured, and it
+  comes down on an empty message or when the town is no longer secured.
+  `REPORT` and `QUERY` describe a character, their group and what they can make
+  out of the location under the ordinary fog rules, with `briefly` for the
+  short form. `ADDRESS` and `PASSWORD` change the player's own details.
+  Message bodies are lifted out of the order text before it is lowercased,
+  comma-stripped and split on periods, so a message keeps its exact characters
+  and pronoun resolution never rewrites what a player wrote.
+  (`parser.protect_quotes`, `engine.process_messages`, `process_post`,
+  `process_report`, `process_address_and_password`, `expire_postings`)
 - **Pronouns** — `me`/`I`/`you` resolve to the lead character, `him`/`her` to
   the most recently named person of that gender who is neither the agent of the
   current order nor the leader, `it` to the last single item, unnamed character
@@ -192,6 +206,12 @@ and are covered by tests.
   with the body rather than falling to the victor, because `rules.md` does not
   say what should happen and the items are indestructible. Item weight and
   encumbrance are likewise unmodelled, so carrying six crystals costs nothing.
+- **QUERY** parses and reports, but it is not yet more immediate than `REPORT`.
+  The rules have QUERY reach a subordinate who is busy and get an answer out of
+  turn; the engine has no sub-turn clock, so both verbs answer at the same
+  point in the turn.
+- **REPORT** does not scale its detail with city size or group size the way the
+  rules describe. It uses the same fog roll as an end-of-turn sighting.
 - **Pronouns** resolve across sentences but not across commands chained inside
   one sentence, because `and`-chained commands are not implemented. The rules'
   `Buy 1 horse and go to Umadosh and give it to Bill May` therefore has to be
@@ -216,7 +236,6 @@ and are covered by tests.
   SECURE, BUILD or work.
 - Religion's `PREACH` donations and the wider miracle table.
 - Named-character hiring, education and the starting-character creation phase.
-- Communication verbs (SAY/TELL, POST, ADDRESS, REPORT, QUERY, PASSWORD).
 
 See [`audit_2025-11.md`](audit_2025-11.md) for the defects fixed in v0.7.1 and
 the design debt closed in v0.7.2.
