@@ -8,6 +8,7 @@ from typing import Dict
 from collections import defaultdict
 
 from spoils_engine.models import GameState
+from spoils_engine import items
 from spoils_engine.engine import TurnLog
 
 
@@ -111,6 +112,14 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
                 report_lines.append(f"  Combat Skill: {char.combat_skill}")
                 report_lines.append(f"  Magic Skill: {char.magic_skill} (Power: {char.magic_power_current}/{char.max_magic_power})")
                 report_lines.append(f"  Movement Points: {char.movement_points}")
+
+                # rules.md shows magical items on the status report, with the
+                # days remaining for anything conjured.
+                held = items.items_held_by(char.id, game_state)
+                if held:
+                    report_lines.append("  Magical items:")
+                    for item in held:
+                        report_lines.append(f"    {items.describe(item, game_state)}")
 
         report_lines.append("")
 

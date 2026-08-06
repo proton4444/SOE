@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 
 from spoils_engine.models import GameState, UnitType
-from spoils_engine import config
+from spoils_engine import config, items
 
 
 # ============================================================================
@@ -259,10 +259,17 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
     casualty_rate *= max(0.25, armor_mitigation)
 
     # Apply to characters (damage proportional to casualty rate)
+    blessed_here = city_id in game_state.location_blessings
     for char in game_state.characters.values():
         if char.faction_id == faction_id and char.location_city_id == city_id and not char.is_dead:
+            # A magical ring divides the chance of being hit, and a blessing
+            # adds a point to its protection factor. Someone with no ring is
+            # unaffected either way.
+            protection = items.ring_protection(char, game_state, blessed=blessed_here)
+            char_rate = items.apply_ring_protection(casualty_rate, protection)
+
             # Damage: casualty_rate * 30 points (0.3 rate = ~9 damage, 0.1 rate = ~3 damage)
-            damage = int(casualty_rate * 30)
+            damage = int(char_rate * 30)
             if damage > 0:
                 char.health = max(0, char.health - damage)
                 losses['characters_wounded'] += 1

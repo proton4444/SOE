@@ -189,6 +189,44 @@ MAGIC_POWER_REGEN_PER_TURN = 0  # Simplified: magic refills to max each turn
 
 
 # ============================================================================
+# MAGICAL ITEMS
+# ============================================================================
+
+# rules.md fixes none of an item's strength -- "there is no way to specify the
+# power or skill level of the item obtained" -- so every item is rolled from
+# these ranges when it is found or conjured. The example items in the rules
+# (*Wameka* trading 72, *Nashi* power 51/60, *Fidula* prot 3, *Opistama*
+# teleport 62/75) sit inside them.
+ITEM_AMULET_SKILL_RANGE = (40, 85)
+ITEM_CRYSTAL_MAX_RANGE = (20, 80)
+ITEM_ORB_POWER_RANGE = (10, 60)
+ITEM_RING_PROTECTION_RANGE = (2, 5)
+ITEM_WAND_MAX_RANGE = (30, 90)
+ITEM_WAND_SKILL_RANGE = (40, 90)
+
+# CONJURE: minimum magic skill to attempt the spell, per rules.md.
+CONJURE_MIN_MAGIC_SKILL = 25
+
+# SCAN: an orb spends one power per ten miles to the scanned location. The
+# engine measures distance in movement cost rather than miles, so this converts
+# one hop of good road into a plausible number of power points.
+ORB_POWER_PER_HOP = 5
+
+# SEARCH: chance a dig in ruins turns up an item at all, and the relative
+# weights of what it turns up. Rings and orbs are the rarest finds.
+RUIN_ITEM_BASE_CHANCE = 0.10
+RUIN_ITEM_CHANCE_PER_DAY = 0.015
+RUIN_ITEM_MAX_CHANCE = 0.60
+RUIN_ITEM_WEIGHTS = {
+    "crystal": 30,
+    "amulet": 25,
+    "wand": 20,
+    "orb": 15,
+    "ring": 10,
+}
+
+
+# ============================================================================
 # STARTING CONDITIONS
 # ============================================================================
 

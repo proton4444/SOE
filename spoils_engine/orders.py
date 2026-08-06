@@ -162,11 +162,14 @@ class TeleportOrder(Order):
         target_character_id: Character to teleport (can be self)
         destination_city_id: Destination city ID
         target_name: Original target name from text (for reporting)
+        wand_name: Wand named with `with`/`using`. rules.md: a wand is never
+            used automatically, so an empty name means the caster's own power.
     """
     actor_id: str = ""
     target_character_id: str = ""
     destination_city_id: str = ""
     target_name: str = ""
+    wand_name: str = ""
 
     def order_type(self) -> str:
         return "TELEPORT"
@@ -180,9 +183,11 @@ class FlyOrder(Order):
     Attributes:
         actor_id: Magic user who will cast the spell (must be group leader)
         destination_city_id: Destination city ID
+        wand_name: Wand named with `with`/`using`, if any.
     """
     actor_id: str = ""
     destination_city_id: str = ""
+    wand_name: str = ""
 
     def order_type(self) -> str:
         return "FLY"
@@ -369,6 +374,10 @@ class AssignOrder(Order):
         character_ids: Named characters being assigned into the recipient's
             group. They bring their own subordinates with them.
         character_names: The names those ids were resolved from, for reporting
+        item_ids: Magical items being handed over. rules.md gives items by
+            name -- "Give Wameka to Joe Flint" -- so a GIVE may name an item
+            where it would otherwise name a character.
+        item_names: The names those ids were resolved from, for reporting
     """
     donor_id: str = ""
     recipient_id: str = ""
@@ -377,6 +386,8 @@ class AssignOrder(Order):
     gold_amount: int = 0
     character_ids: list[str] = field(default_factory=list)
     character_names: list[str] = field(default_factory=list)
+    item_ids: list[str] = field(default_factory=list)
+    item_names: list[str] = field(default_factory=list)
 
     def order_type(self) -> str:
         return "ASSIGN"
@@ -662,6 +673,7 @@ class ProbeOrder(Order):
     actor_id: str = ""
     target_id: str = ""
     target_name: str = ""
+    wand_name: str = ""
 
     def order_type(self) -> str:
         return "PROBE"
@@ -687,8 +699,9 @@ class ScanOrder(Order):
     """
     Use a magical orb to report who is at a distant city.
 
-    Orbs are not yet modelled as inventory items; the engine currently rejects
-    SCAN with a clear warning until magical items ship.
+    The orb must be named in the order and possessed by the actor. It spends
+    its own power on the distance and reports everyone inside or outside the
+    city — but never those merely near it.
     """
     actor_id: str = ""
     city_ids: list[str] = field(default_factory=list)
@@ -697,6 +710,76 @@ class ScanOrder(Order):
 
     def order_type(self) -> str:
         return "SCAN"
+
+
+@dataclass
+class ConjureOrder(Order):
+    """
+    Attempt to conjure a magical item for temporary use.
+
+    Spends *all* of the caster's magic power, including anything in their
+    crystals, and the chance of success as a percentage equals the power
+    expended. Requires magic skill 25. `skill` is set when conjuring an amulet
+    and `spell` when conjuring a wand; the rules require naming those.
+    """
+    actor_id: str = ""
+    item_type: str = ""   # ItemType value
+    skill: str = ""       # amulet only
+    spell: str = ""       # wand only
+
+    def order_type(self) -> str:
+        return "CONJURE"
+
+
+@dataclass
+class ItemPowerTransfer:
+    """
+    One item named by a CHARGE or ABSORB order, and how much power to move.
+
+    A single order may name several items with different quantities each --
+    "Charge Ampu to 75 power and Wasute by 7 power" -- so the quantity and the
+    preposition that set it belong to the item, not to the order.
+
+    Attributes:
+        amount: Points to move, or -1 for as much as possible (which is what an
+            unqualified order, `all` and `everything` all mean).
+        to_level: CHARGE only. False for `by` (add this much), True for `to`
+            (bring the item up to this level).
+    """
+    item_id: str = ""
+    item_name: str = ""
+    amount: int = -1
+    to_level: bool = False
+
+
+@dataclass
+class ChargeOrder(Order):
+    """
+    Transfer magic power from a magic-user into crystals, orbs or wands.
+
+    RECHARGE is a synonym. The actor need not possess the items, as long as
+    whoever does is in the same location and the same faction.
+    """
+    actor_id: str = ""
+    targets: list[ItemPowerTransfer] = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "CHARGE"
+
+
+@dataclass
+class AbsorbOrder(Order):
+    """
+    Transfer magic power from crystals, orbs or wands back to a magic-user.
+
+    The mirror of CHARGE, with the same reach rule about items held by another
+    character in the same place.
+    """
+    actor_id: str = ""
+    targets: list[ItemPowerTransfer] = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "ABSORB"
 
 
 @dataclass
@@ -862,9 +945,11 @@ class SummonOrder(Order):
     Attributes:
         summoner_id: Character summoning creatures
         creature_counts: Dict mapping creature type name to count
+        wand_name: Wand named with `with`/`using`, if any.
     """
     summoner_id: str = ""
     creature_counts: dict[str, int] = field(default_factory=dict)  # e.g., {"dragon": 2, "griffin": 1}
+    wand_name: str = ""
 
     def order_type(self) -> str:
         return "SUMMON"
@@ -1021,6 +1106,10 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "SEARCH": SearchOrder,
         "EXPLORE": SearchOrder,
         "SCAN": ScanOrder,
+        "CONJURE": ConjureOrder,
+        "CHARGE": ChargeOrder,
+        "RECHARGE": ChargeOrder,
+        "ABSORB": AbsorbOrder,
         "GET": GetOrder,
         "OBTAIN": GetOrder,
         "TAKE": GetOrder,

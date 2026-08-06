@@ -42,6 +42,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Per-character gold purses (legacy faction treasury migrates on load)
 - Ships (galleys)
 - Non-combatant and lurking status flags
+- Magical items: amulets, crystals, orbs, rings and wands
 
 ✅ **Core Orders**
 - **Movement**: Land movement between cities (GO/MOVE/TRAVEL)
@@ -54,6 +55,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Prisoner ops**: FREE/RELEASE, KILL/EXECUTE, ENSLAVE, INTERROGATE
 - **Status**: NONCOM/COMBATANT, LURK/UNLURK
 - **Magic**: Teleportation and flight spells
+- **Magical items**: CONJURE, CHARGE/RECHARGE, ABSORB, SCAN with an orb
 - **Healing**: HEAL/CURE commands using religion skill
 - **Location Control**: SECURE command for territorial control
 - **Diplomacy**: ALLY/ENEMY/NEUTRAL commands
@@ -105,13 +107,15 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Phase 1: Validation, then group leadership
 - Phase 2: Movement (land), then sailing (sea)
 - Phase 3: Recruit & buy
-- Phase 4: Magic (teleport, fly, heal), summoning, religion
+- Phase 4: Magic (absorb, teleport, fly, heal), summoning, conjuring, charging,
+  religion, then magic-free zone drain
 - Phase 5: Combat (with character casualties), then capture
 - Phase 6: Income & upkeep (wage debt + loan interest)
 - Phase 7: Location control, diplomacy, assign/join/support, taxation, trade,
   gathering, mining, construction, transfers, get/unload, naming, promotion,
   prisoner ops, status flags, finance, study & teach
-- Phase 8: Cleanup — support expiry, prisoner escape and natural healing
+- Phase 8: Cleanup — support expiry, item regeneration and expiry, prisoner
+  escape and natural healing
 
 ✅ **Economic System**
 - City income based on population
@@ -218,10 +222,11 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Conditional orders (`IF`), `THEN` sequencing and `and`-chained commands
 - Sub-turn game time — the queue's smallest unit is one weekly turn
 - Retreat and morale in combat
-- Fog of war
+- Pronouns (`me`, `him`, `it`) in orders
+- Encumbrance and item weight
 - Group-level possession of ships, resources and gold
 - Resource depletion (accumulation and its cap are in; depletion is not)
-- 24 of the 89 command verbs in `rules.md`
+- 16 of the 89 command verbs in `rules.md`
 
 [`docs/rules_gap.md`](docs/rules_gap.md) has the command-by-command breakdown
 and [`docs/alpha_scope.md`](docs/alpha_scope.md) records what the alpha
@@ -416,6 +421,19 @@ Have Marcus halt.                  # drop the backlog now
 Have Marcus immediately halt.      # and abandon a wait already running
 Have Julia stop.                   # planned: takes effect in sequence
 
+# Magical items (always referred to by the enchantress's name)
+Conjure a ring.                          # spends all your power for that % chance
+Have Merlinus conjure a wand of teleport.
+Conjure an amulet of trading.            # amulets never grant magic or religion
+Search for 30 days.                      # dig uninhabited ruins for a permanent find
+Recharge *Madingo*.                      # give it as much power as you can spare
+Charge *Ampu* to 75 power and *Wasute* by 7 power.
+Absorb 10 points from *Madingo*.
+Have Merlinus absorb everything from *Umiki*.
+Scan Kitesta using *Anomba*.             # an orb spends its own power on distance
+Have McCoy teleport Joe Flint to Kitesta using *Opistama*.
+Give *Wameka* to Joe Flint.
+
 # Comments (ignored)
 # This is a comment
 Have Hero go to City.  # End-of-line comment
@@ -435,6 +453,10 @@ Have Hero go to City.  # End-of-line comment
 - Naming a character with `have` makes them a group leader, so they stop
   following whoever they were with. That is the rules' behaviour, not a bug —
   use `join` to put them back.
+- Magical items are referred to by name. The asterisks are part of the name but
+  optional when typing: `*Wameka*` and `Wameka` both work.
+- A wand is never used automatically. To cast with one, end the spell order with
+  `with` or `using` and the wand's name.
 
 ## CLI Commands
 
@@ -495,6 +517,7 @@ SOE/
 │   ├── order_queue.py     # Per-character order queue (AWAIT/REPEAT/HALT/STOP)
 │   ├── groups.py          # Groups and group leaders (JOIN/ASSIGN/UNLOAD)
 │   ├── fog.py             # Fog of war (position, LURK odds, sightings)
+│   ├── items.py           # Magical items (amulet/crystal/orb/ring/wand)
 │   ├── engine.py          # Turn processing engine
 │   ├── reporting.py       # Report generation
 │   ├── storage.py         # Save/load game state
@@ -509,7 +532,8 @@ SOE/
 │   ├── test_v08.py          # Cheap-gap commands and per-character gold
 │   ├── test_v09.py          # The persistent order queue
 │   ├── test_v10_groups.py   # Groups and group leaders
-│   └── test_v10_fog.py      # Fog of war, PROBE, SEARCH, SCAN
+│   ├── test_v10_fog.py      # Fog of war, PROBE, SEARCH, SCAN
+│   └── test_v10_items.py    # Magical items, CONJURE/CHARGE/ABSORB, SCAN
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -616,20 +640,24 @@ This alpha implements a **simplified subset** of the official `rules.md`:
 | Feature | Rules Section | Alpha Status | Notes |
 |---------|---------------|--------------|-------|
 | Movement (land) | GO/MOVE/TRAVEL | ✅ Implemented | Simplified: no encumbrance, horses |
-| Movement (sea) | SAIL | ⏸️ Deferred | Ships exist but sailing not yet impl. |
+| Movement (sea) | SAIL | ✅ Implemented | Sea lanes require a ship |
 | Recruiting | RECRUIT | ✅ Implemented | Simplified: instant, fixed caps |
 | Combat | ATTACK | ✅ Implemented | Simplified: no retreat logic, morale |
-| Magic | TELEPORT | ✅ Basic | Only teleport, no summon/fly |
-| Income | TAX | ✅ Simplified | Auto per-turn, not TAX command |
+| Magic | TELEPORT/FLY/SUMMON | ✅ Implemented | Flat costs; no encumbrance |
+| Income | TAX | ✅ Implemented | Per-city pools collected by a TAX order |
 | Ships | BUY | ✅ Implemented | Galleys only |
-| Skills | SKILLS | ✅ Partial | Combat, magic only |
-| Diplomacy | ALLY/ENEMY | ⏸️ Deferred | |
-| Religion | PRAY/BLESS | ⏸️ Deferred | |
-| Items | Armor/Weapons | ⏸️ Deferred | |
-| Construction | BUILD | ⏸️ Deferred | |
-| Resources | MINE/COLLECT | ⏸️ Deferred | |
+| Skills | SKILLS | ✅ Partial | Combat, magic, religion, trading |
+| Diplomacy | ALLY/ENEMY | ✅ Partial | Decides combat sides, not movement rights |
+| Religion | PRAY/BLESS/CURSE | ✅ Implemented | Skill-based rolls on religious power |
+| Magical items | AMULET/CRYSTAL/ORB/RING/WAND | ✅ Implemented | No weight or encumbrance |
+| Equipment | Armor/Weapons | ✅ Partial | BUILD output affects combat |
+| Construction | BUILD | ✅ Implemented | No partial progress if interrupted |
+| Resources | MINE/COLLECT | ✅ Implemented | Yields scale with city richness |
+| Communication | SAY/TELL/POST | ⏸️ Deferred | |
+| Elite troops | CREATE | ⏸️ Deferred | |
 
-See `docs/alpha_scope.md` for comprehensive mapping.
+[`docs/rules_gap.md`](docs/rules_gap.md) is the authoritative and current
+breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
 
 ## Design Philosophy
 
@@ -642,7 +670,7 @@ See `docs/alpha_scope.md` for comprehensive mapping.
 
 ## Where we are
 
-**69 of 89 command verbs (78%)** from `rules.md` are recognised, and 4 of its 9
+**73 of 89 command verbs (82%)** from `rules.md` are recognised, and 4 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
 full breakdown, including which commands are missing and why.
 
@@ -687,14 +715,24 @@ day both cost a turn), `until <date>` as a loop terminator, `THEN` sequencing,
 `UNLOAD`, group travel, unit ownership, and the `HAVE`-promotes-to-leader rule.
 
 **Fog of war ✅** — position bands, end-of-turn sightings, real `LURK` odds,
-`PROBE`, `SEARCH`/`EXPLORE`. `SCAN` waits on magical orbs.
+`PROBE`, `SEARCH`/`EXPLORE`.
+
+**Magical items ✅** — shipped: all five kinds from the rules (amulet, crystal,
+orb, ring, wand), `CONJURE`, `CHARGE`/`RECHARGE`, `ABSORB`, a real `SCAN` that
+spends orb power, ruins that yield permanent items instead of gold stubs, and
+magic-free zones. Items are named in the enchantress's `*Starred*` style and
+given by name: `Give *Wameka* to Joe Flint`.
 
 Still ahead, in no fixed order:
 
 - Communication: `SAY`/`TELL`, `POST`, `ADDRESS`, `REPORT`, `QUERY`, `PASSWORD`
-- Magical items: `CONJURE`, `CREATE`, `CHARGE`/`RECHARGE`, `ABSORB` (and real
-  `SCAN` once orbs exist; ruins finds become items rather than gold stubs)
+- `CREATE` elite troop units — continuously training named units that cannot
+  TAX, SECURE or work. (Previously listed here under magical items by mistake;
+  the rules put it with recruitment.)
 - `IF` conditional orders (the queue they needed now exists)
+- Pronouns (`me`, `him`, `it`), which magical items made conspicuous: the rules
+  write `Charge Ampu to 75 power and give it to Merlinus`
+- Encumbrance and item weight, so `FLY` and `TELEPORT` cost what is carried
 - Sub-turn game time, so a wait can cost hours rather than a whole turn
 - Group-level possession of ships, resources and gold, and combat resolved
   group by group rather than by faction total

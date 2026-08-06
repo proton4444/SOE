@@ -7,7 +7,7 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **69 of 89 (78%)** |
+| Command verbs recognised | **73 of 89 (82%)** |
 | Order-language features | **4 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups) |
 | Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
@@ -15,7 +15,7 @@ Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
 engine has a phase for it — not that every sub-rule of that command is honoured.
 
-## Commands implemented (69)
+## Commands implemented (73)
 
 ALLY, ENEMY, NEUTRAL, ASSIGN, GIVE, ATTACK, AWAIT, BLESS, BUILD, CONSTRUCT,
 MAKE, BUY, CAPTURE, COLLECT, GATHER, CURE, CURSE, DISCARD, DISMISS, FREE,
@@ -24,9 +24,10 @@ PROMOTE, RECRUIT, HIRE, SAIL, SECURE, SELL, STUDY, SUMMON, TAX, TEACH, TELEPORT,
 ENSLAVE, KILL, EXECUTE, INTERROGATE, COMBATANT, NONCOM, LURK, UNLURK,
 GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY,
 HALT, STOP, WAIT FOR, WAIT UNTIL, JOIN, COME, SUPPORT,
-PROBE, SEARCH, EXPLORE, SCAN
+PROBE, SEARCH, EXPLORE, SCAN,
+CONJURE, CHARGE, RECHARGE, ABSORB
 
-## Commands not implemented (20)
+## Commands not implemented (16)
 
 Grouped by the subsystem they belong to, which is roughly the order they should
 be tackled in:
@@ -34,8 +35,9 @@ be tackled in:
 - **Inventory** — WORK
 - **Communication** — SAY, TELL, ADDRESS, POST, REPORT, QUERY, PASSWORD
 - **Finance** — INVEST, OFFER, PURCHASE, BUY PASSAGE
-- **Magical items** — CONJURE, CREATE, CHARGE, RECHARGE, ABSORB
-  (`SCAN` is recognised but needs orbs from this list to do anything)
+- **Elite troops** — CREATE. This was previously filed under magical items by
+  mistake: `rules.md` defines CREATE as forming a named elite troop unit that
+  trains continuously, which belongs with recruitment, not with the enchantress.
 - **Religion & training** — PREACH, TRAIN
 - **Naming** — UNNAME
 
@@ -134,6 +136,28 @@ and are covered by tests.
   vs target effective skill). `SEARCH`/`EXPLORE` dig ruins marked `City.is_ruin`
   when the actor is inside. (`fog.py`, `engine.process_sightings`,
   `process_probe`, `process_search`)
+- **Magical items** — all five kinds from `rules.md`, held in
+  `GameState.magical_items` and named in the enchantress's `*Starred*` style so
+  orders can refer to them. Amulets lend a skill (never magic or religion, best
+  one wins); crystals pool with the caster and are drained before their own
+  power, one crystal at a time; orbs power `SCAN` at a cost set by the distance
+  and never fill up; rings divide an attacker's hit and capture chance, with a
+  blessing worth +1; wands supply both the skill and the power for one spell,
+  but only when the order names them with `with`/`using`, and never borrow from
+  a crystal. `CONJURE` spends every point the caster has for a success chance
+  equal to that number and yields a temporary item; `CHARGE`/`RECHARGE` and
+  `ABSORB` move power in and out, reaching items held by a companion in the same
+  place; `SEARCH` in ruins yields permanent items. Orbs and wands regain a point
+  a day, and a crystal gains one only on a day its possessor ended at their
+  natural maximum. Items are given by name (`Give *Wameka* to Joe Flint`) and
+  show on status reports in the rules' format. (`items.py`,
+  `engine.process_conjure`, `process_charge`, `process_absorb`, `process_scan`,
+  `process_search`, `process_item_upkeep`, `combat.apply_casualties`)
+- **Magic-free zones** — a city flagged `is_magic_free` drains the magic power
+  of everyone standing in it and of every item they carry, and nothing
+  regenerates there. One sweep runs after all movement has resolved, so
+  walking, sailing, flying and being teleported in are all caught.
+  (`engine.process_magic_free_zones`, `items.drain_magic_free_zone`)
 
 ## Partial
 
@@ -150,10 +174,17 @@ and are covered by tests.
   gold are still held by their character rather than travelling with a group as
   a single pool, and combat still totals a faction's strength at a location
   rather than resolving group by group.
-- **SCAN** parses and routes, but orbs are not inventory items yet, so the
-  phase always fails with a clear message.
-- **SEARCH** on ruins can yield a small gold find as a stand-in; the rules'
-  magical-item loot table is not modelled.
+- **SCAN** works off a real orb, but distance is priced from the overland
+  movement cost (`config.ORB_POWER_PER_HOP`) rather than the rules' miles, and
+  one order carries one orb — the rules' form pairing several city groups with
+  several orbs in one sentence is rejected rather than misread.
+- **Magical items** are not lost or looted when their holder dies: an item stays
+  with the body rather than falling to the victor, because `rules.md` does not
+  say what should happen and the items are indestructible. Item weight and
+  encumbrance are likewise unmodelled, so carrying six crystals costs nothing.
+- **Amulets** cover trading and combat. The rules allow an amulet for any skill
+  except magic and religion; the engine only has fields for the skills it
+  actually uses (`items.AMULET_SKILLS`).
 - **Population-based security** (how hard it is to lurk under enemy SECURE) is
   approximated by city population band only; SECURE does not yet raise local
   detection odds beyond making the securer visible from outside.
@@ -162,8 +193,11 @@ and are covered by tests.
 
 - Sub-turn game time, and with it the rules' partial-progress accounting for a
   BUILD or FORTIFY interrupted part-way through.
-- Encumbrance, item weight and the full magical-item system (blocks real SCAN
-  and ruin treasure).
+- Encumbrance and item weight. Magical items ship as of v1.0, but nothing in
+  the engine weighs anything, so `FLY` and `TELEPORT` still charge a flat cost
+  where the rules charge by what is being carried.
+- Elite troop units (`CREATE`), which train continuously and cannot TAX,
+  SECURE, BUILD or work.
 - Religion's `PREACH` donations and the wider miracle table.
 - Named-character hiring, education and the starting-character creation phase.
 - Communication verbs (SAY/TELL, POST, ADDRESS, REPORT, QUERY, PASSWORD).

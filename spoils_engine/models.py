@@ -69,6 +69,20 @@ class ResourceType(str, Enum):
     GEMS = "gems"      # Mined in hills/mountains
 
 
+class ItemType(str, Enum):
+    """
+    The five kinds of magical item in `rules.md`.
+
+    All were made by one enchantress long ago and are indestructible, so items
+    are never destroyed — they change hands, or (if conjured) expire.
+    """
+    AMULET = "amulet"    # Grants a skill up to a level
+    CRYSTAL = "crystal"  # Stores magic power; tapped before natural power
+    ORB = "orb"          # SCAN a distant location; provides its own power
+    RING = "ring"        # Divides an attacker's hit chance in combat
+    WAND = "wand"        # Provides both the skill and the power for one spell
+
+
 class LocationPosition(str, Enum):
     """
     Where a character stands relative to a city's gates.
@@ -105,6 +119,7 @@ class City:
     region: Optional[str] = None
     is_port: bool = False
     is_ruin: bool = False  # Uninhabited ruins: SEARCH/EXPLORE may find items
+    is_magic_free: bool = False  # Magic power cannot exist here, in people or items
     fortification_level: int = 0  # 0-100 defensive bonus
     resource_richness: dict[str, float] = field(default_factory=dict)
 
@@ -481,6 +496,67 @@ class SummonedCreature:
         return values.get(self.creature_type, 0) * self.count
 
 
+@dataclass
+class MagicalItem:
+    """
+    One of the enchantress's five kinds of magical item.
+
+    Which fields matter depends on `item_type`, and the unused ones stay at
+    their defaults:
+
+    - AMULET  -- `skill` and `skill_level`. Never magic or religion.
+    - CRYSTAL -- `power_current` / `power_max`.
+    - ORB     -- `power_current`; `power_max` of 0 means no ceiling.
+    - RING    -- `protection`.
+    - WAND    -- `spell`, `power_current` / `power_max`, and `skill_level` as
+                 the magic skill it lends its user.
+
+    Attributes:
+        id: Unique identifier
+        name: The enchantress's name for it, e.g. "*Wameka*". Orders must use
+            this name; the asterisks keep it from colliding with human names.
+        holder_character_id: Who carries it. Empty means it is lying in a ruin
+            waiting to be found.
+        expires_turn: -1 for a permanent item (everything found by SEARCH).
+            A conjured item returns whence it came at this turn number.
+    """
+    id: str
+    name: str
+    item_type: ItemType
+    holder_character_id: str = ""
+    power_current: int = 0
+    power_max: int = 0
+    skill: str = ""
+    skill_level: int = 0
+    spell: str = ""
+    protection: int = 0
+    expires_turn: int = -1
+
+    @property
+    def is_temporary(self) -> bool:
+        """True for conjured items, which expire; found items last forever."""
+        return self.expires_turn >= 0
+
+    @property
+    def holds_power(self) -> bool:
+        """Crystals, orbs and wands store power. Amulets and rings do not."""
+        return self.item_type in (ItemType.CRYSTAL, ItemType.ORB, ItemType.WAND)
+
+    @property
+    def power_headroom(self) -> int:
+        """
+        How much more power this item can take.
+
+        An orb has no maximum, so it reports a large-but-finite headroom rather
+        than an infinity the arithmetic would have to special-case.
+        """
+        if not self.holds_power:
+            return 0
+        if self.item_type == ItemType.ORB:
+            return 10_000
+        return max(0, self.power_max - self.power_current)
+
+
 # ============================================================================
 # GAME STATE
 # ============================================================================
@@ -500,6 +576,10 @@ class GameState:
         unit_stacks: Dict mapping unit_stack_id -> UnitStack
         ships: Dict mapping ship_id -> Ship
         summoned_creatures: Dict mapping creature_id -> SummonedCreature
+        magical_items: Dict mapping item_id -> MagicalItem. Items are held here
+            rather than on the character so that an item keeps its identity
+            across owners, and so unfound items can sit in a ruin with no
+            holder at all. See `items`.
         order_queues: Dict mapping character_id -> that character's pending
             orders. Orders survive between turns here; see `order_queue`.
     """
@@ -510,6 +590,7 @@ class GameState:
     unit_stacks: dict[str, UnitStack] = field(default_factory=dict)
     ships: dict[str, Ship] = field(default_factory=dict)
     summoned_creatures: dict[str, SummonedCreature] = field(default_factory=dict)
+    magical_items: dict[str, MagicalItem] = field(default_factory=dict)
     tax_pools: dict[str, float] = field(default_factory=dict)
     location_blessings: dict[str, int] = field(default_factory=dict)
     location_curses: dict[str, int] = field(default_factory=dict)

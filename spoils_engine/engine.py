@@ -14,7 +14,7 @@ import heapq
 
 from spoils_engine.models import (
     GameState, Character, UnitStack, Ship, SummonedCreature,
-    UnitType, ShipType, RoadQuality, CreatureType, LocationPosition,
+    UnitType, ShipType, RoadQuality, CreatureType, LocationPosition, ItemType,
     available_gold, debit_gold, credit_gold,
 )
 from spoils_engine.orders import (
@@ -24,10 +24,11 @@ from spoils_engine.orders import (
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder,
     ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
     ProbeOrder, SearchOrder, ScanOrder,
+    ConjureOrder, ChargeOrder, AbsorbOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     JoinOrder, SupportOrder, actor_field, actor_id_of,
 )
-from spoils_engine import config, fog, groups, order_queue
+from spoils_engine import config, fog, groups, items, order_queue
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
 from spoils_engine.parser import get_player_leader
 
@@ -729,15 +730,16 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                 # In full version, would calculate actual distance
                 power_cost = 5  # Simplified
 
-                if wizard.magic_power_current < power_cost:
-                    order.warnings.append(f"Insufficient magic power (need {power_cost}, have {wizard.magic_power_current})")
+                # Crystals are tapped before the caster's own power, and a
+                # named wand supplies both skill and power on its own.
+                error = items.pay_for_spell(wizard, power_cost, "teleport",
+                                            order.wand_name, game_state)
+                if error:
+                    order.warnings.append(error)
                     turn_log.add("magic", player_id, "teleport_failed",
-                                f"{wizard.name} lacks magic power to teleport {target.name}",
+                                f"{wizard.name} cannot teleport {target.name}: {error}",
                                 character_id=wizard.id, success=False)
                     continue
-
-                # Deduct magic power
-                wizard.magic_power_current -= power_cost
 
                 # Teleport target
                 old_city = game_state.world_map.cities[target.location_city_id]
@@ -761,15 +763,14 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                 # Simplified: Fixed cost for flight (ignores encumbrance for alpha)
                 power_cost = 10  # Simplified fixed cost
 
-                if wizard.magic_power_current < power_cost:
-                    order.warnings.append(f"Insufficient magic power (need {power_cost}, have {wizard.magic_power_current})")
+                error = items.pay_for_spell(wizard, power_cost, "fly",
+                                            order.wand_name, game_state)
+                if error:
+                    order.warnings.append(error)
                     turn_log.add("magic", player_id, "fly_failed",
-                                f"{wizard.name} lacks magic power to fly",
+                                f"{wizard.name} cannot fly: {error}",
                                 character_id=wizard.id, success=False)
                     continue
-
-                # Deduct magic power
-                wizard.magic_power_current -= power_cost
 
                 # Fly the wizard
                 old_city = game_state.world_map.cities[wizard.location_city_id]
@@ -839,13 +840,12 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                     continue
 
                 power_cost = 3
-                if seer.magic_power_current < power_cost:
+                if not items.spend_magic_power(seer, power_cost, game_state):
                     turn_log.add("magic", player_id, "scry_failed",
                                 f"{seer.name} lacks magic power to scry {target_city.name}",
                                 character_id=seer.id, success=False)
                     continue
 
-                seer.magic_power_current -= power_cost
                 defenders = game_state.get_faction_units_at_city(seer.faction_id, target_city.id)
                 turn_log.add("magic", player_id, "scry",
                             f"{seer.name} scried {target_city.name}: spotted {len(defenders)} friendly unit stacks",
@@ -877,15 +877,15 @@ def process_summon(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                 cost_per = creature_costs.get(creature_type, 0)
                 total_cost += cost_per * count
 
-            # Check if summoner has enough magic power
-            if summoner.magic_power_current < total_cost:
+            # Pay for the summoning: a named wand on its own, otherwise
+            # crystals first and then the summoner's own power.
+            error = items.pay_for_spell(summoner, total_cost, "summon",
+                                        order.wand_name, game_state)
+            if error:
                 turn_log.add("summon", player_id, "summon_failed",
-                            f"{summoner.name}: insufficient magic power (need {total_cost}, have {summoner.magic_power_current})",
+                            f"{summoner.name} cannot summon: {error}",
                             character_id=summoner.id, success=False)
                 continue
-
-            # Deduct magic power
-            summoner.magic_power_current -= total_cost
 
             # Create creatures
             for creature_type, count in order.creature_counts.items():
@@ -1394,6 +1394,22 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                                 character_id=donor.id, success=False)
                     continue
 
+            # Hand over magical items. An item is a possession rather than a
+            # subordinate, so it may cross faction lines exactly as gold and
+            # units do, and it keeps whatever power it was holding.
+            for item_id, item_name in zip(order.item_ids, order.item_names):
+                item = game_state.magical_items.get(item_id)
+                if not item or item.holder_character_id != donor.id:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name} is not carrying {item_name}",
+                                character_id=donor.id, success=False)
+                    continue
+                item.holder_character_id = recipient.id
+                turn_log.add("assign", player_id, "assign_item",
+                            f"{donor.name} gave {items.describe(item, game_state)} "
+                            f"to {recipient.name}",
+                            character_id=donor.id)
+
             # Assign named characters into the recipient's group. rules.md:
             # they keep whoever was assigned to them.
             for cid, cname in zip(order.character_ids, order.character_names):
@@ -1685,7 +1701,11 @@ def process_trade(orders_by_player: Dict[str, List[Order]], game_state: GameStat
             # favour but never inverts it, so buying and selling in the same
             # city is always a small loss rather than an arbitrage loop.
             base_price = config.get_resource_price(order.resource_type)
-            spread = config.RESOURCE_MARKET_SPREAD * (1 - actor.trading_skill / 200)
+            # An amulet of trading lets the wearer "buy and sell items as if he
+            # were a trader" at the amulet's level, so it stands in for the
+            # character's own skill whenever it is higher.
+            trading = items.effective_skill_with_items(actor, "trading", game_state)
+            spread = config.RESOURCE_MARKET_SPREAD * (1 - trading / 200)
             if order.action == "buy":
                 unit_price = max(1, round(base_price * (1 + spread / 2)))
             else:
@@ -2048,8 +2068,14 @@ def process_capture(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                 attacker_power = calculate_faction_power(player_id, actor.location_city_id, game_state)
                 defender_power = calculate_faction_power(target.faction_id, target.location_city_id, game_state)
 
-                # Capture check: 50% + power ratio bonus
+                # Capture check: 50% + power ratio bonus. A magical ring cuts
+                # the chance of being captured just as it cuts the chance of
+                # being hit, and a blessing on the location adds to it.
                 capture_chance = 0.5 + (attacker_power / max(1, defender_power + attacker_power)) * 0.5
+                protection = items.ring_protection(
+                    target, game_state,
+                    blessed=target.location_city_id in game_state.location_blessings)
+                capture_chance = items.apply_ring_protection(capture_chance, protection)
 
                 if rng.random() < capture_chance:
                     # Successful capture
@@ -2310,20 +2336,23 @@ def process_probe(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                 turn_log.add("intel", player_id, "probe_failed",
                             "PROBE: caster or target missing", success=False)
                 continue
-            if caster.magic_power_current < PROBE_COST:
+            error = items.pay_for_spell(caster, PROBE_COST, "probe",
+                                        order.wand_name, game_state)
+            if error:
                 turn_log.add("intel", player_id, "probe_failed",
-                            f"{caster.name} lacks magic power to probe "
-                            f"(need {PROBE_COST}, have {caster.magic_power_current})",
+                            f"{caster.name} cannot probe: {error}",
                             character_id=caster.id, success=False)
                 continue
-
-            caster.magic_power_current -= PROBE_COST
-            # Base success: magic skill as a percentage.
+            # Base success: magic skill as a percentage. A wand casts at its
+            # own skill level, since it supplies the skill as well as the power.
+            wand = (items.find_item_by_name(order.wand_name, game_state)
+                    if order.wand_name else None)
+            cast_skill = wand.skill_level if wand else caster.magic_skill
             success_roll = rng.random() * 100.0
-            if success_roll >= caster.magic_skill:
+            if success_roll >= cast_skill:
                 turn_log.add("intel", player_id, "probe_failed",
                             f"{caster.name} failed to probe {target.name} "
-                            f"(magic skill {caster.magic_skill})",
+                            f"(magic skill {cast_skill})",
                             character_id=caster.id, success=False)
                 continue
 
@@ -2360,8 +2389,8 @@ def process_search(orders_by_player: Dict[str, List[Order]], game_state: GameSta
     SEARCH/EXPLORE uninhabited ruins at the actor's current location.
 
     rules.md: must be *inside* a ruin; outside/near and inhabited cities find
-    nothing. Magical items are not fully modelled yet — a successful dig yields
-    a small gold find as a placeholder, and the chance scales with duration.
+    nothing. A successful dig turns up one of the enchantress's magical items,
+    which lasts forever, and the chance scales with how long the dig ran.
     """
     for player_id, orders in orders_by_player.items():
         for order in orders:
@@ -2387,16 +2416,23 @@ def process_search(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             character_id=actor.id, location=city.id, success=False)
                 continue
 
-            # Longer searches help a little; default week ≈ 25% base chance.
+            # Longer searches help a little, up to a ceiling: no amount of
+            # digging guarantees a ruin still has anything left in it.
             days = max(1, order.duration_days)
-            chance = min(0.75, 0.10 + 0.02 * min(days, 30))
+            chance = min(config.RUIN_ITEM_MAX_CHANCE,
+                        config.RUIN_ITEM_BASE_CHANCE
+                        + config.RUIN_ITEM_CHANCE_PER_DAY * min(days, 30))
             if rng.random() < chance:
-                gold = round(5 + rng.random() * 20, 1)
-                credit_gold(actor, gold)
+                kinds = sorted(config.RUIN_ITEM_WEIGHTS)
+                kind = rng.choices(
+                    kinds, weights=[config.RUIN_ITEM_WEIGHTS[k] for k in kinds]
+                )[0]
+                # Found items are permanent: expires_turn stays -1.
+                found = items.make_item(game_state, rng, ItemType(kind),
+                                        holder_id=actor.id)
                 turn_log.add("intel", player_id, "search",
                             f"{actor.name} searched the ruins of {city.name} "
-                            f"and recovered {gold:.1f}g "
-                            f"(magical items not yet modelled)",
+                            f"and found {items.describe(found, game_state)}",
                             character_id=actor.id, location=city.id)
             else:
                 turn_log.add("intel", player_id, "search",
@@ -2405,25 +2441,326 @@ def process_search(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             character_id=actor.id, location=city.id)
 
 
+def orb_scan_cost(from_city_id: str, to_city_id: str, game_state: GameState) -> int:
+    """
+    Power an orb spends to reach a location.
+
+    rules.md prices a scan at one power per ten miles. The engine has no miles,
+    so the overland route's movement cost stands in for the distance and
+    `ORB_POWER_PER_HOP` converts it. An unreachable location costs nothing to
+    scan because the orb never gets there; callers check reachability first.
+    """
+    if from_city_id == to_city_id:
+        return 0
+    path, cost = find_shortest_path(from_city_id, to_city_id, game_state)
+    if not path:
+        return -1
+    return max(1, int(round(cost * config.ORB_POWER_PER_HOP)))
+
+
 def process_scan(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                  turn_log: TurnLog):
     """
     SCAN a distant city with a magical orb.
 
-    Orbs are not inventory items yet, so every SCAN fails with a clear message
-    until magical items ship. The parser and order type are already in place.
+    rules.md: the orb must be named in the order and held by the actor. It
+    spends its own power — never the caster's, never a crystal's — at a rate
+    set by the distance. The report is complete, unlike REPORT/QUERY: everyone
+    of note is detected whether or not they are lurking. But an orb "will only
+    tell you who is inside or outside a town or city. It cannot be used to scan
+    people near the town", and it cannot see monsters.
     """
     for player_id, orders in orders_by_player.items():
         for order in orders:
             if not isinstance(order, ScanOrder) or order.warnings:
                 continue
             actor = game_state.characters.get(order.actor_id)
-            name = actor.name if actor else "scanner"
-            orb = order.orb_name or "an orb"
-            turn_log.add("intel", player_id, "scan_failed",
-                        f"{name} cannot SCAN with {orb}: magical orbs are not "
-                        f"modelled yet",
-                        character_id=order.actor_id, success=False)
+            if not actor:
+                continue
+
+            if not order.orb_name:
+                turn_log.add("intel", player_id, "scan_failed",
+                            f"{actor.name} must name the orb to SCAN with "
+                            f"(e.g. 'scan Kitesta using *Anomba*')",
+                            character_id=actor.id, success=False)
+                continue
+
+            orb = items.find_item_by_name(order.orb_name, game_state)
+            if not orb or orb.item_type != ItemType.ORB:
+                turn_log.add("intel", player_id, "scan_failed",
+                            f"{actor.name} has no magical orb called "
+                            f"{order.orb_name}",
+                            character_id=actor.id, success=False)
+                continue
+            if orb.holder_character_id != actor.id:
+                turn_log.add("intel", player_id, "scan_failed",
+                            f"{actor.name} does not possess {orb.name}",
+                            character_id=actor.id, success=False)
+                continue
+
+            for city_id, city_name in zip(order.city_ids, order.city_names):
+                cost = orb_scan_cost(actor.location_city_id, city_id, game_state)
+                if cost < 0:
+                    turn_log.add("intel", player_id, "scan_failed",
+                                f"{orb.name} cannot reach {city_name}: no route "
+                                f"from {actor.name}'s location",
+                                character_id=actor.id, success=False)
+                    continue
+                if orb.power_current < cost:
+                    turn_log.add("intel", player_id, "scan_failed",
+                                f"{orb.name} has {orb.power_current} power, not "
+                                f"the {cost} needed to reach {city_name}",
+                                character_id=actor.id, success=False)
+                    continue
+
+                orb.power_current -= cost
+                seen = [
+                    c for c in game_state.characters.values()
+                    if c.location_city_id == city_id and not c.is_dead
+                    and c.location_position != LocationPosition.NEAR
+                ]
+                if seen:
+                    who = ", ".join(
+                        f"{c.name} ({c.location_position.value})"
+                        for c in sorted(seen, key=lambda c: c.name)
+                    )
+                    detail = f"sees {who}"
+                else:
+                    detail = "sees nobody"
+                turn_log.add("intel", player_id, "scan",
+                            f"{actor.name} scans {city_name} with {orb.name} "
+                            f"({cost} power): {detail}",
+                            character_id=actor.id, location=city_id)
+
+
+def process_conjure(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                    turn_log: TurnLog, rng: random.Random):
+    """
+    CONJURE a magical item for temporary use.
+
+    rules.md: needs magic skill 25. The spell spends *all* the caster's power,
+    including anything in their crystals, and the chance of success as a
+    percentage equals the power expended — so a caster at 62 power burns all 62
+    for a 62% chance. A conjured item lasts about as many days as the power
+    that bought it.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, ConjureOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+
+            skill = actor.effective_skill(actor.magic_skill)
+            if skill < config.CONJURE_MIN_MAGIC_SKILL:
+                turn_log.add("magic", player_id, "conjure_failed",
+                            f"{actor.name} needs magic skill "
+                            f"{config.CONJURE_MIN_MAGIC_SKILL} to CONJURE "
+                            f"(has {skill})",
+                            character_id=actor.id, success=False)
+                continue
+
+            power = items.available_magic_power(actor, game_state)
+            if power <= 0:
+                turn_log.add("magic", player_id, "conjure_failed",
+                            f"{actor.name} has no magic power to spend on a "
+                            f"conjuration",
+                            character_id=actor.id, success=False)
+                continue
+
+            # All of it, win or lose.
+            items.spend_magic_power(actor, power, game_state)
+
+            if rng.random() * 100.0 >= power:
+                turn_log.add("magic", player_id, "conjure_failed",
+                            f"{actor.name}'s conjuration failed "
+                            f"({power} power spent for a {power}% chance)",
+                            character_id=actor.id, success=False)
+                continue
+
+            # "the item will remain ... a number of days approximately equal to
+            # the power expended". Turns are the engine's finest clock, so the
+            # day count rounds up to whole turns.
+            turns = max(1, math.ceil(power / config.DAYS_PER_TURN))
+            conjured = items.make_item(
+                game_state, rng, ItemType(order.item_type),
+                holder_id=actor.id,
+                expires_turn=game_state.turn_number + turns,
+                skill=order.skill, spell=order.spell,
+            )
+            turn_log.add("magic", player_id, "conjure",
+                        f"{actor.name} conjured "
+                        f"{items.describe(conjured, game_state)} "
+                        f"({power} power spent)",
+                        character_id=actor.id, location=actor.location_city_id)
+
+
+def _reachable_item(actor: Character, target, game_state: GameState,
+                    verb: str) -> Tuple[object, str]:
+    """
+    Resolve one CHARGE/ABSORB target to an item the actor may act on.
+
+    Returns (item, error); exactly one is meaningful. Shared by both verbs
+    because the rules give them the same reach and the same item-kind test.
+    """
+    item = game_state.magical_items.get(target.item_id)
+    if not item:
+        return None, f"{target.item_name} is no longer anywhere to be found"
+    if not item.holds_power:
+        return None, (f"{item.name} is a {item.item_type.value} and holds no "
+                      f"power, so it cannot be {verb}")
+    if not items.can_reach_item(actor, item, game_state):
+        return None, (f"{actor.name} cannot reach {item.name}: its holder is "
+                      f"not here")
+    return item, ""
+
+
+def process_charge(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                   turn_log: TurnLog):
+    """
+    CHARGE/RECHARGE: move magic power from a magic-user into an item.
+
+    rules.md: only magic power transfers, never religious power, and the
+    charger needs magic skill of at least 1. `by N` adds N, `to N` tops the
+    item up to N, and no quantity means as much as the caster can spare.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, ChargeOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+            if actor.magic_skill < 1:
+                turn_log.add("magic", player_id, "charge_failed",
+                            f"{actor.name} has no magic skill and cannot "
+                            f"charge a magical item",
+                            character_id=actor.id, success=False)
+                continue
+
+            for target in order.targets:
+                item, error = _reachable_item(actor, target, game_state, "charged")
+                if error:
+                    turn_log.add("magic", player_id, "charge_failed", error,
+                                character_id=actor.id, success=False)
+                    continue
+
+                if target.amount < 0:
+                    wanted = actor.magic_power_current
+                elif target.to_level:
+                    wanted = target.amount - item.power_current
+                else:
+                    wanted = target.amount
+
+                # Charging draws on the caster's own power only: pushing power
+                # from one crystal into another through its owner is not a
+                # transfer rules.md contemplates.
+                moved = max(0, min(wanted, actor.magic_power_current,
+                                   item.power_headroom))
+                if moved <= 0:
+                    turn_log.add("magic", player_id, "charge_failed",
+                                f"{actor.name} cannot add power to {item.name} "
+                                f"(has {actor.magic_power_current}, item holds "
+                                f"{item.power_current})",
+                                character_id=actor.id, success=False)
+                    continue
+
+                actor.magic_power_current -= moved
+                item.power_current += moved
+                turn_log.add("magic", player_id, "charge",
+                            f"{actor.name} charged {item.name} by {moved} power "
+                            f"({items.describe(item, game_state)})",
+                            character_id=actor.id,
+                            location=actor.location_city_id)
+
+
+def process_absorb(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                   turn_log: TurnLog):
+    """
+    ABSORB: move magic power from an item back into a magic-user.
+
+    The mirror of CHARGE. A character cannot absorb past their own natural
+    maximum, since that is the ceiling their power obeys everywhere else.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, AbsorbOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+            if actor.magic_skill < 1:
+                turn_log.add("magic", player_id, "absorb_failed",
+                            f"{actor.name} has no magic skill and cannot "
+                            f"absorb magic power",
+                            character_id=actor.id, success=False)
+                continue
+
+            for target in order.targets:
+                item, error = _reachable_item(actor, target, game_state, "absorbed from")
+                if error:
+                    turn_log.add("magic", player_id, "absorb_failed", error,
+                                character_id=actor.id, success=False)
+                    continue
+
+                headroom = actor.max_magic_power - actor.magic_power_current
+                wanted = item.power_current if target.amount < 0 else target.amount
+                moved = max(0, min(wanted, item.power_current, headroom))
+                if moved <= 0:
+                    turn_log.add("magic", player_id, "absorb_failed",
+                                f"{actor.name} absorbed nothing from {item.name} "
+                                f"(item holds {item.power_current}, "
+                                f"{actor.name} is at {actor.magic_power_current}/"
+                                f"{actor.max_magic_power})",
+                                character_id=actor.id, success=False)
+                    continue
+
+                item.power_current -= moved
+                actor.magic_power_current += moved
+                turn_log.add("magic", player_id, "absorb",
+                            f"{actor.name} absorbed {moved} power from "
+                            f"{item.name} ({items.describe(item, game_state)})",
+                            character_id=actor.id,
+                            location=actor.location_city_id)
+
+
+def process_magic_free_zones(game_state: GameState, turn_log: TurnLog):
+    """
+    Drain everyone standing in a magic-free location, and their items with them.
+
+    rules.md: in such a place magical power "does not exist, either in people
+    or in magical items", and entering one drains a character instantly. This
+    runs as one sweep after all movement rather than on each way of arriving,
+    so walking, sailing, flying and being teleported in are all caught.
+    """
+    for character in game_state.characters.values():
+        if character.is_dead:
+            continue
+        city = game_state.world_map.cities.get(character.location_city_id)
+        if not city or not city.is_magic_free:
+            continue
+        if items.drain_magic_free_zone(character, game_state):
+            turn_log.add("magic", character.faction_id, "magic_drained",
+                        f"{character.name}'s magic power drained away in "
+                        f"{city.name}",
+                        character_id=character.id, location=city.id,
+                        success=False)
+
+
+def process_item_upkeep(game_state: GameState, turn_log: TurnLog):
+    """
+    End-of-turn item bookkeeping: regenerate power, retire conjured items.
+
+    rules.md promises "You will be notified when a magical item disappears",
+    so every expiry is logged to the faction that held it.
+    """
+    items.regenerate(game_state)
+    for item, faction_id in items.expire(game_state):
+        if not faction_id:
+            continue
+        turn_log.add("magic", faction_id, "item_expired",
+                    f"{item.name} has returned to whence it came")
 
 
 def process_sightings(game_state: GameState, turn_log: TurnLog, rng: random.Random):
@@ -2948,10 +3285,19 @@ def run_turn(
     # Phase 3: Recruit & Buy
     process_recruit_and_buy(orders_by_player, game_state, turn_log, rng)
 
-    # Phase 4: Magic & Summoning
+    # Phase 4: Magic & Summoning. ABSORB runs first so power drawn out of an
+    # item is available to this turn's spells, and CHARGE last so what the
+    # caster did not spend can be stowed.
+    process_absorb(orders_by_player, game_state, turn_log)
     process_magic(orders_by_player, game_state, turn_log, rng)
     process_summon(orders_by_player, game_state, turn_log)
+    process_conjure(orders_by_player, game_state, turn_log, rng)
+    process_charge(orders_by_player, game_state, turn_log)
     process_religion(orders_by_player, game_state, turn_log, rng)
+
+    # Walking, sailing, flying and teleporting have all resolved by now, so one
+    # sweep catches everyone who ended up somewhere magic cannot exist.
+    process_magic_free_zones(game_state, turn_log)
 
     # Phase 5: Combat
     process_combat(orders_by_player, game_state, turn_log, rng)
@@ -2998,8 +3344,11 @@ def run_turn(
     # changes for the turn have settled.
     process_sightings(game_state, turn_log, rng)
 
-    # Phase 9: Cleanup
+    # Phase 9: Cleanup. Item upkeep runs before `cleanup_turn` refills everyone
+    # to full power, so a crystal only charges off a possessor who really did
+    # end the turn at their natural maximum.
     expire_support(game_state, turn_log)
+    process_item_upkeep(game_state, turn_log)
     process_prisoner_escape(game_state, turn_log, rng)
     cleanup_turn(game_state)
 

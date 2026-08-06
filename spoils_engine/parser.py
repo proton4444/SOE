@@ -19,10 +19,11 @@ from spoils_engine.orders import (
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
     RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
     ProbeOrder, SearchOrder, ScanOrder,
+    ConjureOrder, ChargeOrder, AbsorbOrder, ItemPowerTransfer,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     HaltOrder, StopOrder, JoinOrder, SupportOrder,
 )
-from spoils_engine import config
+from spoils_engine import config, items
 from spoils_engine.fog import parse_position_prefix
 
 
@@ -45,6 +46,28 @@ def extract_sentences(text: str) -> list[str]:
     """Split text into sentences (periods delimit sentences)."""
     sentences = [s.strip() for s in text.split('.') if s.strip()]
     return sentences
+
+
+def strip_wand(sentence: str, game_state: GameState) -> tuple[str, str]:
+    """
+    Lift a trailing `with`/`using <wand>` clause off a spell order.
+
+    rules.md casts a wand spell as the ordinary order "followed by the word
+    with or using and the name of the wand", e.g. "teleport me to Kitesta
+    using *Opistama*". Taking the clause off first keeps it out of the city or
+    creature name the rest of the parser is trying to read.
+
+    The clause is only recognised when it names an item that actually exists,
+    so ordinary uses of `with` ("attack them with 50 soldiers") are untouched.
+    Returns (sentence without the clause, wand name or "").
+    """
+    match = re.search(r'\s+(?:with|using)\s+(\S+)\s*$', sentence)
+    if not match:
+        return sentence, ""
+    name = match.group(1)
+    if not items.find_item_by_name(name, game_state):
+        return sentence, ""
+    return sentence[:match.start()].strip(), name
 
 
 # ============================================================================
@@ -482,8 +505,10 @@ def parse_attack_order(sentence: str, game_state: GameState, player_id: str) -> 
 
 def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TeleportOrder]:
     """Parse a teleport order."""
+    sentence, wand_name = strip_wand(sentence, game_state)
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(TeleportOrder)
+    order.wand_name = wand_name
 
     # Pattern: "have <wizard> teleport <target> to <city>"
     match = re.search(r'have\s+(.+?)\s+teleport\s+(.+?)\s+to\s+(.+)', sentence)
@@ -542,8 +567,10 @@ def parse_teleport_order(sentence: str, game_state: GameState, player_id: str) -
 
 def parse_fly_order(sentence: str, game_state: GameState, player_id: str) -> Optional[FlyOrder]:
     """Parse a fly order (simplified)."""
+    sentence, wand_name = strip_wand(sentence, game_state)
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(FlyOrder)
+    order.wand_name = wand_name
 
     # Pattern: "have <wizard> fly to <city>"
     match = re.search(r'have\s+(.+?)\s+fly\s+to\s+(.+)', sentence)
@@ -977,6 +1004,14 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
         order.recipient_id = recipient_resolved.entity_id
 
         for name in [n.strip() for n in subject_text.split(' and ') if n.strip()]:
+            # A magical item is given by name exactly as a character is, so
+            # try the item registry before reporting an unknown character.
+            item = items.find_item_by_name(name, game_state)
+            if item:
+                order.item_ids.append(item.id)
+                order.item_names.append(item.name)
+                continue
+
             subject_resolved = resolve_character(name, game_state, player_id)
             if not subject_resolved.found:
                 parser.add_warning(order, f"Character '{name}' not found")
@@ -1382,8 +1417,10 @@ def parse_summon_order(sentence: str, game_state: GameState, player_id: str) -> 
         - "Summon 2 dragons"
         - "Have Merlinus summon 1 demon and 2 griffins"
     """
+    sentence, wand_name = strip_wand(sentence, game_state)
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(SummonOrder)
+    order.wand_name = wand_name
 
     # Creature types mapping
     creature_types = ['skeleton', 'zombie', 'harpy', 'minotaur', 'griffin', 'chimera', 'dragon', 'demon']
@@ -1936,8 +1973,10 @@ def parse_noncom_order(sentence: str, game_state: GameState, player_id: str) -> 
 
 def parse_probe_order(sentence: str, game_state: GameState, player_id: str) -> Optional[ProbeOrder]:
     """Parse PROBE <character> / have X probe Y."""
+    sentence, wand_name = strip_wand(sentence, game_state)
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(ProbeOrder)
+    order.wand_name = wand_name
 
     match = re.search(r'have\s+(.+?)\s+probe\s+(.+)', sentence)
     if match:
@@ -2008,10 +2047,17 @@ def parse_scan_order(sentence: str, game_state: GameState, player_id: str) -> Op
             return order
         rest = match.group(1).strip()
 
-    orb_match = re.search(r'\b(?:using|with)\s+(.+)$', rest)
-    if orb_match:
-        order.orb_name = orb_match.group(1).strip()
-        rest = rest[:orb_match.start()].strip()
+    # An orb is named by a trailing `using`/`with` clause. rules.md also allows
+    # pairing several city groups with several orbs in one sentence ("scan
+    # Plugby and Irontown using Jamibo and Tashendi using Akitemba"); that form
+    # is rejected rather than silently misread, since one order carries one orb.
+    orb_clauses = list(re.finditer(r'\b(?:using|with)\s+(\S+)', rest))
+    if len(orb_clauses) > 1:
+        return parser.add_warning(
+            order, "SCAN names more than one orb; give each orb its own order")
+    if orb_clauses:
+        order.orb_name = orb_clauses[0].group(1).strip()
+        rest = rest[:orb_clauses[0].start()].strip()
 
     city_parts = re.split(r'\s+and\s+', rest)
     for part in city_parts:
@@ -2026,6 +2072,175 @@ def parse_scan_order(sentence: str, game_state: GameState, player_id: str) -> Op
         order.city_names.append(resolved.entity_name)
     if not order.city_ids and not order.warnings:
         parser.add_warning(order, "No cities to scan")
+    return order
+
+
+def parse_conjure_order(sentence: str, game_state: GameState,
+                        player_id: str) -> Optional[ConjureOrder]:
+    """
+    Parse CONJURE <item kind> [of <skill|spell>].
+
+    e.g. "conjure an amulet of trading", "have delphinus conjure an orb",
+    "conjure a wand of teleport".
+    """
+    if not re.search(r'\bconjure\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(ConjureOrder)
+
+    match = re.search(r'have\s+(.+?)\s+conjure\b', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+    elif not parser.resolve_actor(order, None):
+        return order
+
+    body = re.search(r'conjure\s+(?:an?|the)?\s*'
+                     r'(amulet|crystal|orb|ring|wand)\b'
+                     r'(?:\s+(?:of|for)\s+(\w+))?', sentence)
+    if not body:
+        return parser.add_warning(
+            order, "CONJURE needs an item kind: amulet, crystal, orb, ring or wand")
+
+    order.item_type = body.group(1)
+    qualifier = (body.group(2) or "").strip()
+
+    if order.item_type == "amulet":
+        if not qualifier:
+            return parser.add_warning(
+                order, "Conjuring an amulet needs a skill, e.g. 'an amulet of trading'")
+        if qualifier in items.AMULET_FORBIDDEN_SKILLS:
+            return parser.add_warning(
+                order, f"An amulet never provides skill in {qualifier}")
+        if qualifier not in items.AMULET_SKILLS:
+            return parser.add_warning(order, f"Unknown amulet skill '{qualifier}'")
+        order.skill = qualifier
+    elif order.item_type == "wand":
+        if not qualifier:
+            return parser.add_warning(
+                order, "Conjuring a wand needs a spell, e.g. 'a wand of teleport'")
+        spell = items.canonical_spell(qualifier)
+        if not spell:
+            return parser.add_warning(order, f"No wand provides '{qualifier}'")
+        order.spell = spell
+
+    return order
+
+
+def _parse_item_transfers(clause: str, game_state: GameState,
+                          parser: "OrderParserBase", order: Order,
+                          absorbing: bool) -> list[ItemPowerTransfer]:
+    """
+    Pull the item/quantity pairs out of a CHARGE or ABSORB clause.
+
+    Both verbs list their items with `and`, and each item may carry its own
+    quantity. CHARGE puts the quantity after the item (`Ampu to 75 power`),
+    ABSORB puts it before (`10 points from Madingo`), and either may leave it
+    out to mean as much as possible.
+    """
+    transfers = []
+    for part in re.split(r'\s+and\s+', clause):
+        part = part.strip().rstrip('.')
+        if not part:
+            continue
+
+        amount, to_level = -1, False
+        if absorbing:
+            # "10 points from Madingo", "all power from Gendari", "Madingo"
+            qty = re.match(r'(?:(\d+)|all|everything)\s*(?:points?|power)?\s*'
+                           r'(?:from\s+)?(.*)$', part)
+            if qty:
+                if qty.group(1):
+                    amount = int(qty.group(1))
+                part = qty.group(2).strip()
+        else:
+            # "Hasimpa by 10 points", "Ampu to 75 power", "Madingo"
+            qty = re.search(r'\s+(by|to)\s+(\d+)\s*(?:points?|power)?\s*$', part)
+            if qty:
+                to_level = qty.group(1) == "to"
+                amount = int(qty.group(2))
+                part = part[:qty.start()].strip()
+
+        # A bare "it" refers back to the item the previous clause named.
+        if part in ("it", "them") and transfers:
+            part = transfers[-1].item_name
+        if not part:
+            continue
+
+        item = items.find_item_by_name(part, game_state)
+        if not item:
+            parser.add_warning(order, f"No magical item called '{part}'")
+            continue
+        transfers.append(ItemPowerTransfer(
+            item_id=item.id, item_name=item.name,
+            amount=amount, to_level=to_level,
+        ))
+    return transfers
+
+
+def parse_charge_order(sentence: str, game_state: GameState,
+                       player_id: str) -> Optional[ChargeOrder]:
+    """
+    Parse CHARGE / RECHARGE <item> [by N | to N] [and <item> ...].
+
+    e.g. "recharge madingo", "have merlinus recharge hasimpa by 10 points",
+    "charge ampu to 75 power".
+    """
+    if not re.search(r'\b(?:re)?charge\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(ChargeOrder)
+
+    match = re.search(r'have\s+(.+?)\s+(?:re)?charge\s+(.+)', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        rest = match.group(2)
+    else:
+        match = re.search(r'\b(?:re)?charge\s+(.+)', sentence)
+        if not match:
+            return None
+        if not parser.resolve_actor(order, None):
+            return order
+        rest = match.group(1)
+
+    order.targets = _parse_item_transfers(rest, game_state, parser, order,
+                                          absorbing=False)
+    if not order.targets and not order.warnings:
+        parser.add_warning(order, "CHARGE names no magical item")
+    return order
+
+
+def parse_absorb_order(sentence: str, game_state: GameState,
+                       player_id: str) -> Optional[AbsorbOrder]:
+    """
+    Parse ABSORB [N points] [from] <item> [and ...].
+
+    e.g. "absorb 10 points from madingo", "absorb all power from gendari",
+    "have merlinus absorb everything from umiki".
+    """
+    if not re.search(r'\babsorb\b', sentence):
+        return None
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(AbsorbOrder)
+
+    match = re.search(r'have\s+(.+?)\s+absorb\s+(.+)', sentence)
+    if match:
+        if not parser.resolve_actor(order, match.group(1).strip()):
+            return order
+        rest = match.group(2)
+    else:
+        match = re.search(r'\babsorb\s+(.+)', sentence)
+        if not match:
+            return None
+        if not parser.resolve_actor(order, None):
+            return order
+        rest = match.group(1)
+
+    order.targets = _parse_item_transfers(rest, game_state, parser, order,
+                                          absorbing=True)
+    if not order.targets and not order.warnings:
+        parser.add_warning(order, "ABSORB names no magical item")
     return order
 
 
@@ -2309,6 +2524,9 @@ ORDER_KEYWORDS = {
     'probe': ['probe'],
     'search': ['search', 'explore'],
     'scan': ['scan'],
+    'conjure': ['conjure'],
+    'charge': ['charge', 'recharge'],
+    'absorb': ['absorb'],
     'get': ['get', 'take', 'obtain'],
     'transfer': ['transfer'],
     'unload': ['unload'],
@@ -2505,6 +2723,17 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['scan']):
             order = parse_scan_order(sentence, game_state, player_id)
+
+        # conjure before charge: "a wand of conjuring" would otherwise be read
+        # as a CHARGE by the bare substring test below.
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['conjure']):
+            order = parse_conjure_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['charge']):
+            order = parse_charge_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['absorb']):
+            order = parse_absorb_order(sentence, game_state, player_id)
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['get']):
             order = parse_get_order(sentence, game_state, player_id)

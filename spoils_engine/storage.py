@@ -21,7 +21,7 @@ from typing import Any, Optional, Union, get_args, get_origin
 
 from spoils_engine.models import (
     GameState, WorldMap, Faction, Character, UnitStack, Ship,
-    City, Road, SummonedCreature
+    City, Road, SummonedCreature, MagicalItem
 )
 from spoils_engine.orders import QueueEntry, order_classes
 
@@ -166,6 +166,7 @@ def decode_game_state(data: dict) -> GameState:
         unit_stacks=_rebuild_registry(data, 'unit_stacks', UnitStack),
         ships=_rebuild_registry(data, 'ships', Ship),
         summoned_creatures=_rebuild_registry(data, 'summoned_creatures', SummonedCreature),
+        magical_items=_rebuild_registry(data, 'magical_items', MagicalItem),
         tax_pools={k: float(v) for k, v in (data.get('tax_pools') or {}).items()},
         location_blessings=dict(data.get('location_blessings') or {}),
         location_curses=dict(data.get('location_curses') or {}),
