@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
 
+from spoils_engine.orders import QueueEntry
+
 
 # ============================================================================
 # ENUMS
@@ -470,6 +472,8 @@ class GameState:
         unit_stacks: Dict mapping unit_stack_id -> UnitStack
         ships: Dict mapping ship_id -> Ship
         summoned_creatures: Dict mapping creature_id -> SummonedCreature
+        order_queues: Dict mapping character_id -> that character's pending
+            orders. Orders survive between turns here; see `order_queue`.
     """
     turn_number: int = 0
     world_map: WorldMap = field(default_factory=WorldMap)
@@ -481,6 +485,7 @@ class GameState:
     tax_pools: dict[str, float] = field(default_factory=dict)
     location_blessings: dict[str, int] = field(default_factory=dict)
     location_curses: dict[str, int] = field(default_factory=dict)
+    order_queues: dict[str, list[QueueEntry]] = field(default_factory=dict)
 
     def get_character_by_name(self, name: str, faction_id: Optional[str] = None) -> Optional[Character]:
         """

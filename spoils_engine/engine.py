@@ -21,11 +21,12 @@ from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder,
     PromoteOrder, TaxOrder, CaptureOrder, FreeOrder, StudyOrder, TeachOrder, SummonOrder, CollectOrder,
-    BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
-    RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
+    BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder,
+    ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
+    actor_field,
 )
-from spoils_engine import config
+from spoils_engine import config, order_queue
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
 from spoils_engine.parser import get_player_leader
 
@@ -205,16 +206,16 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
     death and imprisonment are enforced uniformly rather than per order type.
     Order-specific preconditions (destinations, ports, skills) are checked on
     top of that.
+
+    This runs on the orders the queue released for *this* turn, not on the raw
+    submission, so an order that waited three turns is judged against the world
+    it actually executes in.
     """
     for player_id, orders in orders_by_player.items():
         for order in orders:
             # Universal actor preconditions. A few order types name their
             # actor with a role-specific field instead of `actor_id`.
-            actor_attr = {
-                AssignOrder: "donor_id",
-                SummonOrder: "summoner_id",
-                TeachOrder: "teacher_id",
-            }.get(type(order), "actor_id")
+            actor_attr = actor_field(order)
             if hasattr(order, actor_attr):
                 if not actor_can_act(order, player_id, game_state, actor_attr):
                     continue
@@ -237,14 +238,6 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                     order.warnings.append(
                         f"{target.name} is your ally - declare them an enemy first"
                     )
-
-            elif isinstance(order, (AwaitOrder, RepeatOrder)):
-                # Parsed and understood, but there is no cross-turn order queue
-                # to hold them yet, so say so rather than reporting a success
-                # the engine never delivered.
-                order.warnings.append(
-                    "Queued orders are not executed yet (planned for v0.9)"
-                )
 
             elif isinstance(order, RecruitOrder):
                 if not game_state.world_map.cities.get(order.city_id):
@@ -1497,19 +1490,11 @@ def process_trade(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                             character_id=actor.id)
 
 
-def process_queueing(orders_by_player: Dict[str, List[Order]], turn_log: TurnLog):
-    """Process AWAIT and REPEAT orders for logging/sequencing."""
-    for player_id, orders in orders_by_player.items():
-        for order in orders:
-            if order.warnings:
-                continue  # Skip invalid orders
-
-            if isinstance(order, AwaitOrder):
-                turn_log.add("queue", player_id, "await",
-                            f"Waiting {order.duration_days} days", character_id=order.actor_id)
-            elif isinstance(order, RepeatOrder):
-                turn_log.add("queue", player_id, "repeat",
-                            f"Repeating last order x{order.times}", character_id=order.actor_id)
+def report_pending_orders(game_state: GameState, turn_log: TurnLog):
+    """Tell each player what is still sitting in their characters' queues."""
+    for faction_id in game_state.factions:
+        for line in order_queue.pending_summary(game_state, faction_id):
+            turn_log.add("queue", faction_id, "pending", line)
 
 
 def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
@@ -2520,9 +2505,14 @@ def run_turn(
     """
     Process a complete game turn deterministically.
 
+    Orders are not executed straight from `orders_by_player`. They go onto each
+    character's persistent queue first, and the queue decides what this turn
+    actually runs -- which for an unblocked character is everything they were
+    just given. See `order_queue` for what holds work back.
+
     Args:
         game_state: Current game state (will be modified in-place)
-        orders_by_player: Dict mapping player_id -> list of orders
+        orders_by_player: Dict mapping player_id -> list of orders submitted now
         seed: RNG seed for deterministic execution
 
     Returns:
@@ -2530,6 +2520,11 @@ def run_turn(
     """
     rng = random.Random(seed)
     turn_log = TurnLog()
+
+    # Phase 0: Order queue. Everything below acts on what the queue released.
+    orders_by_player = order_queue.process_order_queue(
+        orders_by_player, game_state, turn_log
+    )
 
     # Phase 1: Validation
     validate_orders(orders_by_player, game_state, turn_log)
@@ -2582,7 +2577,7 @@ def run_turn(
     process_repay(orders_by_player, game_state, turn_log)
     process_study(orders_by_player, game_state, turn_log, rng)
     process_teach(orders_by_player, game_state, turn_log, rng)
-    process_queueing(orders_by_player, turn_log)
+    report_pending_orders(game_state, turn_log)
 
     # Phase 8: Cleanup
     process_prisoner_escape(game_state, turn_log, rng)

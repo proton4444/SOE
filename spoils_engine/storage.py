@@ -23,6 +23,7 @@ from spoils_engine.models import (
     GameState, WorldMap, Faction, Character, UnitStack, Ship,
     City, Road, SummonedCreature
 )
+from spoils_engine.orders import QueueEntry, order_classes
 
 
 # ============================================================================
@@ -112,6 +113,35 @@ def _rebuild_registry(data: dict, key: str, cls: type) -> dict:
     }
 
 
+def _rebuild_queue_entry(data: dict) -> Optional[QueueEntry]:
+    """
+    Rebuild one order-queue entry.
+
+    Queued orders cannot go through the generic path: `Order` is abstract, so
+    the entry records the concrete subclass name and it is looked up here. An
+    entry naming a class this build no longer has is dropped rather than
+    failing the load -- losing one queued order beats losing the game.
+    """
+    known = order_classes()
+    order_class = known.get(data.get("order_class", ""))
+    if not order_class:
+        return None
+
+    return QueueEntry(
+        order=rebuild_dataclass(order_class, data.get("order") or {}),
+        order_class=data["order_class"],
+        release_turn=int(data.get("release_turn", -1)),
+        repeat_remaining=int(data.get("repeat_remaining", 0)),
+        block=_rebuild_queue(data.get("block") or []),
+    )
+
+
+def _rebuild_queue(entries: list) -> list:
+    """Rebuild a list of queue entries, skipping any that no longer decode."""
+    rebuilt = [_rebuild_queue_entry(entry) for entry in entries]
+    return [entry for entry in rebuilt if entry is not None]
+
+
 def decode_game_state(data: dict) -> GameState:
     """
     Decode a dict back into a GameState object.
@@ -139,6 +169,10 @@ def decode_game_state(data: dict) -> GameState:
         tax_pools={k: float(v) for k, v in (data.get('tax_pools') or {}).items()},
         location_blessings=dict(data.get('location_blessings') or {}),
         location_curses=dict(data.get('location_curses') or {}),
+        order_queues={
+            actor_id: _rebuild_queue(entries)
+            for actor_id, entries in (data.get('order_queues') or {}).items()
+        },
     )
     _migrate(game_state, data)
     return game_state

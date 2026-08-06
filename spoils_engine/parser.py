@@ -6,6 +6,7 @@ This implementation uses regex and string matching, but the
 interface is designed to be replaceable with an LLM-based parser.
 """
 
+import math
 import re
 from typing import Optional, Type
 from dataclasses import dataclass
@@ -18,7 +19,9 @@ from spoils_engine.orders import (
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
     RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
+    HaltOrder, StopOrder,
 )
+from spoils_engine import config
 
 
 # ============================================================================
@@ -1558,36 +1561,145 @@ def parse_trade_order(sentence: str, game_state: GameState, player_id: str) -> O
     return None
 
 
+# rules.md allows minutes, hours, days, weeks and months, forbids mixing units,
+# and fixes a month at exactly 30 days.
+TIME_UNIT_DAYS = {
+    'minute': 1 / (24 * 60),
+    'hour': 1 / 24,
+    'day': 1.0,
+    'week': 7.0,
+    'month': float(config.DAYS_PER_MONTH),
+}
+
+
+def parse_duration_days(sentence: str) -> Optional[int]:
+    """
+    Read a "<number> <unit>" duration out of a sentence, in whole days.
+
+    Rounded up, because the queue cannot hold work for less than a turn. The
+    rules' one-hour minimum therefore lands on a single day here.
+    """
+    match = re.search(
+        r'(\d+)\s+(minute|hour|day|week|month)s?\b', sentence
+    )
+    if not match:
+        return None
+
+    days = int(match.group(1)) * TIME_UNIT_DAYS[match.group(2)]
+    return max(1, math.ceil(days))
+
+
 def parse_await_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AwaitOrder]:
-    """Parse an await/wait order."""
+    """
+    Parse WAIT FOR / AWAIT / WAIT UNTIL.
+
+    Three forms are understood: a timed wait ("wait for 3 days"), a wait for a
+    person ("have Mary await Joe Flint"), and a wait to an absolute turn ("wait
+    until turn 12"). `rules.md` writes the last of these as a calendar date,
+    which the alpha has no clock for, so the turn number stands in for it.
+
+    A wait for a person may also carry a duration, which then acts as the
+    deadline the character gives up on.
+    """
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(AwaitOrder)
 
-    match = re.search(r'(?:await|wait)\s+(\d+)', sentence)
-    if match:
-        parser.resolve_actor(order, None)
-        order.duration_days = int(match.group(1))
+    if not re.search(r'\b(?:await|wait)\b', sentence):
+        return None
+
+    # "have <name> wait ..." -- otherwise the wait belongs to the leader.
+    actor_match = re.search(r'have\s+(.+?)\s+(?:await|wait)\b', sentence)
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
         return order
 
-    return None
+    remainder = re.sub(r'^.*?\b(?:await|wait)\b', '', sentence).strip()
+    remainder = re.sub(r'^(?:for|until)\s+', '', remainder).strip()
+
+    # "wait until turn 12" -- convert the absolute turn into a duration.
+    turn_match = re.search(r'^turn\s+(\d+)', remainder)
+    if turn_match:
+        turns = max(0, int(turn_match.group(1)) - game_state.turn_number)
+        order.duration_days = turns * config.DAYS_PER_TURN
+        return order
+
+    duration = parse_duration_days(remainder)
+    if duration is not None:
+        order.duration_days = duration
+
+    # Whatever is left that is not a duration is a person to wait for.
+    target_text = re.sub(r'\d+\s+(?:minute|hour|day|week|month)s?\b', '', remainder)
+    target_text = re.sub(r'\b(?:and|then|until|for|exactly)\b', ' ', target_text)
+    target_text = ' '.join(target_text.split())
+
+    if target_text:
+        resolved = resolve_character(target_text, game_state, player_id, enemy_ok=True)
+        if not resolved.found:
+            return parser.add_warning(order, f"Character '{target_text}' not found")
+        order.target_id = resolved.entity_id
+        if duration is None:
+            # No deadline given: hold for a good while rather than forever, so
+            # a target who never shows up does not strand the queue.
+            order.duration_days = config.AWAIT_DEFAULT_DEADLINE_DAYS
+        return order
+
+    if duration is None:
+        return parser.add_warning(order, "Wait for how long, or for whom?")
+
+    return order
 
 
 def parse_repeat_order(sentence: str, game_state: GameState, player_id: str) -> Optional[RepeatOrder]:
-    """Parse a repeat order."""
+    """
+    Parse a bare REPEAT order.
+
+    The usual spelling is the adverb `repeatedly`, which `parse_orders` lifts
+    off the sentence it governs. This handles the explicit verb form.
+    """
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(RepeatOrder)
 
-    match = re.search(r'repeat\s+(\d+)', sentence)
-    if match:
-        parser.resolve_actor(order, None)
-        order.times = int(match.group(1))
+    if not re.search(r'\brepeat\b', sentence):
+        return None
+
+    actor_match = re.search(r'have\s+(.+?)\s+repeat\b', sentence)
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
         return order
 
-    if sentence.strip() == 'repeat':
-        parser.resolve_actor(order, None)
+    match = re.search(r'repeat\s+(?:.*?\s+)?(\d+)', sentence)
+    order.times = int(match.group(1)) if match else 0
+    return order
+
+
+def parse_halt_order(sentence: str, game_state: GameState, player_id: str):
+    """
+    Parse HALT and STOP.
+
+    HALT is the unplanned stop -- it takes effect the moment it is processed.
+    STOP is the planned one and waits its turn in the queue. The adverb
+    `immediately` additionally abandons a wait that is already running.
+    """
+    verb_match = re.search(r'\b(halt|stop)\b', sentence)
+    if not verb_match:
+        return None
+
+    verb = verb_match.group(1)
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(HaltOrder if verb == 'halt' else StopOrder)
+
+    # Both "have Joe halt" and the rules' "immediately stop Joe Flint" name the
+    # character whose orders are being dropped.
+    actor_match = (
+        re.search(r'have\s+(.+?)\s+(?:immediately\s+)?(?:halt|stop)\b', sentence)
+        or re.search(r'(?:halt|stop)\s+(.+)$', sentence)
+    )
+    actor_name = actor_match.group(1).strip() if actor_match else None
+    actor_name = re.sub(r'^(?:and|then)\s+', '', actor_name).strip() if actor_name else None
+
+    if not parser.resolve_actor(order, actor_name or None):
         return order
 
-    return None
+    order.immediate = bool(re.search(r'\bimmediately\b', sentence))
+    return order
 
 
 def parse_scry_order(sentence: str, game_state: GameState, player_id: str) -> Optional[ScryOrder]:
@@ -1981,7 +2093,26 @@ ORDER_KEYWORDS = {
     'pay': ['pay'],
     'borrow': ['borrow'],
     'repay': ['repay'],
+    'halt': ['halt', 'stop'],
 }
+
+
+def strip_repeatedly(sentence: str) -> tuple[str, Optional[int]]:
+    """
+    Lift the adverb `repeatedly` (and its loop count) off a sentence.
+
+    Returns the sentence without them, and the loop count: None when the
+    sentence was not a repeat at all, 0 for a loop with no count -- which
+    `rules.md` says runs until a HALT or STOP.
+    """
+    if not re.search(r'\brepeatedly\b', sentence):
+        return sentence, None
+
+    count_match = re.search(r'\b(\d+)\s+times?\b', sentence)
+    times = int(count_match.group(1)) if count_match else 0
+
+    stripped = re.sub(r'\brepeatedly\b|\b\d+\s+times?\b', ' ', sentence)
+    return ' '.join(stripped.split()), times
 
 
 def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[Order]:
@@ -1990,6 +2121,11 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
 
     This is the main entry point for order parsing. It can be replaced
     with an LLM-based implementation that has the same signature.
+
+    `repeatedly` is an adverb rather than a verb, so it is lifted off its
+    sentence before the verb dispatch below and emitted as its own REPEAT order
+    in front of the command it governs. The engine's queue then treats
+    everything after that REPEAT as the loop body.
 
     Args:
         raw_text: Raw order text from player
@@ -2007,10 +2143,16 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         if not sentence:
             continue
 
+        original_sentence = sentence
+        sentence, repeat_times = strip_repeatedly(sentence)
+
         order = None
 
+        if any(kw in sentence for kw in ORDER_KEYWORDS['halt']):
+            order = parse_halt_order(sentence, game_state, player_id)
+
         # Try each parser based on keywords (optimization)
-        if any(kw in sentence for kw in ORDER_KEYWORDS['move']):
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['move']):
             order = parse_move_order(sentence, game_state, player_id)
 
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['sail']):
@@ -2147,6 +2289,15 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
             order = parse_pay_order(sentence, game_state, player_id)
 
         if order:
+            if repeat_times is not None:
+                # The loop marker takes the same actor as the command it governs,
+                # so the two can never drift apart.
+                orders.append(RepeatOrder(
+                    player_id=player_id,
+                    original_text=original_sentence,
+                    actor_id=getattr(order, 'actor_id', ''),
+                    times=repeat_times,
+                ))
             orders.append(order)
         else:
             # Unparseable order - create placeholder with warning

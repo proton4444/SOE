@@ -254,15 +254,19 @@ def test_ally_of_both_sides_stays_out(two_faction_state):
 # QUEUE ORDERS ARE HONEST
 # ============================================================================
 
-def test_queued_orders_report_that_they_do_nothing(two_faction_state):
+def test_queued_orders_are_executed_not_just_logged(two_faction_state):
     """
-    AWAIT and REPEAT parsed and logged a success, but no cross-turn order queue
-    exists to execute them. They must say so rather than claim to have run.
+    AWAIT and REPEAT used to log a success no cross-turn queue ever delivered,
+    so v0.7.2 made them warn instead. v0.9 built the queue, and the standard is
+    now the original one: a wait must actually hold the character's orders back.
     """
     gs = two_faction_state
-    await_order = orders.AwaitOrder(player_id="p1", actor_id="c1", duration_days=5)
+    await_order = orders.AwaitOrder(player_id="p1", actor_id="c1", duration_days=7)
+    move = orders.MoveOrder(player_id="p1", actor_id="c1", destination_city_id="city2")
 
-    _, log = engine.run_turn(gs, {"p1": [await_order]}, seed=1)
+    _, log = engine.run_turn(gs, {"p1": [await_order, move]}, seed=1)
 
-    assert await_order.warnings
-    assert not [e for e in log.get_player_events("p1") if e.phase == "queue"]
+    assert not await_order.warnings
+    assert [e for e in log.get_player_events("p1") if e.phase == "queue"]
+    # The move is behind the wait, so the character has not gone anywhere.
+    assert gs.characters["c1"].location_city_id == "city1"

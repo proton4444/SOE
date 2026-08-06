@@ -435,10 +435,18 @@ class TradeOrder(Order):
 
 @dataclass
 class AwaitOrder(Order):
-    """Wait/hold further actions for a number of days."""
+    """
+    Hold this character's queue until a wait is satisfied.
+
+    `duration_days` is how long to wait. `target_id`, when set, waits instead for
+    another character to reach the actor's city (`WAIT FOR <person>`), and the
+    duration becomes a deadline: the wait ends early if the target arrives, and
+    gives up when the deadline passes (`WAIT ... UNTIL`).
+    """
 
     actor_id: str = ""
     duration_days: int = 7
+    target_id: str = ""
 
     def order_type(self) -> str:
         return "AWAIT"
@@ -446,13 +454,50 @@ class AwaitOrder(Order):
 
 @dataclass
 class RepeatOrder(Order):
-    """Repeat the prior valid order to support queued commands."""
+    """
+    Repeat the orders that follow it, for the same character, in a loop.
+
+    `times` is the total number of passes. Zero or less means loop until a HALT
+    or STOP, which is what a bare `repeatedly` means in `rules.md`.
+    """
 
     actor_id: str = ""
-    times: int = 1
+    times: int = 0
 
     def order_type(self) -> str:
         return "REPEAT"
+
+
+@dataclass
+class HaltOrder(Order):
+    """
+    Unplanned stop: drop this character's queued orders as soon as it arrives.
+
+    `immediate` also abandons a wait that is already running, matching the
+    "immediately halt" form in `rules.md`.
+    """
+
+    actor_id: str = ""
+    immediate: bool = False
+
+    def order_type(self) -> str:
+        return "HALT"
+
+
+@dataclass
+class StopOrder(Order):
+    """
+    Planned stop: queued in sequence, and clears whatever is behind it.
+
+    Unlike HALT this waits its turn, so it stops the character at a point the
+    player planned for rather than the moment the order was written.
+    """
+
+    actor_id: str = ""
+    immediate: bool = False
+
+    def order_type(self) -> str:
+        return "STOP"
 
 
 # ============================================================================
@@ -860,7 +905,10 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "RESURRECT": ResurrectOrder,
         "TRADE": TradeOrder,
         "AWAIT": AwaitOrder,
+        "WAIT": AwaitOrder,
         "REPEAT": RepeatOrder,
+        "HALT": HaltOrder,
+        "STOP": StopOrder,
         "KILL": KillOrder,
         "EXECUTE": KillOrder,
         "ENSLAVE": EnslaveOrder,
@@ -884,3 +932,70 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
     if order_class:
         return order_class(player_id=player_id, original_text=original_text)
     return None
+
+
+# ============================================================================
+# ORDER QUEUE
+# ============================================================================
+
+@dataclass
+class QueueEntry:
+    """
+    One slot in a character's persistent order queue.
+
+    Most entries just carry an order. A REPEAT entry is a loop marker instead:
+    `block` holds a pristine copy of the loop body and `repeat_remaining` counts
+    the passes still owed (-1 for a loop that only HALT or STOP can end). An
+    AWAIT entry records the turn its wait expires in `release_turn`.
+
+    `order_class` is written on construction so the queue can be rebuilt from a
+    save file: JSON keeps no record of which Order subclass a dict came from.
+    """
+
+    order: Optional[Order] = None
+    order_class: str = ""
+    release_turn: int = -1
+    repeat_remaining: int = 0
+    block: list["QueueEntry"] = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.order is not None and not self.order_class:
+            self.order_class = type(self.order).__name__
+
+
+# Most orders name their acting character in `actor_id`; a few use a
+# role-specific field because the order has two characters in it.
+ACTOR_FIELDS: dict[str, str] = {
+    "AssignOrder": "donor_id",
+    "SummonOrder": "summoner_id",
+    "TeachOrder": "teacher_id",
+}
+
+
+def actor_field(order: Order) -> str:
+    """Name of the field holding this order's acting character."""
+    return ACTOR_FIELDS.get(type(order).__name__, "actor_id")
+
+
+def actor_id_of(order: Order) -> str:
+    """The acting character's id, or "" for an order that names none."""
+    return getattr(order, actor_field(order), "") or ""
+
+
+def order_classes() -> dict[str, type]:
+    """
+    Every concrete Order subclass, keyed by class name.
+
+    Used to rebuild queued orders from a save file. Keyed by class rather than
+    by `order_type()` because several verbs share one class (KILL and EXECUTE,
+    GET and TAKE), so `order_type` is not a round-trippable identity.
+    """
+    found: dict[str, type] = {}
+
+    def walk(cls: type) -> None:
+        for subclass in cls.__subclasses__():
+            found[subclass.__name__] = subclass
+            walk(subclass)
+
+    walk(Order)
+    return found

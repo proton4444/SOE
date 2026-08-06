@@ -14,12 +14,15 @@ from spoils_engine.engine import TurnLog
 # Preferred ordering for turn-event sections. Phases not listed here are still
 # reported -- they are appended alphabetically after these.
 PHASE_ORDER = [
+    # The queue runs before everything else, and its "still pending" lines are
+    # what a player needs to see first to know what their characters are doing.
+    "queue",
     "movement", "sail", "recruit", "buy_ship", "magic", "summon", "religion",
     "combat", "capture", "prisoner", "kill", "enslave", "interrogate",
     "status", "get", "transfer", "unload", "pay", "borrow", "repay",
     "income", "tax", "trade", "secure",
     "fortify", "diplomacy", "assign", "name", "promote", "collect", "mine",
-    "build", "free", "study", "teach", "queue",
+    "build", "free", "study", "teach",
 ]
 
 

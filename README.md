@@ -11,12 +11,13 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-> **v0.8.0 — cheap gaps closed.** Prisoner ops, status/stealth, inventory
-> transfers, finance (`PAY`/`HIRE`/`BORROW`/`REPAY`), and per-character gold
-> land on top of the v0.7.2 design-debt cleanup. The order queue (`AWAIT`/
-> `REPEAT` execution) remains v0.9. See [`docs/rules_gap.md`](docs/rules_gap.md).
+> **v0.9.0 — the order queue.** Orders now persist between turns on a
+> per-character queue, so `AWAIT`, `REPEAT`/`repeatedly`, `HALT` and `STOP`
+> execute instead of being rejected. An unblocked character still resolves
+> everything they were given in the turn they were given it; only waits and
+> loop boundaries carry work forward. See [`docs/rules_gap.md`](docs/rules_gap.md).
 
-## Features (Alpha v0.8.0)
+## Features (Alpha v0.9.0)
 
 ### Implemented
 
@@ -68,7 +69,16 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Mining**: MINE command to extract minerals (iron, gold, silver, copper, gems)
 - **Construction**: BUILD/CONSTRUCT/MAKE commands to build galleys, catapults, weapons, and armor
 
+✅ **Order Queue**
+- Orders persist on a per-character queue across turns and through save/load
+- `AWAIT`/`WAIT FOR` — wait a duration, or wait for a named character to arrive
+- `REPEAT`/`repeatedly` — loop the following orders, for a count or until halted
+- `HALT` (immediate) and `STOP` (planned) cancel what has not started
+- Queued orders are validated when they execute, against the world they land in
+- Unblocked characters still resolve their whole submission in the same turn
+
 ✅ **Turn Processing**
+- Phase 0: Order queue — HALT, intake, and one drain pass
 - Phase 1: Validation
 - Phase 2: Movement (land), then sailing (sea)
 - Phase 3: Recruit & buy
@@ -182,13 +192,12 @@ This is an alpha implementation of a turn-based engine that processes English-li
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
-- Conditional orders (`IF`) and the rest of the order language — these wait on
-  the cross-turn order queue
+- Conditional orders (`IF`), `THEN` sequencing and `and`-chained commands
+- Sub-turn game time — the queue's smallest unit is one weekly turn
 - Retreat and morale in combat
-- Per-character gold (gold is currently held per faction)
 - Fog of war
 - Resource depletion (accumulation and its cap are in; depletion is not)
-- 48 of the 89 command verbs in `rules.md`
+- 27 of the 89 command verbs in `rules.md`
 
 [`docs/rules_gap.md`](docs/rules_gap.md) has the command-by-command breakdown
 and [`docs/alpha_scope.md`](docs/alpha_scope.md) records what the alpha
@@ -361,6 +370,21 @@ Build 5 catapults.
 Have Blacksmith build 10 weapons.
 Make 20 armor.
 
+# Waiting (holds everything queued behind it)
+Wait for 3 days.
+Have Marcus await 2 weeks.
+Have Marcus wait for Julia.        # until she reaches him
+Wait until turn 12.
+
+# Repeating (everything after it, for that character, is the loop body)
+Have Bill repeatedly tax 5 times.
+Have Mike repeatedly mine silver.  # no count: runs until halted
+
+# Cancelling
+Have Marcus halt.                  # drop the backlog now
+Have Marcus immediately halt.      # and abandon a wait already running
+Have Julia stop.                   # planned: takes effect in sequence
+
 # Comments (ignored)
 # This is a comment
 Have Hero go to City.  # End-of-line comment
@@ -373,6 +397,10 @@ Have Hero go to City.  # End-of-line comment
 - Periods delimit sentences (important for error recovery)
 - `#` starts a comment (to end of line)
 - Plural 's' is optional for unit types
+- Orders go on a per-character queue. With nothing in front of them they run in
+  the turn you sent them; behind a wait or a repeat loop they run later.
+- A repeat loop swallows the rest of that character's orders in the submission,
+  so put anything you want done first *before* the `repeatedly`
 
 ## CLI Commands
 
@@ -430,6 +458,7 @@ SOE/
 │   ├── config.py          # Game balance parameters
 │   ├── orders.py          # Order class definitions
 │   ├── parser.py          # English-like order parser
+│   ├── order_queue.py     # Per-character order queue (AWAIT/REPEAT/HALT/STOP)
 │   ├── engine.py          # Turn processing engine
 │   ├── reporting.py       # Report generation
 │   ├── storage.py         # Save/load game state
@@ -441,7 +470,8 @@ SOE/
 │   ├── test_upkeep.py
 │   ├── test_regressions.py  # Pins the defects fixed in the v0.7.1 audit
 │   ├── test_gap_closures.py # Pins the design debt closed in v0.7.2
-│   └── test_v08.py          # Cheap-gap commands and per-character gold
+│   ├── test_v08.py          # Cheap-gap commands and per-character gold
+│   └── test_v09.py          # The persistent order queue
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -574,14 +604,15 @@ See `docs/alpha_scope.md` for comprehensive mapping.
 
 ## Where we are
 
-**41 of 89 command verbs (46%)** from `rules.md` are recognised, and 2 of its 9
+**62 of 89 command verbs (70%)** from `rules.md` are recognised, and 3 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
 full breakdown, including which commands are missing and why.
 
-The largest divergence is structural: the rules describe an **asynchronous**
-game where orders queue and execute as game time passes, while the engine runs
-fixed synchronous turns. That gap is why `AWAIT` and `REPEAT` are accepted but
-report that they will not run until v0.9 brings the queue.
+The rules describe an **asynchronous** game where orders queue and execute as
+game time passes. v0.9 closes most of that gap: orders live on a persistent
+per-character queue (`spoils_engine/order_queue.py`) that survives save/load and
+carries work between turns. What remains is granularity — the queue advances one
+pass per turn, so it measures time in weeks where the rules measure it in hours.
 
 Engine-internal design debt is clear as of v0.7.2. What remains is rules
 coverage, not cleanup.
@@ -590,38 +621,44 @@ coverage, not cleanup.
 
 ### v0.8 — Close the cheap gaps ✅
 
-Shipped in this release:
-
 - Prisoner operations: `ENSLAVE`, `KILL`/`EXECUTE`, `INTERROGATE`
 - Status and stealth: `COMBATANT`/`NONCOM`, `LURK`/`UNLURK`
 - Inventory: `GET`/`OBTAIN`/`TAKE`, `TRANSFER`, `UNLOAD`
 - Finance: `PAY`, `HIRE` (synonym of `RECRUIT`), `BORROW`/`REPAY`
 - Per-character gold purses (legacy treasury migrates to the leader on load)
 
-### v0.9 — The order queue
+### v0.9 — The order queue ✅
 
-The structural change everything else waits on:
+Shipped in this release:
 
-- Persistent order queue surviving across turns, with game-time costs per order
-- `HALT`/`STOP` to cancel orders in progress
-- Make `AWAIT` and `REPEAT` actually execute
-- `UNTIL`, `REPEATEDLY`, `IMMEDIATELY` adverbs
-- `THEN` sequencing and `and`-chained commands
+- Persistent per-character order queue, saved and reloaded with the game state
+- `AWAIT`/`WAIT FOR` executes: a timed wait, or a wait for another character to
+  arrive, with the duration acting as the deadline it gives up on
+- `REPEAT`/`repeatedly` executes: the loop body runs one pass per turn, for a
+  given count or until halted
+- `HALT` and `STOP`, and `immediately` as their modifier
+- Queued orders are validated when they execute, not when they were written
+
+Deliberately still open: sub-turn timing (a wait of one hour and a wait of one
+day both cost a turn), `until <date>` as a loop terminator, `THEN` sequencing,
+`and`-chained commands, and `immediately` as a general interrupt.
 
 ### v1.0 — Rules fidelity
 
-- `IF` conditional orders (needs the queue)
+- `IF` conditional orders (the queue they needed now exists)
+- Sub-turn game time, so a wait can cost hours rather than a whole turn
 - Communication: `SAY`/`TELL`, `POST`, `ADDRESS`, `REPORT`, `QUERY`
 - Exploration and intel: `EXPLORE`, `SCAN`, `SEARCH`, `PROBE`
 - Magical items: `CONJURE`, `CREATE`, `CHARGE`/`RECHARGE`, `ABSORB`
 - Groups and group leaders: `JOIN`, `COME`, `SUPPORT`
 - Fog of war
-- Retire or justify the five non-rules verbs (`TRADE`, `SCRY`, `RESURRECT`,
-  `REPEAT`, `WAIT`)
+- Retire or justify the three remaining non-rules verbs (`TRADE`, `SCRY`,
+  `RESURRECT`)
 
 ### Also outstanding
 
-**Fog of war** remains a v1.0 feature. Per-character gold shipped with v0.8.
+**Fog of war** remains a v1.0 feature. Per-character gold shipped with v0.8, and
+the order queue with v0.9.
 
 ## Contributing
 

@@ -7,29 +7,29 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **58 of 89 (65%)** |
-| Order-language features | **2 of 9** (`HAVE` delegation, `and` target lists) |
-| Turn model | Synchronous fixed turns; the rules specify an **asynchronous order queue** |
+| Command verbs recognised | **62 of 89 (70%)** |
+| Order-language features | **3 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`) |
+| Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
 Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
 engine has a phase for it — not that every sub-rule of that command is honoured.
 
-## Commands implemented (58)
+## Commands implemented (62)
 
 ALLY, ENEMY, NEUTRAL, ASSIGN, GIVE, ATTACK, AWAIT, BLESS, BUILD, CONSTRUCT,
 MAKE, BUY, CAPTURE, COLLECT, GATHER, CURE, CURSE, DISCARD, DISMISS, FREE,
 RELEASE, FLY, FORTIFY, UNFORTIFY, GO, MOVE, TRAVEL, HEAL, MINE, NAME, PRAY,
 PROMOTE, RECRUIT, HIRE, SAIL, SECURE, SELL, STUDY, SUMMON, TAX, TEACH, TELEPORT,
 ENSLAVE, KILL, EXECUTE, INTERROGATE, COMBATANT, NONCOM, LURK, UNLURK,
-GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY
+GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY,
+HALT, STOP, WAIT FOR, WAIT UNTIL
 
-## Commands not implemented (31)
+## Commands not implemented (27)
 
 Grouped by the subsystem they belong to, which is roughly the order they should
 be tackled in:
 
-- **Order control** — HALT, STOP, WAIT FOR, WAIT UNTIL (needs v0.9 queue)
 - **Inventory** — WORK
 - **Communication** — SAY, TELL, ADDRESS, POST, REPORT, QUERY, PASSWORD
 - **Finance** — INVEST, OFFER, PURCHASE, BUY PASSAGE
@@ -39,12 +39,13 @@ be tackled in:
 - **Religion & training** — PREACH, TRAIN
 - **Naming** — UNNAME
 
-## Engine verbs that are not in the rules (5)
+## Engine verbs that are not in the rules (3)
 
-TRADE, SCRY, RESURRECT, REPEAT, WAIT. These were invented during alpha
-development. They are not wrong, but they are divergence from `rules.md` and
-should either be justified in the design notes or retired in favour of the
-rules' own equivalents (`BUY`/`SELL` for TRADE, `PROBE` for SCRY).
+TRADE, SCRY, RESURRECT. These were invented during alpha development. They are
+not wrong, but they are divergence from `rules.md` and should either be
+justified in the design notes or retired in favour of the rules' own
+equivalents (`BUY`/`SELL` for TRADE, `PROBE` for SCRY). REPEAT and WAIT were on
+this list until v0.9 aligned them with the rules' `REPEATEDLY` and `WAIT FOR`.
 
 ## Order language
 
@@ -54,11 +55,11 @@ rules' own equivalents (`BUY`/`SELL` for TRADE, `PROBE` for SCRY).
 |---|---|
 | `HAVE <character> <command>` | implemented |
 | `and` to list multiple targets | implemented |
+| `REPEATEDLY` | implemented (with an optional `N times` count) |
+| `IMMEDIATELY` | partial — modifies HALT/STOP, not a general interrupt |
+| `UNTIL` conditions | partial — `wait until turn N`, not dates or loop terminators |
 | `and` to chain commands | missing |
 | `THEN` sequencing | missing |
-| `UNTIL` conditions | missing |
-| `REPEATEDLY` | missing |
-| `IMMEDIATELY` | missing |
 | `QUIETLY` / `SILENTLY` | missing |
 | `IF` statements | missing |
 | Pronouns (him/her/them/it) | missing |
@@ -68,15 +69,20 @@ rules' own equivalents (`BUY`/`SELL` for TRADE, `PROBE` for SCRY).
 
 `rules.md` describes an **asynchronous** game: orders go on a queue and execute
 when enough game time has passed, reports arrive as things complete, and a
-player may cancel an order already in progress. The engine instead processes
-fixed turns in phases, and every order either completes or fails within the turn
-it was submitted.
+player may cancel an order already in progress.
 
-This is why `AWAIT` and `REPEAT` parse but do nothing — there is nowhere to
-queue them. `UNTIL`, `REPEATEDLY` and `IF` need the same machinery. A persistent
-order queue with per-order game-time costs is the single largest piece of work
-between here and rules fidelity, and most of the remaining order-language
-features fall out of it.
+v0.9 built that queue (`spoils_engine/order_queue.py`). Orders now live on a
+per-character queue that survives save/load, `AWAIT` and `REPEAT` hold work back
+across turns, and `HALT`/`STOP` cancel what has not started. A queued order is
+validated when it executes rather than when it was written, so it is judged
+against the world it lands in.
+
+What is left of the gap is **granularity**, not structure. The queue advances
+one pass per weekly turn, so it measures game time in turns where the rules
+measure it in hours: a one-hour wait and a one-day wait both cost a turn, and a
+loop body runs at most once per turn. Sub-turn scheduling — and with it `until
+<date>` and the rules' partial-progress rules for an interrupted BUILD — is the
+remaining work, and it is now an increment on the queue rather than a rewrite.
 
 ## Implemented end-to-end
 
@@ -106,12 +112,18 @@ and are covered by tests.
   (`engine.process_trade`, `config.RESOURCE_BASE_PRICE`)
 - **Magic** — teleport, flight, summoning and `SCRY` scouting, all drawing on
   magic power. (`engine.process_magic`, `process_summon`)
+- **Order queue** — orders sit on a per-character queue that persists across
+  turns and through save/load. `AWAIT` holds the orders behind it for a duration
+  or until a named character arrives; `REPEAT`/`repeatedly` runs its body one
+  pass per turn; `HALT` drops the backlog at once and `STOP` does so in
+  sequence. A character with nothing in front of them still resolves their whole
+  submission in the turn they gave it. (`order_queue.py`, `engine.run_turn`)
 
 ## Partial
 
-- **`AWAIT` and `REPEAT`** are parsed but rejected at validation with a warning
-  saying they are not executed yet. There is no cross-turn order queue, which
-  the rules' asynchronous design ultimately requires.
+- **Order-queue timing** is turn-granular. A wait of one hour and a wait of one
+  day both cost a turn, and a loop body runs at most once per turn, because the
+  engine has no clock finer than a weekly turn.
 - **Diplomacy** decides combat sides — an ally cannot be attacked, and a
   defender's allies present at the battle fight and share the casualties. Stance
   still does not affect movement rights or non-combat support.
@@ -126,7 +138,8 @@ and are covered by tests.
 
 - Fog of war — reports are scoped per faction, but the engine models no notion
   of what a faction can observe.
-- Per-character gold; gold is held per faction.
+- Sub-turn game time, and with it the rules' partial-progress accounting for a
+  BUILD or FORTIFY interrupted part-way through.
 - Encumbrance, item weight and the full magical-item system.
 - Religion's `PREACH` donations and the wider miracle table.
 - Named-character hiring, education and the starting-character creation phase.

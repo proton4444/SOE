@@ -28,6 +28,24 @@ CHARACTER_MOVEMENT_POINTS_PER_TURN = 10
 
 
 # ============================================================================
+# GAME TIME
+# ============================================================================
+
+# One turn is one game week. rules.md's default game-to-real-time ratio is 7,
+# and the natural healing rate already assumes a seven-day turn. Order-queue
+# waits expressed in days are converted with this.
+DAYS_PER_TURN = 7
+
+# rules.md: "1 month in Spoils of Empire is exactly 30 days."
+DAYS_PER_MONTH = 30
+
+# How long "wait for <person>" holds when the order names no deadline. The
+# rules let such a wait run indefinitely; a bound keeps a character from being
+# stranded forever by a target who never arrives.
+AWAIT_DEFAULT_DEADLINE_DAYS = 90
+
+
+# ============================================================================
 # ECONOMY
 # ============================================================================
 
