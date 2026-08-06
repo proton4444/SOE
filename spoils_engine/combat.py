@@ -81,6 +81,11 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
         if summoner and summoner.faction_id == faction_id and summoner.location_city_id == city_id:
             base_power += creature.attack_value
 
+    # Add elite troop units (they fight at their own combat level)
+    for unit in game_state.elite_units.values():
+        if unit.faction_id == faction_id and unit.location_city_id == city_id:
+            base_power += unit.attack_value
+
     # Apply skill multiplier
     # Apply equipment bonuses present on combatant characters at this location
     for char in game_state.characters.values():
@@ -288,6 +293,16 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
             # Remove empty stacks
             if stack.count <= 0:
                 del game_state.unit_stacks[stack.id]
+
+    # Apply to elite units (soldiers taking losses like any other force)
+    for unit in list(game_state.elite_units.values()):
+        if unit.faction_id == faction_id and unit.location_city_id == city_id:
+            casualties = int(unit.size * casualty_rate)
+            unit.size -= casualties
+            losses['units'] += casualties
+
+            if unit.size <= 0:
+                del game_state.elite_units[unit.id]
 
     # Apply to ships (probabilistic)
     for ship in list(game_state.ships.values()):

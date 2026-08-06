@@ -135,6 +135,10 @@ class City:
     is_magic_free: bool = False  # Magic power cannot exist here, in people or items
     fortification_level: int = 0  # 0-100 defensive bonus
     resource_richness: dict[str, float] = field(default_factory=dict)
+    # Numeric population, set by INVEST growth. None means "not measured yet":
+    # helpers fall back to the population-band midpoint, and the first weekly
+    # investment check makes it concrete.
+    population: Optional[int] = None
 
     def __hash__(self):
         return hash(self.id)
@@ -241,6 +245,9 @@ class Faction:
     enemies: set[str] = field(default_factory=set)
     email: str = ""
     password: str = ""
+    # True for a computer-controlled faction (independent characters the
+    # players can make offers to). NPC factions are never iterated as players.
+    is_npc: bool = False
 
 
 @dataclass
@@ -302,6 +309,7 @@ class Character:
     religion_skill: int = 0
     religious_power_current: int = 0  # Max = religion_skill
     trading_skill: int = 0
+    sailing_skill: int = 0  # Rules: sailing proficiency, TRAIN sailors, etc.
     health: int = 100  # 0-100, 0 = dead
     is_dead: bool = False
     resources: dict[str, int] = field(default_factory=dict)  # Resource inventory
@@ -414,6 +422,48 @@ class UnitStack:
         if self.unit_type == UnitType.SOLDIER:
             return self.count * 1  # Each soldier = 1 defense
         return 0
+
+
+@dataclass
+class EliteUnit:
+    """
+    An elite troop unit, created by the CREATE command (rules.md).
+
+    A unit is any number of soldiers under a name ("Green Berets"), fighting
+    at a combat level of its own. It trains continuously -- `partial_level`
+    grows every turn and every `ELITE_PARTIAL_PER_LEVEL` points become one
+    full level -- with no teacher and no gold cost. A unit must belong to a
+    named character's group (`leader_character_id`) and travels wherever that
+    leader goes.
+
+    Attributes:
+        id: Unique identifier
+        name: The unit's name, e.g. "gordy's killers"
+        faction_id: Owning faction
+        leader_character_id: The character whose group the unit belongs to
+        location_city_id: Where the unit currently stands (synced to the
+            leader's location each turn)
+        size: Number of soldiers in the unit
+        combat_level: The level every soldier in the unit fights at
+        partial_level: Fraction of a level earned by constant training
+    """
+    id: str
+    name: str
+    faction_id: str
+    leader_character_id: str = ""
+    location_city_id: str = ""
+    size: int = 0
+    combat_level: int = 1
+    partial_level: float = 0.0
+
+    @property
+    def attack_value(self) -> float:
+        """Soldiers fighting at the unit's level, like a named character."""
+        return self.size * (1 + self.combat_level * 0.01)
+
+    @property
+    def defense_value(self) -> float:
+        return self.size * (1 + self.combat_level * 0.01)
 
 
 @dataclass
@@ -618,6 +668,12 @@ class GameState:
     location_blessings: dict[str, int] = field(default_factory=dict)
     location_curses: dict[str, int] = field(default_factory=dict)
     order_queues: dict[str, list[QueueEntry]] = field(default_factory=dict)
+    # Gold invested in a city's growth but not yet spent. INVEST adds to it;
+    # the weekly check in engine.process_income_and_upkeep spends it on
+    # population growth.
+    invest_pools: dict[str, float] = field(default_factory=dict)
+    # Named elite troop units, created by CREATE.
+    elite_units: dict[str, EliteUnit] = field(default_factory=dict)
 
     def get_character_by_name(self, name: str, faction_id: Optional[str] = None) -> Optional[Character]:
         """

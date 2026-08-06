@@ -7,3 +7,17 @@ players:
   leader_name: Khan Tengri
   name: The Silver Horde
   start_city: albatross_city
+independent_faction_id: independent
+independent_faction_name: The Free Cities
+independent_characters:
+- name: Wizard Ojibenmi
+  gender: male
+  location: albatross_city
+  skills:
+    magic: 60
+- name: Bishop Nancy Lopenda
+  gender: female
+  title: bishop
+  location: madegi_doy
+  skills:
+    religion: 45

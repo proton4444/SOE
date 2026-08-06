@@ -11,14 +11,14 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-> **v1.0.0b — fog of war.** Characters stand *inside*, *outside*, or *near* a
-> city; end-of-turn sightings only report people your side can actually notice.
-> `LURK` finally changes those odds (×¼). `PROBE`, `SEARCH`/`EXPLORE` ship;
-> `SCAN` parses but waits on magical orbs. Groups (v1.0.0a) still travel as a
-> party and arrive at the same position band. Communication, magical items,
-> `IF`, and sub-turn time remain. See [`docs/rules_gap.md`](docs/rules_gap.md).
+> **v1.1.0 — all 89 command verbs.** The remaining eight `rules.md` commands
+> ship (`WORK`, `TRAIN`, `UNNAME`, `CREATE` elite troops, `INVEST`, `BUY
+> PASSAGE`, `PREACH`, `OFFER` with independent characters), plus `IF`
+> statements with `else`, `THEN` sequencing, and the sailing skill. Every
+> command verb in `rules.md` is now recognised. See
+> [`docs/rules_gap.md`](docs/rules_gap.md).
 
-## Features (Alpha v1.0.0b)
+## Features (Alpha v1.1.0)
 
 ### Implemented
 
@@ -73,6 +73,27 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Resource Gathering**: COLLECT/GATHER commands for wood and stone
 - **Mining**: MINE command to extract minerals (iron, gold, silver, copper, gems)
 - **Construction**: BUILD/CONSTRUCT/MAKE commands to build galleys, catapults, weapons, and armor
+- **Labour**: WORK for wages (population-scaled; nothing in tiny towns)
+- **Training**: TRAIN command to convert workers into soldiers or sailors
+- **Unnaming**: UNNAME command to convert a named character back to a worker
+- **Elite troops**: CREATE command to form named elite troop units that train
+  continuously (level rises about one point per five weeks), fight at their
+  own level, draw salary by size × level, and must belong to a group leader
+- **Investment**: INVEST command to grow a town's population (the only way
+  population rises; weekly checks spend ~population/100 gold, and a town's
+  income band can step up)
+- **Sea travel without a ship**: BUY PASSAGE on a direct sealane (costs the
+  party's size in gold, may fail for large groups, `definitely` helps)
+- **Preaching**: PREACH to collect tithes scaled by religion skill and
+  population, sometimes attracting followers
+- **Recruiting NPCs**: OFFER gold to independent characters (from
+  `players.yaml`), who accept at half their best level squared plus item
+  value; prisoners of yours always accept
+- **Conditionals**: IF ... THEN ... (OTHERWISE/ELSE) statements, scoped to
+  the end of their sentence and never nested; conditions test gold, units,
+  resources, galleys, summoned creatures, magic/religious power, and
+  encumbrance (approximated by group size)
+- **Sequencing**: THEN chains commands after a wait or in sequence
 
 ✅ **Groups & Group Leaders**
 - A character is either assigned to somebody or leads their own group
@@ -221,17 +242,18 @@ This is an alpha implementation of a turn-based engine that processes English-li
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
-- Conditional orders (`IF`) and `THEN` sequencing
 - Sub-turn game time — the queue's smallest unit is one weekly turn
 - Retreat and morale in combat
-- Encumbrance and item weight
+- Encumbrance and item weight (BUY PASSAGE and IF encumbrance checks use the
+  party's head-count as a stand-in)
 - Group-level possession of ships, resources and gold
 - Resource depletion (accumulation and its cap are in; depletion is not)
-- 9 of the 89 command verbs in `rules.md`
+- `QUIETLY`/`SILENTLY` parse, but report-line suppression is not implemented
+- `CREATE`'s elite troops cannot yet be assigned between leaders or disbanded
 
-[`docs/rules_gap.md`](docs/rules_gap.md) has the command-by-command breakdown
-and [`docs/alpha_scope.md`](docs/alpha_scope.md) records what the alpha
-deliberately left out.
+Every command verb in `rules.md` is now recognised. [`docs/rules_gap.md`](docs/rules_gap.md)
+has the command-by-command breakdown and [`docs/alpha_scope.md`](docs/alpha_scope.md)
+records what the alpha deliberately left out.
 
 ## Installation
 
@@ -399,6 +421,50 @@ Have Engineer build 2 galleys.
 Build 5 catapults.
 Have Blacksmith build 10 weapons.
 Make 20 armor.
+
+# Labour, training, unnaming
+Work for 18 hours.
+Have Mike Foster work for 10 weeks.
+Train 20 soldiers.
+Have Admiral Bill Cunningham train 40 sailors.
+Have Genghis Khan train soldiers.      # every worker in his group
+Unname Joe Flint.
+Have Mike Felton unname Charles Dickens.
+
+# Elite troops
+Create Gordy's Killers using 250 soldiers.
+Have General Wazawaza create The Wazoo Troop with 1200 soldiers.
+
+# Investing in towns
+Invest 400 gold in Ostrina'o.
+Have Bill Harrington invest all of his gold in Yodrina.
+Have Jane invest 75 percent of her gold in Kitesta.
+
+# Buying passage (sea travel without a ship)
+Buy passage to Kitesta.
+Have Jim Thomas buy passage to Amesbok.
+Have Joe Flint definitely buy passage to Kitesta.
+
+# Preaching
+Have Bishop Jake Henderson preach for 2 weeks.
+Preach for 6 days.
+
+# Recruiting independent characters (from players.yaml)
+Offer Bishop Nancy Lopenda 100 gold and have her come to Pomye.
+Offer 1500 to Wizard Ojibenmi and have him summon 3 dragons and report.
+Have Joe Bellin offer 75 percent of his gold to Engineer Tegwi Olafson.
+
+# Conditional orders (scope: the rest of the sentence; never nested)
+If Joe Flint has at least 100 gold, then take it from him and buy 10 horses;
+otherwise wait 1 day.
+Go to Kitesta and if Louise Sanders has any gold then take it from her and
+fly to Umadosh.
+Have Primate Melissa Davies repeatedly briefly report and if she has less
+than 50 religious power, then have her preach for 1 week; otherwise have her
+pray for me.
+
+# Sequencing
+Wait for 2 weeks and then go to Salem.
 
 # Groups (an order to a leader carries their whole group)
 Have Julia join Marcus.            # Julia and her people join his group
@@ -677,7 +743,7 @@ This alpha implements a **simplified subset** of the official `rules.md`:
 | Magic | TELEPORT/FLY/SUMMON | ✅ Implemented | Flat costs; no encumbrance |
 | Income | TAX | ✅ Implemented | Per-city pools collected by a TAX order |
 | Ships | BUY | ✅ Implemented | Galleys only |
-| Skills | SKILLS | ✅ Partial | Combat, magic, religion, trading |
+| Skills | SKILLS | ✅ Partial | Combat, magic, religion, trading, sailing |
 | Diplomacy | ALLY/ENEMY | ✅ Partial | Decides combat sides, not movement rights |
 | Religion | PRAY/BLESS/CURSE | ✅ Implemented | Skill-based rolls on religious power |
 | Magical items | AMULET/CRYSTAL/ORB/RING/WAND | ✅ Implemented | No weight or encumbrance |
@@ -685,7 +751,10 @@ This alpha implements a **simplified subset** of the official `rules.md`:
 | Construction | BUILD | ✅ Implemented | No partial progress if interrupted |
 | Resources | MINE/COLLECT | ✅ Implemented | Yields scale with city richness |
 | Communication | SAY/TELL/POST | ✅ Implemented | QUERY not yet more immediate than REPORT |
-| Elite troops | CREATE | ⏸️ Deferred | |
+| Elite troops | CREATE | ✅ Implemented | Train ~1 level/5 weeks, salary by size × level |
+| Conditional orders | IF | ✅ Implemented | Evaluated at turn start; never nested |
+| Sequencing | THEN | ✅ Implemented | Chains clauses in order |
+| Hiring | OFFER | ✅ Implemented | Deterministic acceptance; NPCs from players.yaml |
 
 [`docs/rules_gap.md`](docs/rules_gap.md) is the authoritative and current
 breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
@@ -701,18 +770,18 @@ breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
 
 ## Where we are
 
-**81 of 89 command verbs (91%)** from `rules.md` are recognised, and 6 of its 9
+**All 89 command verbs** from `rules.md` are now recognised, and 8 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
-full breakdown, including which commands are missing and why.
+full breakdown, including what each new command still simplifies.
 
 The rules describe an **asynchronous** game where orders queue and execute as
-game time passes. v0.9 closes most of that gap: orders live on a persistent
+game time passes. v0.9 closed most of that gap: orders live on a persistent
 per-character queue (`spoils_engine/order_queue.py`) that survives save/load and
 carries work between turns. What remains is granularity — the queue advances one
 pass per turn, so it measures time in weeks where the rules measure it in hours.
 
 Engine-internal design debt is clear as of v0.7.2. What remains is rules
-coverage, not cleanup.
+fidelity, not cleanup.
 
 ## Future Roadmap
 
@@ -779,19 +848,14 @@ given by name: `Give *Wameka* to Joe Flint`.
 
 Still ahead, in no fixed order:
 
-- `CREATE` elite troop units — continuously training named units that cannot
-  TAX, SECURE or work. (Previously listed here under magical items by mistake;
-  the rules put it with recruitment.)
-- `IF` conditional orders (the queue they needed now exists)
-- `THEN` sequencing, which would let a chain pause between its clauses — the
-  rules write `Charge Ampu to 75 power and give it to Merlinus`, which one
-  sentence can now carry (though not yet sequence on its own)
-- Encumbrance and item weight, so `FLY` and `TELEPORT` cost what is carried
-- Sub-turn game time, so a wait can cost hours rather than a whole turn
+- Sub-turn game time, so a wait can cost hours rather than a whole turn, and
+  `UNTIL <date>` and interrupted-BUILD accounting become possible
+- Encumbrance and item weight, so `FLY`/`TELEPORT`/`BUY PASSAGE` cost what is
+  carried and IF encumbrance checks become real
+- Retreat and morale in combat
 - Group-level possession of ships, resources and gold, and combat resolved
   group by group rather than by faction total
-- Retire or justify the three remaining non-rules verbs (`TRADE`, `SCRY`,
-  `RESURRECT`)
+- Retire or justify the three non-rules verbs (`TRADE`, `SCRY`, `RESURRECT`)
 
 ## Contributing
 

@@ -58,6 +58,41 @@ INCOME_PER_POPULATION_BAND = {
     PopulationBand.LARGE: 500,     # 1M+ residents
 }
 
+# Numeric population used when a city has never been measured (INVEST makes
+# the measurement concrete). Midpoints of the bands, for income purposes.
+POPULATION_BAND_MIDPOINT = {
+    PopulationBand.TINY: 5_000,
+    PopulationBand.SMALL: 55_000,
+    PopulationBand.MEDIUM: 550_000,
+    PopulationBand.LARGE: 2_000_000,
+}
+
+# Population at which a city's band (and therefore its income and recruit
+# cap) steps up. Crossed only by INVEST-driven growth.
+POPULATION_BAND_THRESHOLD = [
+    (PopulationBand.TINY, 10_000),
+    (PopulationBand.SMALL, 100_000),
+    (PopulationBand.MEDIUM, 1_000_000),
+]
+
+
+def city_population(city) -> int:
+    """The city's numeric population, from measurement or band midpoint."""
+    if city.population:
+        return city.population
+    return POPULATION_BAND_MIDPOINT.get(city.population_band, 5_000)
+
+
+def population_band_for(population: int) -> PopulationBand:
+    """The band a given numeric population belongs to."""
+    if population >= 1_000_000:
+        return PopulationBand.LARGE
+    if population >= 100_000:
+        return PopulationBand.MEDIUM
+    if population >= 10_000:
+        return PopulationBand.SMALL
+    return PopulationBand.TINY
+
 # Recruitment caps per turn by population band
 # Rules: Larger cities have more recruits available
 RECRUIT_CAP_PER_POPULATION_BAND = {
@@ -102,6 +137,113 @@ BORROW_INTEREST_RATE = 0.01  # 1% of balance per turn (game week)
 BORROW_GRACE_TURNS = 4
 BORROW_MIN_PAYMENT_FRACTION = 0.10
 BORROW_MAX_AMOUNT = 500  # Cap when amount is omitted
+
+
+# ============================================================================
+# WORK
+# ============================================================================
+
+# Daily wages for common labour, by population band. rules.md: work is easy
+# to find in heavily populated areas and may not exist at all in lightly
+# populated ones -- the TINY rate is zero, so those characters volunteer.
+WORK_WAGE_DAILY_PER_BAND = {
+    PopulationBand.TINY: 0.0,
+    PopulationBand.SMALL: 1.0,
+    PopulationBand.MEDIUM: 2.0,
+    PopulationBand.LARGE: 3.0,
+}
+
+# High-level characters try to sell their own skills rather than labour for
+# common wages; the bonus is per day per point of their best skill.
+WORK_SKILL_BONUS_PER_LEVEL_PER_DAY = 0.02
+
+
+# ============================================================================
+# TRAIN
+# ============================================================================
+
+# rules.md: a trainer needs the appropriate skill at least 10 (combat to
+# train soldiers, sailing to train sailors).
+TRAIN_MIN_TRAINER_SKILL = 10
+
+# rules.md: a level 50 trainer trains 5 workers to level 1 in a week, i.e.
+# 70 * trainees / skill days, never less than a week. The engine has no
+# sub-turn clock, so a TRAIN order converts what one week can produce and
+# leaves the rest to train another turn. TRAIN_DAYS_FOR_5_AT_50 = 7 days.
+TRAIN_WORKERS_PER_WEEK_FROM_SKILL = 50 / 7  # level-50 trainer: 5 in 7 days
+TRAIN_MIN_DAYS = 7
+
+
+# ============================================================================
+# PREACH
+# ============================================================================
+
+# Daily donations a level-100 preacher can collect, by population band. The
+# actual take scales with the preacher's religion skill and some randomness.
+PREACH_DONATION_DAILY_PER_BAND = {
+    PopulationBand.TINY: 1,
+    PopulationBand.SMALL: 3,
+    PopulationBand.MEDIUM: 8,
+    PopulationBand.LARGE: 20,
+}
+
+# Chance per week that a preacher attracts followers: the chance is
+# religion_skill/100 times this, and 1-3 workers join when it succeeds.
+PREACH_FOLLOWER_CHANCE = 0.25
+
+
+# ============================================================================
+# INVEST
+# ============================================================================
+
+# rules.md: each week the computer spends about population/100 gold from the
+# invested pool and raises the population by the same amount, with some
+# randomness. INVEST_SPEND_SCATTER is the random fraction either way.
+INVEST_SPEND_SCATTER = 0.5
+INVEST_POPULATION_GAIN_MAX = 2_000  # cap per week so a huge pool cannot explode
+
+
+# ============================================================================
+# BUY PASSAGE
+# ============================================================================
+
+# rules.md: passage costs the group's total encumbrance in gold. The engine
+# has no encumbrance, so every person (character, soldier, sailor, worker,
+# slave) counts as one gold. Rules Appendix B: horses would be 2 each.
+PASSAGE_COST_PER_PERSON = 1
+
+# Passage may fail, most likely for large groups. "definitely" keeps trying.
+PASSAGE_BASE_CHANCE = 0.95
+PASSAGE_SIZE_PENALTY_PER_100 = 0.25
+PASSAGE_DEFINITELY_BONUS = 0.25
+
+
+# ============================================================================
+# OFFER
+# ============================================================================
+
+# rules.md: an independent character accepts an offer of at least half the
+# square of his highest level, plus the value of items in his possession.
+# Item value is approximated from the item fields the engine tracks.
+OFFER_ACCEPT_FRACTION_OF_LEVEL_SQUARE = 0.5
+OFFER_ITEM_VALUE_POWER_PER_POINT = 0.5
+OFFER_ITEM_VALUE_SKILL_PER_POINT = 0.5
+OFFER_ITEM_VALUE_PROTECTION_PER_POINT = 10.0
+
+
+# ============================================================================
+# ELITE TROOPS (CREATE)
+# ============================================================================
+
+# rules.md: an elite unit's level rises about 1 partial point per week, from
+# constant training. The engine gives one partial point per turn (a turn is a
+# week); every ELITE_PARTIAL_PER_LEVEL partial points become one level.
+ELITE_PARTIAL_PER_WEEK = 1.0
+ELITE_PARTIAL_PER_LEVEL = 5
+
+# rules.md: salary is the number of soldiers times the combat level per
+# month; a weekly turn costs that times 7/30.
+ELITE_SALARY_FRACTION_OF_MONTH = 7 / 30
 
 
 def transfer_fee(principal: float) -> int:

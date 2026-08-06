@@ -21,9 +21,9 @@ from typing import Any, Optional, Union, get_args, get_origin
 
 from spoils_engine.models import (
     GameState, WorldMap, Faction, Character, UnitStack, Ship,
-    City, Road, SummonedCreature, MagicalItem
+    City, Road, SummonedCreature, MagicalItem, EliteUnit
 )
-from spoils_engine.orders import QueueEntry, order_classes
+from spoils_engine.orders import QueueEntry, order_classes, IfOrder
 
 
 # ============================================================================
@@ -127,8 +127,23 @@ def _rebuild_queue_entry(data: dict) -> Optional[QueueEntry]:
     if not order_class:
         return None
 
+    order = rebuild_dataclass(order_class, data.get("order") or {})
+
+    # An IF order carries its branch orders inside it. The generic rebuild
+    # leaves them as raw dicts; rebuild them the way the queue does.
+    if isinstance(order, IfOrder):
+        for branch in ("then_orders", "else_orders"):
+            rebuilt = []
+            for entry in getattr(order, branch) or []:
+                if not isinstance(entry, dict):
+                    continue
+                inner_class = known.get(entry.get("order_class", ""))
+                if inner_class:
+                    rebuilt.append(rebuild_dataclass(inner_class, entry.get("order") or {}))
+            setattr(order, branch, rebuilt)
+
     return QueueEntry(
-        order=rebuild_dataclass(order_class, data.get("order") or {}),
+        order=order,
         order_class=data["order_class"],
         release_turn=int(data.get("release_turn", -1)),
         repeat_remaining=int(data.get("repeat_remaining", 0)),
@@ -167,7 +182,9 @@ def decode_game_state(data: dict) -> GameState:
         ships=_rebuild_registry(data, 'ships', Ship),
         summoned_creatures=_rebuild_registry(data, 'summoned_creatures', SummonedCreature),
         magical_items=_rebuild_registry(data, 'magical_items', MagicalItem),
+        elite_units=_rebuild_registry(data, 'elite_units', EliteUnit),
         tax_pools={k: float(v) for k, v in (data.get('tax_pools') or {}).items()},
+        invest_pools={k: float(v) for k, v in (data.get('invest_pools') or {}).items()},
         location_blessings=dict(data.get('location_blessings') or {}),
         location_curses=dict(data.get('location_curses') or {}),
         posted_messages=dict(data.get('posted_messages') or {}),
@@ -236,6 +253,35 @@ def _migrate(game_state: GameState, data: dict) -> None:
 # SAVE/LOAD FUNCTIONS
 # ============================================================================
 
+def _payload_for_orders(game_state: GameState) -> dict:
+    """
+    The asdict payload, with IF branch orders made round-trippable.
+
+    An IfOrder's branches hold Order objects, and asdict flattens them to
+    bare dicts with no record of which subclass they were. This walks the
+    live queue entries in parallel and re-wraps each branch order in a
+    QueueEntry-style envelope so decode can rebuild the concrete class.
+    """
+    payload = asdict(game_state)
+    queues = payload.get("order_queues") or {}
+    for actor_id, entries in game_state.order_queues.items():
+        payload_entries = queues.get(actor_id) or []
+        for i, entry in enumerate(entries):
+            if i >= len(payload_entries) or not isinstance(entry.order, IfOrder):
+                continue
+            order_dict = payload_entries[i].get("order") or {}
+            for branch in ("then_orders", "else_orders"):
+                live = getattr(entry.order, branch)
+                if not live:
+                    continue
+                order_dict[branch] = [
+                    {"order_class": type(order).__name__,
+                     "order": asdict(order)}
+                    for order in live
+                ]
+    return payload
+
+
 def save_game_state(game_state: GameState, game_dir: Path) -> None:
     """
     Save game state to disk.
@@ -252,7 +298,7 @@ def save_game_state(game_state: GameState, game_dir: Path) -> None:
     game_dir.mkdir(parents=True, exist_ok=True)
 
     state_file = game_dir / "state.json"
-    payload = json.dumps(asdict(game_state), cls=GameStateEncoder, indent=2)
+    payload = json.dumps(_payload_for_orders(game_state), cls=GameStateEncoder, indent=2)
 
     fd, tmp_path = tempfile.mkstemp(dir=str(game_dir), prefix=".state-", suffix=".tmp")
     try:

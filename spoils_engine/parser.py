@@ -24,6 +24,8 @@ from spoils_engine.orders import (
     MessageOrder, PostOrder, ReportOrder, AddressOrder, PasswordOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     HaltOrder, StopOrder, JoinOrder, SupportOrder,
+    WorkOrder, TrainOrder, UnnameOrder, CreateOrder, InvestOrder,
+    PassageOrder, PreachOrder, OfferOrder, IfOrder,
 )
 from spoils_engine import config, items, pronouns
 from spoils_engine.fog import parse_position_prefix
@@ -170,6 +172,18 @@ def resolve_character(name_text: str, game_state: GameState,
         char = _match_without_title(name_text, game_state, player_id)
         if char:
             return ResolvedEntity(char.id, char.name)
+        # Independent characters (NPC factions) are recruitable: orders may
+        # name them -- "Offer Bishop Nancy Lopenda 100 gold and have her come
+        # to Pomye" -- so they resolve even before the player controls them.
+        # The HAVE form on an NPC only becomes the player's own when the
+        # offer is accepted (see engine.process_offer).
+        char = game_state.get_character_by_name(name_text)
+        if not char:
+            words = name_text.split()
+            if words and words[0] in TITLE_WORDS:
+                char = game_state.get_character_by_name(" ".join(words[1:]))
+        if char and _is_npc(char, game_state):
+            return ResolvedEntity(char.id, char.name)
         if not enemy_ok:
             return ResolvedEntity("", name_text, found=False)
 
@@ -179,6 +193,12 @@ def resolve_character(name_text: str, game_state: GameState,
         return ResolvedEntity(char.id, char.name)
 
     return ResolvedEntity("", name_text, found=False)
+
+
+def _is_npc(char: Character, game_state: GameState) -> bool:
+    """True when the character belongs to a computer-controlled faction."""
+    faction = game_state.factions.get(char.faction_id)
+    return bool(faction and faction.is_npc)
 
 
 # rules.md: "Titles are ignored except in the NAME and PROMOTE commands, where
@@ -1807,6 +1827,459 @@ def parse_trade_order(sentence: str, game_state: GameState, player_id: str) -> O
     return None
 
 
+# ============================================================================
+# V1.1 PARSERS: WORK, TRAIN, UNNAME, CREATE, INVEST, PASSAGE, PREACH, OFFER
+# ============================================================================
+
+def _strip_clause_adverbs(sentence: str) -> str:
+    r"""Remove the adverb words from a clause so they cannot be eaten into an
+    actor name by a `have\s+(.+?)\s+<verb>` capture ("have joe flint
+    definitely buy passage to amesbok" must name joe flint)."""
+    return re.sub(r'\b(?:definitely|quietly|silently|briefly|carefully|'
+                  r'exactly|repeatedly|then)\b', ' ', sentence)
+
+
+def parse_work_order(sentence: str, game_state: GameState, player_id: str) -> Optional[WorkOrder]:
+    """
+    Parse a WORK order: work for wages for a duration.
+
+    Examples:
+        - "Work for 18 hours"
+        - "Have Mike Foster work for 10 weeks"
+        - "Have Billy Bob work."  # one game week by default
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(WorkOrder)
+
+    if not re.search(r'\bwork\b', sentence):
+        return None
+
+    cleaned = _strip_clause_adverbs(sentence)
+    actor_match = re.search(r'have\s+(.+?)\s+work\b', cleaned)
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    duration = parse_duration_days(sentence)
+    order.duration_days = duration if duration is not None else config.DAYS_PER_TURN
+    return order
+
+
+def parse_train_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TrainOrder]:
+    """
+    Parse a TRAIN order: convert workers into soldiers or sailors.
+
+    Examples:
+        - "Train 20 soldiers"
+        - "Have Admiral Bill Cunningham train 40 sailors"
+        - "Have Genghis Khan train soldiers."  # every worker in his group
+        - "train them"  # "them" is pronoun-resolved to the workers: train
+          them *into* soldiers, per rules.md's "simply say 'train them'"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(TrainOrder)
+
+    if not re.search(r'\btrain\b', sentence):
+        return None
+
+    cleaned = _strip_clause_adverbs(sentence)
+    actor_match = re.search(r'have\s+(.+?)\s+train\b', cleaned)
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    match = re.search(r'train\s+(?:(\d+)\s+)?(soldiers?|sailors?|workers?)', sentence)
+    if match:
+        count = int(match.group(1)) if match.group(1) else 0
+        unit = match.group(2)
+        if unit.startswith('sailor'):
+            order.unit_type = 'sailor'
+        else:
+            # "train 30 workers" (what `train them` resolves to) means turn
+            # 30 workers into soldiers -- soldiers are the default target.
+            order.unit_type = 'soldier'
+        order.count = count
+    else:
+        # Bare "train": every worker in the group becomes a soldier.
+        order.unit_type = 'soldier'
+        order.count = 0
+
+    return order
+
+
+def parse_unname_order(sentence: str, game_state: GameState, player_id: str) -> Optional[UnnameOrder]:
+    """
+    Parse an UNNAME order: convert a named character back to a worker.
+
+    Examples:
+        - "Unname Joe Flint"
+        - "Have Mike Felton unname Charles Dickens"
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(UnnameOrder)
+
+    if not re.search(r'\bunname\b', sentence):
+        return None
+
+    actor_match = re.search(r'have\s+(.+?)\s+unname\b', _strip_clause_adverbs(sentence))
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    target_match = re.search(r'unname\s+(.+)$', sentence)
+    if not target_match:
+        return None
+    target_name = target_match.group(1).strip()
+
+    resolved = resolve_character(target_name, game_state, player_id)
+    if not resolved.found:
+        return parser.add_warning(order, f"Character '{target_name}' not found")
+    order.target_id = resolved.entity_id
+    return order
+
+
+def parse_create_order(sentence: str, game_state: GameState, player_id: str) -> Optional[CreateOrder]:
+    """
+    Parse a CREATE order: form an elite troop unit from soldiers.
+
+    Examples:
+        - "Create Gordy's Killers using 250 soldiers."
+        - "Have General Wazawaza create The Wazoo Troop with 1200 soldiers."
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(CreateOrder)
+
+    if not re.search(r'\bcreate\b', sentence):
+        return None
+
+    actor_match = re.search(r'have\s+(.+?)\s+create\b', _strip_clause_adverbs(sentence))
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    match = re.search(r'create\s+(.+?)\s+(?:using|with)\s+(\d+)\s+soldiers?', sentence)
+    if not match:
+        return None
+    unit_name = match.group(1).strip()
+    if len(unit_name) > 32:
+        return parser.add_warning(order, f"Elite unit name too long (max 32 characters): '{unit_name}'")
+    order.unit_name = unit_name
+    order.count = int(match.group(2))
+    return order
+
+
+def parse_invest_order(sentence: str, game_state: GameState, player_id: str) -> Optional[InvestOrder]:
+    """
+    Parse an INVEST order: invest gold in a town's growth.
+
+    Examples:
+        - "Invest 400 gold in Ostrina'o."
+        - "Have Bill Harrington invest all of his gold in Yodrina."
+        - "Have Jane invest 75 percent of her gold in Kitesta."
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(InvestOrder)
+
+    if not re.search(r'\binvest\b', sentence):
+        return None
+
+    actor_match = re.search(r'have\s+(.+?)\s+invest\b', _strip_clause_adverbs(sentence))
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    city_match = re.search(r'invest\b.*?\bin\s+(.+)$', sentence)
+    if not city_match:
+        return None
+    city_name = city_match.group(1).strip()
+    city = resolve_city(city_name, game_state)
+    if not city.found:
+        return parser.add_warning(order, f"City '{city_name}' not found")
+    order.city_id = city.entity_id
+
+    # Amount: a number, a percent of the actor's gold (stored negative), or
+    # -1 for everything the actor has.
+    percent_match = re.search(r'invest\s+(\d+)\s*(?:percent|%)\s*of\s+(?:his|her)\s+gold', sentence)
+    if percent_match:
+        order.amount = -float(percent_match.group(1))
+    elif re.search(r'invest\s+(?:all|any)\b', sentence):
+        order.amount = -1.0
+    else:
+        match = re.search(r'invest\s+(\d+(?:\.\d+)?)\s*(?:gold)?\b', sentence)
+        if not match:
+            return None
+        order.amount = float(match.group(1))
+    return order
+
+
+def parse_passage_order(sentence: str, game_state: GameState, player_id: str) -> Optional[PassageOrder]:
+    """
+    Parse a BUY PASSAGE order: travel one direct sealane hop by merchant ship.
+
+    Examples:
+        - "Buy passage to Kitesta."
+        - "Have Jim Thomas buy passage to Amesbok."
+        - "Have Joe Flint definitely buy passage to Kitesta."
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(PassageOrder)
+
+    if not re.search(r'passage\b', sentence):
+        return None
+
+    actor_match = re.search(r'have\s+(.+?)\s+(?:buy\s+)?passage\b',
+                            _strip_clause_adverbs(sentence))
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    dest_match = re.search(r'passage\s+(?:to\s+)?(.+)$', sentence)
+    if not dest_match:
+        return None
+    dest_name = dest_match.group(1).strip()
+    dest = resolve_city(dest_name, game_state)
+    if not dest.found:
+        return parser.add_warning(order, f"City '{dest_name}' not found")
+    order.destination_city_id = dest.entity_id
+    order.definitely = bool(re.search(r'\bdefinitely\b', sentence))
+    return order
+
+
+def parse_preach_order(sentence: str, game_state: GameState, player_id: str) -> Optional[PreachOrder]:
+    """
+    Parse a PREACH order: preach for tithes and donations.
+
+    Examples:
+        - "Preach for 6 days."
+        - "Have Bishop Jake Henderson preach for 2 weeks."
+        - "Have Primate Melissa Davies preach."  # one game week by default
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(PreachOrder)
+
+    if not re.search(r'\bpreach\b', sentence):
+        return None
+
+    actor_match = re.search(r'have\s+(.+?)\s+preach\b', _strip_clause_adverbs(sentence))
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    duration = parse_duration_days(sentence)
+    order.duration_days = duration if duration is not None else config.DAYS_PER_TURN
+    return order
+
+
+def parse_offer_order(sentence: str, game_state: GameState, player_id: str) -> Optional[OfferOrder]:
+    """
+    Parse an OFFER order: offer gold to recruit an independent character.
+
+    Examples:
+        - "Offer Bishop Nancy Lopenda 100 gold and have her come to Pomye."
+        - "Have Joe Bellin offer 75 percent of his gold to Engineer Tegwi Olafson."
+        - "Offer 1500 to Wizard Ojibenmi and have him summon 3 dragons."
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(OfferOrder)
+
+    if not re.search(r'\boffer\b', sentence):
+        return None
+
+    actor_match = re.search(r'have\s+(.+?)\s+offer\b', _strip_clause_adverbs(sentence))
+    if not parser.resolve_actor(order, actor_match.group(1).strip() if actor_match else None):
+        return order
+
+    # Two spellings: "Offer 1500 to Wizard Ojibenmi" and the rules' favourite
+    # "Offer Bishop Nancy Lopenda 100 gold" (name before the amount).
+    target_name = None
+    target_match = re.search(r'offer\b.*?\bto\s+(.+)$', sentence)
+    if target_match:
+        target_name = target_match.group(1).strip()
+    else:
+        named = re.search(r'offer\s+([a-z][a-z0-9\' ]*?)\s+(\d+(?:\.\d+)?)\s*(?:gold)?\b', sentence)
+        if named:
+            target_name = named.group(1).strip()
+    if not target_name:
+        return None
+    resolved = resolve_character(target_name, game_state, player_id, enemy_ok=True)
+    if not resolved.found:
+        return parser.add_warning(order, f"Character '{target_name}' not found")
+    order.target_id = resolved.entity_id
+
+    percent_match = re.search(r'offer\s+(\d+)\s*(?:percent|%)\s*of\s+(?:his|her)\s+gold', sentence)
+    if percent_match:
+        order.amount = -float(percent_match.group(1))  # negative = percent
+    elif re.search(r'offer\s+(?:all|any)\b', sentence):
+        order.amount = -1.0  # everything the actor has
+    else:
+        # The amount is the first number after "offer": "Offer 1500 to
+        # Wizard Ojibenmi" or "Offer Bishop Nancy Lopenda 100 gold".
+        after = sentence[sentence.find('offer') + len('offer'):]
+        amount_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:gold)?\b', after)
+        if amount_match:
+            order.amount = float(amount_match.group(1))
+        else:
+            return parser.add_warning(order, "Offer how much gold?")
+    return order
+
+
+def parse_if_order(sentence: str, game_state: GameState, player_id: str) -> Optional[IfOrder]:
+    """
+    Parse an IF statement: `if <condition> then <orders>` with an optional
+    `otherwise`/`else` branch. Scope is the rest of the sentence, and IF may
+    not be nested. The condition is stored unresolved (by name) and evaluated
+    when the order is reached on the queue.
+
+    The head of the sentence (commands before the `if`) is parsed by the
+    caller; only the tail from the `if` onward lands here.
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(IfOrder)
+
+    if_match = re.search(r'\bif\s+(.+?)\b(?:then|,)\s+(.+)$', sentence)
+    if not if_match:
+        return parser.add_warning(order, "If statement needs a condition and a 'then'")
+    condition_text = if_match.group(1).strip()
+    body_text = if_match.group(2).strip()
+
+    else_match = re.search(r'\b(?:otherwise|else)\b\s+(.+)$', body_text)
+    if else_match:
+        then_text = body_text[:else_match.start()].strip()
+        else_text = else_match.group(1).strip()
+    else:
+        then_text, else_text = body_text, ""
+
+    condition = parse_if_condition(condition_text, game_state, player_id)
+    if condition is None:
+        return parser.add_warning(order, f"Unrecognised condition: '{condition_text}'")
+    order.condition = condition
+    if condition.get("subject_name"):
+        subject = resolve_character(condition["subject_name"], game_state, player_id, enemy_ok=True)
+        if subject.found:
+            order.actor_id = subject.entity_id
+
+    # Branch bodies parse as ordinary clauses: "then take it from her and fly
+    # to Umadosh" is two orders. Per rules.md they do NOT inherit the head's
+    # HAVE target -- "if he has 1000 soldiers then go to Kitesta" has the
+    # player's own leader go, not the tested character.
+    order.then_orders = _parse_clause_body(
+        then_text, game_state, player_id, have_target="", prev_verb="")
+    if else_text:
+        order.else_orders = _parse_clause_body(
+            else_text, game_state, player_id, have_target="", prev_verb="")
+    if not order.then_orders and not order.else_orders:
+        return parser.add_warning(order, "If statement has no orders in its branches")
+    return order
+
+
+_CONDITION_ITEMS = (
+    "soldiers", "sailors", "workers", "slaves", "horses", "catapults",
+    "weapons", "armor", "galleys", "ships",
+    "skeletons", "zombies", "harpies", "minotaurs", "griffins", "chimeras",
+    "dragons", "demons",
+    "gold", "wood", "stone", "iron", "copper", "silver", "gems",
+    "encumbrance", "power",
+)
+
+_CONDITION_COMPARATORS = (
+    "less than", "fewer than", "more than", "at least", "at most", "exactly",
+)
+
+_IF_UNIT_TO_KEY = {
+    "soldier": "soldier", "sailor": "sailor", "worker": "worker",
+    "slave": "slave", "horse": "horse", "catapult": "catapult",
+    "weapon": "weapon", "armor": "armor", "galley": "galley",
+    "ship": "galley", "skeleton": "skeleton", "zombie": "zombie",
+    "harpy": "harpy", "minotaur": "minotaur", "griffin": "griffin",
+    "chimera": "chimera", "dragon": "dragon", "demon": "demon",
+    "gold": "gold", "wood": "wood", "stone": "stone", "iron": "iron",
+    "copper": "copper", "silver": "silver", "gem": "gems", "gems": "gems",
+    "encumbrance": "encumbrance", "power": "power",
+}
+
+
+def parse_if_condition(text: str, game_state: GameState, player_id: str) -> Optional[dict]:
+    """
+    Parse the condition of an IF statement into a structured dict.
+
+    The shape is "<who> has/have [magic|religious] <comparator> <amount>
+    <item>". With no comparator it means `exactly`; `any`/`some` means more
+    than zero. The subject is stored by name and resolved at evaluation time,
+    because the order may sit on a queue and the character's existence (e.g.
+    an NPC who joins later) may change before it runs.
+    """
+    has_match = re.search(r'^(.+?)\s+has\s+(.+)$', text)
+    if not has_match:
+        return None
+    subject_name = has_match.group(1).strip()
+    remainder = has_match.group(2).strip()
+
+    power_modifier = ""
+    for mod in ("magical", "magic", "religious", "religion"):
+        if re.search(r'\b' + mod + r'\b', remainder):
+            power_modifier = mod
+            remainder = re.sub(r'\b' + mod + r'\b', ' ', remainder)
+            break
+
+    comparator = None
+    for comp in _CONDITION_COMPARATORS:
+        if re.search(r'\b' + comp + r'\b', remainder):
+            comparator = comp
+            remainder = re.sub(r'\b' + comp + r'\b', ' ', remainder)
+            break
+
+    if re.search(r'\b(?:any|some)\b', remainder):
+        comparator = "more than"
+        remainder = re.sub(r'\b(?:any|some)\b', ' ', remainder)
+
+    amount = None
+    amount_match = re.search(r'(\d+)', remainder)
+    if amount_match:
+        amount = int(amount_match.group(1))
+
+    unit = ""
+    for item in _CONDITION_ITEMS:
+        if re.search(r'\b' + item + r'\b', remainder):
+            unit = item
+            break
+
+    if unit == "power" and not power_modifier:
+        # rules.md: no modifier means the higher of magic and religion power.
+        power_modifier = "either"
+
+    if comparator is None:
+        comparator = "exactly"
+
+    return {
+        "subject_name": subject_name,
+        "comparator": comparator,
+        "amount": amount if amount is not None else 0,
+        "unit": _IF_UNIT_TO_KEY.get(unit.rstrip('s'), unit),
+        "power_modifier": power_modifier,
+    }
+
+
+def _parse_clause_body(text: str, game_state: GameState, player_id: str,
+                       have_target: str, prev_verb: str) -> list[Order]:
+    """Parse a run of clauses (an IF branch body) into orders."""
+    orders: list[Order] = []
+    for clause in split_clauses(text, game_state, player_id):
+        clause = re.sub(r'^then\s+', '', clause.strip())
+        if not clause:
+            continue
+        if clause.startswith("have "):
+            have_target = _have_target(clause)
+        elif _leading_verb(clause):
+            if have_target:
+                clause = f"have {have_target} {clause}"
+        elif prev_verb:
+            clause = f"{prev_verb} {clause}"
+        order = _dispatch_clause(clause, game_state, player_id)
+        verb = _leading_verb(clause)
+        if verb:
+            prev_verb = verb
+        if order:
+            # The HAVE form delegates and promotes to group leader; mirror
+            # the central marking in parse_orders so branch orders promote.
+            if clause.startswith("have "):
+                order.explicit_actor = True
+            orders.append(order)
+    return orders
+
+
 # rules.md allows minutes, hours, days, weeks and months, forbids mixing units,
 # and fixes a month at exactly 30 days.
 TIME_UNIT_DAYS = {
@@ -2901,6 +3374,14 @@ ORDER_KEYWORDS = {
     'halt': ['halt', 'stop'],
     'join': ['join'],
     'support': ['support'],
+    'work': ['work'],
+    'train': ['train'],
+    'unname': ['unname'],
+    'create': ['create'],
+    'invest': ['invest'],
+    'passage': ['passage'],
+    'offer': ['offer'],
+    'preach': ['preach'],
 }
 
 
@@ -2933,9 +3414,11 @@ def strip_repeatedly(sentence: str) -> tuple[str, Optional[int]]:
 # Adverbs that may sit between `and` and the verb of the next chained command:
 # "Buy 10 horses and briefly query Joe Flint" (rules.md) or "and have him and
 # Joe Bunnions ... immediately charge it". They belong to the clause that
-# follows them, and are skipped when reading the head of a clause.
+# follows them, and are skipped when reading the head of a clause. `then` is
+# included so "wait for 2 weeks and then go to Salem" chains like any other
+# command (see rules.md's THEN sequencing).
 _CLAUSE_ADVERBS = ("immediately", "silently", "quietly", "definitely",
-                   "briefly", "exactly", "carefully", "repeatedly")
+                   "briefly", "exactly", "carefully", "repeatedly", "then")
 
 # Every word that can start a command, for recognising where a clause begins.
 _COMMAND_VERBS = frozenset(
@@ -3406,6 +3889,48 @@ def _dispatch_clause(sentence: str, game_state: GameState,
         if order:
             return order
 
+    # "Buy passage to Kitesta": the buy branch above already tried and failed
+    # (a passage order names no galley), so the passage branch can be last.
+    if any(kw in sentence for kw in ORDER_KEYWORDS['passage']):
+        order = parse_passage_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['work']):
+        order = parse_work_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['train']):
+        order = parse_train_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['unname']):
+        order = parse_unname_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['create']):
+        order = parse_create_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['invest']):
+        order = parse_invest_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['offer']):
+        order = parse_offer_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['preach']):
+        order = parse_preach_order(sentence, game_state, player_id)
+        if order:
+            return order
+
     return None
 
 
@@ -3449,10 +3974,16 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         # splitting, so no verb parser below has to know pronouns exist.
         sentence = pronouns.resolve(sentence, referents, game_state, player_id)
 
+        # IF statements govern the rest of their sentence, so the head (which
+        # parses as ordinary chained commands) is split off before the `if`.
+        if_match = re.search(r'(?:^|\s+)if\s+', sentence)
+        head = sentence[:if_match.start()].strip() if if_match else sentence
+        if_tail = sentence[if_match.start():].strip() if if_match else ""
+
         # `and` joins whole commands as well as items, so one sentence can
         # carry several orders: "Assign 20 soldiers and 23 horses to Bill
         # Jenkins, and have him go to Riverton and attack Mike May" is three.
-        clauses = split_clauses(sentence, game_state, player_id)
+        clauses = split_clauses(head, game_state, player_id)
 
         # The HAVE form hands its command to a named character, and the
         # character stays the actor of the chained commands that follow it:
@@ -3465,6 +3996,11 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
             clause = clause.strip()
             if not clause:
                 continue
+
+            # `then` sequencing ("wait for 2 weeks and then go to Salem") is
+            # a clause boundary; the queue behind a wait already holds the
+            # rest, so the marker itself can go.
+            clause = re.sub(r'^then\s+', '', clause)
 
             if clause.startswith("have "):
                 have_target = _have_target(clause)
@@ -3515,6 +4051,11 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
                 generic_order.warnings.append(
                     f"Could not parse order: '{clause}'")
                 orders.append(generic_order)
+
+        if if_tail:
+            if_order = parse_if_order(if_tail, game_state, player_id)
+            if if_order:
+                orders.append(if_order)
 
     # Put the players' own words back where the placeholders stand.
     for order in orders:

@@ -31,6 +31,10 @@ class Order(ABC):
     original_text: str = ""
     warnings: list[str] = field(default_factory=list)
     explicit_actor: bool = False
+    # True when the order was written with `quietly`/`silently`, meaning the
+    # rules want its results suppressed on the status report. Parsed and
+    # recorded; report suppression is not implemented yet.
+    silent: bool = False
 
     @abstractmethod
     def order_type(self) -> str:
@@ -1126,6 +1130,169 @@ class MineOrder(Order):
 
 
 # ============================================================================
+# V1.1 ORDERS: WORK, TRAIN, UNNAME, CREATE, INVEST, PASSAGE, PREACH, OFFER, IF
+# ============================================================================
+
+@dataclass
+class WorkOrder(Order):
+    """Work for wages. The actor and their group do common labour for the
+    location's daily rate; high-skill characters also sell their skills.
+
+    Attributes:
+        actor_id: Character doing the work
+        duration_days: How long to work (default 7)
+    """
+    actor_id: str = ""
+    duration_days: int = 7
+
+    def order_type(self) -> str:
+        return "WORK"
+
+
+@dataclass
+class TrainOrder(Order):
+    """Train workers into soldiers or sailors. The trainer needs combat or
+    sailing skill (respectively) of at least 10.
+
+    Attributes:
+        actor_id: The trainer
+        unit_type: What to train ("soldier" or "sailor")
+        count: How many workers to convert; 0 means every worker in the group
+    """
+    actor_id: str = ""
+    unit_type: str = "soldier"
+    count: int = 0
+
+    def order_type(self) -> str:
+        return "TRAIN"
+
+
+@dataclass
+class UnnameOrder(Order):
+    """Convert a named character back to a common worker. The character must
+    be part of a group and have nothing of their own; the resulting worker is
+    assigned to the group leader.
+
+    Attributes:
+        actor_id: The character giving the order (the group leader)
+        target_id: The character to unname
+    """
+    actor_id: str = ""
+    target_id: str = ""
+
+    def order_type(self) -> str:
+        return "UNNAME"
+
+
+@dataclass
+class CreateOrder(Order):
+    """Create an elite troop unit from soldiers of the actor's group.
+
+    Attributes:
+        actor_id: The character forming the unit (its group leader)
+        unit_name: The unit's name, e.g. "gordy's killers"
+        count: Number of soldiers to fold into the unit
+    """
+    actor_id: str = ""
+    unit_name: str = ""
+    count: int = 0
+
+    def order_type(self) -> str:
+        return "CREATE"
+
+
+@dataclass
+class InvestOrder(Order):
+    """Invest gold in a town's growth. The investor need not be present.
+
+    Attributes:
+        actor_id: The character spending the gold
+        city_id: The town to invest in
+        amount: Gold to invest; -1 means everything the actor has
+    """
+    actor_id: str = ""
+    city_id: str = ""
+    amount: float = 0.0
+
+    def order_type(self) -> str:
+        return "INVEST"
+
+
+@dataclass
+class PassageOrder(Order):
+    """Buy passage on a merchant ship: travel one direct sealane hop without
+    owning a galley.
+
+    Attributes:
+        actor_id: The traveller (their group comes along)
+        destination_city_id: One-hop destination connected by a sealane
+        definitely: The `definitely` adverb, which improves the odds
+    """
+    actor_id: str = ""
+    destination_city_id: str = ""
+    definitely: bool = False
+
+    def order_type(self) -> str:
+        return "PASSAGE"
+
+
+@dataclass
+class PreachOrder(Order):
+    """Preach and collect tithes. Donations scale with religion skill and
+    location population; followers sometimes join.
+
+    Attributes:
+        actor_id: The preacher
+        duration_days: How long to preach (default 7)
+    """
+    actor_id: str = ""
+    duration_days: int = 7
+
+    def order_type(self) -> str:
+        return "PREACH"
+
+
+@dataclass
+class OfferOrder(Order):
+    """Offer gold to an independent character (or one of your prisoners) to
+    join your faction.
+
+    Attributes:
+        actor_id: The character making the offer
+        target_id: The offeree
+        amount: Gold offered; -1 means everything the actor has
+    """
+    actor_id: str = ""
+    target_id: str = ""
+    amount: float = 0.0
+
+    def order_type(self) -> str:
+        return "OFFER"
+
+
+@dataclass
+class IfOrder(Order):
+    """A conditional statement: `if <condition> then <orders>` with an
+    optional `otherwise`/`else` branch. The condition is evaluated when the
+    order is reached on the queue, and only the chosen branch runs.
+
+    Attributes:
+        actor_id: The character the condition is tested about (for the
+            report); branch orders carry their own actors
+        condition: The parsed condition being tested
+        then_orders: Orders to run when the condition holds
+        else_orders: Orders to run otherwise
+    """
+    actor_id: str = ""
+    condition: dict = None
+    then_orders: list = field(default_factory=list)
+    else_orders: list = field(default_factory=list)
+
+    def order_type(self) -> str:
+        return "IF"
+
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -1174,6 +1341,15 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "CONSTRUCT": BuildOrder,  # CONSTRUCT is synonym for BUILD
         "MAKE": BuildOrder,  # MAKE is synonym for BUILD
         "MINE": MineOrder,
+        "WORK": WorkOrder,
+        "TRAIN": TrainOrder,
+        "UNNAME": UnnameOrder,
+        "CREATE": CreateOrder,
+        "INVEST": InvestOrder,
+        "PASSAGE": PassageOrder,
+        "PREACH": PreachOrder,
+        "OFFER": OfferOrder,
+        "IF": IfOrder,
         "FORTIFY": FortifyOrder,
         "UNFORTIFY": UnfortifyOrder,
         "PRAY": PrayOrder,

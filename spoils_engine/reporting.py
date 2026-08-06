@@ -174,6 +174,26 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
 
         report_lines.append("")
 
+        # Elite troop units
+        report_lines.append("=" * 70)
+        report_lines.append("YOUR ELITE TROOPS")
+        report_lines.append("=" * 70)
+
+        faction_elites = [u for u in game_state.elite_units.values() if u.faction_id == faction_id]
+
+        if not faction_elites:
+            report_lines.append("No elite troops.")
+        else:
+            for unit in faction_elites:
+                city = game_state.world_map.cities.get(unit.location_city_id)
+                city_name = city.name if city else "Unknown"
+                leader = game_state.characters.get(unit.leader_character_id)
+                leader_s = f", leader: {leader.name}" if leader else ""
+                report_lines.append(f"\n{unit.name} (level {unit.combat_level}, {unit.size} soldiers){leader_s}")
+                report_lines.append(f"  Location: {city_name}")
+
+        report_lines.append("")
+
         # Turn Events
         report_lines.append("=" * 70)
         report_lines.append("TURN EVENTS")

@@ -96,6 +96,42 @@ def init_game(
             game_state.characters[char_id] = leader
 
             typer.echo(f"  Created faction: {player_name} ({player_id})")
+
+        # Independent characters: one computer-controlled faction holding
+        # everyone the players can make OFFERs to.
+        independents = players_data.get('independent_characters', [])
+        if independents:
+            npc_faction_id = players_data.get('independent_faction_id', 'independent')
+            npc_faction = models.Faction(
+                id=npc_faction_id,
+                name=players_data.get('independent_faction_name', 'The Independents'),
+                is_npc=True,
+            )
+            game_state.factions[npc_faction_id] = npc_faction
+
+            for j, npc_data in enumerate(independents):
+                npc_name = npc_data['name']
+                npc_city_id = npc_data.get('location') or list(world_map.cities.keys())[0]
+                npc_id = npc_data.get('id', f"char_{npc_faction_id}_{j+1}")
+                skills = npc_data.get('skills', {})
+                npc = models.Character(
+                    id=npc_id,
+                    name=npc_name,
+                    faction_id=npc_faction_id,
+                    location_city_id=npc_city_id,
+                    is_leader=npc_data.get('is_leader', False),
+                    gender=npc_data.get('gender', 'male'),
+                    title=npc_data.get('title', ''),
+                    combat_skill=int(skills.get('combat', 0)),
+                    magic_skill=int(skills.get('magic', 0)),
+                    religion_skill=int(skills.get('religion', 0)),
+                    trading_skill=int(skills.get('trading', 0)),
+                    sailing_skill=int(skills.get('sailing', 0)),
+                    magic_power_current=int(skills.get('magic', 0)),
+                    religious_power_current=int(skills.get('religion', 0)),
+                )
+                game_state.characters[npc_id] = npc
+            typer.echo(f"  Created {len(independents)} independent character(s) ({npc_faction_id})")
     else:
         typer.echo("No players file specified. Creating example factions...")
 
@@ -291,6 +327,24 @@ def example_setup():
                     'name': 'The Silver Horde',
                     'leader_name': 'Khan Tengri',
                     'start_city': 'albatross_city'
+                }
+            ],
+            # Independent characters the players can recruit with OFFER.
+            'independent_faction_id': 'independent',
+            'independent_faction_name': 'The Free Cities',
+            'independent_characters': [
+                {
+                    'name': 'Wizard Ojibenmi',
+                    'gender': 'male',
+                    'location': 'albatross_city',
+                    'skills': {'magic': 60}
+                },
+                {
+                    'name': 'Bishop Nancy Lopenda',
+                    'gender': 'female',
+                    'title': 'bishop',
+                    'location': 'madegi_doy',
+                    'skills': {'religion': 45}
                 }
             ]
         }

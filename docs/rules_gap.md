@@ -7,39 +7,20 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **81 of 89 (91%)** |
-| Order-language features | **6 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns, `and`-chained commands) |
+| Command verbs recognised | **89 of 89 (100%)** — as of v1.1.0 every verb in `rules.md` is recognised |
+| Order-language features | **8 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns, `and`-chained commands, `IF`, `THEN`) — `QUIETLY`/`SILENTLY` parse but do not yet suppress report lines |
 | Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
 Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
 engine has a phase for it — not that every sub-rule of that command is honoured.
 
-## Commands implemented (80)
+## Commands implemented (89)
 
-ALLY, ENEMY, NEUTRAL, ASSIGN, GIVE, ATTACK, AWAIT, BLESS, BUILD, CONSTRUCT,
-MAKE, BUY, CAPTURE, COLLECT, GATHER, CURE, CURSE, DISCARD, DISMISS, FREE,
-RELEASE, FLY, FORTIFY, UNFORTIFY, GO, MOVE, TRAVEL, HEAL, MINE, NAME, PRAY,
-PROMOTE, RECRUIT, HIRE, SAIL, SECURE, SELL, STUDY, SUMMON, TAX, TEACH, TELEPORT,
-ENSLAVE, KILL, EXECUTE, INTERROGATE, COMBATANT, NONCOM, LURK, UNLURK,
-GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY,
-HALT, STOP, WAIT FOR, WAIT UNTIL, JOIN, COME, SUPPORT,
-PROBE, SEARCH, EXPLORE, SCAN,
-CONJURE, CHARGE, RECHARGE, ABSORB,
-SAY, TELL, POST, REPORT, QUERY, ADDRESS, PASSWORD
-
-## Commands not implemented (9)
-
-Grouped by the subsystem they belong to, which is roughly the order they should
-be tackled in:
-
-- **Inventory** — WORK
-- **Finance** — INVEST, OFFER, BUY PASSAGE
-- **Elite troops** — CREATE. This was previously filed under magical items by
-  mistake: `rules.md` defines CREATE as forming a named elite troop unit that
-  trains continuously, which belongs with recruitment, not with the enchantress.
-- **Religion & training** — PREACH, TRAIN
-- **Naming** — UNNAME
+ALL commands from `rules.md` are recognised. The v1.1 closure added the last
+eight: WORK, TRAIN, UNNAME, CREATE, INVEST, BUY PASSAGE, PREACH and OFFER.
+See the "Implemented end-to-end" and "Partial" sections below for what each
+still simplifies.
 
 ## Engine verbs that are not in the rules (3)
 
@@ -62,9 +43,9 @@ this list until v0.9 aligned them with the rules' `REPEATEDLY` and `WAIT FOR`.
 | `IMMEDIATELY` | partial — modifies HALT/STOP, not a general interrupt |
 | `UNTIL` conditions | partial — `wait until turn N`, not dates or loop terminators |
 | `and` to chain commands | implemented — one sentence carries several orders; see `parser.split_clauses` |
-| `THEN` sequencing | missing |
-| `QUIETLY` / `SILENTLY` | missing |
-| `IF` statements | missing |
+| `THEN` sequencing | implemented — a clause separator (`wait for 2 weeks and then go to Salem`); a pause across turns still comes from the queue behind a WAIT |
+| `QUIETLY` / `SILENTLY` | partial — both parse as clause adverbs, but report-line suppression is not implemented (the `silent` flag is recorded on the order and unused) |
+| `IF` statements | implemented — condition evaluated when the order is reached on the queue; `else`/`otherwise` supported; scope is the rest of the sentence; never nested. Conditions: gold, recruitable ranks, resources, galleys, summoned creatures, magic/religious power, encumbrance (by group size). Evaluated at turn start, so conditions reflect the state the character begins the turn with rather than after this turn's own preceding orders (see Partial). |
 | Pronouns (him/her/them/it) | implemented (resolved before verb dispatch; see `pronouns.py`) |
 
 ## The structural gap
@@ -91,6 +72,62 @@ remaining work, and it is now an increment on the queue rather than a rewrite.
 These exist in the parser, the engine and (where relevant) combat resolution,
 and are covered by tests.
 
+- **WORK** — the actor and their group labour for wages that scale with the
+  location's population band; TINY towns pay nothing (voluntary community
+  service) and high-skill characters sell their skills for a bonus where
+  there is work to sell it into. (`engine.process_work`, `config.WORK_*`)
+- **TRAIN** — workers become soldiers (combat skill ≥ 10) or sailors (sailing
+  skill ≥ 10). rules.md sizes the work by skill — 70 × trainees / skill days —
+  so a weekly turn converts what the skill supports and the rest stays in the
+  pool. `sailing_skill` was added to characters and wired into STUDY/TEACH.
+  (`engine.process_train`, `config.TRAIN_*`)
+- **UNNAME** — a named character with nothing of their own becomes one worker
+  in their group leader's group; the lead character cannot be unnamed (the
+  engine declines to implement the rules' quit-the-game mechanic).
+  (`engine.process_unname`)
+- **CREATE (elite troops)** — named units formed from a group's soldiers
+  (`EliteUnit` in `models`), starting at combat level 1. They train
+  continuously (one partial point per week; five partial points = one level),
+  fight at their own level (`combat.calculate_faction_power`), take
+  casualties like any force, draw salary of size × level per month prorated
+  to a week (`process_income_and_upkeep`), travel with their group leader
+  (`sync_elite_locations`), and cannot TAX/SECURE/BUILD/MINE/WORK/GATHER or
+  row because they are not characters and never receive orders. The status
+  report shows them (`reporting`).
+- **INVEST** — gold goes into a per-city pool (`GameState.invest_pools`);
+  each week the check (`engine.process_invest_weekly`) spends about
+  population/100 gold and raises the population by the same amount (with
+  scatter, capped per week). Cities get a numeric `population` (band midpoint
+  until first measured) and step up their income band when growth crosses a
+  threshold. Ruins cannot be invested in; the investor need not be present.
+- **BUY PASSAGE** — travel one direct sealane hop without owning a ship, at a
+  fare equal to the party's size in gold (encumbrance is unmodelled; horses
+  do not exist). Passage may fail — the bigger the group the worse the odds —
+  and `definitely` helps. A failure refunds the fare. (`engine.process_passage`)
+- **PREACH** — donations scale with religion skill, location population and a
+  random day-to-day factor; followers (1-3 workers) sometimes join.
+  (`engine.process_preach`, `config.PREACH_*`)
+- **OFFER** — independent characters (from `players.yaml` under
+  `independent_characters`, or any `is_npc` faction) accept an offer of at
+  least half the square of their highest skill plus item value; characters
+  under another player's control always decline; one's own prisoners always
+  accept (released and recruited). An accepted offeree brings their whole
+  group, units, ships and elite units with them (`_transfer_ownership`).
+  Orders chained after the offer ("Offer ... and have her come to Pomye") run
+  if it is accepted and fail with a warning if it is refused.
+  (`engine.process_offer`, `cli.init_game`)
+- **IF statements** — `if <condition> then <orders>` with `else`/`otherwise`;
+  scope is the rest of the sentence; no nesting. The condition is stored by
+  name and evaluated when the order is reached on the queue, then only the
+  chosen branch's orders run (`engine.process_if_orders`). Conditions cover
+  gold, soldiers/sailors/workers/slaves, resources, catapults/weapons/armor,
+  galleys, summoned creatures, magic/religious power (with `magic`/`religion`
+  modifiers, or the higher of the two), and encumbrance (approximated by
+  group head-count). Pronoun resolution already handled "take it" style
+  amounts before IF parsing.
+- **THEN sequencing** — `then` chains clauses like `and` ("wait for 2 weeks
+  and then go to Salem" is a WAIT then a GO; the queue already holds orders
+  behind a wait).
 - **Fortifications & location defense** — `FORTIFY`/`UNFORTIFY` spend stone to
   raise or tear down city defenses; the holding faction gains a combat
   multiplier. The level belongs to the city, so it stays with the walls when the
@@ -203,7 +240,28 @@ and are covered by tests.
 
 - **Order-queue timing** is turn-granular. A wait of one hour and a wait of one
   day both cost a turn, and a loop body runs at most once per turn, because the
-  engine has no clock finer than a weekly turn.
+  engine has no clock finer than a weekly turn. An IF condition is evaluated at
+  the start of the turn it is reached, against the world as the character
+  begins it — not after this same turn's preceding orders have run, which the
+  rules' asynchronous engine would provide.
+- **TRAIN** converts what one week can produce rather than holding the order
+  across several turns; the rules' training spans days, which the queue could
+  model once sub-turn time exists.
+- **BUY PASSAGE** prices a party by head-count instead of encumbrance, and the
+  rules' `via` multi-stop form (`Travel to Im Prok via Amesbok`) is not
+  parsed — each hop must be ordered separately, as the rules allow.
+- **OFFER** acceptance is deterministic (no hidden variation between NPCs),
+  and the rules' flavour — independents who will never accept, or players'
+  characters who might jump ship when unpaid — is not modelled. An NPC is
+  resolved for orders (including "have <npc> come to ...") from the turn they
+  are offered to.
+- **CREATE** elite units can neither be handed to another group leader nor
+  disbanded once formed; they follow their creator's group for life.
+- **INVEST** uses the band-midpoint population until a city is first
+  measured, so a TINY town's weekly spend is approximated; the population
+  growth cap keeps a huge pool from exploding a town in one turn.
+- **PREACH** attracts only workers; the rules' rare skilled converts and the
+  wider miracle table are absent.
 - **Diplomacy** decides combat sides — an ally cannot be attacked, and a
   defender's allies present at the battle fight and share the casualties. Stance
   still does not affect movement rights or non-combat support.
@@ -246,13 +304,20 @@ and are covered by tests.
 ## Not implemented
 
 - Sub-turn game time, and with it the rules' partial-progress accounting for a
-  BUILD or FORTIFY interrupted part-way through.
-- Encumbrance and item weight. Magical items ship as of v1.0, but nothing in
-  the engine weighs anything, so `FLY` and `TELEPORT` still charge a flat cost
-  where the rules charge by what is being carried.
-- Elite troop units (`CREATE`), which train continuously and cannot TAX,
-  SECURE, BUILD or work.
-- Religion's `PREACH` donations and the wider miracle table.
+  BUILD or FORTIFY interrupted part-way through, `until <date>` and
+  hour-level waits.
+- Encumbrance and item weight. Nothing in the engine weighs anything, so
+  `FLY`/`TELEPORT` still charge a flat cost and `BUY PASSAGE` fares and IF
+  encumbrance checks use head-count.
+- `QUIETLY`/`SILENTLY` report suppression (the adverbs parse; the `silent`
+  flag on orders is recorded and unused).
+- Retreat and morale in combat.
+- Elite troops' restrictions are enforced structurally (they cannot take
+  orders), but they cannot be reassigned between leaders or disbanded.
+- Group-level possession of ships, resources and gold; combat still totals a
+  faction's strength at a location rather than resolving group by group.
+- Resource depletion (accumulation and its cap are in; depletion is not).
+- Religion's `PREACH` follower variety and the wider miracle table.
 - Named-character hiring, education and the starting-character creation phase.
 
 See [`audit_2025-11.md`](audit_2025-11.md) for the defects fixed in v0.7.1 and

@@ -7,14 +7,15 @@ All randomness is controlled by a seeded RNG for reproducibility.
 
 import math
 import random
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
 import heapq
 
 from spoils_engine.models import (
-    GameState, Character, UnitStack, Ship, SummonedCreature,
+    GameState, Character, UnitStack, Ship, SummonedCreature, EliteUnit,
     UnitType, ShipType, RoadQuality, CreatureType, LocationPosition, ItemType,
+    PopulationBand,
     available_gold, debit_gold, credit_gold,
 )
 from spoils_engine.orders import (
@@ -28,10 +29,12 @@ from spoils_engine.orders import (
     MessageOrder, PostOrder, ReportOrder, AddressOrder, PasswordOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     JoinOrder, SupportOrder, actor_field, actor_id_of,
+    WorkOrder, TrainOrder, UnnameOrder, CreateOrder, InvestOrder,
+    PassageOrder, PreachOrder, OfferOrder, IfOrder,
 )
 from spoils_engine import config, fog, groups, items, order_queue
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
-from spoils_engine.parser import get_player_leader
+from spoils_engine.parser import get_player_leader, resolve_character
 
 
 # ============================================================================
@@ -92,12 +95,16 @@ def allocate_id(registry: Dict[str, object], prefix: str) -> str:
 
 
 def actor_can_act(order: Order, player_id: str, game_state: GameState,
-                  actor_attr: str = "actor_id") -> bool:
+                  actor_attr: str = "actor_id",
+                  offered_ids: set = None) -> bool:
     """
     Check the preconditions every acting character must satisfy.
 
     The actor must exist, belong to the issuing player, be alive, and not be
     held prisoner. Appends a warning to the order and returns False on failure.
+
+    `offered_ids` lists characters named in the same submission's OFFER
+    orders: they are exempt from the ownership check (see validate_orders).
     """
     actor_id = getattr(order, actor_attr, "")
     if not actor_id:
@@ -109,7 +116,7 @@ def actor_can_act(order: Order, player_id: str, game_state: GameState,
         order.warnings.append(f"Character {actor_id} not found")
         return False
 
-    if actor.faction_id != player_id:
+    if actor.faction_id != player_id and actor_id not in (offered_ids or set()):
         order.warnings.append("Character does not belong to you")
         return False
 
@@ -214,13 +221,27 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
     submission, so an order that waited three turns is judged against the world
     it actually executes in.
     """
+    # Characters named in this turn's OFFER orders may not belong to the
+    # player yet: the rules let you order them on the assumption the offer is
+    # accepted. Validation lets those orders through; process_offer fails them
+    # if the character actually refuses.
+    offered_ids = {
+        o.target_id for orders in orders_by_player.values() for o in orders
+        if isinstance(o, OfferOrder)
+    }
+
     for player_id, orders in orders_by_player.items():
         for order in orders:
+            # An IF statement tests a condition about (possibly) another
+            # player's character; the condition evaluation owns that check.
+            if isinstance(order, IfOrder):
+                continue
             # Universal actor preconditions. A few order types name their
             # actor with a role-specific field instead of `actor_id`.
             actor_attr = actor_field(order)
             if hasattr(order, actor_attr):
-                if not actor_can_act(order, player_id, game_state, actor_attr):
+                if not actor_can_act(order, player_id, game_state, actor_attr,
+                                     offered_ids):
                     continue
 
             actor = game_state.characters.get(getattr(order, actor_attr, ""))
@@ -1141,7 +1162,801 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
 # PHASE 6: INCOME & UPKEEP
 # ============================================================================
 
-def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
+def process_work(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """
+    Process WORK orders: the actor and their group labour for common wages.
+
+    The daily rate comes from the location's population band (rules.md: work
+    is scarce in lightly populated areas -- TINY towns pay nothing and the
+    characters do voluntary community service). High-skill characters sell
+    their own skills for a little more.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, WorkOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            daily = config.WORK_WAGE_DAILY_PER_BAND.get(city.population_band, 0.0)
+            workers = groups.group_soldier_count(actor, game_state, UnitType.WORKER)
+            wage = daily * order.duration_days * (workers + 1)
+
+            # rules.md: high-level characters sell their own skills -- but
+            # only where there is work to sell it into.
+            if daily > 0:
+                best_skill = max(actor.combat_skill, actor.magic_skill,
+                                 actor.religion_skill, actor.trading_skill,
+                                 actor.sailing_skill)
+                wage += (best_skill * config.WORK_SKILL_BONUS_PER_LEVEL_PER_DAY
+                         * order.duration_days)
+            wage = round(wage, 1)
+
+            if wage > 0:
+                credit_gold(actor, wage)
+                turn_log.add("work", player_id, "work",
+                            f"{actor.name} worked {order.duration_days} days in "
+                            f"{city.name} and earned {wage}g",
+                            location=city.id, character_id=actor.id)
+            else:
+                turn_log.add("work", player_id, "work_volunteered",
+                            f"{actor.name} found no work in {city.name} and "
+                            f"did voluntary community service instead",
+                            location=city.id, character_id=actor.id)
+
+
+def process_train(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """
+    Process TRAIN orders: convert workers into soldiers or sailors.
+
+    The trainer needs combat skill (soldiers) or sailing skill (sailors) of
+    at least 10. rules.md sizes the work by skill -- a level-50 trainer
+    converts 5 workers a week -- so one weekly turn converts what the skill
+    supports and the rest stays in the pool for another week. This is the
+    engine's turn-granular version of the rules' hours-long training time.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, TrainOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            if order.unit_type == "sailor":
+                skill = actor.sailing_skill
+                skill_name = "sailing"
+            else:
+                skill = actor.combat_skill
+                skill_name = "combat"
+
+            if skill < config.TRAIN_MIN_TRAINER_SKILL:
+                turn_log.add("train", player_id, "train_failed",
+                            f"{actor.name}: needs {skill_name} skill of at least "
+                            f"{config.TRAIN_MIN_TRAINER_SKILL} to train "
+                            f"{order.unit_type}s (has {skill})",
+                            character_id=actor.id, success=False)
+                continue
+
+            available = groups.group_soldier_count(actor, game_state, UnitType.WORKER)
+            if available <= 0:
+                turn_log.add("train", player_id, "train_failed",
+                            f"{actor.name}: no workers in the group to train",
+                            character_id=actor.id, success=False)
+                continue
+
+            if order.count > 0:
+                trainees = min(order.count, available)
+            else:
+                trainees = available
+            trainees = min(trainees, max(1, int(skill * config.TRAIN_WORKERS_PER_WEEK_FROM_SKILL)))
+
+            removed = _remove_group_workers(actor, game_state, trainees)
+            if removed <= 0:
+                turn_log.add("train", player_id, "train_failed",
+                            f"{actor.name}: no workers available to train",
+                            character_id=actor.id, success=False)
+                continue
+
+            new_type = UnitType.SOLDIER if order.unit_type == "soldier" else UnitType.SAILOR
+            _add_group_units(actor, game_state, new_type, removed)
+            turn_log.add("train", player_id, "train",
+                        f"{actor.name} trained {removed} worker(s) into "
+                        f"{order.unit_type}s in one week",
+                        location=actor.location_city_id, character_id=actor.id)
+
+
+def _group_worker_stacks(actor: Character, game_state: GameState) -> List[UnitStack]:
+    """Worker stacks the actor's group can draw on: group-owned stacks, then
+    unowned faction stacks at the actor's location."""
+    member_ids = {m.id for m in [actor] + groups.group_members(actor.id, game_state)}
+    owned = [s for s in game_state.unit_stacks.values()
+             if s.unit_type == UnitType.WORKER and s.owner_character_id in member_ids]
+    if owned:
+        return owned
+    return [s for s in game_state.unit_stacks.values()
+            if s.unit_type == UnitType.WORKER and not s.owner_character_id
+            and s.faction_id == actor.faction_id
+            and s.location_city_id == actor.location_city_id]
+
+
+def _remove_group_workers(actor: Character, game_state: GameState, count: int) -> int:
+    """Remove up to `count` workers from the actor's group; returns how many
+    were actually removed."""
+    removed = 0
+    for stack in _group_worker_stacks(actor, game_state):
+        if removed >= count:
+            break
+        take = min(stack.count, count - removed)
+        stack.count -= take
+        removed += take
+        if stack.count <= 0:
+            del game_state.unit_stacks[stack.id]
+    return removed
+
+
+def _add_group_units(actor: Character, game_state: GameState, unit_type: UnitType, count: int) -> None:
+    """Add trained/created units to the actor's group, merging into an
+    existing stack they own at the same location."""
+    if count <= 0:
+        return
+    for stack in game_state.unit_stacks.values():
+        if (stack.owner_character_id == actor.id and stack.unit_type == unit_type
+                and stack.location_city_id == actor.location_city_id):
+            stack.count += count
+            return
+    stack_id = allocate_id(game_state.unit_stacks, "stack")
+    game_state.unit_stacks[stack_id] = UnitStack(
+        id=stack_id, faction_id=actor.faction_id,
+        location_city_id=actor.location_city_id, unit_type=unit_type, count=count,
+        owner_character_id=actor.id,
+    )
+
+
+def process_unname(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """
+    Process UNNAME orders: convert a named character back to a common worker.
+
+    Per rules.md the character must be part of a group and have nothing of
+    their own; the resulting worker goes to the group leader. The lead
+    character cannot be unnamed (that would quit the game; rules.md treats it
+    as the elimination mechanic, which the alpha declines to support).
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, UnnameOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            target = game_state.characters.get(order.target_id)
+            if not actor or not target:
+                continue
+            if target.is_dead:
+                continue
+
+            if target.is_leader:
+                turn_log.add("unname", player_id, "unname_failed",
+                            f"{actor.name}: cannot unname the lead character "
+                            f"({target.name}) -- the engine does not support "
+                            "quitting the game",
+                            character_id=actor.id, success=False)
+                continue
+
+            if not target.group_leader_id:
+                turn_log.add("unname", player_id, "unname_failed",
+                            f"{actor.name}: {target.name} is not part of a "
+                            "group and cannot be unnamed",
+                            character_id=actor.id, success=False)
+                continue
+
+            leader = game_state.characters.get(target.group_leader_id)
+            if not leader:
+                continue
+
+            if (groups.direct_members(target.id, game_state)
+                    or groups.owned_stacks(target.id, game_state)
+                    or any(s.owner_character_id == target.id for s in game_state.ships.values())):
+                turn_log.add("unname", player_id, "unname_failed",
+                            f"{actor.name}: {target.name} still has people, "
+                            "units or ships of their own",
+                            character_id=actor.id, success=False)
+                continue
+
+            # Convert: the character becomes one worker in the leader's group.
+            del game_state.characters[target.id]
+            for stack in game_state.unit_stacks.values():
+                if stack.owner_character_id == leader.id and stack.unit_type == UnitType.WORKER:
+                    stack.count += 1
+                    break
+            else:
+                _add_group_units(leader, game_state, UnitType.WORKER, 1)
+
+            turn_log.add("unname", player_id, "unname",
+                        f"{actor.name} unnamed {target.name}, who became a "
+                        f"worker in {leader.name}'s group",
+                        character_id=actor.id)
+
+
+def process_create(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """
+    Process CREATE orders: form an elite troop unit from soldiers.
+
+    The soldiers come from the actor's group. The unit starts at combat level
+    1 and trains itself one partial point per turn (see process_elite_upkeep);
+    the actor is its group leader.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, CreateOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            available = groups.group_soldier_count(actor, game_state, UnitType.SOLDIER)
+            if available < order.count:
+                turn_log.add("create", player_id, "create_failed",
+                            f"{actor.name}: only {available} soldiers in the "
+                            f"group (need {order.count})",
+                            character_id=actor.id, success=False)
+                continue
+
+            removed = 0
+            for stack in groups.owned_stacks(actor.id, game_state) + [
+                    s for s in game_state.unit_stacks.values()
+                    if s.unit_type == UnitType.SOLDIER and not s.owner_character_id
+                    and s.faction_id == actor.faction_id
+                    and s.location_city_id == actor.location_city_id]:
+                if removed >= order.count:
+                    break
+                if stack.unit_type != UnitType.SOLDIER:
+                    continue
+                take = min(stack.count, order.count - removed)
+                stack.count -= take
+                removed += take
+                if stack.count <= 0:
+                    del game_state.unit_stacks[stack.id]
+            if removed <= 0:
+                continue
+
+            unit_id = allocate_id(game_state.elite_units, "elite")
+            game_state.elite_units[unit_id] = EliteUnit(
+                id=unit_id, name=order.unit_name, faction_id=player_id,
+                leader_character_id=actor.id, location_city_id=actor.location_city_id,
+                size=removed, combat_level=1,
+            )
+            turn_log.add("create", player_id, "create",
+                        f"{actor.name} created elite unit '{order.unit_name}' "
+                        f"with {removed} soldiers (combat level 1)",
+                        location=actor.location_city_id, character_id=actor.id)
+
+
+def process_invest(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
+    """
+    Process INVEST orders: put gold into a town's growth pool.
+
+    The investor need not be present; the weekly check in
+    process_invest_weekly converts the pool into population. Uninhabited
+    locations (ruins) cannot be invested in.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, InvestOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+            city = game_state.world_map.cities.get(order.city_id)
+            if not city:
+                continue
+            if city.is_ruin:
+                turn_log.add("invest", player_id, "invest_failed",
+                            f"{actor.name}: cannot invest in uninhabited "
+                            f"{city.name}",
+                            location=city.id, character_id=actor.id, success=False)
+                continue
+
+            faction = game_state.factions.get(player_id)
+            if order.amount < 0:
+                if order.amount < -1:
+                    amount = available_gold(actor, faction) * (-order.amount / 100.0)
+                else:
+                    amount = available_gold(actor, faction)
+            else:
+                amount = order.amount
+
+            if not debit_gold(actor, faction, amount):
+                turn_log.add("invest", player_id, "invest_failed",
+                            f"{actor.name}: insufficient gold to invest "
+                            f"{amount:g}g",
+                            location=city.id, character_id=actor.id, success=False)
+                continue
+
+            pool = game_state.invest_pools.get(city.id, 0.0)
+            game_state.invest_pools[city.id] = round(pool + amount, 1)
+            turn_log.add("invest", player_id, "invest",
+                        f"{actor.name} invested {amount:g}g in {city.name} "
+                        f"(pool {game_state.invest_pools[city.id]:g}g)",
+                        location=city.id, character_id=actor.id)
+
+
+def process_preach(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog, rng):
+    """
+    Process PREACH orders: collect tithes and donations.
+
+    Donations scale with religion skill and location population. The preacher
+    may also attract followers -- mostly unskilled workers, occasionally a
+    soldier, per rules.md.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, PreachOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+            city = game_state.world_map.cities.get(actor.location_city_id)
+            if not city:
+                continue
+
+            daily = config.PREACH_DONATION_DAILY_PER_BAND.get(city.population_band, 0.0)
+            donations = int(actor.religion_skill / 100.0 * daily * order.duration_days
+                            * (0.5 + rng.random()))
+            if donations > 0:
+                credit_gold(actor, donations)
+            followers = 0
+            follower_roll = rng.random()
+            if follower_roll < (actor.religion_skill / 100.0) * config.PREACH_FOLLOWER_CHANCE:
+                followers = rng.randint(1, 3)
+
+            details = []
+            if donations:
+                details.append(f"collected {donations}g in donations")
+            else:
+                details.append("collected nothing")
+            if followers:
+                _add_group_units(actor, game_state, UnitType.WORKER, followers)
+                details.append(f"{followers} follower(s) joined")
+
+            turn_log.add("preach", player_id, "preach",
+                        f"{actor.name} preached {order.duration_days} days in "
+                        f"{city.name} and {'; '.join(details)}",
+                        location=city.id, character_id=actor.id)
+
+
+def _offer_acceptance_threshold(target: Character, game_state: GameState) -> float:
+    """The gold an offer to `target` must reach: half the square of the
+    highest skill plus the value of items in their possession (rules.md)."""
+    highest = max(target.combat_skill, target.magic_skill, target.religion_skill,
+                  target.trading_skill, target.sailing_skill)
+    threshold = config.OFFER_ACCEPT_FRACTION_OF_LEVEL_SQUARE * (highest ** 2)
+    for item in game_state.magical_items.values():
+        if item.holder_character_id != target.id:
+            continue
+        value = (item.power_current * config.OFFER_ITEM_VALUE_POWER_PER_POINT
+                 + item.skill_level * config.OFFER_ITEM_VALUE_SKILL_PER_POINT
+                 + item.protection * config.OFFER_ITEM_VALUE_PROTECTION_PER_POINT)
+        threshold += value
+    return threshold
+
+
+def _transfer_ownership(target: Character, new_faction_id: str, game_state: GameState) -> None:
+    """The offeree, their group, their units, ships and elite units all move
+    to the new faction (rules.md: "he and everyone and everything currently
+    assigned to him will become yours to control")."""
+    member_ids = {m.id for m in [target] + groups.group_members(target.id, game_state)}
+    for member in game_state.characters.values():
+        if member.id in member_ids:
+            member.faction_id = new_faction_id
+    for stack in game_state.unit_stacks.values():
+        if stack.owner_character_id in member_ids:
+            stack.faction_id = new_faction_id
+    for ship in game_state.ships.values():
+        if ship.owner_character_id in member_ids:
+            ship.faction_id = new_faction_id
+    for unit in game_state.elite_units.values():
+        if unit.leader_character_id in member_ids:
+            unit.faction_id = new_faction_id
+
+
+def process_offer(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                  turn_log: TurnLog) -> set[tuple[str, str]]:
+    """
+    Process OFFER orders: recruit an independent character (or free one of
+    your prisoners) with gold.
+
+    Acceptance is deterministic: the offer must reach half the square of the
+    offeree's highest level plus item value. A character under another
+    player's control always declines. Offers to one's own prisoners are
+    accepted (the rules' magic ensures sincerity).
+
+    Runs before movement and group leadership so an accepted character joins
+    the faction in time for any orders chained after the offer ("Offer ...
+    and have her come to Pomye") to work.
+
+    Returns {(player_id, character_id)} of refusals, so run_turn can fail the
+    chained orders that assumed acceptance.
+    """
+    refusals: set[tuple[str, str]] = set()
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, OfferOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            target = game_state.characters.get(order.target_id)
+            if not actor or not target:
+                continue
+
+            faction = game_state.factions.get(player_id)
+            if order.amount < 0:
+                amount = available_gold(actor, faction) * (-order.amount / 100.0) if order.amount < -1 else available_gold(actor, faction)
+            else:
+                amount = order.amount
+
+            target_faction = game_state.factions.get(target.faction_id)
+
+            # One's own prisoner: the magic of the offer guarantees sincerity.
+            if target.is_prisoner and target.captor_id and \
+                    game_state.characters.get(target.captor_id, None) and \
+                    game_state.characters[target.captor_id].faction_id == player_id:
+                if not debit_gold(actor, faction, amount):
+                    turn_log.add("offer", player_id, "offer_failed",
+                                f"{actor.name}: insufficient gold to offer "
+                                f"{amount:g}g to {target.name}",
+                                character_id=actor.id, success=False)
+                    continue
+                target.is_prisoner = False
+                target.captor_id = ""
+                _transfer_ownership(target, player_id, game_state)
+                turn_log.add("offer", player_id, "offer",
+                            f"{actor.name} offered {amount:g}g and {target.name} "
+                            "accepted: they join your faction, released from "
+                            "prison",
+                            character_id=actor.id)
+                continue
+
+            # A character already under a player's control declines politely.
+            if target_faction and not target_faction.is_npc:
+                turn_log.add("offer", player_id, "offer_rejected",
+                            f"{target.name} declined your offer -- they are "
+                            "already under another player's command",
+                            character_id=actor.id, success=False)
+                refusals.add((player_id, target.id))
+                continue
+
+            threshold = _offer_acceptance_threshold(target, game_state)
+            if amount < threshold:
+                turn_log.add("offer", player_id, "offer_rejected",
+                            f"{target.name} declined your offer of {amount:g}g "
+                            f"-- they hold out for at least {threshold:g}g",
+                            character_id=actor.id, success=False)
+                refusals.add((player_id, target.id))
+                continue
+
+            if not debit_gold(actor, faction, amount):
+                turn_log.add("offer", player_id, "offer_failed",
+                            f"{actor.name}: insufficient gold to offer "
+                            f"{amount:g}g to {target.name}",
+                            character_id=actor.id, success=False)
+                continue
+
+            _transfer_ownership(target, player_id, game_state)
+            turn_log.add("offer", player_id, "offer",
+                        f"{actor.name} offered {amount:g}g and {target.name} "
+                        "accepted: they and their group join your faction",
+                        character_id=actor.id)
+    return refusals
+
+
+def process_passage(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                    turn_log: TurnLog, rng: random.Random):
+    """
+    Process BUY PASSAGE orders: travel one direct sealane hop on a merchant
+    ship.
+
+    Cost is the group's size in gold (encumbrance is unmodelled). Passage may
+    fail -- the bigger the group, the harder to find a berth -- and
+    `definitely` improves the odds. On success the whole group travels, like
+    any other movement.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, PassageOrder):
+                continue
+            if order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor or actor.is_dead:
+                continue
+
+            start_city = game_state.world_map.cities.get(actor.location_city_id)
+            end_city = game_state.world_map.cities.get(order.destination_city_id)
+            if not start_city or not end_city:
+                continue
+            if start_city.id == end_city.id:
+                turn_log.add("passage", player_id, "passage_failed",
+                            f"{actor.name}: already at {end_city.name}",
+                            character_id=actor.id, success=False)
+                continue
+
+            # One direct sealane hop only (rules.md).
+            path, cost = find_sea_route(actor.location_city_id, order.destination_city_id, game_state)
+            if not path or cost == float('inf') or len(path) != 2:
+                turn_log.add("passage", player_id, "passage_failed",
+                            f"{actor.name}: no direct sealane from "
+                            f"{start_city.name} to {end_city.name}",
+                            character_id=actor.id, success=False)
+                continue
+
+            owners = [actor] + groups.group_members(actor.id, game_state)
+            people = len(owners)
+            for owner in owners:
+                people += sum(stack.count for stack in groups.owned_stacks(owner.id, game_state)
+                              if stack.location_city_id == actor.location_city_id)
+
+            fare = people * config.PASSAGE_COST_PER_PERSON
+            faction = game_state.factions.get(player_id)
+            if not debit_gold(actor, faction, fare):
+                turn_log.add("passage", player_id, "passage_failed",
+                            f"{actor.name}: cannot afford passage "
+                            f"({fare}g for a party of {people})",
+                            character_id=actor.id, success=False)
+                continue
+
+            chance = config.PASSAGE_BASE_CHANCE - config.PASSAGE_SIZE_PENALTY_PER_100 * (people / 100.0)
+            if order.definitely:
+                chance += config.PASSAGE_DEFINITELY_BONUS
+            chance = max(0.0, min(1.0, chance))
+
+            if rng.random() > chance:
+                credit_gold(actor, fare)
+                turn_log.add("passage", player_id, "passage_failed",
+                            f"{actor.name}: no berth found on the {start_city.name}-"
+                            f"{end_city.name} run for a party of {people} "
+                            "(refunded the fare)",
+                            character_id=actor.id, success=False)
+                continue
+
+            travelled = groups.move_group(actor, end_city.id, game_state)
+            actor.location_city_id = end_city.id
+            escort = groups.describe_escort(travelled, actor, game_state)
+            turn_log.add("passage", player_id, "passage",
+                        f"{actor.name} bought passage from {start_city.name} to "
+                        f"{end_city.name}{escort} (fare {fare}g)",
+                        location=end_city.id, character_id=actor.id)
+
+
+def _count_condition_units(subject: Character, unit: str, game_state: GameState) -> int:
+    """Count what an IF condition asks about, per rules.md: recruitable
+    ranks, creatures, items and power the character controls."""
+    if unit == "gold":
+        return int(available_gold(subject, game_state.factions.get(subject.faction_id)))
+    if unit == "soldier":
+        return groups.group_soldier_count(subject, game_state, UnitType.SOLDIER)
+    if unit == "sailor":
+        return groups.group_soldier_count(subject, game_state, UnitType.SAILOR)
+    if unit == "worker":
+        return groups.group_soldier_count(subject, game_state, UnitType.WORKER)
+    if unit == "slave":
+        return groups.group_soldier_count(subject, game_state, UnitType.SLAVE)
+    if unit == "horse":
+        return subject.resources.get("horse", 0)
+    if unit == "catapult":
+        return subject.resources.get("catapult", 0)
+    if unit == "weapon":
+        return subject.resources.get("weapon", 0)
+    if unit == "armor":
+        return subject.resources.get("armor", 0)
+    if unit == "wood":
+        return subject.resources.get("wood", 0)
+    if unit == "stone":
+        return subject.resources.get("stone", 0)
+    if unit == "iron":
+        return subject.resources.get("iron", 0)
+    if unit == "copper":
+        return subject.resources.get("copper", 0)
+    if unit == "silver":
+        return subject.resources.get("silver", 0)
+    if unit == "gems":
+        return subject.resources.get("gems", 0)
+    if unit == "galley":
+        return sum(1 for ship in game_state.ships.values()
+                   if ship.faction_id == subject.faction_id
+                   and ship.location_city_id == subject.location_city_id)
+    if unit in ("skeleton", "zombie", "harpy", "minotaur", "griffin",
+                "chimera", "dragon", "demon"):
+        return sum(creature.count for creature in game_state.summoned_creatures.values()
+                   if creature.summoner_id == subject.id
+                   and creature.creature_type.value == unit)
+    if unit == "encumbrance":
+        # No encumbrance model; the group's size in people stands in for it.
+        return 1 + sum(
+            stack.count for stack in game_state.unit_stacks.values()
+            if stack.faction_id == subject.faction_id
+            and stack.location_city_id == subject.location_city_id)
+    if unit == "power":
+        if subject.magic_skill == 0 and subject.religion_skill == 0:
+            return 0
+        return subject.magic_power_current + subject.religious_power_current
+    return 0
+
+
+def evaluate_if_condition(condition: dict, game_state: GameState, player_id: str,
+                          turn_log: TurnLog, order) -> Optional[bool]:
+    """Evaluate one parsed IF condition against the current state."""
+    subject = resolve_character(condition["subject_name"], game_state, player_id,
+                                enemy_ok=True)
+    if not subject.found:
+        return None
+
+    subject_char = game_state.characters.get(subject.entity_id)
+    if not subject_char or subject_char.is_dead:
+        return None
+
+    amount = int(condition.get("amount", 0))
+    comparator = condition.get("comparator", "exactly")
+    unit = condition.get("unit", "gold")
+    modifier = condition.get("power_modifier", "")
+
+    if unit == "power":
+        if modifier == "magic" or modifier == "magical":
+            value = subject_char.magic_power_current
+        elif modifier == "religious" or modifier == "religion":
+            value = subject_char.religious_power_current
+        else:
+            value = max(subject_char.magic_power_current,
+                        subject_char.religious_power_current)
+    else:
+        value = _count_condition_units(subject_char, unit, game_state)
+
+    if comparator in ("less than", "fewer than"):
+        return value < amount
+    if comparator == "more than":
+        return value > amount
+    if comparator == "at least":
+        return value >= amount
+    if comparator == "at most":
+        return value <= amount
+    return value == amount
+
+
+def process_if_orders(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                      turn_log: TurnLog):
+    """
+    Evaluate IF statements and splice the chosen branch's orders into the
+    turn.
+
+    Runs right after the queue releases the turn's orders, so a condition
+    waited on across turns is judged against the world it lands in -- the
+    engine's version of "tested after all preceding orders have executed".
+    """
+    for player_id, orders in orders_by_player.items():
+        spliced: List[Order] = []
+        for order in orders:
+            if not isinstance(order, IfOrder):
+                spliced.append(order)
+                continue
+            if order.warnings or not order.condition:
+                spliced.append(order)
+                continue
+
+            result = evaluate_if_condition(order.condition, game_state, player_id,
+                                           turn_log, order)
+            if result is None:
+                turn_log.add("if", player_id, "if_unknown",
+                            f"Condition 'if {order.condition.get('subject_name')} "
+                            f"has {order.condition.get('comparator')} "
+                            f"{order.condition.get('amount')} "
+                            f"{order.condition.get('unit')}' could not be "
+                            "resolved",
+                            success=False)
+                continue
+
+            branch = order.then_orders if result else order.else_orders
+            turn_log.add("if", player_id, "if_branch",
+                        f"IF condition {'held' if result else 'failed'} -- "
+                        f"{len(branch)} order(s) {'issued' if result else 'skipped'}",
+                        character_id=order.actor_id or "")
+            spliced.extend(branch)
+        orders_by_player[player_id] = spliced
+
+
+def sync_elite_locations(game_state: GameState) -> None:
+    """Elite units travel with their group leader; keep their stored location
+    in step whenever the leader moves."""
+    for unit in game_state.elite_units.values():
+        leader = game_state.characters.get(unit.leader_character_id)
+        if leader and not leader.is_dead:
+            unit.location_city_id = leader.location_city_id
+
+
+def process_elite_upkeep(game_state: GameState, turn_log: TurnLog) -> None:
+    """Elite units train constantly: one partial point per week, with every
+    five partial points becoming a combat level."""
+    for unit in game_state.elite_units.values():
+        unit.partial_level += config.ELITE_PARTIAL_PER_WEEK
+        gained = int(unit.partial_level / config.ELITE_PARTIAL_PER_LEVEL)
+        if gained > 0:
+            unit.partial_level -= gained * config.ELITE_PARTIAL_PER_LEVEL
+            unit.combat_level += gained
+            leader = game_state.characters.get(unit.leader_character_id)
+            turn_log.add("income", unit.faction_id, "elite_training",
+                        f"Elite unit '{unit.name}' trained up to combat "
+                        f"level {unit.combat_level}",
+                        character_id=leader.id if leader else "")
+
+
+def process_invest_weekly(game_state: GameState, turn_log: TurnLog,
+                          rng: Optional[random.Random] = None):
+    """
+    The weekly INVEST check (rules.md): for each town with invested gold,
+    spend about population/100 gold on infrastructure and raise the population
+    by the same amount. Some randomness, capped per week so a huge pool cannot
+    explode a town in one turn. A band crossing raises the town's income and
+    recruit cap.
+    """
+    if not game_state.invest_pools:
+        return
+    rng = rng or random.Random(0)
+    for city_id, pool in list(game_state.invest_pools.items()):
+        city = game_state.world_map.cities.get(city_id)
+        if not city:
+            continue
+        pool = game_state.invest_pools.get(city_id, 0)
+        if pool <= 0:
+            continue
+
+        pop = config.city_population(city)
+        spend = int(pop / 100 * (1 + (rng.random() - 0.5) * 2 * config.INVEST_SPEND_SCATTER))
+        spend = max(0, min(spend, int(pool)))
+        if spend <= 0:
+            continue
+
+        gain = min(spend, config.INVEST_POPULATION_GAIN_MAX)
+        game_state.invest_pools[city_id] = round(pool - spend, 1)
+        city.population = pop + gain
+        if city.population >= 1_000_000:
+            city.population_band = PopulationBand.LARGE
+        elif city.population >= 100_000:
+            city.population_band = PopulationBand.MEDIUM
+        elif city.population >= 10_000:
+            city.population_band = PopulationBand.SMALL
+
+        turn_log.add("income", city_id, "invest_growth",
+                     f"{gain} gold invested in {city.name} was spent on growth: "
+                     f"population rose to {city.population:,}")
+
+        if game_state.invest_pools[city_id] <= 0:
+            del game_state.invest_pools[city_id]
+
+
+def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog,
+                              rng: Optional[random.Random] = None):
     """Award income and deduct upkeep."""
     for faction in game_state.factions.values():
         # Calculate income from controlled cities (goes to tax pools until collected)
@@ -1180,6 +1995,14 @@ def process_income_and_upkeep(game_state: GameState, turn_log: TurnLog):
                 upkeep += config.calculate_character_salary(
                     char.combat_skill, char.magic_skill
                 )
+
+        # Elite troop salary: soldiers times combat level per month (rules.md),
+        # prorated to a weekly turn. The unit trains constantly, so the bill
+        # comes due every turn regardless of orders.
+        for unit in game_state.elite_units.values():
+            if unit.faction_id == faction.id:
+                upkeep += (unit.size * unit.combat_level
+                           * config.ELITE_SALARY_FRACTION_OF_MONTH)
 
         # Round upkeep to 1 decimal place
         upkeep = round(upkeep, 1)
@@ -3453,6 +4276,8 @@ def process_study(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                 current_skill = actor.magic_skill
             elif order.skill_name == "religion":
                 current_skill = actor.religion_skill
+            elif order.skill_name == "sailing":
+                current_skill = actor.sailing_skill
             else:
                 continue
 
@@ -3472,6 +4297,8 @@ def process_study(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                 actor.magic_skill = current_skill
             elif order.skill_name == "religion":
                 actor.religion_skill = current_skill
+            elif order.skill_name == "sailing":
+                actor.sailing_skill = current_skill
 
             turn_log.add("study", player_id, "study_success",
                         f"{actor.name}: studied {order.skill_name} for {order.duration_weeks} weeks (now level {current_skill})",
@@ -3511,6 +4338,9 @@ def process_teach(orders_by_player: Dict[str, List[Order]], game_state: GameStat
             elif order.skill_name == "religion":
                 teacher_skill = teacher.religion_skill
                 student_skill = student.religion_skill
+            elif order.skill_name == "sailing":
+                teacher_skill = teacher.sailing_skill
+                student_skill = student.sailing_skill
             else:
                 continue
 
@@ -3537,6 +4367,8 @@ def process_teach(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                 student.magic_skill = student_skill
             elif order.skill_name == "religion":
                 student.religion_skill = student_skill
+            elif order.skill_name == "sailing":
+                student.sailing_skill = student_skill
 
             turn_log.add("teach", player_id, "teach_success",
                         f"{teacher.name}: taught {student.name} {order.skill_name} for {order.duration_weeks} weeks (now level {student_skill})",
@@ -3617,8 +4449,25 @@ def run_turn(
         orders_by_player, game_state, turn_log
     )
 
+    # Phase 0b: IF statements. A condition reached on the queue is judged
+    # against the world it lands in, and its chosen branch joins the turn.
+    process_if_orders(orders_by_player, game_state, turn_log)
+
     # Phase 1: Validation
     validate_orders(orders_by_player, game_state, turn_log)
+
+    # Phase 1a: Offers. Resolved before group leadership so an accepted
+    # independent character joins the faction before any order naming them
+    # (the HAVE-promotes-to-leader pass) runs. A refusal fails the chained
+    # orders that assumed acceptance.
+    refusals = process_offer(orders_by_player, game_state, turn_log)
+    for player_id, char_id in refusals:
+        for order in orders_by_player.get(player_id, []):
+            if (actor_id_of(order) == char_id and order.explicit_actor
+                    and not isinstance(order, OfferOrder)):
+                order.warnings.append(
+                    "The offer to this character was refused, so their "
+                    "assumed orders failed")
 
     # Phase 1b: Group leadership. A character given a direct order becomes a
     # group leader before the order that named them is carried out.
@@ -3627,8 +4476,11 @@ def run_turn(
     # Phase 2: Movement
     process_movement(orders_by_player, game_state, turn_log, rng)
 
-    # Phase 2b: Sailing
+    # Phase 2b: Sailing, then buying passage (which is sea travel without a
+    # ship) -- and elite units follow whoever led them on the way.
     process_sail(orders_by_player, game_state, turn_log, rng)
+    process_passage(orders_by_player, game_state, turn_log, rng)
+    sync_elite_locations(game_state)
 
     # Phase 3: Recruit & Buy
     process_recruit_and_buy(orders_by_player, game_state, turn_log, rng)
@@ -3653,8 +4505,10 @@ def run_turn(
     # Phase 5b: Capture (prisoner taking)
     process_capture(orders_by_player, game_state, turn_log, rng)
 
-    # Phase 6: Income & Upkeep
-    process_income_and_upkeep(game_state, turn_log)
+    # Phase 6: Income & Upkeep. The weekly INVEST check runs first so the
+    # growth it pays for counts in this turn's income.
+    process_invest_weekly(game_state, turn_log, rng)
+    process_income_and_upkeep(game_state, turn_log, rng)
 
     # Phase 7: Location Control & Diplomacy & Unit Management & Economics & Training
     process_secure(orders_by_player, game_state, turn_log)
@@ -3686,6 +4540,12 @@ def run_turn(
     process_probe(orders_by_player, game_state, turn_log, rng)
     process_search(orders_by_player, game_state, turn_log, rng)
     process_scan(orders_by_player, game_state, turn_log)
+    process_work(orders_by_player, game_state, turn_log)
+    process_train(orders_by_player, game_state, turn_log)
+    process_unname(orders_by_player, game_state, turn_log)
+    process_create(orders_by_player, game_state, turn_log)
+    process_invest(orders_by_player, game_state, turn_log)
+    process_preach(orders_by_player, game_state, turn_log, rng)
 
     # Communication. SECURE has already resolved above, so a POST is judged
     # against who holds the town at the end of this turn, and REPORT last of
@@ -3707,6 +4567,8 @@ def run_turn(
     expire_postings(game_state, turn_log)
     process_item_upkeep(game_state, turn_log)
     process_prisoner_escape(game_state, turn_log, rng)
+    sync_elite_locations(game_state)
+    process_elite_upkeep(game_state, turn_log)
     cleanup_turn(game_state)
 
     return (game_state, turn_log)
