@@ -378,6 +378,10 @@ class AssignOrder(Order):
             name -- "Give Wameka to Joe Flint" -- so a GIVE may name an item
             where it would otherwise name a character.
         item_names: The names those ids were resolved from, for reporting
+        resources: Mass-noun quantities moving with the transfer -- "Give 50
+            armor to Thomas Ames" is 50 armor, and "give 10 stone to Carl
+            Higgins" is 10 stone. Wood, stone, iron, silver, copper, gems
+            and armor, keyed by name.
     """
     donor_id: str = ""
     recipient_id: str = ""
@@ -388,6 +392,7 @@ class AssignOrder(Order):
     character_names: list[str] = field(default_factory=list)
     item_ids: list[str] = field(default_factory=list)
     item_names: list[str] = field(default_factory=list)
+    resources: dict[str, int] = field(default_factory=dict)
 
     def order_type(self) -> str:
         return "ASSIGN"
@@ -884,6 +889,7 @@ class GetOrder(Order):
     unit_type: str = ""
     unit_count: int = 0
     gold_amount: int = 0
+    resources: dict[str, int] = field(default_factory=dict)
 
     def order_type(self) -> str:
         return "GET"

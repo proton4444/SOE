@@ -20,13 +20,18 @@ the thirty-odd verb parsers never see a pronoun and need no knowledge of one.
 By the time `parse_orders` hands a sentence to a parser, every pronoun has
 become the name it stood for.
 
-Referents carry from one sentence to the next, which is what the rules'
-own examples require:
+Each pronoun binds to what was most recently named *before it* in the
+submission, which is what the rules' own chains require:
 
     Have Mark Bolton study combat for 4 weeks.
     Have Donald Nap go to Madegi Doy and give him 100 gold.
 
 `him` is Mark Bolton -- not Donald Nap, who is the agent of his own order.
+And in "have him go to Riverton, and say ... to King Bodo Bunji, and give him
+100 gold" the first `him` is the man from the earlier sentence while the
+second is the king, because the king was named in between. A pronoun sitting
+directly after `have` is the agent of its own command, so the agent exclusion
+never applies to it -- only your leader is barred.
 """
 
 import re
@@ -78,27 +83,6 @@ class ReferentContext:
     last_singular: str = ""                                  # -> it
     last_plural: str = ""                                    # -> them
 
-    def remember_person(self, name: str, gender: str) -> None:
-        """Record a named person as the newest candidate for him or her."""
-        history = self.female_history if gender == "female" else self.male_history
-        if name in history:
-            history.remove(name)
-        history.append(name)
-
-    def gendered(self, gender: str, excluded: tuple[str, ...]) -> str:
-        """
-        The most recently named person of this gender who is allowed here.
-
-        rules.md bars the agent of the current order and the player's leader,
-        so those are passed in and skipped over rather than blocking the
-        pronoun entirely.
-        """
-        history = self.female_history if gender == "female" else self.male_history
-        for name in reversed(history):
-            if name not in excluded:
-                return name
-        return ""
-
 
 def _word(pattern: str) -> re.Pattern:
     """Compile a whole-word pattern, so `me` never matches inside `mine`."""
@@ -107,15 +91,20 @@ def _word(pattern: str) -> re.Pattern:
 
 _LEADER_RE = _word("|".join(LEADER_PRONOUNS))
 _REFLEXIVE_RE = _word("|".join(REFLEXIVE_PRONOUNS))
-_HIM_RE = _word("him")
-_HER_RE = _word("her")
-_IT_RE = _word("it")
-_THEM_RE = _word("them")
+_IT_THEM_RE = _word(r"(?:it|them)")
 
-_COUNTED_RE = re.compile(
-    rf"\b(\d+)\s+({'|'.join(COUNTABLE_NOUNS)})s?\b")
-_MASS_RE = re.compile(
-    rf"\b(\d+)\s+({'|'.join(MASS_NOUNS)})\b")
+# Bare mass nouns ("gather stone", "collect wood") still give `it` something
+# to stand for, per rules.md: "the pronoun it can be used to refer to whatever
+# was successfully collected".
+_BARE_MASS_RE = re.compile(rf"\b(?:{'|'.join(MASS_NOUNS)})\b")
+
+# Any counted thing and the `and`-run that may follow it, used by the
+# position-aware it/them scan below.
+_THING_ITEM_RE = re.compile(
+    rf"\d+\s+(?:{'|'.join(COUNTABLE_NOUNS + MASS_NOUNS)})s?")
+_THING_RUN_RE = re.compile(
+    rf"\s+and\s+\d+\s+(?:{'|'.join(COUNTABLE_NOUNS + MASS_NOUNS)})s?")
+_IT_THEM_RE = _word(r"(?:it|them)")
 
 
 # ============================================================================
@@ -153,6 +142,12 @@ def _leading_character(text: str, game_state: GameState,
     for char in sorted(candidates, key=lambda c: -len(c.name)):
         if text.startswith(char.name.lower()):
             return char
+    # A leading title ("have Captain Jane Tucker go to Riverton") is ignored
+    # in orders; the name is what follows it.
+    from spoils_engine.models import TITLE_WORDS
+    words = text.split()
+    if words and words[0] in TITLE_WORDS:
+        return _leading_character(" ".join(words[1:]), game_state, player_id)
     return None
 
 
@@ -184,6 +179,15 @@ def resolve(sentence: str, context: ReferentContext, game_state: GameState,
     if leader:
         context.leader_name = leader.name.lower()
 
+    # Referents are remembered before substitution so that a pronoun can bind
+    # to a name named earlier in the *same* sentence. The rules' own example
+    # needs it: "Have Joe Flint give 10 horses to Billy Jones and have him go
+    # to Madegi Doy" resolves `him` to Joe Flint, who is named in the very
+    # sentence that contains the pronoun. Remembering reads names and
+    # quantities only, never pronouns, so the order is safe.
+    agent_name = agent.name.lower() if agent else ""
+    group = _people_list(sentence, game_state, player_id)
+
     # Reflexives first: `himself` contains `him`, so resolving `him` ahead of
     # it would corrupt the word.
     if agent:
@@ -192,90 +196,243 @@ def resolve(sentence: str, context: ReferentContext, game_state: GameState,
     if context.leader_name:
         sentence = _LEADER_RE.sub(context.leader_name, sentence)
 
-    # him / her never mean the agent and never mean the leader, so the context
-    # is consulted only after those two are excluded.
-    agent_name = agent.name.lower() if agent else ""
-    barred = (agent_name, context.leader_name)
-    for pattern, gender in ((_HIM_RE, "male"), (_HER_RE, "female")):
-        referent = context.gendered(gender, barred)
-        if referent:
-            sentence = pattern.sub(referent, sentence)
+    sentence = _resolve_him_her(sentence, context, game_state, player_id,
+                                agent_name)
 
-    if context.last_singular:
-        sentence = _IT_RE.sub(context.last_singular, sentence)
-    if context.last_plural:
-        sentence = _THEM_RE.sub(context.last_plural, sentence)
-
-    _remember(sentence, context, game_state, player_id, agent_name)
-    return sentence
+    return _resolve_it_them(sentence, context, game_state, group)
 
 
-def _remember(sentence: str, context: ReferentContext, game_state: GameState,
-              player_id: str, agent_name: str) -> None:
-    """
-    Record what this sentence named, for the pronouns that follow it.
-
-    "Most recently named" is read as last by position in the sentence, and a
-    name that sits in a longer list of people and things is skipped: rules.md
-    rules out "Doctor McCoy" as a referent in "Assign 10 soldiers and Doctor
-    McCoy to Joe Flint" precisely because he is linked to the soldiers.
-    """
-    _remember_people(sentence, context, game_state, player_id, agent_name)
-    _remember_things(sentence, context, game_state)
-
-
-def _remember_people(sentence: str, context: ReferentContext,
+def _resolve_him_her(sentence: str, context: ReferentContext,
                      game_state: GameState, player_id: str,
-                     agent_name: str) -> None:
+                     agent_name: str) -> str:
     """
-    Update the him/her referents from the characters this sentence names.
+    Substitute `him` and `her`, each at its own position in the sentence.
 
-    The agent of *this* sentence is still recorded: rules.md only bars them
-    from being the referent of a pronoun in their own order, and the very next
-    sentence may well say "have him go to Tashendi" meaning exactly them. The
-    leader is dropped for good, since him and her never mean the leader.
+    A pronoun binds to the most recently named person of its gender before it
+    in the sentence, which is how the rules' own chains read: "Have him go to
+    Riverton, and say ... to King Bodo Bunji, and give him 100 gold" makes the
+    first `him` the man from the earlier sentence and the second `him` the
+    king, because the king was named in between.
+
+    A pronoun sitting directly after `have` is the agent of its own command,
+    so the agent exclusion never applies to it -- "have him go to Tashendi"
+    binds to Joe Flint even though he is the agent of the sentence. An object
+    pronoun is never the agent of the sentence and never the leader. The
+    histories stay in `context` for the sentences that follow.
     """
+    leader = context.leader_name
     listed = _listed_spans(sentence)
 
-    mentions: list[tuple[int, Character]] = []
+    mentions: list[tuple[int, str, str]] = []
     for char in game_state.characters.values():
         name = char.name.lower()
+        if name == leader:
+            continue
         for match in re.finditer(rf"\b{re.escape(name)}\b", sentence):
-            mentions.append((match.start(), char))
+            # A name inside an enumeration is "part of a longer list of
+            # people and/or items" and cannot be what him or her refers to.
+            if any(start <= match.start() < end for start, end in listed):
+                continue
+            mentions.append((match.start(), char.gender, name))
+    mentions.sort()
 
-    for position, char in sorted(mentions, key=lambda m: m[0]):
-        name = char.name.lower()
-        if name == context.leader_name:
+    male = list(context.male_history)
+    female = list(context.female_history)
+
+    def remember(gender: str, name: str) -> None:
+        history = female if gender == "female" else male
+        if name in history:
+            history.remove(name)
+        history.append(name)
+
+    def referent(gender: str, barred: tuple[str, ...]) -> str:
+        history = female if gender == "female" else male
+        for name in reversed(history):
+            if name not in barred:
+                return name
+        return ""
+
+    parts: list[str] = []
+    cursor = 0
+    for match in re.finditer(r"\b(?:him|her)\b", sentence):
+        while mentions and mentions[0][0] < match.start():
+            _, gender, name = mentions.pop(0)
+            remember(gender, name)
+
+        have_position = bool(re.search(r"\bhave\s+$", sentence[:match.start()]))
+        barred = (leader,) if have_position else (agent_name, leader)
+        gender = "female" if match.group(0) == "her" else "male"
+        name = referent(gender, barred)
+        if not name and have_position:
+            # A have-position pronoun may look forward: rules.md's "Purchase
+            # 20 horses ... and have him go to Madegi Doy and assign them to
+            # Joe Flint" names its `him` only at the end of the sentence.
+            for _, mention_gender, mention in mentions:
+                if mention_gender == gender:
+                    name = mention
+                    break
+        if not name:
             continue
-        # A name inside an enumeration is "part of a longer list of people
-        # and/or items" and cannot be what him or her refers to.
-        if any(start <= position < end for start, end in listed):
+        parts.append(sentence[cursor:match.start()] + name)
+        cursor = match.end()
+
+    # Mentions after the last pronoun are still the referents the next
+    # sentence's pronouns will bind to.
+    for _, gender, name in mentions:
+        remember(gender, name)
+
+    parts.append(sentence[cursor:])
+    context.male_history = male
+    context.female_history = female
+    return "".join(parts)
+
+
+def _thing_events(sentence: str,
+                  game_state: GameState) -> list[tuple[int, str, str]]:
+    """
+    Everything in `sentence` that `it` or `them` can stand for, in order.
+
+    Each event is (position, "singular" or "plural", the text to substitute).
+    A run of two or more quantities joined by `and` is one plural thing --
+    "recruit 5 soldiers and 3 workers" leaves `them` meaning both -- unless a
+    quantity of one is mixed in, where rules.md keeps them apart ("Buy 1
+    galley and recruit 40 sailors" still lets `it` mean the galley). A
+    magical item named in the order and a bare mass noun ("gather stone")
+    are single things.
+    """
+    events: list[tuple[int, str, str]] = []
+    covered = 0
+
+    def run_kind(text: str) -> Optional[tuple[str, str]]:
+        """
+        (kind, text) for a counted thing or run of things.
+
+        A mass noun takes `it` however many there are ("10 stone and 20
+        silver" is still `it`), and a run mixing in any countable is `them`
+        ("10 armor and 10 horses" is `them`). A countable quantity of one
+        keeps its own pronoun ("1 galley and 40 sailors" leaves `it` the
+        galley), which is None here so the singles stay apart.
+        """
+        items = list(_THING_ITEM_RE.finditer(text))
+        mass = "|".join(MASS_NOUNS)
+        kinds = []
+        for item in items:
+            if re.search(rf"(?:{mass})\s*$", item.group(0)):
+                kinds.append("mass")
+            elif item.group(0).startswith("1 "):
+                kinds.append("one")
+            else:
+                kinds.append("many")
+        if all(k == "mass" for k in kinds):
+            return ("singular", text)
+        if len(items) > 1 and any(k == "one" for k in kinds):
+            return None  # a single thing among several keeps its own pronoun
+        if any(k == "one" for k in kinds):
+            return ("singular", text)
+        return ("plural", text)
+
+    for match in _THING_ITEM_RE.finditer(sentence):
+        if match.start() < covered:
             continue
-        context.remember_person(name, char.gender)
+        text = match.group(0)
+        end = match.end()
+        while True:
+            run = _THING_RUN_RE.match(sentence, end)
+            if not run:
+                break
+            text += run.group(0)
+            end = run.end()
+        covered = end
 
-    # A run of people joined by `and` is what `them` refers to.
-    group = _people_list(sentence, game_state, player_id)
-    if group:
-        context.last_plural = group
+        kind = run_kind(text)
+        if kind:
+            events.append((match.start(), kind[0], kind[1]))
+        else:
+            # A single thing among several keeps its own pronoun.
+            for inner in _THING_ITEM_RE.finditer(text):
+                inner_kind = run_kind(inner.group(0))
+                events.append((match.start() + inner.start(),
+                               inner_kind[0], inner.group(0)))
 
-
-def _remember_things(sentence: str, context: ReferentContext,
-                     game_state: GameState) -> None:
-    """Update the it/them referents from the goods this sentence names."""
-    # A magical item named in the order is a single thing: `it`.
     for item in game_state.magical_items.values():
         bare = item.name.strip("*").lower()
-        if re.search(rf"\*?{re.escape(bare)}\*?", sentence):
-            context.last_singular = item.name.lower()
+        found = re.search(rf"\*?{re.escape(bare)}\*?", sentence)
+        if found and found.start() >= covered:
+            events.append((found.start(), "singular", item.name.lower()))
 
-    # Mass nouns take `it` however many there are; countables split on one.
-    for match in _MASS_RE.finditer(sentence):
-        context.last_singular = match.group(0)
-    for match in _COUNTED_RE.finditer(sentence):
-        if int(match.group(1)) == 1:
-            context.last_singular = match.group(0)
+    for match in _BARE_MASS_RE.finditer(sentence):
+        if match.start() < covered:
+            continue
+        if re.search(r"\d+\s+$", sentence[max(0, match.start() - 6):match.start()]):
+            continue  # quantified above
+        events.append((match.start(), "singular", match.group(0)))
+
+    return events
+
+
+def _resolve_it_them(sentence: str, context: ReferentContext,
+                     game_state: GameState, group: str) -> str:
+    """
+    Substitute `it` and `them`, each at its own position in the sentence.
+
+    A pronoun binds to what was most recently mentioned *before it*, which is
+    what the rules' own two-them example needs: "Purchase 20 horses and
+    assign them and 2 sailors to Watusingi, and have him go to Madegi Doy and
+    assign them to Joe Flint" -- the first `them` is the horses, the second is
+    the horses and the sailors. A `them` followed by "and 2 sailors" grows
+    into the longer list for the pronouns that come after it. The final
+    referents stay in `context` for the next sentence.
+    """
+    events = sorted(_thing_events(sentence, game_state))
+    if group:
+        # A run of people is the most recent plural of all.
+        events.append((len(sentence), "plural", group))
+
+    last_singular = context.last_singular
+    last_plural = context.last_plural
+    parts: list[str] = []
+    cursor = 0
+
+    for match in _IT_THEM_RE.finditer(sentence):
+        while events and events[0][0] < match.start():
+            _, kind, text = events.pop(0)
+            if kind == "plural":
+                last_plural = text
+            else:
+                last_singular = text
+
+        if match.group(0) == "it":
+            if not last_singular:
+                continue
+            parts.append(sentence[cursor:match.start()] + last_singular)
+            cursor = match.end()
+            continue
+
+        if not last_plural:
+            continue
+        parts.append(sentence[cursor:match.start()] + last_plural)
+        cursor = match.end()
+        run = _THING_RUN_RE.match(sentence, match.end())
+        if run:
+            # "assign them and 2 sailors": the list grows for later pronouns,
+            # and the run's own mentions are part of it.
+            last_plural = last_plural + run.group(0)
+            while events and events[0][0] < match.end() + len(run.group(0)):
+                events.pop(0)
+
+    parts.append(sentence[cursor:])
+
+    # Events after the last pronoun (or, with no pronouns, all of them) are
+    # still the referents the next sentence's pronouns will bind to.
+    for _, kind, text in events:
+        if kind == "plural":
+            last_plural = text
         else:
-            context.last_plural = match.group(0)
+            last_singular = text
+
+    context.last_singular = last_singular
+    context.last_plural = last_plural
+    return "".join(parts)
 
 
 # An enumeration runs until a preposition hands the list to somebody.

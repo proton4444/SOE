@@ -7,8 +7,8 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **80 of 89 (90%)** |
-| Order-language features | **5 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns) |
+| Command verbs recognised | **81 of 89 (91%)** |
+| Order-language features | **6 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns, `and`-chained commands) |
 | Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
 Counted by cross-referencing the command sections of `rules.md` against
@@ -34,7 +34,7 @@ Grouped by the subsystem they belong to, which is roughly the order they should
 be tackled in:
 
 - **Inventory** — WORK
-- **Finance** — INVEST, OFFER, PURCHASE, BUY PASSAGE
+- **Finance** — INVEST, OFFER, BUY PASSAGE
 - **Elite troops** — CREATE. This was previously filed under magical items by
   mistake: `rules.md` defines CREATE as forming a named elite troop unit that
   trains continuously, which belongs with recruitment, not with the enchantress.
@@ -61,7 +61,7 @@ this list until v0.9 aligned them with the rules' `REPEATEDLY` and `WAIT FOR`.
 | `REPEATEDLY` | implemented (with an optional `N times` count) |
 | `IMMEDIATELY` | partial — modifies HALT/STOP, not a general interrupt |
 | `UNTIL` conditions | partial — `wait until turn N`, not dates or loop terminators |
-| `and` to chain commands | missing |
+| `and` to chain commands | implemented — one sentence carries several orders; see `parser.split_clauses` |
 | `THEN` sequencing | missing |
 | `QUIETLY` / `SILENTLY` | missing |
 | `IF` statements | missing |
@@ -182,6 +182,22 @@ and are covered by tests.
   regenerates there. One sweep runs after all movement has resolved, so
   walking, sailing, flying and being teleported in are all caught.
   (`engine.process_magic_free_zones`, `items.drain_magic_free_zone`)
+- **And-chained commands** — one sentence carries several orders, split by
+  `parser.split_clauses` at the `and`s that separate whole commands from the
+  `and`s that list items inside one. The HAVE form's actor sticks to the
+  clauses that follow it (`Have him go to Riverton and tax for 3 weeks, and go
+  to Ennistown and tax` is four orders to the same character), a counted
+  continuation inherits the previous verb (`Give 50 gold to Nancy Myers and 20
+  horses to Bill Fenton`, `recruit 5 soldiers and 3 workers`), and a clause
+  whose target rides in the tail gets it folded back (`assign 20 soldiers and
+  23 horses to Bill Jenkins` splits into one order per kind). `PURCHASE`
+  parses as `BUY`. Titles are stripped from names (`Assign 200 soldiers to
+  Captain Bill Jones`). GIVE/TAKE now move mass resources (`Give 50 armor to
+  Thomas Ames`, `Take 10 copper and 20 silver from Bill Hawthorne`, a bare
+  `give stone to X` for everything collected), and the prepositionless give
+  (`Give Pindimya 10 gold`) and `have him to go to Kitesta` forms parse.
+  (`parser.split_clauses`, `pronouns._resolve_him_her`,
+  `pronouns._resolve_it_them`, `engine.process_assign`, `engine.process_get`)
 
 ## Partial
 
@@ -212,12 +228,14 @@ and are covered by tests.
   point in the turn.
 - **REPORT** does not scale its detail with city size or group size the way the
   rules describe. It uses the same fog roll as an end-of-turn sighting.
-- **Pronouns** resolve across sentences but not across commands chained inside
-  one sentence, because `and`-chained commands are not implemented. The rules'
-  `Buy 1 horse and go to Umadosh and give it to Bill May` therefore has to be
-  written as separate sentences. `them` referring to a mixed list ("20 horses
-  and 2 sailors") resolves to the text but the verb parsers only act on the
-  first kind.
+- **Pronouns** resolve position-by-position: each `him`/`her`/`it`/`them`
+  binds to what was most recently named before it, so a sentence can use the
+  same pronoun for two different people, and the two-them form of the rules
+  (`Purchase 20 horses and assign them and 2 sailors ... assign them to Joe
+  Flint`) comes out right. A pronoun naming a multi-character actor (`them`
+  for "Joe Flint and Mary Wise") resolves to the list text, but the verb
+  parsers still act on single actors, so a group-level order warns honestly.
+  Multi-item GIVE/TAKE lists hand over each kind in its own order.
 - **Amulets** cover trading and combat. The rules allow an amulet for any skill
   except magic and religion; the engine only has fields for the skills it
   actually uses (`items.AMULET_SKILLS`).

@@ -69,6 +69,19 @@ class ResourceType(str, Enum):
     GEMS = "gems"      # Mined in hills/mountains
 
 
+# rules.md: "Titles are ignored except in the NAME and PROMOTE commands, where
+# they are mandatory." A player writes "Assign 200 soldiers to Captain Bill
+# Jones" and means Bill Jones, so a leading title word is dropped before the
+# name lookup. Defined here (rather than in the parser) so the pronoun pass,
+# which runs before the parsers, can strip them too.
+TITLE_WORDS = frozenset((
+    "captain", "wizard", "bishop", "engineer", "trader", "adept", "king",
+    "queen", "prince", "princess", "lord", "lady", "baron", "baroness",
+    "major", "sergeant", "primate", "abbot", "duke", "earl", "count",
+    "countess", "chief", "priest", "priestess", "sage", "master", "doctor",
+))
+
+
 class ItemType(str, Enum):
     """
     The five kinds of magical item in `rules.md`.

@@ -221,7 +221,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 ### Deferred to Future Versions
 
 ⏸️ **Still To Implement:**
-- Conditional orders (`IF`), `THEN` sequencing and `and`-chained commands
+- Conditional orders (`IF`) and `THEN` sequencing
 - Sub-turn game time — the queue's smallest unit is one weekly turn
 - Retreat and morale in combat
 - Encumbrance and item weight
@@ -701,7 +701,7 @@ breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
 
 ## Where we are
 
-**80 of 89 command verbs (90%)** from `rules.md` are recognised, and 5 of its 9
+**81 of 89 command verbs (91%)** from `rules.md` are recognised, and 6 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
 full breakdown, including which commands are missing and why.
 
@@ -738,7 +738,7 @@ Shipped in this release:
 
 Deliberately still open: sub-turn timing (a wait of one hour and a wait of one
 day both cost a turn), `until <date>` as a loop terminator, `THEN` sequencing,
-`and`-chained commands, and `immediately` as a general interrupt.
+and `immediately` as a general interrupt.
 
 ### v1.0 — Rules fidelity
 
@@ -750,7 +750,22 @@ day both cost a turn), `until <date>` as a loop terminator, `THEN` sequencing,
 
 **Pronouns ✅** — shipped: `me`/`I`/`you`, `him`/`her`, `it`, `them` and the
 reflexives, resolved before verb dispatch with referents carrying between the
-sentences of a submission.
+sentences of a submission. Each pronoun binds to the person or thing most
+recently named *before it*, so a sentence can use the same pronoun twice for
+two different people.
+
+**And-chained commands ✅** — one sentence can carry several orders:
+`Assign 20 soldiers and 23 horses to Bill Jenkins, and have him go to Riverton
+and attack Mike May` is three commands. `and` also joins items inside a
+command, so a clause only breaks where the command so far is complete and the
+tail starts a new one. The HAVE form's actor stays on the clauses that follow
+it (`have him go to Riverton and tax for 3 weeks, and go to Ennistown and
+tax`), and a counted continuation inherits the previous verb (`give 50 gold to
+Nancy Myers and 20 horses to Bill Fenton`, `recruit 5 soldiers and 3 workers`).
+Mass resources move by GIVE and TAKE (`Give 50 armor to Thomas Ames`, `Take 10
+copper and 20 silver from Bill Hawthorne`), and a bare `give stone to X` after
+a `gather` hands over whatever was collected. `PURCHASE` now parses as a
+synonym of `BUY` per the rules.
 
 **Communication ✅** — shipped: `SAY`/`TELL` to a person, a town or everyone,
 `POST` at the gates of a secured town, `REPORT`/`QUERY` with the `briefly`
@@ -768,9 +783,9 @@ Still ahead, in no fixed order:
   TAX, SECURE or work. (Previously listed here under magical items by mistake;
   the rules put it with recruitment.)
 - `IF` conditional orders (the queue they needed now exists)
-- `and`-chained commands and `THEN` sequencing, which would let one sentence
-  carry several orders — the rules write `Charge Ampu to 75 power and give it
-  to Merlinus`, which today needs two sentences
+- `THEN` sequencing, which would let a chain pause between its clauses — the
+  rules write `Charge Ampu to 75 power and give it to Merlinus`, which one
+  sentence can now carry (though not yet sequence on its own)
 - Encumbrance and item weight, so `FLY` and `TELEPORT` cost what is carried
 - Sub-turn game time, so a wait can cost hours rather than a whole turn
 - Group-level possession of ships, resources and gold, and combat resolved

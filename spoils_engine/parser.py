@@ -11,7 +11,8 @@ import re
 from typing import Optional, Type
 from dataclasses import dataclass, fields as dc_fields
 
-from spoils_engine.models import GameState, UnitType, ShipType, Character, LocationPosition
+from spoils_engine.models import (GameState, UnitType, ShipType, Character,
+                                  LocationPosition, TITLE_WORDS)
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, RecruitOrder, BuyShipOrder, AttackOrder, TeleportOrder, FlyOrder, HealOrder,
     SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder, NeutralOrder, AssignOrder, NameOrder,
@@ -166,6 +167,9 @@ def resolve_character(name_text: str, game_state: GameState,
         char = game_state.get_character_by_name(name_text, faction_id=player_id)
         if char:
             return ResolvedEntity(char.id, char.name)
+        char = _match_without_title(name_text, game_state, player_id)
+        if char:
+            return ResolvedEntity(char.id, char.name)
         if not enemy_ok:
             return ResolvedEntity("", name_text, found=False)
 
@@ -175,6 +179,20 @@ def resolve_character(name_text: str, game_state: GameState,
         return ResolvedEntity(char.id, char.name)
 
     return ResolvedEntity("", name_text, found=False)
+
+
+# rules.md: "Titles are ignored except in the NAME and PROMOTE commands, where
+# they are mandatory." A player writes "Assign 200 soldiers to Captain Bill
+# Jones" and means Bill Jones, so a leading title word is dropped before the
+# name lookup.
+def _match_without_title(name_text: str, game_state: GameState,
+                         player_id: str) -> Optional[Character]:
+    """A character whose name follows a leading title word."""
+    words = name_text.split()
+    if not words or words[0] not in TITLE_WORDS:
+        return None
+    return game_state.get_character_by_name(
+        " ".join(words[1:]), faction_id=player_id)
 
 
 def resolve_city(name_text: str, game_state: GameState) -> ResolvedEntity:
@@ -322,8 +340,12 @@ def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Op
     order = parser.create_order(MoveOrder)
 
     # Pattern: "have <name> go/move/travel/come to <city>".
-    # rules.md: "COME -- see the GO command"; they are the same order.
-    match = re.search(r'have\s+(.+?)\s+(?:go|move|travel|come)\s+to\s+(.+)', sentence)
+    # rules.md: "COME -- see the GO command"; they are the same order. The
+    # rules also write "have him to go to Kitesta" (give 50 armor to Thomas
+    # Ames), with a `to` between the name and the verb.
+    match = re.search(
+        r'have\s+(.+?)\s+(?:to\s+)?(?:go|move|travel|come)\s+to\s+(.+)',
+        sentence)
     if match:
         actor_name, city_name = match.group(1).strip(), match.group(2).strip()
 
@@ -448,7 +470,7 @@ def parse_buy_ship_order(sentence: str, game_state: GameState, player_id: str) -
     order = parser.create_order(BuyShipOrder)
 
     # Pattern: "have <name> buy <num> <ship_type> [in <city>]"
-    match = re.search(r'have\s+(.+?)\s+buy\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
+    match = re.search(r'have\s+(.+?)\s+(?:buy|purchase)\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
     if match:
         actor_name = match.group(1).strip()
         count = int(match.group(2))
@@ -472,7 +494,7 @@ def parse_buy_ship_order(sentence: str, game_state: GameState, player_id: str) -
         return order
 
     # Pattern: "buy <num> <ship_type> [in <city>]" (implicit leader)
-    match = re.search(r'^buy\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
+    match = re.search(r'^(?:buy|purchase)\s+(\d+)\s+(\w+)(?:\s+in\s+(.+))?', sentence)
     if match:
         count = int(match.group(1))
         ship_type = match.group(2).strip().rstrip('s')
@@ -955,6 +977,15 @@ def parse_neutral_order(sentence: str, game_state: GameState, player_id: str) ->
     return None
 
 
+# Everything GIVE, TAKE and ASSIGN move by the count: units, gold, and the
+# mass resources the rules hand around ("Give 50 armor to Thomas Ames",
+# "Take 10 copper and 20 silver from Bill Hawthorne").
+_TRANSFER_KINDS = (r'soldier|sailor|worker|slave|gold|wood|stone|iron|'
+                   r'silver|copper|gems|armor')
+_RESOURCE_KINDS = ('wood', 'stone', 'iron', 'silver', 'copper', 'gems',
+                   'armor')
+
+
 def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AssignOrder]:
     """Parse an assign/give order (simplified)."""
     parser = OrderParserBase(game_state, player_id, sentence)
@@ -962,7 +993,9 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
 
     # Pattern: "have <donor> assign/give <quantity> <type> to <recipient>"
     # Example: "have Joe give 100 soldiers to Bill"
-    match = re.search(r'have\s+(.+?)\s+(?:assign|give)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+to\s+(.+)', sentence)
+    match = re.search(
+        rf'have\s+(.+?)\s+(?:assign|give)\s+(\d+)\s+({_TRANSFER_KINDS})s?\s+to\s+(.+)',
+        sentence)
     if match:
         donor_name = match.group(1).strip()
         quantity = int(match.group(2))
@@ -983,22 +1016,12 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
         order.donor_id = donor_resolved.entity_id
         order.recipient_id = recipient_resolved.entity_id
 
-        if unit_or_gold == 'gold':
-            order.gold_amount = quantity
-        elif unit_or_gold == 'soldier':
-            order.unit_type = "SOLDIER"
-            order.unit_count = quantity
-        elif unit_or_gold == 'sailor':
-            order.unit_type = "SAILOR"
-            order.unit_count = quantity
-        elif unit_or_gold == 'worker':
-            order.unit_type = "WORKER"
-            order.unit_count = quantity
-
+        _fill_assign(order, unit_or_gold, quantity, parser)
         return order
 
     # Pattern: "assign/give <quantity> <type> to <recipient>" (implicit leader as donor)
-    match = re.search(r'^(?:assign|give)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+to\s+(.+)', sentence)
+    match = re.search(
+        rf'^(?:assign|give)\s+(\d+)\s+({_TRANSFER_KINDS})s?\s+to\s+(.+)', sentence)
     if match:
         quantity = int(match.group(1))
         unit_or_gold = match.group(2).strip().lower()
@@ -1018,24 +1041,15 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
 
         order.recipient_id = recipient_resolved.entity_id
 
-        if unit_or_gold == 'gold':
-            order.gold_amount = quantity
-        elif unit_or_gold == 'soldier':
-            order.unit_type = "SOLDIER"
-            order.unit_count = quantity
-        elif unit_or_gold == 'sailor':
-            order.unit_type = "SAILOR"
-            order.unit_count = quantity
-        elif unit_or_gold == 'worker':
-            order.unit_type = "WORKER"
-            order.unit_count = quantity
-
+        _fill_assign(order, unit_or_gold, quantity, parser)
         return order
 
     # Pattern: "assign <name> [and <name>] to <recipient>" -- named characters
     # rather than a count of unnamed units. rules.md: an assigned character
     # keeps whoever was already assigned to them, so a whole branch of the
-    # group moves at once.
+    # group moves at once. A counted kind may sit in the same list ("Assign
+    # 10 soldiers and Doctor McCoy to Joe Flint"): the count fills the
+    # transfer and the names ride along.
     match = re.search(r'^(?:have\s+(.+?)\s+)?(?:assign|give)\s+(.+?)\s+to\s+(.+)$', sentence)
     if match:
         donor_name, subject_text, recipient_name = match.groups()
@@ -1069,16 +1083,100 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
                 order.item_names.append(item.name)
                 continue
 
+            # A counted kind in a name list: "assign 10 soldiers and Doctor
+            # McCoy to Joe Flint". One kind fills the transfer; the splitter
+            # turns several kinds into one order each, so this is rare.
+            counted = re.match(rf'^(\d+)\s+({_TRANSFER_KINDS})s?$', name)
+            if counted:
+                _fill_assign(order, counted.group(2).lower(),
+                             int(counted.group(1)), parser)
+                continue
+
+            # A bare resource ("give stone to X" after "gather stone") hands
+            # over whatever the donor holds. rules.md: "the pronoun it can
+            # be used to refer to whatever was successfully collected".
+            bare = re.fullmatch(rf"(?:{'|'.join(_RESOURCE_KINDS)})s?", name)
+            if bare:
+                order.resources[bare.group(0).rstrip('s')] = -1
+                continue
+
             subject_resolved = resolve_character(name, game_state, player_id)
             if not subject_resolved.found:
                 parser.add_warning(order, f"Character '{name}' not found")
-                return order
+                continue
             order.character_ids.append(subject_resolved.entity_id)
             order.character_names.append(subject_resolved.entity_name)
 
         return order
 
+    # Pattern: "give <recipient> <quantity> <type>" -- the prepositionless
+    # form. rules.md: "Have Joe give me 50 gold" and "Give Pindimya 10 gold"
+    # mean the same as their `to` equivalents.
+    match = re.search(
+        rf'(?:have\s+(.+?)\s+)?(?:assign|give)\s+(.+?)\s+(\d+)\s+({_TRANSFER_KINDS})s?\s*$',
+        sentence)
+    if match:
+        donor_name, recipient_name, quantity, unit_or_gold = match.groups()
+
+        if donor_name:
+            donor_resolved = resolve_character(donor_name.strip(), game_state, player_id)
+            if not donor_resolved.found:
+                parser.add_warning(order, f"Donor '{donor_name.strip()}' not found")
+                return order
+            order.donor_id = donor_resolved.entity_id
+            order.explicit_actor = True
+        else:
+            leader = get_player_leader(game_state, player_id)
+            if not leader:
+                parser.add_warning(order, "No leader character found")
+                return order
+            order.donor_id = leader.id
+
+        recipient_resolved = resolve_character(recipient_name.strip(), game_state, player_id, enemy_ok=True)
+        if not recipient_resolved.found:
+            parser.add_warning(order, f"Recipient '{recipient_name.strip()}' not found")
+            return order
+        order.recipient_id = recipient_resolved.entity_id
+
+        _fill_assign(order, unit_or_gold.lower(), int(quantity), parser)
+        return order
+
     return None
+
+
+def _fill_assign(order: AssignOrder, kind: str, quantity: int,
+                 parser: OrderParserBase) -> None:
+    """Load one counted kind onto an AssignOrder."""
+    if kind == 'gold':
+        order.gold_amount += quantity
+    elif kind in _RESOURCE_KINDS:
+        order.resources[kind] = order.resources.get(kind, 0) + quantity
+    else:
+        # An order carries one unit kind. The splitter normally turns
+        # "assign 5 soldiers and 3 workers to X" into one order per kind, so
+        # a second kind here is a surprise rather than the common path.
+        if order.unit_type and order.unit_type != kind.upper():
+            parser.add_warning(
+                order, f"Only one unit kind per GIVE; {kind}s not transferred")
+            return
+        order.unit_type = kind.upper()
+        order.unit_count = quantity
+
+
+def _fill_take(order: GetOrder, kind: str, quantity: int,
+               parser: OrderParserBase) -> None:
+    """Load one counted kind onto a GetOrder."""
+    if kind == 'gold':
+        order.gold_amount += quantity
+    elif kind in _RESOURCE_KINDS:
+        order.resources[kind] = order.resources.get(kind, 0) + quantity
+    else:
+        if order.unit_type and order.unit_type != kind.upper():
+            parser.add_warning(
+                order, f"Only one unit kind per TAKE; {kind}s not taken")
+            return
+        order.unit_type = kind.upper()
+        order.unit_count = quantity
 
 
 def parse_name_order(sentence: str, game_state: GameState, player_id: str) -> Optional[NameOrder]:
@@ -1688,19 +1786,19 @@ def parse_trade_order(sentence: str, game_state: GameState, player_id: str) -> O
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(TradeOrder)
 
-    match = re.search(r'have\s+(.+?)\s+(buy|sell)\s+(\d+)\s+([a-z]+)', sentence)
+    match = re.search(r'have\s+(.+?)\s+(buy|purchase|sell)\s+(\d+)\s+([a-z]+)', sentence)
     if match:
         actor_name = match.group(1).strip()
         if not parser.resolve_actor(order, actor_name):
             return order
-        order.action = match.group(2)
+        order.action = 'buy' if match.group(2) == 'purchase' else match.group(2)
         order.amount = int(match.group(3))
         order.resource_type = match.group(4)
         return order
 
-    match = re.search(r'^(buy|sell)\s+(\d+)\s+([a-z]+)', sentence)
+    match = re.search(r'^(buy|purchase|sell)\s+(\d+)\s+([a-z]+)', sentence)
     if match:
-        order.action = match.group(1)
+        order.action = 'buy' if match.group(1) == 'purchase' else match.group(1)
         order.amount = int(match.group(2))
         order.resource_type = match.group(3)
         parser.resolve_actor(order, None)
@@ -2542,9 +2640,9 @@ def parse_get_order(sentence: str, game_state: GameState, player_id: str) -> Opt
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(GetOrder)
 
-    # have X take N gold|units from Y
+    # have X take N gold|units|resources from Y
     match = re.search(
-        r'have\s+(.+?)\s+(?:get|take|obtain)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+from\s+(.+)',
+        rf'have\s+(.+?)\s+(?:get|take|obtain)\s+(\d+)\s+({_TRANSFER_KINDS})s?\s+from\s+(.+)',
         sentence,
     )
     if match:
@@ -2557,16 +2655,12 @@ def parse_get_order(sentence: str, game_state: GameState, player_id: str) -> Opt
             parser.add_warning(order, f"Donor '{match.group(4).strip()}' not found")
             return order
         order.donor_id = donor.entity_id
-        if kind == 'gold':
-            order.gold_amount = qty
-        else:
-            order.unit_type = kind.upper()
-            order.unit_count = qty
+        _fill_take(order, kind, qty, parser)
         return order
 
-    # take N gold|units from Y (leader is recipient)
+    # take N gold|units|resources from Y (leader is recipient)
     match = re.search(
-        r'^(?:get|take|obtain)\s+(\d+)\s+(soldier|sailor|worker|gold)s?\s+from\s+(.+)',
+        rf'^(?:get|take|obtain)\s+(\d+)\s+({_TRANSFER_KINDS})s?\s+from\s+(.+)',
         sentence,
     )
     if match:
@@ -2579,11 +2673,7 @@ def parse_get_order(sentence: str, game_state: GameState, player_id: str) -> Opt
             parser.add_warning(order, f"Donor '{match.group(3).strip()}' not found")
             return order
         order.donor_id = donor.entity_id
-        if kind == 'gold':
-            order.gold_amount = qty
-        else:
-            order.unit_type = kind.upper()
-            order.unit_count = qty
+        _fill_take(order, kind, qty, parser)
         return order
 
     # get Joe and Tom — characters join actor (same faction only)
@@ -2755,7 +2845,7 @@ ORDER_KEYWORDS = {
     'move': ['go', 'move', 'travel', 'come'],
     'sail': ['sail'],
     'recruit': ['recruit', 'hire'],
-    'buy': ['buy'],
+    'buy': ['buy', 'purchase'],
     'attack': ['attack'],
     'capture': ['capture'],
     'teleport': ['teleport'],
@@ -2775,7 +2865,7 @@ ORDER_KEYWORDS = {
     'name': ['name'],
     'promote': ['promote'],
     'tax': ['tax'],
-    'trade': ['buy', 'sell', 'trade'],
+    'trade': ['buy', 'sell', 'trade', 'purchase'],
     'await': ['await', 'wait'],
     'repeat': ['repeat'],
     'scry': ['scry'],
@@ -2836,6 +2926,489 @@ def strip_repeatedly(sentence: str) -> tuple[str, Optional[int]]:
     return ' '.join(stripped.split()), times
 
 
+# ============================================================================
+# AND-CHAINED COMMANDS
+# ============================================================================
+
+# Adverbs that may sit between `and` and the verb of the next chained command:
+# "Buy 10 horses and briefly query Joe Flint" (rules.md) or "and have him and
+# Joe Bunnions ... immediately charge it". They belong to the clause that
+# follows them, and are skipped when reading the head of a clause.
+_CLAUSE_ADVERBS = ("immediately", "silently", "quietly", "definitely",
+                   "briefly", "exactly", "carefully", "repeatedly")
+
+# Every word that can start a command, for recognising where a clause begins.
+_COMMAND_VERBS = frozenset(
+    word for words in ORDER_KEYWORDS.values() for word in words) | {"have"}
+
+# Prepositions that hand an assign-style list to its target, used to fold the
+# target back onto an unfinished clause ("assign 20 soldiers and 23 horses to
+# Bill Jenkins" splits into one order per kind, both naming Bill Jenkins).
+_TARGET_PREPOSITIONS = ("to", "from", "by", "in")
+
+
+def _first_word_after_adverbs(text: str) -> str:
+    """The first significant word of a clause, skipping leading adverbs."""
+    for word in text.split():
+        if word in _CLAUSE_ADVERBS:
+            continue
+        return word
+    return ""
+
+
+def _leading_verb(clause: str) -> str:
+    """The first command verb word of a clause, after the HAVE marker.
+
+    "recruit" for "have mary anderson recruit 5 soldiers and 3 workers"; ""
+    for a clause that continues the previous command ("20 horses to Bill
+    Fenton"). `have` is the delegation marker rather than a verb, so it is
+    passed over: the elided continuation of a have-clause is its *action*.
+    """
+    for word in clause.split():
+        if word in _COMMAND_VERBS and word != "have":
+            return word
+    return ""
+
+
+def _have_target(clause: str) -> str:
+    """The name(s) `have` hands the order to, up to the first verb.
+
+    "bill jenkins" for "have bill jenkins go to riverton", and the whole
+    list for "have merlinus and joe bunnions charge it". A "to" between the
+    name and the verb ("have him to go to Kitesta", which rules.md uses) is
+    skipped rather than swallowed into the name.
+    """
+    words = clause.split()
+    if not words or words[0] != "have":
+        return ""
+    taken = []
+    for word in words[1:]:
+        if word in _COMMAND_VERBS:
+            break
+        if word in _CLAUSE_ADVERBS or word == "to":
+            continue
+        taken.append(word)
+    return " ".join(taken)
+
+
+def _replicate_target(prefix: str, remainder: str, elided_verb: str,
+                      game_state: GameState, player_id: str) -> Optional[str]:
+    """
+    Fold the tail's target phrase back onto an unfinished clause.
+
+    In "assign 20 soldiers and 23 horses to Bill Jenkins" the first clause is
+    not complete until its target arrives, and the target sits in the tail.
+    Taking the tail up to its first preposition gives "assign 20 soldiers to
+    Bill Jenkins", which is a complete command -- so the `and` is a boundary
+    and the tail can start its own clause. Returns the completed clause, or
+    None when the tail does not complete it.
+    """
+    words = remainder.split()
+    for index, word in enumerate(words):
+        if word not in _TARGET_PREPOSITIONS:
+            continue
+        # The target phrase runs to the next `and` (the next clause) or the
+        # end of the sentence.
+        cut = next((j for j in range(index, len(words)) if words[j] == "and"),
+                   len(words))
+        tail = " ".join(words[index:cut])
+        candidate = f"{prefix} {tail}"
+        if _clause_complete(candidate, elided_verb, game_state, player_id):
+            return candidate
+        return None
+    return None
+
+
+def _clause_complete(clause: str, elided_verb: str, game_state: GameState,
+                     player_id: str) -> bool:
+    """
+    Whether `clause` is a whole command on its own.
+
+    A clause that starts with a quantity or a name rather than a verb is a
+    continuation of the previous command ("20 horses to Bill Fenton" after
+    "give 50 gold to Nancy Myers"), so it is judged with the previous verb
+    put back in front. A parser that matched the grammar counts as complete
+    even when entity resolution failed: the order it returns carries its own
+    honest warning.
+    """
+    if not _leading_verb(clause) and elided_verb:
+        clause = f"{elided_verb} {clause}"
+    if not _leading_verb(clause):
+        return False
+    return _dispatch_clause(clause, game_state, player_id) is not None
+
+
+def split_clauses(sentence: str, game_state: GameState,
+                  player_id: str) -> list[str]:
+    """
+    Split one sentence into command clauses at its `and` boundaries.
+
+    `and` joins either items within one command or whole commands:
+    "Assign 20 soldiers and 23 horses to Bill Jenkins, and have him go to
+    Riverton and attack Mike May" is three commands. A boundary is an `and`
+    whose clause so far is complete and whose tail starts a new one -- with
+    a verb, with `have`, or with a quantity that continues the previous verb
+    ("give 50 gold to Nancy Myers and 20 horses to Bill Fenton"). When the
+    clause so far is unfinished but would be complete with the tail's target
+    folded back onto it, the target is replicated instead.
+
+    The sentence is already pronoun-resolved, so the clauses it yields are
+    ready for verb dispatch.
+    """
+    clauses: list[str] = []
+    start = 0
+    prev_verb = ""
+
+    for match in re.finditer(r"\s+and\s+", sentence):
+        prefix = sentence[start:match.start()].strip()
+        if not prefix:
+            continue
+        head = _first_word_after_adverbs(sentence[match.end():])
+        if head not in _COMMAND_VERBS and not head.isdigit():
+            continue
+
+        if _clause_complete(prefix, prev_verb, game_state, player_id):
+            clauses.append(prefix)
+            start = match.end()
+            verb = _leading_verb(prefix)
+            if verb:
+                prev_verb = verb
+            continue
+
+        # The clause so far lacks its target but the tail carries it.
+        if head.isdigit():
+            completed = _replicate_target(prefix, sentence[match.end():],
+                                          prev_verb, game_state, player_id)
+            if completed is not None:
+                clauses.append(completed)
+                start = match.end()
+                # A replicated clause is a continuation ("2 workers to Bill
+                # Gershwin"), so the verb stays the previous clause's.
+                verb = _leading_verb(completed)
+                if verb:
+                    prev_verb = verb
+
+    tail = sentence[start:].strip()
+    if tail:
+        clauses.append(tail)
+    return clauses
+
+
+def _dispatch_clause(sentence: str, game_state: GameState,
+                     player_id: str) -> Optional[Order]:
+    """
+    Route one clause to the verb parser that handles it.
+
+    This is the shared heart of order parsing: `parse_orders` calls it once
+    per clause of a sentence, and `split_clauses` calls it to judge whether
+    text so far is a complete command. It never mutates state.
+
+    Keyword checks are only a routing hint: a parser that returns None (the
+    clause does not match its grammar) falls through to the next candidate,
+    which is why every branch is a match-and-return rather than a shortcut.
+    """
+    if any(kw in sentence for kw in ORDER_KEYWORDS['halt']):
+        order = parse_halt_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    # Try each parser based on keywords (optimization)
+    if any(kw in sentence for kw in ORDER_KEYWORDS['move']):
+        order = parse_move_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['sail']):
+        order = parse_sail_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['recruit']):
+        order = parse_recruit_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['buy']):
+        order = parse_buy_ship_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['attack']):
+        order = parse_attack_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['teleport']):
+        order = parse_teleport_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['fly']):
+        order = parse_fly_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['heal']):
+        order = parse_heal_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['pray']):
+        order = parse_pray_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['bless']):
+        order = parse_bless_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['curse']):
+        order = parse_curse_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['resurrect']):
+        order = parse_resurrect_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['secure']):
+        order = parse_secure_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['fortify']):
+        order = parse_fortify_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['unfortify']):
+        order = parse_unfortify_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['ally']):
+        order = parse_ally_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['enemy']):
+        order = parse_enemy_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['neutral']):
+        order = parse_neutral_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['assign']):
+        order = parse_assign_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['name']):
+        order = parse_name_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['promote']):
+        order = parse_promote_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['tax']):
+        order = parse_tax_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['trade']):
+        order = parse_trade_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['await']):
+        order = parse_await_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['repeat']):
+        order = parse_repeat_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['scry']):
+        order = parse_scry_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['capture']):
+        order = parse_capture_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['free']):
+        order = parse_free_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['study']):
+        order = parse_study_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['teach']):
+        order = parse_teach_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['summon']):
+        order = parse_summon_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['collect']):
+        order = parse_collect_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['build']):
+        order = parse_build_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['mine']):
+        order = parse_mine_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['kill']):
+        order = parse_kill_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['enslave']):
+        order = parse_enslave_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['interrogate']):
+        order = parse_interrogate_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['noncom']):
+        order = parse_noncom_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['lurk']):
+        order = parse_lurk_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['probe']):
+        order = parse_probe_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['search']):
+        order = parse_search_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['scan']):
+        order = parse_scan_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['password']):
+        order = parse_password_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['address']):
+        order = parse_address_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['message']):
+        order = parse_message_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['post']):
+        order = parse_post_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['report']):
+        order = parse_report_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    # conjure before charge: "a wand of conjuring" would otherwise be read
+    # as a CHARGE by the bare substring test below.
+    if any(kw in sentence for kw in ORDER_KEYWORDS['conjure']):
+        order = parse_conjure_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['charge']):
+        order = parse_charge_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['absorb']):
+        order = parse_absorb_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['get']):
+        order = parse_get_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['transfer']):
+        order = parse_transfer_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['unload']):
+        order = parse_unload_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    # repay before pay: "repay" contains the substring "pay"
+    if any(kw in sentence for kw in ORDER_KEYWORDS['repay']):
+        order = parse_repay_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['borrow']):
+        order = parse_borrow_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['pay']):
+        order = parse_pay_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['join']):
+        order = parse_join_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    if any(kw in sentence for kw in ORDER_KEYWORDS['support']):
+        order = parse_support_order(sentence, game_state, player_id)
+        if order:
+            return order
+
+    return None
+
+
 def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[Order]:
     """
     Parse raw order text into a list of Order objects.
@@ -2844,7 +3417,7 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
     with an LLM-based implementation that has the same signature.
 
     `repeatedly` is an adverb rather than a verb, so it is lifted off its
-    sentence before the verb dispatch below and emitted as its own REPEAT order
+    clause before the verb dispatch below and emitted as its own REPEAT order
     in front of the command it governs. The engine's queue then treats
     everything after that REPEAT as the loop body.
 
@@ -2872,217 +3445,76 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         if not sentence:
             continue
 
-        original_sentence = sentence
-        # Every pronoun becomes the name it stands for before verb dispatch, so
-        # no verb parser below has to know pronouns exist.
+        # Every pronoun becomes the name it stands for before clause
+        # splitting, so no verb parser below has to know pronouns exist.
         sentence = pronouns.resolve(sentence, referents, game_state, player_id)
-        sentence, repeat_times = strip_repeatedly(sentence)
 
-        order = None
+        # `and` joins whole commands as well as items, so one sentence can
+        # carry several orders: "Assign 20 soldiers and 23 horses to Bill
+        # Jenkins, and have him go to Riverton and attack Mike May" is three.
+        clauses = split_clauses(sentence, game_state, player_id)
 
-        if any(kw in sentence for kw in ORDER_KEYWORDS['halt']):
-            order = parse_halt_order(sentence, game_state, player_id)
+        # The HAVE form hands its command to a named character, and the
+        # character stays the actor of the chained commands that follow it:
+        # "have him go to Riverton and tax for 3 weeks, and go to Ennistown
+        # and tax" is four orders, all to the same character.
+        have_target = ""
+        prev_verb = ""
 
-        # Try each parser based on keywords (optimization)
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['move']):
-            order = parse_move_order(sentence, game_state, player_id)
+        for clause in clauses:
+            clause = clause.strip()
+            if not clause:
+                continue
 
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['sail']):
-            order = parse_sail_order(sentence, game_state, player_id)
+            if clause.startswith("have "):
+                have_target = _have_target(clause)
+            elif _leading_verb(clause):
+                if have_target:
+                    clause = f"have {have_target} {clause}"
+            else:
+                # Verb elision: "give 50 gold to Nancy Myers and 20 horses to
+                # Bill Fenton" is two GIVE orders; "charge Ampu to 75 power
+                # and Wasute by 7 power" is one CHARGE with both items (the
+                # CHARGE parser reads the list itself), and the counted
+                # continuation of a recruit ("recruit 5 soldiers and 3
+                # workers") is a second RECRUIT.
+                if prev_verb:
+                    prefix = f"have {have_target} " if have_target else ""
+                    clause = f"{prefix}{prev_verb} {clause}"
 
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['recruit']):
-            order = parse_recruit_order(sentence, game_state, player_id)
+            clause_original = clause
+            clause, repeat_times = strip_repeatedly(clause)
 
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['buy']):
-            order = parse_buy_ship_order(sentence, game_state, player_id)
+            order = _dispatch_clause(clause, game_state, player_id)
+            verb = _leading_verb(clause_original)
+            if verb:
+                prev_verb = verb
 
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['attack']):
-            order = parse_attack_order(sentence, game_state, player_id)
+            if order:
+                # rules.md's HAVE form delegates to a named character, and
+                # that makes them a group leader. Not every parser routes
+                # through resolve_actor, so the delegation is recognised
+                # centrally here.
+                if HAVE_PREFIX.match(clause_original):
+                    order.explicit_actor = True
 
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['teleport']):
-            order = parse_teleport_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['fly']):
-            order = parse_fly_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['heal']):
-            order = parse_heal_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['pray']):
-            order = parse_pray_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['bless']):
-            order = parse_bless_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['curse']):
-            order = parse_curse_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['resurrect']):
-            order = parse_resurrect_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['secure']):
-            order = parse_secure_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['fortify']):
-            order = parse_fortify_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['unfortify']):
-            order = parse_unfortify_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['ally']):
-            order = parse_ally_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['enemy']):
-            order = parse_enemy_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['neutral']):
-            order = parse_neutral_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['assign']):
-            order = parse_assign_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['name']):
-            order = parse_name_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['promote']):
-            order = parse_promote_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['tax']):
-            order = parse_tax_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['trade']):
-            order = parse_trade_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['await']):
-            order = parse_await_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['repeat']):
-            order = parse_repeat_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['scry']):
-            order = parse_scry_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['capture']):
-            order = parse_capture_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['free']):
-            order = parse_free_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['study']):
-            order = parse_study_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['teach']):
-            order = parse_teach_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['summon']):
-            order = parse_summon_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['collect']):
-            order = parse_collect_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['build']):
-            order = parse_build_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['mine']):
-            order = parse_mine_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['kill']):
-            order = parse_kill_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['enslave']):
-            order = parse_enslave_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['interrogate']):
-            order = parse_interrogate_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['noncom']):
-            order = parse_noncom_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['lurk']):
-            order = parse_lurk_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['probe']):
-            order = parse_probe_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['search']):
-            order = parse_search_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['scan']):
-            order = parse_scan_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['password']):
-            order = parse_password_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['address']):
-            order = parse_address_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['message']):
-            order = parse_message_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['post']):
-            order = parse_post_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['report']):
-            order = parse_report_order(sentence, game_state, player_id)
-
-        # conjure before charge: "a wand of conjuring" would otherwise be read
-        # as a CHARGE by the bare substring test below.
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['conjure']):
-            order = parse_conjure_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['charge']):
-            order = parse_charge_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['absorb']):
-            order = parse_absorb_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['get']):
-            order = parse_get_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['transfer']):
-            order = parse_transfer_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['unload']):
-            order = parse_unload_order(sentence, game_state, player_id)
-
-        # repay before pay: "repay" contains the substring "pay"
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['repay']):
-            order = parse_repay_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['borrow']):
-            order = parse_borrow_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['pay']):
-            order = parse_pay_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['join']):
-            order = parse_join_order(sentence, game_state, player_id)
-
-        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['support']):
-            order = parse_support_order(sentence, game_state, player_id)
-
-        if order:
-            # rules.md's HAVE form delegates to a named character, and that
-            # makes them a group leader. Not every parser routes through
-            # resolve_actor, so the delegation is recognised centrally here.
-            if HAVE_PREFIX.match(original_sentence):
-                order.explicit_actor = True
-
-            if repeat_times is not None:
-                # The loop marker takes the same actor as the command it governs,
-                # so the two can never drift apart.
-                orders.append(RepeatOrder(
-                    player_id=player_id,
-                    original_text=original_sentence,
-                    actor_id=getattr(order, 'actor_id', ''),
-                    times=repeat_times,
-                ))
-            orders.append(order)
-        else:
-            # Unparseable order - create placeholder with warning
-            generic_order = MoveOrder(player_id=player_id, original_text=sentence)
-            generic_order.warnings.append(f"Could not parse order: '{sentence}'")
-            orders.append(generic_order)
+                if repeat_times is not None:
+                    # The loop marker takes the same actor as the command it
+                    # governs, so the two can never drift apart.
+                    orders.append(RepeatOrder(
+                        player_id=player_id,
+                        original_text=clause_original,
+                        actor_id=getattr(order, 'actor_id', ''),
+                        times=repeat_times,
+                    ))
+                orders.append(order)
+            else:
+                # Unparseable order - create placeholder with warning
+                generic_order = MoveOrder(
+                    player_id=player_id, original_text=clause)
+                generic_order.warnings.append(
+                    f"Could not parse order: '{clause}'")
+                orders.append(generic_order)
 
     # Put the players' own words back where the placeholders stand.
     for order in orders:

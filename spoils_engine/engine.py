@@ -1395,6 +1395,22 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                                 character_id=donor.id, success=False)
                     continue
 
+            # Transfer mass resources ("Give 50 armor to Thomas Ames"; a
+            # bare "give stone to X" hands over everything the donor holds).
+            for kind, wanted in order.resources.items():
+                amount = wanted if wanted >= 0 else donor.resources.get(kind, 0)
+                if donor.resources.get(kind, 0) < amount:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name}: insufficient {kind}",
+                                character_id=donor.id, success=False)
+                    continue
+                donor.resources[kind] = donor.resources.get(kind, 0) - amount
+                recipient.resources[kind] = (
+                    recipient.resources.get(kind, 0) + amount)
+                turn_log.add("assign", player_id, "assign_resource",
+                            f"{donor.name} gave {amount} {kind} to {recipient.name}",
+                            character_id=donor.id)
+
             # Hand over magical items. An item is a possession rather than a
             # subordinate, so it may cross faction lines exactly as gold and
             # units do, and it keeps whatever power it was holding.
@@ -3123,8 +3139,9 @@ def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                             character_id=recipient.id, success=False)
                 continue
 
-            # Character-join form: no gold/units — just co-locate (already true)
-            if order.gold_amount <= 0 and order.unit_count <= 0:
+            # Character-join form: no gold/units/resources — just co-locate
+            if (order.gold_amount <= 0 and order.unit_count <= 0
+                    and not order.resources):
                 turn_log.add("get", player_id, "get_join",
                             f"{donor.name} joined {recipient.name}",
                             character_id=recipient.id)
@@ -3143,6 +3160,22 @@ def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                                 f"{recipient.name}: {donor.name} has insufficient gold",
                                 character_id=recipient.id, success=False)
                     continue
+
+            for kind, wanted in order.resources.items():
+                amount = wanted if wanted >= 0 else donor.resources.get(kind, 0)
+                if donor.resources.get(kind, 0) < amount:
+                    turn_log.add("get", player_id, "get_failed",
+                                f"{recipient.name}: {donor.name} has "
+                                f"insufficient {kind}",
+                                character_id=recipient.id, success=False)
+                    continue
+                donor.resources[kind] = donor.resources.get(kind, 0) - amount
+                recipient.resources[kind] = (
+                    recipient.resources.get(kind, 0) + amount)
+                turn_log.add("get", player_id, "get_resource",
+                            f"{recipient.name} took {amount} {kind} "
+                            f"from {donor.name}",
+                            character_id=recipient.id)
 
             if order.unit_count > 0 and order.unit_type:
                 donor_stack = next(
