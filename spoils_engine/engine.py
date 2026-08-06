@@ -24,9 +24,9 @@ from spoils_engine.orders import (
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder,
     ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
-    actor_field,
+    JoinOrder, SupportOrder, actor_field, actor_id_of,
 )
-from spoils_engine import config, order_queue
+from spoils_engine import config, groups, order_queue
 from spoils_engine.combat import CombatResolver, calculate_faction_power, apply_casualties
 from spoils_engine.parser import get_player_leader
 
@@ -286,6 +286,130 @@ def validate_orders(orders_by_player: Dict[str, List[Order]], game_state: GameSt
 # PHASE 2: MOVEMENT
 # ============================================================================
 
+def process_group_leadership(orders_by_player: Dict[str, List[Order]],
+                             game_state: GameState, turn_log: TurnLog):
+    """
+    Give a character their independence the moment they are given an order.
+
+    rules.md: "Whenever you use the HAVE command, the character named in the
+    command will automatically become a group leader if he was not already one.
+    From that point on, he will remain independent unless given specific orders
+    to join another group."
+
+    This runs before the phases that act on those orders, so a character who is
+    told to go somewhere leaves with their own group rather than dragging their
+    former leader's people along.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if order.warnings or not order.explicit_actor:
+                continue
+
+            actor = game_state.characters.get(actor_id_of(order))
+            if not actor or actor.faction_id != player_id:
+                continue
+
+            former_leader_id = actor.group_leader_id
+            if not groups.detach(actor):
+                continue
+
+            former = game_state.characters.get(former_leader_id)
+            turn_log.add("groups", player_id, "became_leader",
+                         f"{actor.name} left {former.name}'s group and now leads their own"
+                         if former else f"{actor.name} now leads their own group",
+                         character_id=actor.id)
+
+
+def process_join(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                 turn_log: TurnLog):
+    """Process JOIN -- the ASSIGN operation, given to the one being assigned."""
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, JoinOrder) or order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            target = game_state.characters.get(order.target_id)
+
+            if not actor:
+                continue
+            if not target or target.faction_id != player_id:
+                turn_log.add("groups", player_id, "join_failed",
+                             f"{actor.name}: cannot join {order.target_name or 'them'}",
+                             character_id=actor.id, success=False)
+                continue
+
+            refusal = groups.attach(actor, target, game_state)
+            if refusal:
+                turn_log.add("groups", player_id, "join_failed",
+                             f"{actor.name} could not join {target.name}: {refusal}",
+                             character_id=actor.id, success=False)
+                continue
+
+            following = len(groups.group_members(actor.id, game_state))
+            brought = f" bringing {following} other(s)" if following else ""
+            turn_log.add("groups", player_id, "join",
+                         f"{actor.name} joined {target.name}'s group{brought}",
+                         character_id=actor.id)
+
+
+def process_support(orders_by_player: Dict[str, List[Order]], game_state: GameState,
+                    turn_log: TurnLog):
+    """
+    Process SUPPORT -- agree to fight alongside someone when they attack.
+
+    The supporter keeps their own group, so combat leadership does not carry
+    across; see `combat.calculate_faction_power`. With no duration the
+    agreement stands until a HALT or STOP clears the character's queue.
+    """
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, SupportOrder) or order.warnings:
+                continue
+
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                continue
+
+            target_id = order.target_ids[0] if order.target_ids else ""
+            target = game_state.characters.get(target_id)
+            if not target:
+                turn_log.add("groups", player_id, "support_failed",
+                             f"{actor.name}: nobody by that name to support",
+                             character_id=actor.id, success=False)
+                continue
+
+            actor.supporting_id = target.id
+            if order.duration_days > 0:
+                actor.support_until_turn = (
+                    game_state.turn_number
+                    + order_queue.turns_for_days(order.duration_days)
+                )
+                window = f" for {order.duration_days} day(s)"
+            else:
+                actor.support_until_turn = -1  # until halted
+                window = " until halted"
+
+            turn_log.add("groups", player_id, "support",
+                         f"{actor.name} will fight alongside {target.name}{window}",
+                         character_id=actor.id)
+
+
+def expire_support(game_state: GameState, turn_log: TurnLog):
+    """Drop support agreements whose time is up."""
+    for char in game_state.characters.values():
+        if not char.supporting_id or char.support_until_turn < 0:
+            continue
+        if game_state.turn_number >= char.support_until_turn:
+            target = game_state.characters.get(char.supporting_id)
+            char.supporting_id = ""
+            char.support_until_turn = -1
+            turn_log.add("groups", char.faction_id, "support_ended",
+                         f"{char.name} is no longer supporting "
+                         f"{target.name if target else 'anyone'}",
+                         character_id=char.id)
+
+
 def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                      turn_log: TurnLog, rng: random.Random):
     """Process all movement orders."""
@@ -319,17 +443,23 @@ def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameS
                             character_id=actor.id, success=False)
                 continue
 
-            # Move character
+            # Move character, and whoever is travelling with them. rules.md:
+            # a group goes where its leader goes.
             start_city = game_state.world_map.cities[actor.location_city_id]
             end_city = game_state.world_map.cities[order.destination_city_id]
+            travelled = groups.move_group(actor, order.destination_city_id, game_state)
             actor.location_city_id = order.destination_city_id
             # Round up: truncating made every sub-1.0 hop (excellent roads cost
             # 0.5) free, so a character could cross the map without ever
             # spending a movement point.
             actor.movement_points -= max(1, math.ceil(cost))
+            for member in travelled:
+                member.movement_points -= max(1, math.ceil(cost))
 
+            escort = groups.describe_escort(travelled, actor, game_state)
             turn_log.add("movement", player_id, "move",
-                        f"{actor.name} moved from {start_city.name} to {end_city.name} (cost: {cost:.1f})",
+                        f"{actor.name} moved from {start_city.name} to {end_city.name}"
+                        f"{escort} (cost: {cost:.1f})",
                         location=end_city.id, character_id=actor.id)
 
 
@@ -506,14 +636,16 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                                 location=city.id, character_id=actor.id, success=False)
                     continue
 
-                # Create unit stack
+                # Create unit stack. Recruits belong to whoever raised them, so
+                # they march with that character rather than being left behind.
                 stack_id = allocate_id(game_state.unit_stacks, f"stack_{player_id}")
                 new_stack = UnitStack(
                     id=stack_id,
                     faction_id=player_id,
                     location_city_id=order.city_id,
                     unit_type=unit_type_enum,
-                    count=order.count
+                    count=order.count,
+                    owner_character_id=actor.id,
                 )
                 game_state.unit_stacks[stack_id] = new_stack
 
@@ -856,6 +988,32 @@ def defending_side(defender_id: str, attacker_id: str, city_id: str,
     return side
 
 
+def supporting_side(attacker: Character, city_id: str,
+                    game_state: GameState) -> List[str]:
+    """
+    Other factions whose characters have agreed to fight alongside this attacker.
+
+    rules.md: a supporter joins "as if they had given the same ATTACK/CAPTURE
+    order at exactly the same time", but stays a separate group. Their strength
+    is summed per faction rather than merged, which is what the rules mean by
+    combat leadership being "limited to a single group" -- the supporter's
+    leadership lifts their own people and nobody else's.
+    """
+    extra: List[str] = []
+
+    for char in game_state.characters.values():
+        if char.supporting_id != attacker.id:
+            continue
+        if char.location_city_id != city_id or char.is_dead or char.is_prisoner:
+            continue
+        if char.faction_id == attacker.faction_id or char.faction_id in extra:
+            continue
+        if calculate_faction_power(char.faction_id, city_id, game_state) > 0:
+            extra.append(char.faction_id)
+
+    return sorted(extra)
+
+
 def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                    turn_log: TurnLog, rng: random.Random):
     """Process combat orders using CombatResolver."""
@@ -892,8 +1050,16 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
             # Calculate powers. The defender's allies present at the location
             # stand with them, so their strength counts and they share the
             # losses.
-            side = defending_side(defender_faction_id, attacker_player_id, city_id, game_state)
-            attacker_power = calculate_faction_power(attacker_player_id, city_id, game_state)
+            # Supporters fight as if they had attacked at the same moment, and
+            # cannot also be counted among the defender's allies.
+            supporters = supporting_side(attacker, city_id, game_state)
+            side = [fid for fid in
+                    defending_side(defender_faction_id, attacker_player_id, city_id, game_state)
+                    if fid not in supporters]
+            attack_side = [attacker_player_id] + supporters
+            attacker_power = sum(
+                calculate_faction_power(fid, city_id, game_state) for fid in attack_side
+            )
             defender_power = sum(
                 calculate_faction_power(fid, city_id, game_state) for fid in side
             )
@@ -917,10 +1083,18 @@ def process_combat(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                 attacker_power, defender_power
             )
 
-            # Apply casualties
+            # Apply casualties. Supporters bleed for it too.
             attacker_losses = apply_casualties(
                 attacker_player_id, city_id, result.attacker_casualties, game_state, rng
             )
+            for supporter_id in supporters:
+                supporter_losses = apply_casualties(
+                    supporter_id, city_id, result.attacker_casualties, game_state, rng
+                )
+                turn_log.add("combat", supporter_id, "supported",
+                            f"Your forces fought alongside {attacker.name} in {city.name} "
+                            f"(lost {supporter_losses['units']} units)",
+                            location=city_id)
             defender_losses = {
                 fid: apply_casualties(fid, city_id, result.defender_casualties, game_state, rng)
                 for fid in side
@@ -1210,16 +1384,58 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                                 character_id=donor.id, success=False)
                     continue
 
+            # Assign named characters into the recipient's group. rules.md:
+            # they keep whoever was assigned to them.
+            for cid, cname in zip(order.character_ids, order.character_names):
+                subject = game_state.characters.get(cid)
+                if not subject or subject.faction_id != player_id:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name}: cannot assign {cname}",
+                                character_id=donor.id, success=False)
+                    continue
+
+                # Units may be given across faction lines, but a character
+                # cannot: taking somebody else's people is CAPTURE, not GIVE.
+                if recipient.faction_id != player_id:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name}: {cname} cannot be assigned to "
+                                f"another faction's character",
+                                character_id=donor.id, success=False)
+                    continue
+
+                refusal = groups.attach(subject, recipient, game_state)
+                if refusal:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                f"{donor.name}: {subject.name} could not be assigned "
+                                f"to {recipient.name} - {refusal}",
+                                character_id=donor.id, success=False)
+                    continue
+
+                turn_log.add("assign", player_id, "assign_character",
+                            f"{donor.name} assigned {subject.name} to {recipient.name}'s group",
+                            character_id=donor.id)
+
             # Transfer units
             if order.unit_count > 0 and order.unit_type:
-                # Find donor's unit stack
+                # The donor's own units first, then the unowned pool standing
+                # with them -- recruits land unowned until somebody is given them.
                 donor_stack = None
                 for stack in game_state.unit_stacks.values():
                     if (stack.faction_id == player_id and
                         stack.location_city_id == donor.location_city_id and
-                        stack.unit_type.name == order.unit_type):
+                        stack.unit_type.name == order.unit_type and
+                        stack.owner_character_id == donor.id):
                         donor_stack = stack
                         break
+
+                if donor_stack is None or donor_stack.count < order.unit_count:
+                    for stack in game_state.unit_stacks.values():
+                        if (stack.faction_id == player_id and
+                            stack.location_city_id == donor.location_city_id and
+                            stack.unit_type.name == order.unit_type and
+                            not stack.owner_character_id):
+                            donor_stack = stack
+                            break
 
                 if not donor_stack:
                     turn_log.add("assign", player_id, "assign_failed",
@@ -1236,13 +1452,15 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                 # Transfer units
                 donor_stack.count -= order.unit_count
 
-                # Find or create recipient stack. Units join the recipient's
-                # faction -- GIVE may cross faction lines.
+                # Find or create the recipient's stack. Units join the
+                # recipient's faction -- GIVE may cross faction lines -- and
+                # become theirs, so they travel with them from now on.
                 recipient_stack = None
                 for stack in game_state.unit_stacks.values():
                     if (stack.faction_id == recipient.faction_id and
                         stack.location_city_id == recipient.location_city_id and
-                        stack.unit_type.name == order.unit_type):
+                        stack.unit_type.name == order.unit_type and
+                        stack.owner_character_id == recipient.id):
                         recipient_stack = stack
                         break
 
@@ -1256,7 +1474,8 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                         faction_id=recipient.faction_id,
                         location_city_id=recipient.location_city_id,
                         unit_type=UnitType[order.unit_type],
-                        count=order.unit_count
+                        count=order.unit_count,
+                        owner_character_id=recipient.id,
                     )
                     game_state.unit_stacks[new_stack_id] = new_stack
 
@@ -2045,9 +2264,19 @@ def process_status_orders(orders_by_player: Dict[str, List[Order]], game_state: 
                 actor = game_state.characters.get(order.actor_id)
                 if not actor:
                     continue
+                # rules.md: "The LURK command should only be used on the leader
+                # of a group. Everyone in the group will automatically be
+                # included." A member who later breaks away keeps the flag only
+                # if their new leader is given their own LURK order.
                 actor.is_lurking = order.set_lurking
+                followers = groups.group_members(actor.id, game_state)
+                for member in followers:
+                    member.is_lurking = order.set_lurking
+
+                verb = "starts lurking" if order.set_lurking else "stops lurking"
+                with_group = f" (with {len(followers)} in their group)" if followers else ""
                 turn_log.add("status", player_id, "lurk",
-                            f"{actor.name} {'starts lurking' if order.set_lurking else 'stops lurking'}",
+                            f"{actor.name} {verb}{with_group}",
                             character_id=actor.id)
 
 
@@ -2180,7 +2409,14 @@ def process_transfer(orders_by_player: Dict[str, List[Order]], game_state: GameS
 
 
 def process_unload(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
-    """Mark co-located characters as independent group leaders (alpha)."""
+    """
+    Process UNLOAD -- turn a member of your group loose without ordering them
+    to do anything.
+
+    rules.md: "you can always make a character a group leader by simply giving
+    him an order. However, the UNLOAD command is useful when you simply want a
+    character to become a group leader and not do anything else."
+    """
     for player_id, orders in orders_by_player.items():
         for order in orders:
             if not isinstance(order, UnloadOrder) or order.warnings:
@@ -2200,9 +2436,13 @@ def process_unload(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                                 f"{actor.name}: {target.name} is not co-located",
                                 character_id=actor.id, success=False)
                     continue
-                # No full group model yet; success is recorded for order language.
+                if not groups.detach(target):
+                    turn_log.add("unload", player_id, "unload_failed",
+                                f"{actor.name}: {target.name} already leads their own group",
+                                character_id=actor.id, success=False)
+                    continue
                 turn_log.add("unload", player_id, "unload_success",
-                            f"{actor.name}: unloaded {target.name} as independent",
+                            f"{actor.name} unloaded {target.name}, who now leads their own group",
                             character_id=actor.id)
 
 
@@ -2529,6 +2769,10 @@ def run_turn(
     # Phase 1: Validation
     validate_orders(orders_by_player, game_state, turn_log)
 
+    # Phase 1b: Group leadership. A character given a direct order becomes a
+    # group leader before the order that named them is carried out.
+    process_group_leadership(orders_by_player, game_state, turn_log)
+
     # Phase 2: Movement
     process_movement(orders_by_player, game_state, turn_log, rng)
 
@@ -2557,6 +2801,8 @@ def run_turn(
     process_fortifications(orders_by_player, game_state, turn_log)
     process_diplomacy(orders_by_player, game_state, turn_log)
     process_assign(orders_by_player, game_state, turn_log)
+    process_join(orders_by_player, game_state, turn_log)
+    process_support(orders_by_player, game_state, turn_log)
     process_name(orders_by_player, game_state, turn_log)
     process_promote(orders_by_player, game_state, turn_log)
     process_tax(orders_by_player, game_state, turn_log)
@@ -2580,6 +2826,7 @@ def run_turn(
     report_pending_orders(game_state, turn_log)
 
     # Phase 8: Cleanup
+    expire_support(game_state, turn_log)
     process_prisoner_escape(game_state, turn_log, rng)
     cleanup_turn(game_state)
 

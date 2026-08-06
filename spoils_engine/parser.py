@@ -19,7 +19,7 @@ from spoils_engine.orders import (
     BuildOrder, MineOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder, TradeOrder, AwaitOrder,
     RepeatOrder, ScryOrder, KillOrder, EnslaveOrder, InterrogateOrder, NoncomOrder, LurkOrder,
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
-    HaltOrder, StopOrder,
+    HaltOrder, StopOrder, JoinOrder, SupportOrder,
 )
 from spoils_engine import config
 
@@ -161,12 +161,14 @@ class OrderParserBase:
             True if resolved successfully, False otherwise
         """
         if actor_name:
-            # Explicit actor name
+            # Explicit actor name -- the HAVE form. rules.md makes that
+            # character a group leader, so record that it was named.
             resolved = resolve_character(actor_name, self.game_state, self.player_id)
             if not resolved.found:
                 self.add_warning(order, f"Character '{actor_name}' not found")
                 return False
             order.actor_id = resolved.entity_id
+            order.explicit_actor = True
         else:
             # Implicit leader
             leader = get_player_leader(self.game_state, self.player_id)
@@ -216,8 +218,9 @@ def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Op
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(MoveOrder)
 
-    # Pattern: "have <name> go/move/travel to <city>"
-    match = re.search(r'have\s+(.+?)\s+(?:go|move|travel)\s+to\s+(.+)', sentence)
+    # Pattern: "have <name> go/move/travel/come to <city>".
+    # rules.md: "COME -- see the GO command"; they are the same order.
+    match = re.search(r'have\s+(.+?)\s+(?:go|move|travel|come)\s+to\s+(.+)', sentence)
     if match:
         actor_name, city_name = match.group(1).strip(), match.group(2).strip()
 
@@ -232,8 +235,8 @@ def parse_move_order(sentence: str, game_state: GameState, player_id: str) -> Op
         order.destination_city_id = city_resolved.entity_id
         return order
 
-    # Pattern: "go/move/travel to <city>" (implicit leader)
-    match = re.search(r'^(?:go|move|travel)\s+to\s+(.+)', sentence)
+    # Pattern: "go/move/travel/come to <city>" (implicit leader)
+    match = re.search(r'^(?:go|move|travel|come)\s+to\s+(.+)', sentence)
     if match:
         city_name = match.group(1).strip()
 
@@ -929,6 +932,44 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
         elif unit_or_gold == 'worker':
             order.unit_type = "WORKER"
             order.unit_count = quantity
+
+        return order
+
+    # Pattern: "assign <name> [and <name>] to <recipient>" -- named characters
+    # rather than a count of unnamed units. rules.md: an assigned character
+    # keeps whoever was already assigned to them, so a whole branch of the
+    # group moves at once.
+    match = re.search(r'^(?:have\s+(.+?)\s+)?(?:assign|give)\s+(.+?)\s+to\s+(.+)$', sentence)
+    if match:
+        donor_name, subject_text, recipient_name = match.groups()
+
+        if donor_name:
+            donor_resolved = resolve_character(donor_name.strip(), game_state, player_id)
+            if not donor_resolved.found:
+                parser.add_warning(order, f"Donor '{donor_name.strip()}' not found")
+                return order
+            order.donor_id = donor_resolved.entity_id
+            order.explicit_actor = True
+        else:
+            leader = get_player_leader(game_state, player_id)
+            if not leader:
+                parser.add_warning(order, "No leader character found")
+                return order
+            order.donor_id = leader.id
+
+        recipient_resolved = resolve_character(recipient_name.strip(), game_state, player_id)
+        if not recipient_resolved.found:
+            parser.add_warning(order, f"Recipient '{recipient_name.strip()}' not found")
+            return order
+        order.recipient_id = recipient_resolved.entity_id
+
+        for name in [n.strip() for n in subject_text.split(' and ') if n.strip()]:
+            subject_resolved = resolve_character(name, game_state, player_id)
+            if not subject_resolved.found:
+                parser.add_warning(order, f"Character '{name}' not found")
+                return order
+            order.character_ids.append(subject_resolved.entity_id)
+            order.character_names.append(subject_resolved.entity_name)
 
         return order
 
@@ -1670,6 +1711,76 @@ def parse_repeat_order(sentence: str, game_state: GameState, player_id: str) -> 
     return order
 
 
+def parse_join_order(sentence: str, game_state: GameState, player_id: str) -> Optional[JoinOrder]:
+    """
+    Parse JOIN -- become part of another character's group.
+
+    "Have Joe Flint join General Bill Hayden" or the bare "join Mike Holmes",
+    which the player's own leader carries out.
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(JoinOrder)
+
+    match = re.search(r'(?:have\s+(.+?)\s+)?join\s+(.+)$', sentence)
+    if not match:
+        return None
+
+    actor_name, target_name = match.group(1), match.group(2).strip()
+    target_name = re.sub(r'^(?:and|then)\s+', '', target_name).strip()
+
+    if not parser.resolve_actor(order, actor_name.strip() if actor_name else None):
+        return order
+
+    resolved = resolve_character(target_name, game_state, player_id)
+    if not resolved.found:
+        return parser.add_warning(order, f"Character '{target_name}' not found")
+
+    order.target_id = resolved.entity_id
+    order.target_name = resolved.entity_name
+    return order
+
+
+def parse_support_order(sentence: str, game_state: GameState, player_id: str) -> Optional[SupportOrder]:
+    """
+    Parse SUPPORT -- fight alongside somebody when they attack.
+
+    The target is usually another player's character, so the name is resolved
+    across factions. A `for <duration>` phrase bounds the agreement; without
+    one it stands until a HALT or STOP.
+    """
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(SupportOrder)
+
+    match = re.search(r'(?:have\s+(.+?)\s+)?support\s+(.+)$', sentence)
+    if not match:
+        return None
+
+    actor_name, remainder = match.group(1), match.group(2).strip()
+
+    if not parser.resolve_actor(order, actor_name.strip() if actor_name else None):
+        return order
+
+    duration = parse_duration_days(remainder)
+    if duration is not None:
+        order.duration_days = duration
+
+    target_text = re.sub(r'\bfor\s+\d+\s+(?:minute|hour|day|week|month)s?\b', ' ', remainder)
+    target_text = re.sub(r'\b(?:and|then)\b.*$', ' ', target_text)
+    target_text = ' '.join(target_text.split())
+
+    if not target_text:
+        return parser.add_warning(order, "Support whom?")
+
+    for name in [n.strip() for n in target_text.split(' and ') if n.strip()]:
+        resolved = resolve_character(name, game_state, player_id, enemy_ok=True)
+        if not resolved.found:
+            return parser.add_warning(order, f"Character '{name}' not found")
+        order.target_ids.append(resolved.entity_id)
+        order.target_names.append(resolved.entity_name)
+
+    return order
+
+
 def parse_halt_order(sentence: str, game_state: GameState, player_id: str):
     """
     Parse HALT and STOP.
@@ -2048,7 +2159,7 @@ def parse_repay_order(sentence: str, game_state: GameState, player_id: str) -> O
 
 # Order detection keywords for optimization
 ORDER_KEYWORDS = {
-    'move': ['go', 'move', 'travel'],
+    'move': ['go', 'move', 'travel', 'come'],
     'sail': ['sail'],
     'recruit': ['recruit', 'hire'],
     'buy': ['buy'],
@@ -2094,7 +2205,13 @@ ORDER_KEYWORDS = {
     'borrow': ['borrow'],
     'repay': ['repay'],
     'halt': ['halt', 'stop'],
+    'join': ['join'],
+    'support': ['support'],
 }
+
+
+# "Have <character> ..." -- rules.md's form for delegating an order.
+HAVE_PREFIX = re.compile(r'^\s*have\s+')
 
 
 def strip_repeatedly(sentence: str) -> tuple[str, Optional[int]]:
@@ -2288,7 +2405,19 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         if not order and any(kw in sentence for kw in ORDER_KEYWORDS['pay']):
             order = parse_pay_order(sentence, game_state, player_id)
 
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['join']):
+            order = parse_join_order(sentence, game_state, player_id)
+
+        if not order and any(kw in sentence for kw in ORDER_KEYWORDS['support']):
+            order = parse_support_order(sentence, game_state, player_id)
+
         if order:
+            # rules.md's HAVE form delegates to a named character, and that
+            # makes them a group leader. Not every parser routes through
+            # resolve_actor, so the delegation is recognised centrally here.
+            if HAVE_PREFIX.match(original_sentence):
+                order.explicit_actor = True
+
             if repeat_times is not None:
                 # The loop marker takes the same actor as the command it governs,
                 # so the two can never drift apart.

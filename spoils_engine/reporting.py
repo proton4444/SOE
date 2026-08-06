@@ -16,7 +16,7 @@ from spoils_engine.engine import TurnLog
 PHASE_ORDER = [
     # The queue runs before everything else, and its "still pending" lines are
     # what a player needs to see first to know what their characters are doing.
-    "queue",
+    "queue", "groups",
     "movement", "sail", "recruit", "buy_ship", "magic", "summon", "religion",
     "combat", "capture", "prisoner", "kill", "enslave", "interrogate",
     "status", "get", "transfer", "unload", "pay", "borrow", "repay",

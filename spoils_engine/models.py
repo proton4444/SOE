@@ -213,6 +213,11 @@ class Character:
         title: Optional title (e.g., "primate", "bishop")
         is_prisoner: Whether this character is a prisoner
         captor_id: ID of character holding this prisoner (empty if not prisoner)
+        group_leader_id: The character this one is assigned to. Empty means they
+            lead their own group. Orders given to a leader carry their group
+            along; see `groups`.
+        supporting_id: Character this one has agreed to fight alongside, and
+            `support_until_turn` is the turn that agreement lapses.
         gold: Personal purse. Rules track gold per character, not per faction.
         is_noncom: If True, stays out of combat unless named in ATTACK/CAPTURE.
         is_lurking: If True, trying to avoid detection (full FOW is v1.0).
@@ -235,6 +240,9 @@ class Character:
     title: str = ""  # Optional title (e.g., "primate", "bishop")
     is_prisoner: bool = False
     captor_id: str = ""  # ID of character holding this prisoner
+    group_leader_id: str = ""  # Empty = leads their own group
+    supporting_id: str = ""  # Character being fought alongside
+    support_until_turn: int = -1  # Turn the support agreement lapses
     gold: float = 0.0
     is_noncom: bool = False
     is_lurking: bool = False
@@ -332,12 +340,17 @@ class UnitStack:
         location_city_id: Current location
         unit_type: Type of units in this stack
         count: Number of units
+        owner_character_id: Character these units are assigned to. Empty means
+            they belong to the faction at this location rather than to anyone in
+            particular, which is where recruits land until someone is given
+            them. Owned units travel with their owner.
     """
     id: str
     faction_id: str
     location_city_id: str
     unit_type: UnitType
     count: int
+    owner_character_id: str = ""
 
     @property
     def attack_value(self) -> int:

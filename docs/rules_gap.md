@@ -7,15 +7,15 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **62 of 89 (70%)** |
-| Order-language features | **3 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`) |
+| Command verbs recognised | **65 of 89 (73%)** |
+| Order-language features | **4 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups) |
 | Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
 Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
 engine has a phase for it — not that every sub-rule of that command is honoured.
 
-## Commands implemented (62)
+## Commands implemented (65)
 
 ALLY, ENEMY, NEUTRAL, ASSIGN, GIVE, ATTACK, AWAIT, BLESS, BUILD, CONSTRUCT,
 MAKE, BUY, CAPTURE, COLLECT, GATHER, CURE, CURSE, DISCARD, DISMISS, FREE,
@@ -23,9 +23,9 @@ RELEASE, FLY, FORTIFY, UNFORTIFY, GO, MOVE, TRAVEL, HEAL, MINE, NAME, PRAY,
 PROMOTE, RECRUIT, HIRE, SAIL, SECURE, SELL, STUDY, SUMMON, TAX, TEACH, TELEPORT,
 ENSLAVE, KILL, EXECUTE, INTERROGATE, COMBATANT, NONCOM, LURK, UNLURK,
 GET, OBTAIN, TAKE, TRANSFER, UNLOAD, PAY, BORROW, REPAY,
-HALT, STOP, WAIT FOR, WAIT UNTIL
+HALT, STOP, WAIT FOR, WAIT UNTIL, JOIN, COME, SUPPORT
 
-## Commands not implemented (27)
+## Commands not implemented (24)
 
 Grouped by the subsystem they belong to, which is roughly the order they should
 be tackled in:
@@ -35,7 +35,6 @@ be tackled in:
 - **Finance** — INVEST, OFFER, PURCHASE, BUY PASSAGE
 - **Exploration & intel** — EXPLORE, SCAN, SEARCH, PROBE
 - **Magical items** — CONJURE, CREATE, CHARGE, RECHARGE, ABSORB
-- **Groups** — JOIN, COME, SUPPORT (UNLOAD is a thin alpha placeholder)
 - **Religion & training** — PREACH, TRAIN
 - **Naming** — UNNAME
 
@@ -53,8 +52,9 @@ this list until v0.9 aligned them with the rules' `REPEATEDLY` and `WAIT FOR`.
 
 | Feature | Status |
 |---|---|
-| `HAVE <character> <command>` | implemented |
+| `HAVE <character> <command>` | implemented (and promotes them to group leader) |
 | `and` to list multiple targets | implemented |
+| Groups and group leaders | implemented |
 | `REPEATEDLY` | implemented (with an optional `N times` count) |
 | `IMMEDIATELY` | partial — modifies HALT/STOP, not a general interrupt |
 | `UNTIL` conditions | partial — `wait until turn N`, not dates or loop terminators |
@@ -63,7 +63,6 @@ this list until v0.9 aligned them with the rules' `REPEATEDLY` and `WAIT FOR`.
 | `QUIETLY` / `SILENTLY` | missing |
 | `IF` statements | missing |
 | Pronouns (him/her/them/it) | missing |
-| Groups and group leaders | missing |
 
 ## The structural gap
 
@@ -112,6 +111,14 @@ and are covered by tests.
   (`engine.process_trade`, `config.RESOURCE_BASE_PRICE`)
 - **Magic** — teleport, flight, summoning and `SCRY` scouting, all drawing on
   magic power. (`engine.process_magic`, `process_summon`)
+- **Groups and group leaders** — a character is either assigned to somebody
+  (`Character.group_leader_id`) or leads their own group, and unnamed units are
+  assigned the same way (`UnitStack.owner_character_id`). A group travels
+  together, `JOIN` and `ASSIGN` are the same operation from opposite ends,
+  `UNLOAD` sets a character loose, and a direct order (the `HAVE` form) promotes
+  its target to group leader. `SUPPORT` puts a character into somebody else's
+  battle without merging the groups. (`groups.py`, `engine.process_join`,
+  `process_support`, `supporting_side`)
 - **Order queue** — orders sit on a per-character queue that persists across
   turns and through save/load. `AWAIT` holds the orders behind it for a duration
   or until a named character arrives; `REPEAT`/`repeatedly` runs its body one
@@ -129,10 +136,13 @@ and are covered by tests.
   still does not affect movement rights or non-combat support.
 - **Gold** is held per character as of v0.8. Legacy `Faction.treasury` still
   acts as a spend fall-back and migrates onto the leader when an old save is
-  loaded. Full group-level possession and multi-item GET lists remain simplified.
-- **UNLOAD / groups** — UNLOAD logs independence but there is no full group-
-  leader model yet (JOIN/COME/SUPPORT are still open).
-- **LURK** stores a flag and reports it; detection odds need fog of war (v1.0).
+  loaded. Multi-item GET lists remain simplified.
+- **Group possession** covers characters and unit stacks. Ships, resources and
+  gold are still held by their character rather than travelling with a group as
+  a single pool, and combat still totals a faction's strength at a location
+  rather than resolving group by group.
+- **LURK** applies to the whole group as the rules require, but the flag has no
+  detection odds behind it yet; that needs fog of war.
 
 ## Not implemented
 

@@ -23,10 +23,14 @@ class Order(ABC):
         player_id: ID of the player issuing this order
         original_text: Original text snippet for debugging
         warnings: List of warnings generated during parsing/validation
+        explicit_actor: True when the order named its actor rather than falling
+            back to the faction leader -- the HAVE form. `rules.md` makes that
+            character a group leader, so the engine has to know which it was.
     """
     player_id: str
     original_text: str = ""
     warnings: list[str] = field(default_factory=list)
+    explicit_actor: bool = False
 
     @abstractmethod
     def order_type(self) -> str:
@@ -360,12 +364,17 @@ class AssignOrder(Order):
         unit_type: Type of unit to transfer (soldier/sailor/worker) or None for gold
         unit_count: Number of units to transfer
         gold_amount: Amount of gold to transfer
+        character_ids: Named characters being assigned into the recipient's
+            group. They bring their own subordinates with them.
+        character_names: The names those ids were resolved from, for reporting
     """
     donor_id: str = ""
     recipient_id: str = ""
     unit_type: str = ""  # UnitType or empty string
     unit_count: int = 0
     gold_amount: int = 0
+    character_ids: list[str] = field(default_factory=list)
+    character_names: list[str] = field(default_factory=list)
 
     def order_type(self) -> str:
         return "ASSIGN"
@@ -466,6 +475,44 @@ class RepeatOrder(Order):
 
     def order_type(self) -> str:
         return "REPEAT"
+
+
+@dataclass
+class JoinOrder(Order):
+    """
+    Join another character's group, bringing your own subordinates along.
+
+    `rules.md`: JOIN does the same thing as ASSIGN, but is given to the
+    character being assigned rather than to the one doing the assigning, so
+    they can finish other work first.
+    """
+
+    actor_id: str = ""
+    target_id: str = ""
+    target_name: str = ""
+
+    def order_type(self) -> str:
+        return "JOIN"
+
+
+@dataclass
+class SupportOrder(Order):
+    """
+    Fight alongside somebody when they attack.
+
+    `rules.md`: the supporter joins the battle "as if they had given the same
+    ATTACK/CAPTURE order at exactly the same time", but stays a separate group,
+    so their leadership does not benefit the person they are supporting. With no
+    duration the agreement stands until a HALT or STOP.
+    """
+
+    actor_id: str = ""
+    target_ids: list[str] = field(default_factory=list)
+    target_names: list[str] = field(default_factory=list)
+    duration_days: int = 0  # 0 = until halted
+
+    def order_type(self) -> str:
+        return "SUPPORT"
 
 
 @dataclass
@@ -909,6 +956,9 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "REPEAT": RepeatOrder,
         "HALT": HaltOrder,
         "STOP": StopOrder,
+        "JOIN": JoinOrder,
+        "SUPPORT": SupportOrder,
+        "COME": MoveOrder,  # rules.md: "COME -- see the GO command"
         "KILL": KillOrder,
         "EXECUTE": KillOrder,
         "ENSLAVE": EnslaveOrder,

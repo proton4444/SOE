@@ -11,13 +11,14 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-> **v0.9.0 — the order queue.** Orders now persist between turns on a
-> per-character queue, so `AWAIT`, `REPEAT`/`repeatedly`, `HALT` and `STOP`
-> execute instead of being rejected. An unblocked character still resolves
-> everything they were given in the turn they were given it; only waits and
-> loop boundaries carry work forward. See [`docs/rules_gap.md`](docs/rules_gap.md).
+> **v1.0.0a — groups and group leaders.** Characters are no longer loose atoms.
+> A character is either assigned to somebody or leads their own group; a group
+> travels together, and a direct order promotes its target to group leader.
+> `JOIN`, `COME` and `SUPPORT` land, and `UNLOAD` finally does something. This
+> is the first slice of v1.0; fog of war, communication, exploration and
+> magical items are still ahead. See [`docs/rules_gap.md`](docs/rules_gap.md).
 
-## Features (Alpha v0.9.0)
+## Features (Alpha v1.0.0a)
 
 ### Implemented
 
@@ -69,6 +70,17 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Mining**: MINE command to extract minerals (iron, gold, silver, copper, gems)
 - **Construction**: BUILD/CONSTRUCT/MAKE commands to build galleys, catapults, weapons, and armor
 
+✅ **Groups & Group Leaders**
+- A character is either assigned to somebody or leads their own group
+- Groups travel together — moving a leader moves their people and their units
+- Unit stacks belong to a character and march with them; recruits join the
+  character who raised them
+- `JOIN` and `ASSIGN` are the same operation from opposite ends
+- `UNLOAD` sets a character loose without ordering them to do anything else
+- A direct order (the `HAVE` form) promotes its target to group leader
+- `LURK` covers the whole group, as the rules require
+- `SUPPORT` puts a character into somebody else's battle without merging groups
+
 ✅ **Order Queue**
 - Orders persist on a per-character queue across turns and through save/load
 - `AWAIT`/`WAIT FOR` — wait a duration, or wait for a named character to arrive
@@ -79,16 +91,16 @@ This is an alpha implementation of a turn-based engine that processes English-li
 
 ✅ **Turn Processing**
 - Phase 0: Order queue — HALT, intake, and one drain pass
-- Phase 1: Validation
+- Phase 1: Validation, then group leadership
 - Phase 2: Movement (land), then sailing (sea)
 - Phase 3: Recruit & buy
 - Phase 4: Magic (teleport, fly, heal), summoning, religion
 - Phase 5: Combat (with character casualties), then capture
 - Phase 6: Income & upkeep (wage debt + loan interest)
-- Phase 7: Location control, diplomacy, taxation, trade, gathering, mining,
-  construction, transfers, get/unload, naming, promotion, prisoner ops,
-  status flags, finance, study & teach
-- Phase 8: Cleanup — prisoner escape and natural healing
+- Phase 7: Location control, diplomacy, assign/join/support, taxation, trade,
+  gathering, mining, construction, transfers, get/unload, naming, promotion,
+  prisoner ops, status flags, finance, study & teach
+- Phase 8: Cleanup — support expiry, prisoner escape and natural healing
 
 ✅ **Economic System**
 - City income based on population
@@ -196,8 +208,9 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Sub-turn game time — the queue's smallest unit is one weekly turn
 - Retreat and morale in combat
 - Fog of war
+- Group-level possession of ships, resources and gold
 - Resource depletion (accumulation and its cap are in; depletion is not)
-- 27 of the 89 command verbs in `rules.md`
+- 24 of the 89 command verbs in `rules.md`
 
 [`docs/rules_gap.md`](docs/rules_gap.md) has the command-by-command breakdown
 and [`docs/alpha_scope.md`](docs/alpha_scope.md) records what the alpha
@@ -370,6 +383,13 @@ Build 5 catapults.
 Have Blacksmith build 10 weapons.
 Make 20 armor.
 
+# Groups (an order to a leader carries their whole group)
+Have Julia join Marcus.            # Julia and her people join his group
+Have Marcus assign Gaius to Julia. # the same move, ordered from the other end
+Have Marcus unload Julia.          # set her loose without ordering her about
+Have Julia come to Carthage.       # COME is GO; this also makes her a leader
+Have Marcus support Hannibal for 2 weeks.
+
 # Waiting (holds everything queued behind it)
 Wait for 3 days.
 Have Marcus await 2 weeks.
@@ -401,6 +421,9 @@ Have Hero go to City.  # End-of-line comment
   the turn you sent them; behind a wait or a repeat loop they run later.
 - A repeat loop swallows the rest of that character's orders in the submission,
   so put anything you want done first *before* the `repeatedly`
+- Naming a character with `have` makes them a group leader, so they stop
+  following whoever they were with. That is the rules' behaviour, not a bug —
+  use `join` to put them back.
 
 ## CLI Commands
 
@@ -459,6 +482,7 @@ SOE/
 │   ├── orders.py          # Order class definitions
 │   ├── parser.py          # English-like order parser
 │   ├── order_queue.py     # Per-character order queue (AWAIT/REPEAT/HALT/STOP)
+│   ├── groups.py          # Groups and group leaders (JOIN/ASSIGN/UNLOAD)
 │   ├── engine.py          # Turn processing engine
 │   ├── reporting.py       # Report generation
 │   ├── storage.py         # Save/load game state
@@ -471,7 +495,8 @@ SOE/
 │   ├── test_regressions.py  # Pins the defects fixed in the v0.7.1 audit
 │   ├── test_gap_closures.py # Pins the design debt closed in v0.7.2
 │   ├── test_v08.py          # Cheap-gap commands and per-character gold
-│   └── test_v09.py          # The persistent order queue
+│   ├── test_v09.py          # The persistent order queue
+│   └── test_v10_groups.py   # Groups and group leaders
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -604,7 +629,7 @@ See `docs/alpha_scope.md` for comprehensive mapping.
 
 ## Where we are
 
-**62 of 89 command verbs (70%)** from `rules.md` are recognised, and 3 of its 9
+**65 of 89 command verbs (73%)** from `rules.md` are recognised, and 4 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
 full breakdown, including which commands are missing and why.
 
@@ -645,13 +670,19 @@ day both cost a turn), `until <date>` as a loop terminator, `THEN` sequencing,
 
 ### v1.0 — Rules fidelity
 
+**Groups and group leaders ✅** — shipped: `JOIN`, `COME`, `SUPPORT`, a real
+`UNLOAD`, group travel, unit ownership, and the `HAVE`-promotes-to-leader rule.
+
+Still ahead, in no fixed order:
+
+- Fog of war, and with it `EXPLORE`, `SCAN`, `SEARCH`, `PROBE` and real `LURK`
+  detection odds
+- Communication: `SAY`/`TELL`, `POST`, `ADDRESS`, `REPORT`, `QUERY`, `PASSWORD`
+- Magical items: `CONJURE`, `CREATE`, `CHARGE`/`RECHARGE`, `ABSORB`
 - `IF` conditional orders (the queue they needed now exists)
 - Sub-turn game time, so a wait can cost hours rather than a whole turn
-- Communication: `SAY`/`TELL`, `POST`, `ADDRESS`, `REPORT`, `QUERY`
-- Exploration and intel: `EXPLORE`, `SCAN`, `SEARCH`, `PROBE`
-- Magical items: `CONJURE`, `CREATE`, `CHARGE`/`RECHARGE`, `ABSORB`
-- Groups and group leaders: `JOIN`, `COME`, `SUPPORT`
-- Fog of war
+- Group-level possession of ships, resources and gold, and combat resolved
+  group by group rather than by faction total
 - Retire or justify the three remaining non-rules verbs (`TRADE`, `SCRY`,
   `RESURRECT`)
 
