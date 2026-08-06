@@ -23,7 +23,7 @@ from spoils_engine.orders import (
     GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
     HaltOrder, StopOrder, JoinOrder, SupportOrder,
 )
-from spoils_engine import config, items
+from spoils_engine import config, items, pronouns
 from spoils_engine.fog import parse_position_prefix
 
 
@@ -2585,11 +2585,19 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
     normalized = normalize_text(raw_text)
     sentences = extract_sentences(normalized)
 
+    # Pronoun referents carry from one sentence to the next within a single
+    # submission, which is what the rules' own examples need: "Have Mark Bolton
+    # study combat. Have Donald Nap go to Madegi Doy and give him 100 gold."
+    referents = pronouns.ReferentContext()
+
     for sentence in sentences:
         if not sentence:
             continue
 
         original_sentence = sentence
+        # Every pronoun becomes the name it stands for before verb dispatch, so
+        # no verb parser below has to know pronouns exist.
+        sentence = pronouns.resolve(sentence, referents, game_state, player_id)
         sentence, repeat_times = strip_repeatedly(sentence)
 
         order = None

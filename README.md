@@ -56,6 +56,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Status**: NONCOM/COMBATANT, LURK/UNLURK
 - **Magic**: Teleportation and flight spells
 - **Magical items**: CONJURE, CHARGE/RECHARGE, ABSORB, SCAN with an orb
+- **Pronouns**: `me`/`I`/`you`, `him`/`her`, `it`, `them` and the reflexives
 - **Healing**: HEAL/CURE commands using religion skill
 - **Location Control**: SECURE command for territorial control
 - **Diplomacy**: ALLY/ENEMY/NEUTRAL commands
@@ -222,7 +223,6 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - Conditional orders (`IF`), `THEN` sequencing and `and`-chained commands
 - Sub-turn game time — the queue's smallest unit is one weekly turn
 - Retreat and morale in combat
-- Pronouns (`me`, `him`, `it`) in orders
 - Encumbrance and item weight
 - Group-level possession of ships, resources and gold
 - Resource depletion (accumulation and its cap are in; depletion is not)
@@ -434,6 +434,14 @@ Scan Kitesta using *Anomba*.             # an orb spends its own power on distan
 Have McCoy teleport Joe Flint to Kitesta using *Opistama*.
 Give *Wameka* to Joe Flint.
 
+# Pronouns (referents carry from one sentence to the next)
+Have Joe Flint give me 100 gold.   # me/I/you are always your leader
+Have Mark Bolton study combat.
+Have Donald Nap give him 100 gold. # him = Mark Bolton, not the agent
+Recruit 5 soldiers. Assign them to me.
+Charge *Ampu* to 75 power. Give it to Merlinus.
+Have Bishop Linda bless herself.   # reflexives mean the agent
+
 # Comments (ignored)
 # This is a comment
 Have Hero go to City.  # End-of-line comment
@@ -457,6 +465,9 @@ Have Hero go to City.  # End-of-line comment
   optional when typing: `*Wameka*` and `Wameka` both work.
 - A wand is never used automatically. To cast with one, end the spell order with
   `with` or `using` and the wand's name.
+- Pronouns resolve against what you named in earlier sentences of the same
+  submission. `him`/`her` never mean your leader (use `me` or `you`) and never
+  mean the character acting in that same order.
 
 ## CLI Commands
 
@@ -518,6 +529,7 @@ SOE/
 │   ├── groups.py          # Groups and group leaders (JOIN/ASSIGN/UNLOAD)
 │   ├── fog.py             # Fog of war (position, LURK odds, sightings)
 │   ├── items.py           # Magical items (amulet/crystal/orb/ring/wand)
+│   ├── pronouns.py        # me/him/her/it/them resolution before dispatch
 │   ├── engine.py          # Turn processing engine
 │   ├── reporting.py       # Report generation
 │   ├── storage.py         # Save/load game state
@@ -533,7 +545,8 @@ SOE/
 │   ├── test_v09.py          # The persistent order queue
 │   ├── test_v10_groups.py   # Groups and group leaders
 │   ├── test_v10_fog.py      # Fog of war, PROBE, SEARCH, SCAN
-│   └── test_v10_items.py    # Magical items, CONJURE/CHARGE/ABSORB, SCAN
+│   ├── test_v10_items.py    # Magical items, CONJURE/CHARGE/ABSORB, SCAN
+│   └── test_v10_pronouns.py # Pronoun resolution
 ├── maps/                  # Map files
 │   └── sample_map.json
 ├── examples/              # Example data
@@ -670,7 +683,7 @@ breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
 
 ## Where we are
 
-**73 of 89 command verbs (82%)** from `rules.md` are recognised, and 4 of its 9
+**73 of 89 command verbs (82%)** from `rules.md` are recognised, and 5 of its 9
 order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
 full breakdown, including which commands are missing and why.
 

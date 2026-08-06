@@ -8,7 +8,7 @@ dropped: they went stale as the code moved. Use the named modules instead.
 | Axis | Coverage |
 |---|---|
 | Command verbs recognised | **73 of 89 (82%)** |
-| Order-language features | **4 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups) |
+| Order-language features | **5 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns) |
 | Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
 
 Counted by cross-referencing the command sections of `rules.md` against
@@ -65,7 +65,7 @@ this list until v0.9 aligned them with the rules' `REPEATEDLY` and `WAIT FOR`.
 | `THEN` sequencing | missing |
 | `QUIETLY` / `SILENTLY` | missing |
 | `IF` statements | missing |
-| Pronouns (him/her/them/it) | missing |
+| Pronouns (him/her/them/it) | implemented (resolved before verb dispatch; see `pronouns.py`) |
 
 ## The structural gap
 
@@ -153,6 +153,16 @@ and are covered by tests.
   show on status reports in the rules' format. (`items.py`,
   `engine.process_conjure`, `process_charge`, `process_absorb`, `process_scan`,
   `process_search`, `process_item_upkeep`, `combat.apply_casualties`)
+- **Pronouns** — `me`/`I`/`you` resolve to the lead character, `him`/`her` to
+  the most recently named person of that gender who is neither the agent of the
+  current order nor the leader, `it` to the last single item, unnamed character
+  or quantity of a mass noun, `them` to the last group or list, and the
+  reflexives to the agent. Referents carry from one sentence to the next within
+  a submission, which is what the rules' examples need. Resolution is a
+  substitution pass over the sentence before verb dispatch, so no verb parser
+  knows pronouns exist. A pronoun with nothing to bind to is left in place and
+  reported as an unknown name rather than silently bound to the wrong actor.
+  (`pronouns.py`, `parser.parse_orders`)
 - **Magic-free zones** — a city flagged `is_magic_free` drains the magic power
   of everyone standing in it and of every item they carry, and nothing
   regenerates there. One sweep runs after all movement has resolved, so
@@ -182,6 +192,12 @@ and are covered by tests.
   with the body rather than falling to the victor, because `rules.md` does not
   say what should happen and the items are indestructible. Item weight and
   encumbrance are likewise unmodelled, so carrying six crystals costs nothing.
+- **Pronouns** resolve across sentences but not across commands chained inside
+  one sentence, because `and`-chained commands are not implemented. The rules'
+  `Buy 1 horse and go to Umadosh and give it to Bill May` therefore has to be
+  written as separate sentences. `them` referring to a mixed list ("20 horses
+  and 2 sailors") resolves to the text but the verb parsers only act on the
+  first kind.
 - **Amulets** cover trading and combat. The rules allow an amulet for any skill
   except magic and religion; the engine only has fields for the skills it
   actually uses (`items.AMULET_SKILLS`).
