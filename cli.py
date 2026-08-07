@@ -5,6 +5,7 @@ Command-line interface for the Spoils of Empire PBEM engine.
 Uses Typer for a clean, user-friendly CLI experience.
 """
 
+import json
 import sys
 from pathlib import Path
 from typing import Optional
@@ -46,9 +47,18 @@ def init_game(
     typer.echo(f"Initializing game '{game_id}'...")
 
     # Load or create map
-    if map_file and map_file.exists():
+    if map_file is not None:
+        if not map_file.exists():
+            typer.echo(f"Error: map file not found: {map_file}", err=True)
+            raise typer.Exit(1)
         typer.echo(f"Loading map from {map_file}...")
-        world_map = map_loader.load_map_from_json(map_file)
+        try:
+            world_map = map_loader.load_map_from_json(map_file)
+        except map_loader.MapValidationError as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(1)
+        for warning in map_loader.validate_map_warnings(world_map):
+            typer.echo(f"  Warning: {warning}")
     else:
         typer.echo("No map specified, creating sample map...")
         world_map = map_loader.create_sample_map()
@@ -285,6 +295,33 @@ def process_turn(
 
     typer.echo(f"\nTurn {turn} processed successfully!")
     typer.echo(f"Current turn: {game_state.turn_number}")
+
+
+@app.command("validate-map")
+def validate_map_cmd(
+    map_file: Path = typer.Argument(..., help="Path to map JSON file"),
+):
+    """Validate a map JSON file (structure, graph, soft warnings)."""
+    if not map_file.exists():
+        typer.echo(f"Error: map file not found: {map_file}", err=True)
+        raise typer.Exit(1)
+    try:
+        world_map = map_loader.load_map_from_json(map_file)
+    except map_loader.MapValidationError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
+    except (json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
+        typer.echo(f"Error loading map: {exc}", err=True)
+        raise typer.Exit(1)
+
+    warnings = map_loader.validate_map_warnings(world_map)
+    typer.echo(
+        f"OK: {len(world_map.cities)} cities, {len(world_map.roads)} roads"
+    )
+    for warning in warnings:
+        typer.echo(f"  Warning: {warning}")
+    if warnings:
+        raise typer.Exit(0)
 
 
 @app.command()

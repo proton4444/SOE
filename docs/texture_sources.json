@@ -1,0 +1,46 @@
+{
+  "note": "Neutral greyscale surface textures generated with Magnific (recraft-v4-1). Carry no map information; applied as multiply overlays only. URLs are signed and expire - the processed tiles in maps/textures/ are the durable artefact.",
+  "model": "recraft-v4-1",
+  "textures": {
+    "paper": {
+      "id": "P36qVK742C",
+      "url": "https://pikaso.cdnpk.net/private/production/5105456871/render.png?token=exp=1786406400~hmac=5105083cde3dabc9ba5ebcd79cc0bfd094e6c7d6a64629f5cdaf9996511343e9",
+      "prompt": "antique cartography paper, linen fibers"
+    },
+    "sea": {
+      "id": "XmIi5GnBfo",
+      "url": "https://pikaso.cdnpk.net/private/production/5105457144/render.png?token=exp=1786406400~hmac=062525cb114b8abbed68add53e3fff55c8f291c131c50112931603de50cce697",
+      "prompt": "calm shallow water from overhead"
+    },
+    "plain": {
+      "id": "rgs8iu1xtc",
+      "url": "https://pikaso.cdnpk.net/private/production/5105457705/render.png?token=exp=1786406400~hmac=8e6ccfdef623846bd04162d3af49137f98b32a2943c6c4ce8abdbcceaf499f9d",
+      "prompt": "open grassland, aerial"
+    },
+    "forest": {
+      "id": "vQEnsoga47",
+      "url": "https://pikaso.cdnpk.net/private/production/5105457870/render.png?token=exp=1786406400~hmac=2f57a6eff1021ac8e8d88a7d1c63c1bec62b0c6eec30530c3a2e2d1b4f8b97d4",
+      "prompt": "dense forest canopy, aerial"
+    },
+    "hills": {
+      "id": "eIoNbIvdqL",
+      "url": "https://pikaso.cdnpk.net/private/production/5105460492/render.png?token=exp=1786406400~hmac=c7c363c1cb273f350aea6a61137895d1f950550cd49798fec68327c803bc11d6",
+      "prompt": "rolling hills, aerial"
+    },
+    "mountains": {
+      "id": "gO7az4MSXO",
+      "url": "https://pikaso.cdnpk.net/private/production/5105460548/render.png?token=exp=1786406400~hmac=1e6ccae77c96aaec6f7f2efb564130754d61c9d1ad4aee8166e931338c0182da",
+      "prompt": "rugged mountain ridges, hachure relief"
+    },
+    "desert": {
+      "id": "rgs83yRxtc",
+      "url": "https://pikaso.cdnpk.net/private/production/5105460652/render.png?token=exp=1786406400~hmac=257ab0c301ee7725445cb8d72102fcdf7d3ce8bab7fccf30acb9c2b2da5c628e",
+      "prompt": "sand dunes, aerial"
+    },
+    "swamp": {
+      "id": "jUgtZiVLD0",
+      "url": "https://pikaso.cdnpk.net/private/production/5105460984/render.png?token=exp=1786406400~hmac=fe9e7459069386711cab7512e9b1a56f650f118593b9aab50c3e040258688efc",
+      "prompt": "marsh wetland channels, aerial"
+    }
+  }
+}

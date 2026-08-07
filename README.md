@@ -23,7 +23,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 ### Implemented
 
 ✅ **World & Map**
-- Cities with population bands (<10k, 10k-99k, 100k-999k, 1M+)
+- Cities with population bands (<1k, 1k-9k, 10k-99k, 100k+)
 - Roads and sea lanes with quality ratings
 - JSON-based map files
 - Port cities for ship construction
@@ -552,6 +552,65 @@ Have Hero go to City.  # End-of-line comment
   periods included — and pronouns inside a message are never rewritten. Put the
   sentence-ending period *after* the closing quote, as the rules' examples do.
 
+## Web Server (beta) — humans in the browser, agents over JSON
+
+The engine is playable online. Link-based rooms: a 5-character code plus a
+4-digit PIN is all it takes to join. No accounts, no passwords — the room PIN
+and per-player agent keys are the credentials.
+
+```bash
+pip install -r requirements.txt
+python -m uvicorn webapp.main:app --reload --port 8000
+```
+
+Open http://localhost:8000 to create or join a game. Turns resolve
+automatically once every joined player has submitted orders (the host can also
+resolve early — missing players count as empty orders). Every turn runs with a
+seed derived from the room code and turn number, so results are reproducible.
+
+Games live in `games/room_<code>/` — the CLI can still inspect and process the
+same games, and rooms are tracked in `server_data/rooms.json`.
+
+### Agent API
+
+A player key (the `agent_key` from joining) is the only credential. Send it as
+an `X-Agent-Key` header or a `key` query parameter.
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/rooms` `{name, slots, map}` | Create a room → `code`, `pin`, `host_key`, slots |
+| `POST /api/join` `{code, pin, name}` | Claim a slot → `faction_id`, `faction_name`, `agent_key` |
+| `GET /api/rooms/{code}/status` | Turn number, players, who has submitted |
+| `POST /api/rooms/{code}/orders` `{orders: "..."}` | Submit orders; returns parse feedback |
+| `GET /api/rooms/{code}/state` | Structured fog-of-war view (your characters, units, cities) |
+| `GET /api/rooms/{code}/report?turn=N` | Your text report for a resolved turn |
+| `POST /api/rooms/{code}/resolve` (host key) | Force the next turn (`force: true` skips the all-submitted check) |
+
+Example agent loop:
+
+```python
+import requests
+
+room = requests.post("http://localhost:8000/api/rooms",
+                     json={"name": "Agent War", "slots": 2}).json()
+me = requests.post("http://localhost:8000/api/join",
+                   json={"code": room["code"], "pin": room["pin"], "name": "alpha-bot"}).json()
+key = me["agent_key"]
+
+while True:
+    state = requests.get(f"http://localhost:8000/api/rooms/{room['code']}/state",
+                         headers={"X-Agent-Key": key}).json()
+    # decide orders from state...
+    resp = requests.post(f"http://localhost:8000/api/rooms/{room['code']}/orders",
+                         headers={"X-Agent-Key": key},
+                         json={"orders": "Recruit 20 soldiers in Madegi Doy."})
+    report = requests.get(f"http://localhost:8000/api/rooms/{room['code']}/report",
+                          headers={"X-Agent-Key": key}).json()["report"]
+```
+
+Note: a room currently resolves only when the host presses the button (or an
+agent calls `/resolve`). Scheduled auto-resolution is a natural next step.
+
 ## CLI Commands
 
 ### `soe init-game <game_id>`
@@ -659,8 +718,13 @@ SOE/
 ### Map & Cities
 
 Cities have **population bands** that determine:
-- **Income per turn**: <10k=10g, 10k-99k=50g, 100k-999k=200g, 1M+=500g
-- **Recruit cap per turn**: <10k=10, 10k-99k=50, 100k-999k=200, 1M+=500
+- **Income per turn**: <1k=10g, 1k-9k=50g, 10k-99k=200g, 100k+=500g
+- **Recruit cap per turn**: <1k=10, 1k-9k=50, 10k-99k=200, 100k+=500
+
+A map may also give a city an exact `population` (as in the original SOE map
+index); it is then used for INVEST growth, taxes and wages, and the band is
+derived from it when none is given. Cities can carry `grid_ref` (e.g. "A6"),
+`is_magic_free` (drains all magic power, per the rules) and `is_ruin`.
 
 Income is **not** paid straight into the treasury. It accumulates in a per-city
 tax pool (capped at four turns' worth) and reaches your treasury only when a
@@ -673,6 +737,11 @@ Roads have **quality** affecting movement cost:
 - Fair: 1.5x cost
 - Poor: 2.0x cost
 - Sea: 1.0x (requires ship, sea lanes only)
+
+A road with `distance_miles` (from the gamemaster's map) costs quality-multiplier
+x miles/10 movement points — 100 miles on a good road is one turn — and
+mileage also prices TELEPORT and orb SCAN (one power per ten miles). Roads
+without mileages keep the quality-only cost.
 
 Land and sea form **separate networks**: a marching character cannot cross a sea
 lane, and a ship cannot sail up a road. Every hop costs at least one movement

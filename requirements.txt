@@ -2,6 +2,13 @@
 typer>=0.9.0
 pyyaml>=6.0
 
+# Web server (beta)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+jinja2>=3.1
+python-multipart>=0.0.9
+
 # Development dependencies
 pytest>=7.0
 pytest-cov>=4.0
+httpx>=0.27

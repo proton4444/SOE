@@ -1,0 +1,3 @@
+# The Silver Horde turn 4 (style=military, gold≈830, soldiers=40, religion=0)
+Recruit 40 soldiers in Madegi Doy.
+Have Khan Tengri attack Emperor Marcus.

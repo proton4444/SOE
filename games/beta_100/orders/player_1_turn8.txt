@@ -1,0 +1,8 @@
+# The Golden Empire turn 8 (style=religious, gold≈604, soldiers=114, religion=35)
+Have Emperor Marcus tax.
+Have Emperor Marcus secure Madegi Doy.
+Recruit 6 soldiers in Madegi Doy.
+Have Emperor Marcus attack Khan Tengri.
+Have Emperor Marcus capture Khan Tengri.
+Have Emperor Marcus study religion.
+Have Emperor Marcus invest 48 gold in Madegi Doy.

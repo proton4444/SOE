@@ -1,0 +1,5 @@
+# The Golden Empire turn 24 (style=religious, gold≈491, soldiers=117, religion=44)
+Have Emperor Marcus study religion.
+Have Emperor Marcus preach.
+Have Emperor Marcus bless himself.
+Have Emperor Marcus go to Riverton.

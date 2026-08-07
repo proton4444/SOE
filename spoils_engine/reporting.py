@@ -7,9 +7,9 @@ Generates per-player human-readable reports from game state and turn logs.
 from typing import Dict
 from collections import defaultdict
 
-from spoils_engine.models import GameState
+from spoils_engine.models import GameState, RoadQuality
 from spoils_engine import items
-from spoils_engine.engine import TurnLog
+from spoils_engine.turn_log import TurnLog
 
 
 # Preferred ordering for turn-event sections. Phases not listed here are still
@@ -29,6 +29,72 @@ PHASE_ORDER = [
     # they describe the world as it stands after everything above has resolved.
     "message", "report",
 ]
+
+
+def _occupied_city_ids(game_state: GameState, faction_id: str) -> set[str]:
+    """Cities where this faction has someone standing, plus the ones it holds."""
+    faction = game_state.factions.get(faction_id)
+    here = set(faction.controlled_city_ids) if faction else set()
+    for char in game_state.characters.values():
+        if char.faction_id == faction_id and not char.is_dead and not char.is_prisoner:
+            here.add(char.location_city_id)
+    for stack in game_state.unit_stacks.values():
+        if stack.faction_id == faction_id:
+            here.add(stack.location_city_id)
+    for ship in game_state.ships.values():
+        if ship.faction_id == faction_id:
+            here.add(ship.location_city_id)
+    here.discard(None)
+    return here
+
+
+def _geography_lines(game_state: GameState, faction_id: str) -> list[str]:
+    """
+    The routes leading out of every city this faction occupies.
+
+    A player's people know the roads under their feet: where each one goes, its
+    condition, how far it runs and what it costs to march. Without this the map
+    is only discoverable by trial and error, which in a postal game means a
+    wasted turn per guess.
+    """
+    from spoils_engine import config, map_loader
+
+    world_map = game_state.world_map
+    lines = ["=" * 70, "THE LIE OF THE LAND", "=" * 70]
+
+    occupied = sorted(
+        (cid for cid in _occupied_city_ids(game_state, faction_id)
+         if cid in world_map.cities),
+        key=lambda cid: world_map.cities[cid].name,
+    )
+    if not occupied:
+        lines.append("Nowhere to survey: you hold no ground.")
+        lines.append("")
+        return lines
+
+    for city_id in occupied:
+        city = world_map.cities[city_id]
+        land = map_loader.landmass_name(world_map, city_id)
+        where = f" -- {land}" if land else ""
+        lines.append(f"\n{city.name}{where}")
+        if city.terrain:
+            lines.append(f"  Terrain: {', '.join(sorted(city.terrain))}")
+
+        routes = world_map.neighbors(city_id)
+        if not routes:
+            lines.append("  No road or sea lane leaves this place.")
+            continue
+        for neighbor, road in sorted(routes, key=lambda pair: pair[0].name):
+            kind = "sea lane" if road.quality == RoadQuality.SEA else f"{road.quality.value} road"
+            miles = f"{road.distance_miles:g} miles, " if road.distance_miles else ""
+            cost = config.get_hop_cost(road)
+            one_way = "" if road.bidirectional else " (one way -- no return)"
+            lines.append(
+                f"  -> {neighbor.name}: {kind}, {miles}{cost:.1f} mv{one_way}"
+            )
+
+    lines.append("")
+    return lines
 
 
 def generate_player_reports(game_state: GameState, turn_log: TurnLog,
@@ -193,6 +259,9 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
                 report_lines.append(f"  Location: {city_name}")
 
         report_lines.append("")
+
+        # The lie of the land where this faction actually stands
+        report_lines.extend(_geography_lines(game_state, faction_id))
 
         # Turn Events
         report_lines.append("=" * 70)

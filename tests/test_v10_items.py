@@ -58,6 +58,22 @@ def world():
     return gs
 
 
+def escort(gs, count=45, leader="c1"):
+    """
+    Assign soldiers to a character so their flight has a real weight.
+
+    rules.md prices FLY at one fifth of the group's encumbrance. A lone wizard
+    weighs 1 and would fly for a single point, which is too cheap to show
+    whether a crystal or a wand paid. Forty-five soldiers put the cost at 10.
+    """
+    gs.unit_stacks[f"stack_{leader}"] = models.UnitStack(
+        id=f"stack_{leader}", faction_id=gs.characters[leader].faction_id,
+        location_city_id=gs.characters[leader].location_city_id,
+        unit_type=models.UnitType.SOLDIER, count=count,
+        owner_character_id=leader,
+    )
+
+
 def give(gs, item_type, holder="c1", **kw):
     """Put an item of a known strength in a character's hands."""
     item = models.MagicalItem(
@@ -141,6 +157,7 @@ def test_spending_more_than_available_changes_nothing(world):
 
 def test_a_spell_draws_on_a_crystal(world):
     world.characters["c1"].magic_power_current = 2
+    escort(world)
     crystal = give(world, ItemType.CRYSTAL, power_current=30, power_max=40)
 
     world, log = run(world, "fly to carthage")
@@ -232,6 +249,7 @@ def test_a_wand_is_only_used_when_the_order_names_it(world):
 
 def test_a_named_wand_supplies_the_power(world):
     world.characters["c1"].magic_power_current = 0
+    escort(world)
     wand = give(world, ItemType.WAND, spell="fly", power_current=50,
                 power_max=60, skill_level=70)
     wand.name = "*Opistama*"
@@ -254,6 +272,7 @@ def test_a_wand_of_the_wrong_spell_is_refused(world):
 
 def test_a_wand_never_taps_a_crystal(world):
     world.characters["c1"].magic_power_current = 0
+    escort(world)
     crystal = give(world, ItemType.CRYSTAL, power_current=40, power_max=40)
     wand = give(world, ItemType.WAND, spell="fly", power_current=3,
                 power_max=60, skill_level=70)

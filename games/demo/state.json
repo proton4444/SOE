@@ -1,5 +1,5 @@
 {
-  "turn_number": 2,
+  "turn_number": 3,
   "world_map": {
     "cities": {
       "madegi_doy": {
@@ -7,11 +7,16 @@
         "name": "Madegi Doy",
         "population_band": "1M+",
         "terrain": [
-          "plains",
-          "coastal"
+          "coastal",
+          "plains"
         ],
         "region": "Main Continent",
-        "is_port": true
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
       },
       "kitesta": {
         "id": "kitesta",
@@ -22,7 +27,12 @@
           "river"
         ],
         "region": "Main Continent",
-        "is_port": false
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
       },
       "riverton": {
         "id": "riverton",
@@ -33,18 +43,28 @@
           "river"
         ],
         "region": "Main Continent",
-        "is_port": false
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
       },
       "albatross_city": {
         "id": "albatross_city",
         "name": "Albatross City",
         "population_band": "100k-999k",
         "terrain": [
-          "mountains",
-          "coastal"
+          "coastal",
+          "mountains"
         ],
         "region": "Northern Island",
-        "is_port": true
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
       },
       "peshandi": {
         "id": "peshandi",
@@ -54,7 +74,12 @@
           "desert"
         ],
         "region": "Main Continent",
-        "is_port": false
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
       }
     },
     "roads": {
@@ -102,7 +127,16 @@
       "controlled_city_ids": [
         "madegi_doy"
       ],
-      "treasury": 1970
+      "secured_city_ids": [],
+      "treasury": 0.0,
+      "wage_debt": 0.0,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": false
     },
     "player_2": {
       "id": "player_2",
@@ -110,7 +144,16 @@
       "controlled_city_ids": [
         "albatross_city"
       ],
-      "treasury": 1370
+      "secured_city_ids": [],
+      "treasury": 0.0,
+      "wage_debt": 0.0,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": false
     }
   },
   "characters": {
@@ -119,22 +162,58 @@
       "name": "Emperor Marcus",
       "faction_id": "player_1",
       "location_city_id": "kitesta",
+      "is_leader": true,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 1967.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
       "movement_points": 10,
       "combat_skill": 10,
       "magic_skill": 5,
       "magic_power_current": 5,
-      "health": 100
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {}
     },
     "char_player_2_leader": {
       "id": "char_player_2_leader",
       "name": "Khan Tengri",
       "faction_id": "player_2",
       "location_city_id": "madegi_doy",
+      "is_leader": true,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 1367.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
       "movement_points": 10,
       "combat_skill": 10,
       "magic_skill": 5,
       "magic_power_current": 5,
-      "health": 100
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {}
     }
   },
   "unit_stacks": {
@@ -143,22 +222,37 @@
       "faction_id": "player_1",
       "location_city_id": "madegi_doy",
       "unit_type": "soldier",
-      "count": 20
+      "count": 20,
+      "owner_character_id": ""
     },
     "stack_player_1_1_1409": {
       "id": "stack_player_1_1_1409",
       "faction_id": "player_1",
       "location_city_id": "kitesta",
       "unit_type": "soldier",
-      "count": 10
+      "count": 10,
+      "owner_character_id": ""
     },
     "stack_player_2_2_5506": {
       "id": "stack_player_2_2_5506",
       "faction_id": "player_2",
       "location_city_id": "albatross_city",
       "unit_type": "soldier",
-      "count": 30
+      "count": 30,
+      "owner_character_id": ""
     }
   },
-  "ships": {}
+  "ships": {},
+  "summoned_creatures": {},
+  "magical_items": {},
+  "posted_messages": {},
+  "tax_pools": {
+    "madegi_doy": 500,
+    "albatross_city": 200
+  },
+  "location_blessings": {},
+  "location_curses": {},
+  "order_queues": {},
+  "invest_pools": {},
+  "elite_units": {}
 }

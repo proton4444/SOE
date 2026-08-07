@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Room {{ room.code }} — Spoils of Empire{% endblock %}
+{% block content %}
+{% include "partials/panel.html" %}
+
+{# Map sits outside the HTMX-polled panel so open/scroll state survives refreshes. #}
+<section class="card map-room">
+  <details open>
+    <summary>World map <span class="muted">· {{ map_file }}</span></summary>
+    <div class="map-panel map-frame-room">
+      <div class="map-panel-inner">
+        <div class="map-frame">{{ map_svg|safe }}</div>
+        {{ map_islands|safe }}
+      </div>
+    </div>
+  </details>
+</section>
+{% endblock %}

@@ -1,0 +1,9 @@
+# The Golden Empire turn 1 (style=religious, gold≈960, soldiers=0, religion=25)
+Have Emperor Marcus tax.
+Have Emperor Marcus secure Madegi Doy.
+Recruit 40 soldiers in Madegi Doy.
+Recruit 10 workers in Madegi Doy.
+Have Emperor Marcus preach.
+Have Emperor Marcus bless himself.
+Have Emperor Marcus offer 76 gold to Bishop Nancy Lopenda.
+Have Emperor Marcus invest 76 gold in Madegi Doy.

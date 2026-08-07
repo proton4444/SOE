@@ -17,11 +17,34 @@ from spoils_engine.orders import QueueEntry
 # ============================================================================
 
 class PopulationBand(str, Enum):
-    """Population size categories for cities."""
-    TINY = "< 10k"           # Less than 10,000
-    SMALL = "10k-99k"        # 10,000 to 99,999
-    MEDIUM = "100k-999k"     # 100,000 to 999,999
-    LARGE = "1M+"            # 1 million or more
+    """Population size categories for cities.
+
+    The tiers are the gamemaster's own, from the legend of the original
+    map: >100k / 10k-99,999 / 1k-9,999 / <1k. The world's largest town is
+    134,000, so bands pitched at real-world city sizes left ``1M+`` empty
+    and lumped 128 of the 154 towns into a single bottom band.
+    """
+    TINY = "< 1k"            # Less than 1,000 -- a village
+    SMALL = "1k-9k"          # 1,000 to 9,999
+    MEDIUM = "10k-99k"       # 10,000 to 99,999
+    LARGE = "100k+"          # 100,000 or more
+
+    @classmethod
+    def _missing_(cls, value):
+        """Accept the pre-retier band names found in saved games.
+
+        Each legacy band is mapped to the band its old midpoint now falls
+        in, so a city loaded from an old save keeps the size it had.
+        """
+        return _LEGACY_POPULATION_BANDS.get(value)
+
+
+# Old value -> new band, by where the old band's midpoint lands.
+_LEGACY_POPULATION_BANDS = {
+    "< 10k": PopulationBand.SMALL,        # old midpoint 5,000
+    "100k-999k": PopulationBand.LARGE,    # old midpoint 550,000
+    "1M+": PopulationBand.LARGE,
+}
 
 
 class RoadQuality(str, Enum):
@@ -133,12 +156,19 @@ class City:
     is_port: bool = False
     is_ruin: bool = False  # Uninhabited ruins: SEARCH/EXPLORE may find items
     is_magic_free: bool = False  # Magic power cannot exist here, in people or items
+    # Grid reference from the gamemaster's map, e.g. "A6" (original SOE map
+    # index style). Display only; movement uses the roads graph.
+    grid_ref: Optional[str] = None
     fortification_level: int = 0  # 0-100 defensive bonus
     resource_richness: dict[str, float] = field(default_factory=dict)
-    # Numeric population, set by INVEST growth. None means "not measured yet":
-    # helpers fall back to the population-band midpoint, and the first weekly
-    # investment check makes it concrete.
+    # Numeric population, set from the map or by INVEST growth. None means
+    # "not measured yet": helpers fall back to the population-band midpoint,
+    # and the first weekly investment check makes it concrete.
     population: Optional[int] = None
+    # Optional presentation coordinates (0..1 fractions of the map). Used by
+    # the web map view; the engine ignores them for movement and rules.
+    x: Optional[float] = None
+    y: Optional[float] = None
 
     def __hash__(self):
         return hash(self.id)
@@ -155,12 +185,16 @@ class Road:
         to_city_id: Destination city ID
         quality: Quality/condition of the route
         bidirectional: If True, can travel both ways with same cost
+        distance_miles: Length of the route in miles, from the gamemaster's
+            map. The rules price travel time and scan/teleport power from
+            this; when absent the engine falls back to quality-only cost.
     """
     id: str
     from_city_id: str
     to_city_id: str
     quality: RoadQuality
     bidirectional: bool = True
+    distance_miles: Optional[float] = None
 
 
 @dataclass

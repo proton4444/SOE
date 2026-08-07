@@ -20,7 +20,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from spoils_engine.models import (
     Character,

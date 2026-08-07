@@ -1,0 +1,86 @@
+<div id="panel"
+     {% if player %}hx-get="/room/{{ room.code }}/panel" hx-trigger="every 4s" hx-swap="outerHTML"{% endif %}>
+  <section class="card">
+    <div class="room-head">
+      <div>
+        <h2>{{ room.name }} <span class="code">{{ room.code }}</span></h2>
+        <p class="muted">
+          PIN <code>{{ pin or "—" }}</code> · turn <strong>{{ status.next_turn }}</strong>
+          (resolved through {{ status.turn }})
+        </p>
+      </div>
+      {% if is_host %}
+        <form method="post" action="/room/{{ room.code }}/resolve"
+              hx-post="/room/{{ room.code }}/resolve" hx-target="#panel" hx-swap="outerHTML">
+          <button type="submit" class="ghost">Resolve now</button>
+        </form>
+      {% endif %}
+    </div>
+    {% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+    <table class="players">
+      <tr><th>Faction</th><th>Player</th><th>Kind</th><th>Starts in</th><th>Turn {{ status.next_turn }}</th></tr>
+      {% for p in status.players %}
+      <tr class="{{ 'me' if player and p.faction_id == player.faction_id else '' }}">
+        <td>{{ p.faction_name }}</td>
+        <td>{{ p.display_name or "—" }}</td>
+        <td>{% if p.kind == "empty" %}—{% elif p.kind == "agent" %}bot/agent{% else %}human{% endif %}</td>
+        <td>{{ p.start_city or "—" }}</td>
+        <td>
+          {% if p.kind == "empty" %}<span class="muted">open</span>
+          {% elif p.submitted %}<span class="ok">✓ submitted ({{ p.parsed }} orders)</span>
+          {% else %}<span class="wait">waiting…</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% if status.all_submitted and status.waiting_on == [] %}
+      <p class="notice ok">Everyone is in — resolve to run turn {{ status.next_turn }}.</p>
+    {% elif status.waiting_on %}
+      <p class="muted">Waiting on: {{ status.waiting_on | join(", ") }}</p>
+    {% endif %}
+  </section>
+
+  {% if player %}
+  <section class="card">
+    <h3>Orders for turn {{ status.next_turn }} — {{ player.faction_name }}</h3>
+    <form method="post" action="/room/{{ room.code }}/orders"
+          hx-post="/room/{{ room.code }}/orders" hx-target="#panel" hx-swap="outerHTML">
+      <textarea name="orders" rows="10" spellcheck="false"
+        placeholder="Recruit 20 soldiers in Madegi Doy.&#10;Have Emperor Marcus go to Kitesta.">{{ submission_text }}</textarea>
+      <div class="row">
+        <button type="submit">Submit orders</button>
+        <span class="muted">English-like orders; <code>#</code> starts a comment.</span>
+      </div>
+    </form>
+  </section>
+  {% else %}
+  <section class="card">
+    <h3>Join this game</h3>
+    <form method="post" action="/join">
+      <input type="hidden" name="code" value="{{ room.code }}">
+      <label>PIN <input name="pin" required maxlength="4" inputmode="numeric"></label>
+      <label>Your name <input name="display_name" required></label>
+      <button type="submit">Join</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if player %}
+  <section class="card">
+    <h3>Your reports</h3>
+    {% if status.available_reports %}
+      {% for t in status.available_reports|reverse %}
+        <details {% if loop.first %}open{% endif %}>
+          <summary>Turn {{ t }}</summary>
+          {% if t in room.reports and player.faction_id in room.reports[t] %}
+            <pre class="report">{{ room.reports[t][player.faction_id] }}</pre>
+          {% endif %}
+        </details>
+      {% endfor %}
+    {% else %}
+      <p class="muted">No reports yet — submit orders for turn 1.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>

@@ -1,0 +1,5 @@
+# The Golden Empire turn 29 (style=religious, gold≈524, soldiers=117, religion=49)
+Have Emperor Marcus tax.
+Have Emperor Marcus secure Hakkaba.
+Have Emperor Marcus study religion.
+Have Emperor Marcus preach.

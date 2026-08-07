@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Spoils of Empire — the map{% endblock %}
+{% block content %}
+
+<section class="map-hero card">
+  <div class="map-head">
+    <div>
+      <h2>The Known World</h2>
+      <p class="muted">Choose your battlefield — cities, roads and sea lanes
+      shape everything that follows. Hover a city or route for details.</p>
+    </div>
+    {{ legend|safe }}
+  </div>
+
+  <div class="map-toolbar">
+    <div class="map-picker" role="tablist" aria-label="Available maps">
+      {% for m in maps %}
+      <button type="button" class="ghost map-btn {{ 'active' if m == default_map else '' }}"
+              role="tab" aria-selected="{{ 'true' if m == default_map else 'false' }}"
+              hx-get="/map/{{ m }}" hx-target="#map-panel" hx-swap="innerHTML"
+              hx-on:click="document.getElementById('map_file').value='{{ m }}';
+                           document.querySelectorAll('.map-btn').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false');});
+                           this.classList.add('active'); this.setAttribute('aria-selected','true');
+                           var s=document.getElementById('map-stats'); if(s) s.textContent='{{ m }}';">
+        {{ m }}
+      </button>
+      {% else %}
+      <span class="muted">No maps in <code>maps/</code>.</span>
+      {% endfor %}
+    </div>
+    <div class="map-stats muted" id="map-stats">{{ default_map }}</div>
+  </div>
+
+  <div id="map-panel" class="map-panel" tabindex="0">{{ map_svg|safe }}</div>
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Create a game</h2>
+    {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+    <form method="post" action="/create">
+      <input type="hidden" name="map_file" id="map_file" value="{{ default_map }}">
+      <label>Game name
+        <input name="name" placeholder="Friday Night Empire">
+      </label>
+      <label>Players
+        <select name="slots">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+      </label>
+      <button type="submit">Create game</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Join a game</h2>
+    <form method="post" action="/join">
+      <label>Game code
+        <input name="code" placeholder="ABC12" required maxlength="5" style="text-transform:uppercase">
+      </label>
+      <label>PIN
+        <input name="pin" placeholder="1234" required maxlength="4" inputmode="numeric">
+      </label>
+      <label>Your name
+        <input name="display_name" placeholder="Player name" required>
+      </label>
+      <button type="submit">Join game</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Agent access</h2>
+  <p>Agents don't need the browser. Create or join a room, then use the key
+  you receive with the <code>/api</code> endpoints — see the README for the API.</p>
+</section>
+{% endblock %}

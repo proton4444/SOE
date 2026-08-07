@@ -26,6 +26,13 @@ BASE_MOVEMENT_COST = 1
 # Movement points characters get per turn (simplified for alpha)
 CHARACTER_MOVEMENT_POINTS_PER_TURN = 10
 
+# Miles one movement point covers on a good road. When a road carries a
+# `distance_miles` from the gamemaster's map, a hop costs
+# quality_multiplier * (miles / MILES_PER_MOVE_POINT), so a 100-mile good
+# road is one full turn of walking (~14 miles/day). Roads without miles keep
+# the old quality-only cost.
+MILES_PER_MOVE_POINT = 10
+
 
 # ============================================================================
 # GAME TIME
@@ -52,27 +59,28 @@ AWAIT_DEFAULT_DEADLINE_DAYS = 90
 # Income per turn by population band (simplified from taxation rules)
 # Based on rules: ~1 gold per 4 residents per year, converted to per-turn
 INCOME_PER_POPULATION_BAND = {
-    PopulationBand.TINY: 10,       # < 10k residents
-    PopulationBand.SMALL: 50,      # 10k-99k residents
-    PopulationBand.MEDIUM: 200,    # 100k-999k residents
-    PopulationBand.LARGE: 500,     # 1M+ residents
+    PopulationBand.TINY: 10,       # < 1k residents
+    PopulationBand.SMALL: 50,      # 1k-9,999 residents
+    PopulationBand.MEDIUM: 200,    # 10k-99,999 residents
+    PopulationBand.LARGE: 500,     # 100k+ residents
 }
 
 # Numeric population used when a city has never been measured (INVEST makes
 # the measurement concrete). Midpoints of the bands, for income purposes.
+# LARGE is open-ended; 150,000 sits just above the world's largest town.
 POPULATION_BAND_MIDPOINT = {
-    PopulationBand.TINY: 5_000,
-    PopulationBand.SMALL: 55_000,
-    PopulationBand.MEDIUM: 550_000,
-    PopulationBand.LARGE: 2_000_000,
+    PopulationBand.TINY: 500,
+    PopulationBand.SMALL: 5_000,
+    PopulationBand.MEDIUM: 55_000,
+    PopulationBand.LARGE: 150_000,
 }
 
 # Population at which a city's band (and therefore its income and recruit
 # cap) steps up. Crossed only by INVEST-driven growth.
 POPULATION_BAND_THRESHOLD = [
-    (PopulationBand.TINY, 10_000),
-    (PopulationBand.SMALL, 100_000),
-    (PopulationBand.MEDIUM, 1_000_000),
+    (PopulationBand.TINY, 1_000),
+    (PopulationBand.SMALL, 10_000),
+    (PopulationBand.MEDIUM, 100_000),
 ]
 
 
@@ -80,16 +88,16 @@ def city_population(city) -> int:
     """The city's numeric population, from measurement or band midpoint."""
     if city.population:
         return city.population
-    return POPULATION_BAND_MIDPOINT.get(city.population_band, 5_000)
+    return POPULATION_BAND_MIDPOINT.get(city.population_band, 500)
 
 
 def population_band_for(population: int) -> PopulationBand:
     """The band a given numeric population belongs to."""
-    if population >= 1_000_000:
-        return PopulationBand.LARGE
     if population >= 100_000:
-        return PopulationBand.MEDIUM
+        return PopulationBand.LARGE
     if population >= 10_000:
+        return PopulationBand.MEDIUM
+    if population >= 1_000:
         return PopulationBand.SMALL
     return PopulationBand.TINY
 
@@ -322,9 +330,9 @@ COMBAT_MINIMUM_ATTACK_RATIO = 0.5  # Attack if at least 50% of defender power
 # MAGIC
 # ============================================================================
 
-# Magic power costs
-# Teleport: cost = distance / TELEPORT_DISTANCE_PER_POWER
-TELEPORT_DISTANCE_PER_POWER = 10  # 1 magic power per 10 distance units
+# Magic power costs.
+# TELEPORT and FLY are priced by encumbrance, not distance -- rules.md gives
+# teleport "no limit on distance" -- so see `encumbrance.py` for their costs.
 
 # Magic power regeneration (not implemented in alpha - instant refill)
 MAGIC_POWER_REGEN_PER_TURN = 0  # Simplified: magic refills to max each turn
@@ -364,9 +372,10 @@ ITEM_WAND_SKILL_RANGE = (40, 90)
 # CONJURE: minimum magic skill to attempt the spell, per rules.md.
 CONJURE_MIN_MAGIC_SKILL = 25
 
-# SCAN: an orb spends one power per ten miles to the scanned location. The
-# engine measures distance in movement cost rather than miles, so this converts
-# one hop of good road into a plausible number of power points.
+# SCAN: an orb spends one power per ten miles to the scanned location
+# (rules.md). When the route carries `distance_miles` from the map the miles
+# are used directly; this converts movement cost into power for maps without
+# mileages.
 ORB_POWER_PER_HOP = 5
 
 # SEARCH: chance a dig in ruins turns up an item at all, and the relative
@@ -415,6 +424,21 @@ MAX_PATH_LENGTH = 20
 def get_movement_cost(road_quality: RoadQuality) -> float:
     """Get the movement cost multiplier for a road quality."""
     return ROAD_QUALITY_COST.get(road_quality, 1.0) * BASE_MOVEMENT_COST
+
+
+def get_hop_cost(road) -> float:
+    """
+    Movement cost of crossing one route.
+
+    With `distance_miles` on the map (rules.md: travel time depends on the
+    distance and the quality of the roads) the cost is the quality multiplier
+    times miles per movement point. Without it, the old quality-only hop cost
+    keeps hand-built maps working.
+    """
+    multiplier = get_movement_cost(road.quality)
+    if road.distance_miles:
+        return multiplier * (road.distance_miles / MILES_PER_MOVE_POINT)
+    return multiplier
 
 
 def get_income_for_city(pop_band: PopulationBand) -> int:

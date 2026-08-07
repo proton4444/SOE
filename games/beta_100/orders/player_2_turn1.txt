@@ -1,0 +1,5 @@
+# The Silver Horde turn 1 (style=military, gold≈960, soldiers=0, religion=0)
+Have Khan Tengri tax.
+Have Khan Tengri secure Kitesta.
+Recruit 40 soldiers in Kitesta.
+Have Khan Tengri invest 76 gold in Kitesta.

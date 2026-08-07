@@ -1,0 +1,5 @@
+# The Silver Horde turn 3 (style=military, gold≈864, soldiers=40, religion=0)
+Have Khan Tengri tax.
+Have Khan Tengri secure Hakkaba.
+Recruit 10 soldiers in Hakkaba.
+Have Khan Tengri go to Madegi Doy.

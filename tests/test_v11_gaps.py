@@ -4,7 +4,6 @@ INVEST, BUY PASSAGE, PREACH, OFFER, IF statements, THEN sequencing and
 sailing skill.
 """
 
-import json
 import random
 import tempfile
 from pathlib import Path
@@ -335,10 +334,10 @@ def test_invest_weekly_check_grows_population(state):
     gs = state
     run(gs, {"p1": parse("Invest 400 gold in Rome.", gs)})
     run(gs, {})  # next week's check
-    # Rome is MEDIUM (~550k people): the check spends ~5500/week, far more
-    # than the 400 pool, so the whole pool goes to work in one week.
+    # Rome is MEDIUM (~55k people): the check spends ~550/week, more than
+    # the 400 pool, so the whole pool goes to work in one week.
     pop = config.city_population(gs.world_map.cities["city1"])
-    assert pop == 550_000 + 400
+    assert pop == 55_000 + 400
     assert "city1" not in gs.invest_pools
 
 

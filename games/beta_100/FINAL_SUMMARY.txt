@@ -1,0 +1,31 @@
+======================================================================
+GAME STATE SUMMARY - Turn 100
+======================================================================
+
+FACTIONS:
+  The Golden Empire (player_1)
+    Treasury: 0.0g
+    Cities: 1
+    Characters: 1
+    Units: 159
+    Ships: 0
+
+  The Silver Horde (player_2)
+    Treasury: 0.0g
+    Cities: 1
+    Characters: 1
+    Units: 4
+    Ships: 0
+
+  The Free Cities (independent)
+    Treasury: 0.0g
+    Cities: 0
+    Characters: 2
+    Units: 0
+    Ships: 0
+
+WORLD:
+  Cities: 6
+  Roads/Sea Lanes: 6
+
+======================================================================

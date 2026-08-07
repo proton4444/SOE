@@ -101,8 +101,10 @@ and are covered by tests.
   until first measured) and step up their income band when growth crosses a
   threshold. Ruins cannot be invested in; the investor need not be present.
 - **BUY PASSAGE** — travel one direct sealane hop without owning a ship, at a
-  fare equal to the party's size in gold (encumbrance is unmodelled; horses
-  do not exist). Passage may fail — the bigger the group the worse the odds —
+  fare equal to the party's size in gold. The rules charge the group's
+  encumbrance instead, which `encumbrance.group_encumbrance` can now supply;
+  head-count stands in until that is switched over. Passage may fail — the
+  bigger the group the worse the odds —
   and `definitely` helps. A failure refunds the fare. (`engine.process_passage`)
 - **PREACH** — donations scale with religion skill, location population and a
   random day-to-day factor; followers (1-3 workers) sometimes join.
@@ -257,9 +259,10 @@ and are covered by tests.
   are offered to.
 - **CREATE** elite units can neither be handed to another group leader nor
   disbanded once formed; they follow their creator's group for life.
-- **INVEST** uses the band-midpoint population until a city is first
-  measured, so a TINY town's weekly spend is approximated; the population
-  growth cap keeps a huge pool from exploding a town in one turn.
+- **INVEST** uses the city's exact `population` when the map provides one,
+  and the band-midpoint until a city without one is first measured, so a
+  TINY town's weekly spend is approximated; the population growth cap keeps
+  a huge pool from exploding a town in one turn.
 - **PREACH** attracts only workers; the rules' rare skilled converts and the
   wider miracle table are absent.
 - **Diplomacy** decides combat sides — an ally cannot be attacked, and a
@@ -272,10 +275,18 @@ and are covered by tests.
   gold are still held by their character rather than travelling with a group as
   a single pool, and combat still totals a faction's strength at a location
   rather than resolving group by group.
-- **SCAN** works off a real orb, but distance is priced from the overland
-  movement cost (`config.ORB_POWER_PER_HOP`) rather than the rules' miles, and
-  one order carries one orb — the rules' form pairing several city groups with
-  several orbs in one sentence is rejected rather than misread.
+- **SCAN** works off a real orb and prices distance in map miles (one power
+  per ten miles, per the rules) when the route carries `distance_miles`;
+  maps without mileages fall back to the movement-cost conversion
+  (`config.ORB_POWER_PER_HOP`). The distance is measured over roads *and* sea
+  lanes, since an orb follows neither — an island reachable only by water can
+  still be scanned. It remains an approximation: the rules take distance off
+  the drawn map ("crow-flight"), and route mileage is longer than a straight
+  line, so a scan over winding roads costs more than it should. Map
+  coordinates are presentation-only and not to scale, so there is nothing
+  better to measure yet. One order carries one orb — the rules' form pairing
+  several city groups with several orbs in one sentence is rejected rather
+  than misread.
 - **Magical items** are not lost or looted when their holder dies: an item stays
   with the body rather than falling to the victor, because `rules.md` does not
   say what should happen and the items are indestructible. Item weight and
@@ -306,9 +317,17 @@ and are covered by tests.
 - Sub-turn game time, and with it the rules' partial-progress accounting for a
   BUILD or FORTIFY interrupted part-way through, `until <date>` and
   hour-level waits.
-- Encumbrance and item weight. Nothing in the engine weighs anything, so
-  `FLY`/`TELEPORT` still charge a flat cost and `BUY PASSAGE` fares and IF
-  encumbrance checks use head-count.
+- Horses, wagons, armour, weapons, catapults, battering rams and siege towers
+  as *carried* things. `encumbrance.py` weighs people, unit stacks, mined
+  substances and purses to Appendix B, which is what `FLY` and `TELEPORT` now
+  charge for; the Appendix B figures for the rest are recorded in
+  `UNMODELLED_ENCUMBRANCE` but contribute nothing until those items are tracked
+  as cargo. With them absent, the horse/wagon rules that lighten a group on
+  land, and the land-speed bonus for horses, are also still missing.
+  `BUY PASSAGE` fares and IF encumbrance checks continue to use head-count and
+  could now be switched to `encumbrance.group_encumbrance`.
+- Item weight: magical items are weightless, so carrying six crystals costs
+  nothing to fly.
 - `QUIETLY`/`SILENTLY` report suppression (the adverbs parse; the `silent`
   flag on orders is recorded and unused).
 - Retreat and morale in combat.

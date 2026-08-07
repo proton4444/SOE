@@ -1,0 +1,10 @@
+# The Golden Empire turn 2 (style=religious, gold≈939, soldiers=40, religion=25)
+Have Emperor Marcus tax.
+Have Emperor Marcus secure Madegi Doy.
+Recruit 40 soldiers in Madegi Doy.
+Recruit 10 workers in Madegi Doy.
+Have Emperor Marcus study religion.
+Have Emperor Marcus preach.
+Have Emperor Marcus bless himself.
+Have Emperor Marcus offer 75 gold to Bishop Nancy Lopenda.
+Have Emperor Marcus invest 75 gold in Madegi Doy.

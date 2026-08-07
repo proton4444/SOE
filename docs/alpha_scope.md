@@ -49,7 +49,7 @@ Based on the official rules, Spoils of Empire includes:
 
 #### 1. World & Map System
 - **Cities**:
-  - Unique ID, name, population band (<10k, 10k-99k, 100k-999k, 1M+)
+  - Unique ID, name, population band (<1k, 1k-9k, 10k-99k, 100k+)
   - Terrain flags (plains, forest, mountains, river, coastal)
   - Port status (can build/dock ships)
   - Region grouping (islands, continents)
@@ -238,7 +238,7 @@ Based on the official rules, Spoils of Empire includes:
 
 ### Economy
 - **Simplified**: Fixed income per pop band, fixed recruitment costs, no trading skill
-- **Income**: <10k=10g/turn, 10k-99k=50g/turn, 100k-999k=200g/turn, 1M+=500g/turn
+- **Income**: <1k=10g/turn, 1k-9k=50g/turn, 10k-99k=200g/turn, 100k+=500g/turn
 - **Deferred**: TAX command, variable prices, trading discounts
 
 ### Magic
@@ -247,7 +247,7 @@ Based on the official rules, Spoils of Empire includes:
 
 ### Recruiting
 - **Simplified**: Fixed caps per pop band, instant recruitment
-- **Caps**: <10k=10/turn, 10k-99k=50/turn, 100k-999k=200/turn, 1M+=500/turn
+- **Caps**: <1k=10/turn, 1k-9k=50/turn, 10k-99k=200/turn, 100k+=500/turn
 - **Deferred**: Time-based recruitment, availability fluctuations
 
 ## Alpha Design Principles

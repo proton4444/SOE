@@ -70,3 +70,6 @@ Thumbs.db
 # games/*/state.json
 # games/*/reports/
 # games/*/orders/
+
+# Web server runtime data
+server_data/

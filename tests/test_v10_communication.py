@@ -8,7 +8,6 @@ that a quoted message survives the parser at all: order text is lowercased,
 stripped of commas and split on periods, none of which a message may suffer.
 """
 
-import random
 from pathlib import Path
 
 import pytest

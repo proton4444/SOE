@@ -200,7 +200,6 @@ def test_pay_reduces_wage_debt(two_faction_state):
 def test_borrow_and_repay(two_faction_state):
     gs = two_faction_state
     gs.characters["c1"].gold = 0
-    borrow = orders.BorrowOrder(player_id="p1", actor_id="c1", gold_amount=100)
     # High skill + medium city + seed should often succeed; force via many seeds
     succeeded = False
     for seed in range(50):

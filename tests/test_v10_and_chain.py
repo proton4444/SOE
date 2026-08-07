@@ -363,8 +363,8 @@ def test_resolution_rewrites_the_two_thems(court):
 
 def test_bare_mass_noun_gives_it_something_to_stand_for(court):
     context = pronouns.ReferentContext()
-    first = pronouns.resolve("have baldur gather stone for 10 hours",
-                             context, court, "p1")
+    pronouns.resolve("have baldur gather stone for 10 hours",
+                     context, court, "p1")
     second = pronouns.resolve("give it to engineer tom baldwin",
                               context, court, "p1")
     assert second == "give stone to engineer tom baldwin"

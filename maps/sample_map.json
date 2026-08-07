@@ -3,56 +3,105 @@
     {
       "id": "madegi_doy",
       "name": "Madegi Doy",
-      "population_band": "1M+",
+      "population_band": "100k+",
+      "population": 1200000,
       "terrain": [
         "coastal",
         "plains"
       ],
       "region": "Main Continent",
-      "is_port": true
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "B8",
+      "x": 0.12,
+      "y": 0.78
     },
     {
       "id": "kitesta",
       "name": "Kitesta",
-      "population_band": "100k-999k",
+      "population_band": "100k+",
+      "population": 420000,
       "terrain": [
         "river",
         "plains"
       ],
       "region": "Main Continent",
-      "is_port": false
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F5",
+      "x": 0.48,
+      "y": 0.48
     },
     {
       "id": "riverton",
       "name": "Riverton",
       "population_band": "10k-99k",
+      "population": 45000,
       "terrain": [
         "forest",
         "river"
       ],
       "region": "Main Continent",
-      "is_port": false
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H3",
+      "resource_richness": {
+        "wood": 1.0
+      },
+      "x": 0.7,
+      "y": 0.28
     },
     {
       "id": "albatross_city",
       "name": "Albatross City",
-      "population_band": "100k-999k",
+      "population_band": "100k+",
+      "population": 280000,
       "terrain": [
         "coastal",
         "mountains"
       ],
       "region": "Northern Island",
-      "is_port": true
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "K2",
+      "x": 0.88,
+      "y": 0.12
     },
     {
       "id": "peshandi",
       "name": "Peshandi",
-      "population_band": "< 10k",
+      "population_band": "1k-9k",
+      "population": 6800,
       "terrain": [
         "desert"
       ],
       "region": "Main Continent",
-      "is_port": false
+      "is_port": false,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "D2",
+      "x": 0.28,
+      "y": 0.16
+    },
+    {
+      "id": "hakkaba",
+      "name": "Hakkaba",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "mountains"
+      ],
+      "region": "Main Continent",
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "G6",
+      "x": 0.55,
+      "y": 0.55
     }
   ],
   "roads": [
@@ -60,7 +109,8 @@
       "id": "road_1",
       "from": "madegi_doy",
       "to": "kitesta",
-      "quality": "good",
+      "quality": "excellent",
+      "distance_miles": 94,
       "bidirectional": true
     },
     {
@@ -68,6 +118,7 @@
       "from": "kitesta",
       "to": "riverton",
       "quality": "fair",
+      "distance_miles": 59,
       "bidirectional": true
     },
     {
@@ -75,6 +126,7 @@
       "from": "riverton",
       "to": "peshandi",
       "quality": "poor",
+      "distance_miles": 102,
       "bidirectional": true
     },
     {
@@ -82,6 +134,15 @@
       "from": "peshandi",
       "to": "madegi_doy",
       "quality": "fair",
+      "distance_miles": 92,
+      "bidirectional": true
+    },
+    {
+      "id": "road_5",
+      "from": "kitesta",
+      "to": "hakkaba",
+      "quality": "poor",
+      "distance_miles": 20,
       "bidirectional": true
     },
     {
@@ -89,6 +150,7 @@
       "from": "madegi_doy",
       "to": "albatross_city",
       "quality": "sea",
+      "distance_miles": 201,
       "bidirectional": true
     }
   ]
