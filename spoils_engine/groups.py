@@ -100,6 +100,29 @@ def owned_stacks(character_id: str, game_state: GameState) -> List[UnitStack]:
             if s.owner_character_id == character_id]
 
 
+def member_ids(leader: Character, game_state: GameState) -> set[str]:
+    """Character IDs whose possessions form this group's asset pool."""
+    return {leader.id, *(member.id for member in group_members(leader.id, game_state))}
+
+
+def group_gold(leader: Character, game_state: GameState) -> float:
+    ids = member_ids(leader, game_state)
+    return sum(c.gold for c in game_state.characters.values() if c.id in ids)
+
+
+def group_resource_count(leader: Character, resource: str,
+                         game_state: GameState) -> int:
+    ids = member_ids(leader, game_state)
+    return sum(c.resources.get(resource, 0) for c in game_state.characters.values()
+               if c.id in ids)
+
+
+def group_ships(leader: Character, game_state: GameState):
+    ids = member_ids(leader, game_state)
+    return [ship for ship in game_state.ships.values()
+            if ship.owner_character_id in ids]
+
+
 def group_soldier_count(leader: Character, game_state: GameState,
                         unit_type=None) -> int:
     """

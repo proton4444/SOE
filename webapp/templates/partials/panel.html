@@ -10,10 +10,14 @@
         </p>
       </div>
       {% if is_host %}
-        <form method="post" action="/room/{{ room.code }}/resolve"
-              hx-post="/room/{{ room.code }}/resolve" hx-target="#panel" hx-swap="outerHTML">
-          <button type="submit" class="ghost">Resolve now</button>
-        </form>
+        <div class="row room-actions">
+          <a class="button ghost" href="/room/{{ room.code }}/setup">Setup</a>
+          <a class="button ghost" href="/room/{{ room.code }}/master">Master dashboard</a>
+          <form method="post" action="/room/{{ room.code }}/resolve"
+                hx-post="/room/{{ room.code }}/resolve" hx-target="#panel" hx-swap="outerHTML">
+            <button type="submit" class="ghost">Resolve now</button>
+          </form>
+        </div>
       {% endif %}
     </div>
     {% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
@@ -24,7 +28,7 @@
       <tr class="{{ 'me' if player and p.faction_id == player.faction_id else '' }}">
         <td>{{ p.faction_name }}</td>
         <td>{{ p.display_name or "—" }}</td>
-        <td>{% if p.kind == "empty" %}—{% elif p.kind == "agent" %}bot/agent{% else %}human{% endif %}</td>
+        <td>{% if p.kind == "empty" %}—{% elif p.bot %}<span class="ok">bot</span>{% elif p.kind == "agent" %}bot/agent{% else %}human{% endif %}</td>
         <td>{{ p.start_city or "—" }}</td>
         <td>
           {% if p.kind == "empty" %}<span class="muted">open</span>
@@ -53,12 +57,77 @@
         <span class="muted">English-like orders; <code>#</code> starts a comment.</span>
       </div>
     </form>
+    <details class="order-ref">
+      <summary>Order reference (beta — all commands are live)</summary>
+      <p class="muted">Every command from the rules is recognised. Examples use sample names; swap in your leader and cities from the report. Full list: <code>examples/beta_order_catalog.txt</code>.</p>
+      <pre class="order-examples"># Movement / sea
+Have Emperor Marcus go to Kitesta.
+Have Emperor Marcus sail to Albatross City.
+Have Emperor Marcus fly to Kitesta.
+Have Emperor Marcus teleport himself to Kitesta.
+Have Emperor Marcus definitely buy passage to Albatross City.
+
+# Army / economy
+Recruit 20 soldiers in Madegi Doy.
+Buy 1 galley in Madegi Doy.
+Have Emperor Marcus tax.
+Have Emperor Marcus secure Madegi Doy.
+Buy 10 wood.
+Have Emperor Marcus collect wood.
+Have Emperor Marcus work.
+Have Emperor Marcus train 10 soldiers.
+Have Emperor Marcus invest 50 gold in Madegi Doy.
+Have Emperor Marcus fortify Madegi Doy.
+
+# Combat / prisoners
+Have Emperor Marcus attack Khan Tengri.
+Have Emperor Marcus capture Khan Tengri.
+Have Emperor Marcus free Khan Tengri.
+Have Emperor Marcus interrogate Khan Tengri.
+
+# Characters / groups
+Name male worker Julia Smithers.
+Promote Julia Smithers to Captain.
+Have Emperor Marcus assign 10 soldiers to Julia Smithers.
+Have Julia Smithers join Emperor Marcus.
+Create Red Guard using 20 soldiers.
+
+# Skills / magic / religion
+Have Emperor Marcus study magic.
+Have Emperor Marcus teach combat to Julia Smithers.
+Have Emperor Marcus summon 1 demon.
+Have Emperor Marcus conjure a wand of teleport.
+Have Emperor Marcus preach.
+Have Emperor Marcus pray.
+Have Emperor Marcus bless himself.
+Have Emperor Marcus heal himself.
+Have Emperor Marcus offer 50 gold to Bishop Nancy Lopenda.
+
+# Intel / diplomacy / messages
+Have Emperor Marcus probe Khan Tengri.
+Have Emperor Marcus search.
+Have Emperor Marcus lurk.
+Enemy The Silver Horde.
+Have Emperor Marcus say "Hello." to Khan Tengri.
+Have Emperor Marcus post "Notice" in Madegi Doy.
+Have Emperor Marcus briefly report.
+Password MySecretPass99.
+
+# Queue language
+Have Emperor Marcus wait for 1 week.
+Have Emperor Marcus repeatedly tax 2 times.
+If Emperor Marcus has at least 100 gold, then have him tax.
+Have Emperor Marcus go to Kitesta and tax and secure Kitesta.</pre>
+    </details>
   </section>
   {% else %}
   <section class="card">
     <h3>Join this game</h3>
     <form method="post" action="/join">
       <input type="hidden" name="code" value="{{ room.code }}">
+      {% if beta_invite_required %}
+      <label>Beta invitation <input name="beta_invite" required autocomplete="off"></label>
+      {% endif %}
       <label>PIN <input name="pin" required maxlength="4" inputmode="numeric"></label>
       <label>Your name <input name="display_name" required></label>
       <button type="submit">Join</button>

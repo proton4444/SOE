@@ -38,6 +38,17 @@ from spoils_engine import (  # noqa: E402
 from spoils_engine.models import RoadQuality, UnitType  # noqa: E402
 from spoils_engine.phases.pathing import find_route  # noqa: E402
 
+# Full order surface for beta (all rules verbs executable by test players)
+import importlib.util as _ilu  # noqa: E402
+
+_surf_path = Path(__file__).resolve().parent / "beta_order_surface.py"
+_spec = _ilu.spec_from_file_location("beta_order_surface", _surf_path)
+_surf = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_surf)
+ENGINE_ORDER_TYPES = _surf.ENGINE_ORDER_TYPES
+RULES_VERB_TO_ENGINE = _surf.RULES_VERB_TO_ENGINE
+exercise_orders = _surf.exercise_orders
+
 GAME_ID = "beta_100"
 TURNS = 100
 BASE_SEED = 20260807
@@ -50,6 +61,9 @@ PLAYERS = [
         "start_city": "madegi_doy",
         "style": "religious",  # preach / pray / bless / heal / study religion
         "religion_skill": 25,
+        "magic_skill": 15,
+        "sailing_skill": 12,
+        "combat_skill": 12,
     },
     {
         "id": "player_2",
@@ -57,7 +71,10 @@ PLAYERS = [
         "leader_name": "Khan Tengri",
         "start_city": "kitesta",
         "style": "military",  # prioritise troops & combat
-        "religion_skill": 0,
+        "religion_skill": 8,
+        "magic_skill": 20,
+        "sailing_skill": 10,
+        "combat_skill": 18,
     },
 ]
 
@@ -66,9 +83,11 @@ PLAYERS = [
 # helpers
 # ---------------------------------------------------------------------------
 
+
 def _alive_chars(gs: models.GameState, faction_id: str) -> list[models.Character]:
     return [
-        c for c in gs.characters.values()
+        c
+        for c in gs.characters.values()
         if c.faction_id == faction_id and not c.is_dead and not c.is_prisoner
     ]
 
@@ -111,7 +130,8 @@ def _enemies_here(
     gs: models.GameState, faction_id: str, city_id: str
 ) -> list[models.Character]:
     return [
-        c for c in gs.characters.values()
+        c
+        for c in gs.characters.values()
         if c.faction_id != faction_id
         and not c.is_dead
         and c.location_city_id == city_id
@@ -170,9 +190,7 @@ def _snapshot(gs: models.GameState) -> dict:
     for fid, fac in gs.factions.items():
         if getattr(fac, "is_npc", False):
             continue
-        all_chars = [
-            c for c in gs.characters.values() if c.faction_id == fid
-        ]
+        all_chars = [c for c in gs.characters.values() if c.faction_id == fid]
         alive = [c for c in all_chars if not c.is_dead and not c.is_prisoner]
         factions[fid] = {
             "name": fac.name,
@@ -213,11 +231,11 @@ def _snapshot(gs: models.GameState) -> dict:
 # bot brain
 # ---------------------------------------------------------------------------
 
-def _independents_here(
-    gs: models.GameState, city_id: str
-) -> list[models.Character]:
+
+def _independents_here(gs: models.GameState, city_id: str) -> list[models.Character]:
     return [
-        c for c in gs.characters.values()
+        c
+        for c in gs.characters.values()
         if c.location_city_id == city_id
         and not c.is_dead
         and not c.is_prisoner
@@ -268,7 +286,7 @@ def plan_orders(
         gold -= n_soldiers
 
     # Workers for labour when flush
-    if gold > 200 and style in ("expand", "religious") and _workers_total(gs, faction_id) < 20:
+    if gold > 150 and _workers_total(gs, faction_id) < 25:
         n_work = min(10, int(gold * 0.05), max(cap // 4, 5))
         if n_work >= 2:
             lines.append(f"Recruit {n_work} workers in {city_name}.")
@@ -320,21 +338,20 @@ def plan_orders(
             and rng.random() < 0.20
         ):
             lines.append(f"Have {leader.name} study combat.")
+        if leader.magic_skill < 30 and gold > 40 and rng.random() < 0.25:
+            lines.append(f"Have {leader.name} study magic.")
 
     # 5) Expand or hunt — religious stays longer in big towns to preach
     reachable = _reachable_land(gs, leader.location_city_id)
-    unclaimed = [
-        (c, cost) for c, cost in reachable
-        if _controller(gs, c.id) is None
-    ]
+    unclaimed = [(c, cost) for c, cost in reachable if _controller(gs, c.id) is None]
     enemy_held = [
-        (c, cost) for c, cost in reachable
+        (c, cost)
+        for c, cost in reachable
         if (ctrl := _controller(gs, c.id)) not in (None, faction_id)
         and not getattr(gs.factions.get(ctrl or ""), "is_npc", False)
     ]
     own_other = [
-        (c, cost) for c, cost in reachable
-        if _controller(gs, c.id) == faction_id
+        (c, cost) for c, cost in reachable if _controller(gs, c.id) == faction_id
     ]
 
     moved = False
@@ -350,7 +367,8 @@ def plan_orders(
         if religious and city is not None and rng.random() < 0.55:
             # Occasionally walk to another large town to preach
             big = [
-                (c, cost) for c, cost in reachable
+                (c, cost)
+                for c, cost in reachable
                 if c.population_band.value in ("100k+", "10k-99k")
                 or (c.population and c.population >= 10000)
             ]
@@ -358,16 +376,26 @@ def plan_orders(
                 dest, _ = rng.choice(big)
                 lines.append(f"Have {leader.name} go to {dest.name}.")
                 moved = True
-        if not moved and unclaimed and soldiers_here >= 5 and (
-            style == "expand" or soldiers_all < 120 or rng.random() < 0.7
+        if (
+            not moved
+            and unclaimed
+            and soldiers_here >= 5
+            and (style == "expand" or soldiers_all < 120 or rng.random() < 0.7)
         ):
-            dest, _ = unclaimed[0] if style in ("expand", "religious") else rng.choice(unclaimed)
+            dest, _ = (
+                unclaimed[0]
+                if style in ("expand", "religious")
+                else rng.choice(unclaimed)
+            )
             # Religious avoids empty ruins early (poor tithes)
             if not (religious and dest.is_ruin and gs.turn_number < 15):
                 lines.append(f"Have {leader.name} go to {dest.name}.")
                 moved = True
-        elif not moved and enemy_held and soldiers_here >= 30 and (
-            style == "military" or rng.random() < 0.4
+        elif (
+            not moved
+            and enemy_held
+            and soldiers_here >= 30
+            and (style == "military" or rng.random() < 0.4)
         ):
             dest, _ = rng.choice(enemy_held)
             lines.append(f"Have {leader.name} go to {dest.name}.")
@@ -383,14 +411,15 @@ def plan_orders(
 
     # 6) Fly only for non-religious (religious stays to preach)
     if (
-        not religious
-        and not moved
+        not moved
         and leader.magic_power_current >= 5
-        and rng.random() < 0.2
+        and leader.magic_skill >= 5
+        and rng.random() < (0.15 if religious else 0.25)
     ):
         land = _land_neighbors(gs, leader.location_city_id)
         far_unclaimed = [
-            c for c in land
+            c
+            for c in land
             if _controller(gs, c.id) is None
             and not any(r.id == c.id for r, _ in reachable)
         ]
@@ -405,13 +434,28 @@ def plan_orders(
         if invest >= 20:
             lines.append(f"Have {leader.name} invest {invest} gold in {city_name}.")
 
+    # 8) Full command surface — every rules verb is potentially issued
+    exercise_orders(
+        lines,
+        gs,
+        faction_id,
+        leader,
+        city_name,
+        gold,
+        soldiers_here,
+        enemies,
+        moved,
+        style,
+        rng,
+    )
+
     if not lines:
         lines.append(f"Have {leader.name} tax.")
 
     header = (
         f"# {fac.name} turn {gs.turn_number + 1} "
         f"(style={style}, gold≈{gold:.0f}, soldiers={soldiers_all}, "
-        f"religion={leader.religion_skill})\n"
+        f"religion={leader.religion_skill}, magic={leader.magic_skill})\n"
     )
     return header + "\n".join(lines) + "\n"
 
@@ -419,6 +463,7 @@ def plan_orders(
 # ---------------------------------------------------------------------------
 # run
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RunStats:
@@ -430,12 +475,14 @@ class RunStats:
     combat_events: int = 0
     deaths: list[str] = field(default_factory=list)
     snapshots: list[dict] = field(default_factory=list)
+    order_types_issued: Counter = field(default_factory=Counter)
 
 
 def init_game(game_dir: Path) -> models.GameState:
     if game_dir.exists():
         # wipe prior beta run
         import shutil
+
         shutil.rmtree(game_dir)
     game_dir.mkdir(parents=True)
 
@@ -454,6 +501,9 @@ def init_game(game_dir: Path) -> models.GameState:
         )
         gs.factions[p["id"]] = fac
         rel = int(p.get("religion_skill", 0))
+        magic = int(p.get("magic_skill", config.STARTING_MAGIC_SKILL))
+        sailing = int(p.get("sailing_skill", 0))
+        combat = int(p.get("combat_skill", config.STARTING_COMBAT_SKILL))
         leader = models.Character(
             id=f"char_{p['id']}_leader",
             name=p["leader_name"],
@@ -461,11 +511,12 @@ def init_game(game_dir: Path) -> models.GameState:
             location_city_id=start,
             is_leader=True,
             gold=float(config.STARTING_TREASURY),
-            combat_skill=config.STARTING_COMBAT_SKILL,
-            magic_skill=config.STARTING_MAGIC_SKILL,
-            magic_power_current=config.STARTING_MAGIC_SKILL,
+            combat_skill=combat,
+            magic_skill=magic,
+            magic_power_current=magic,
             religion_skill=rel,
             religious_power_current=rel,
+            sailing_skill=sailing,
         )
         gs.characters[leader.id] = leader
 
@@ -478,9 +529,11 @@ def init_game(game_dir: Path) -> models.GameState:
             {"name": "Bishop Nancy Lopenda", "loc": "madegi_doy", "religion": 45},
         ]
     ):
-        loc = npc["loc"] if npc["loc"] in world_map.cities else list(world_map.cities)[0]
-        gs.characters[f"char_independent_{j+1}"] = models.Character(
-            id=f"char_independent_{j+1}",
+        loc = (
+            npc["loc"] if npc["loc"] in world_map.cities else list(world_map.cities)[0]
+        )
+        gs.characters[f"char_independent_{j + 1}"] = models.Character(
+            id=f"char_independent_{j + 1}",
             name=npc["name"],
             faction_id="independent",
             location_city_id=loc,
@@ -562,12 +615,8 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
 
     # Trajectory every 10 turns
     lines += ["## Trajectory (every 10 turns)", ""]
-    lines.append(
-        "| Turn | P1 sec | P1 gold | P1 sol | P2 sec | P2 gold | P2 sol |"
-    )
-    lines.append(
-        "|-----:|-------:|--------:|-------:|-------:|--------:|-------:|"
-    )
+    lines.append("| Turn | P1 sec | P1 gold | P1 sol | P2 sec | P2 gold | P2 sol |")
+    lines.append("|-----:|-------:|--------:|-------:|-------:|--------:|-------:|")
     for snap in stats.snapshots:
         if snap["turn"] % 10 != 0 and snap["turn"] not in (1, stats.turns_completed):
             continue
@@ -583,6 +632,45 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
     lines += ["", "## Top event types (engine log)", ""]
     for etype, count in stats.event_types.most_common(25):
         lines.append(f"- `{etype}`: {count}")
+
+    issued = set(stats.order_types_issued)
+    missing_engine = [x for x in ENGINE_ORDER_TYPES if x not in issued]
+    rules_covered = sorted({v for v, e in RULES_VERB_TO_ENGINE.items() if e in issued})
+    rules_missed = sorted(
+        {v for v, e in RULES_VERB_TO_ENGINE.items() if e not in issued}
+    )
+    lines += [
+        "",
+        "## Order-type coverage (beta players)",
+        "",
+        f"- **Engine types issued:** {len(issued)} / {len(ENGINE_ORDER_TYPES)}",
+        f"- **rules.md verbs mapped to an issued type:** "
+        f"{len(rules_covered)} / {len(RULES_VERB_TO_ENGINE)}",
+        "",
+        "### Issued (counts)",
+        "",
+    ]
+    for ot, n in stats.order_types_issued.most_common():
+        lines.append(f"- `{ot}`: {n}")
+    if missing_engine:
+        lines += ["", "### Engine types never issued this run", ""]
+        for x in missing_engine:
+            lines.append(f"- `{x}`")
+    if rules_missed:
+        lines += ["", "### rules.md verbs whose engine type was never issued", ""]
+        for v in rules_missed:
+            lines.append(f"- {v} → `{RULES_VERB_TO_ENGINE[v]}`")
+    lines += [
+        "",
+        "### Implementation note",
+        "",
+        "All `rules.md` Table-of-Contents command verbs are recognised by "
+        "`parser.ORDER_KEYWORDS` and have an engine phase. Extra engine-only "
+        "types: `SCRY`, `RESURRECT`, `TRADE` (resource buy/sell), `REPEAT` "
+        "(rules REPEATEDLY). See `docs/rules_gap.md` and "
+        "`examples/beta_order_catalog.txt`.",
+        "",
+    ]
 
     if stats.deaths:
         lines += ["", "## Recorded deaths / losses", ""]
@@ -623,9 +711,7 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
             f"{len(stats.errors)} error(s)."
         )
     elif stats.turns_completed < TURNS:
-        lines.append(
-            f"**PARTIAL** — stopped at turn {stats.turns_completed}/{TURNS}."
-        )
+        lines.append(f"**PARTIAL** — stopped at turn {stats.turns_completed}/{TURNS}.")
     else:
         p1 = final["factions"].get("player_1", {})
         p2 = final["factions"].get("player_2", {})
@@ -643,9 +729,10 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
                 "both independent players still active."
             )
         lines.append(
-            "Systems exercised: movement, recruit, tax, secure, expand, "
-            "combat/capture, study, invest, preach/pray/bless/heal/offer, "
-            "fog sightings, upkeep."
+            "Systems exercised: full order surface (see Order-type coverage), "
+            "movement, recruit, tax, secure, expand, combat/capture, study, "
+            "invest, preach/pray/bless/heal/offer, magic, ships/passage, "
+            "groups, prisoners, fog sightings, upkeep."
         )
 
     lines += [
@@ -666,7 +753,9 @@ def main() -> int:
     game_dir = _ROOT / "games" / GAME_ID
     print(f"=== Beta 100-turn test → {game_dir} ===")
     gs = init_game(game_dir)
-    print(f"Initialised: {len(gs.factions)} factions, {len(gs.world_map.cities)} cities")
+    print(
+        f"Initialised: {len(gs.factions)} factions, {len(gs.world_map.cities)} cities"
+    )
 
     stats = RunStats()
     history_path = game_dir / "history.jsonl"
@@ -695,6 +784,10 @@ def main() -> int:
                     parsed = parser.parse_orders(text, gs, pid)
                     for o in parsed:
                         stats.warnings_total += len(getattr(o, "warnings", []) or [])
+                        try:
+                            stats.order_types_issued[o.order_type()] += 1
+                        except Exception:
+                            pass
                     orders_by_player[pid] = parsed
                 # NPC faction: no orders
                 for fid in gs.factions:
@@ -712,10 +805,14 @@ def main() -> int:
                         stats.combat_events += 1
                     # Avoid false positives: "studied" contains the substring "died"
                     if et in ("death", "killed", "character_death") or (
-                        (" killed " in f" {desc} " or desc.startswith("killed ")
-                         or " has died" in desc or "was killed" in desc)
+                        " killed " in f" {desc} "
+                        or desc.startswith("killed ")
+                        or " has died" in desc
+                        or "was killed" in desc
                     ):
-                        stats.deaths.append(f"T{turn}: [{ev.event_type}] {ev.description}")
+                        stats.deaths.append(
+                            f"T{turn}: [{ev.event_type}] {ev.description}"
+                        )
 
                 snap = _snapshot(gs)
                 stats.snapshots.append(snap)

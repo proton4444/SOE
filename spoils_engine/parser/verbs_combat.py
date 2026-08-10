@@ -19,10 +19,62 @@ from spoils_engine.parser.resolve import (
 )
 
 
+# rules.md's ATTACK takes a character name and nothing else. The battle happens
+# where the attacker already stands, and a location is reached with GO in the
+# same sentence -- "have him go to Kitesta and attack John May". So a trailing
+# "in Kitesta" is not a target qualifier, and folding it into the name sends the
+# parser hunting for a character called "Regent Aurelia in Kitesta": the order
+# is accepted, no such person exists, and the attack silently never happens.
+_ATTACK_LOCATION_TAIL = re.compile(r'^(.+?)\s+(?:in|at|near|outside)\s+(.+)$')
+
+
+def _resolve_attack_target(order: AttackOrder, parser: OrderParserBase,
+                           target_name: str, game_state: GameState) -> None:
+    """
+    Bind an ATTACK to the character the player named, or say why it cannot.
+
+    The whole phrase is tried as a name first, so a character whose name really
+    does contain `in` or `at` is still reachable. Only when that fails is a
+    trailing location blamed, and only when it names a city that exists.
+    """
+    order.target_name = target_name
+
+    resolved = resolve_character(target_name, game_state, None)
+    if resolved.found:
+        target_char = game_state.characters.get(resolved.entity_id)
+        if target_char:
+            order.target_faction_id = target_char.faction_id
+            order.target_character_id = target_char.id
+            order.target_name = target_char.name
+        return
+
+    match = _ATTACK_LOCATION_TAIL.match(target_name)
+    if match and resolve_city(match.group(2).strip(), game_state).found:
+        person, place = match.group(1).strip(), match.group(2).strip()
+        parser.add_warning(
+            order,
+            f"ATTACK takes only a name and is fought where the attacker "
+            f"stands, so '{target_name}' was read as a name and nobody is "
+            f"called that. Write 'go to {place} and attack {person}' instead.")
+        return
+
+    parser.add_warning(order, f"No character named '{target_name}' was found to attack")
+
+
 def parse_attack_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AttackOrder]:
     """Parse an attack order."""
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(AttackOrder)
+    order.definitely = bool(re.search(r'\bdefinitely\b', sentence))
+    for stance in ("cravenly", "cautiously", "bravely", "recklessly", "suicidally"):
+        if re.search(rf'\b{stance}\b', sentence):
+            order.stance = stance
+            break
+    sentence = re.sub(
+        r'\b(?:definitely|cravenly|cautiously|bravely|recklessly|suicidally)\b',
+        ' ', sentence,
+    )
+    sentence = ' '.join(sentence.split())
 
     # Pattern: "have <name> [go to <city> and] attack <target>"
     match = re.search(r'have\s+(.+?)\s+(?:go\s+to\s+(.+?)\s+and\s+)?attack\s+(.+)', sentence)
@@ -34,16 +86,12 @@ def parse_attack_order(sentence: str, game_state: GameState, player_id: str) -> 
         if not parser.resolve_actor(order, actor_name):
             return order
 
-        order.target_name = target_name
+        _resolve_attack_target(order, parser, target_name, game_state)
 
-        # Resolve target faction
-        target_resolved = resolve_character(target_name, game_state, None)
-        if target_resolved.found:
-            target_char = game_state.characters.get(target_resolved.entity_id)
-            if target_char:
-                order.target_faction_id = target_char.faction_id
-
-        # Resolve location
+        # The GO in "go to Kitesta and attack" is what puts the attacker there,
+        # and it runs in the movement phase before combat. Recording the city
+        # keeps the order readable, but process_combat fights the battle where
+        # the attacker actually ends up -- if the march failed, so does this.
         if city_name:
             city_resolved = resolve_city(city_name, game_state)
             if city_resolved.found:
@@ -63,16 +111,9 @@ def parse_attack_order(sentence: str, game_state: GameState, player_id: str) -> 
         if not parser.resolve_actor(order, None):
             return order
 
-        order.target_name = target_name
+        _resolve_attack_target(order, parser, target_name, game_state)
 
-        # Resolve target
-        target_resolved = resolve_character(target_name, game_state, None)
-        if target_resolved.found:
-            target_char = game_state.characters.get(target_resolved.entity_id)
-            if target_char:
-                order.target_faction_id = target_char.faction_id
-
-        # Use leader's location
+        # A default only: process_combat re-reads the attacker's location.
         leader = get_player_leader(game_state, player_id)
         if leader:
             order.location_city_id = leader.location_city_id

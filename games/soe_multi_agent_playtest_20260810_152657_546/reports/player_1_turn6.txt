@@ -1,0 +1,91 @@
+======================================================================
+SPOILS OF EMPIRE - Turn 6
+Faction: The Golden Empire (player_1)
+======================================================================
+
+======================================================================
+FACTION SUMMARY
+======================================================================
+Character gold (total): 639.5g
+Cities you are sovereign over: 1
+  Madegi Doy
+
+======================================================================
+YOUR CHARACTERS
+======================================================================
+
+Emperor Marcus (ID: char_player_1_leader) [leader]
+  Location: Madegi Doy
+  Gold: 639.5g
+  Combat Skill: 10
+  Magic Skill: 5 (Power: 5/5)
+  Movement Points: 10
+
+======================================================================
+YOUR UNITS
+======================================================================
+
+At Madegi Doy:
+  40 workers
+  20 soldiers
+  20 soldiers
+  20 workers
+  10 sailors
+
+======================================================================
+YOUR SHIPS
+======================================================================
+No ships.
+
+======================================================================
+YOUR ELITE TROOPS
+======================================================================
+No elite troops.
+
+======================================================================
+TERRITORIAL AUTHORITY
+======================================================================
+
+Madegi Doy
+  Sovereign: The Golden Empire (you)
+  Occupier: none
+  Administrator: The Golden Empire (you)
+
+======================================================================
+THE LIE OF THE LAND
+======================================================================
+
+Madegi Doy -- Main Continent
+  Terrain: coastal, plains
+  -> Albatross City: sea lane, 201 miles, 20.1 mv
+  -> Kitesta: excellent road, 94 miles, 4.7 mv
+  -> Peshandi: fair road, 92 miles, 13.8 mv
+
+======================================================================
+TURN EVENTS
+======================================================================
+
+Queue:
+  ✓ Emperor Marcus will repeat next turn (until halted)
+  ✓ Emperor Marcus will repeat next turn (until halted)
+  ✓ Emperor Marcus: 7 pending (TAX, REPEAT, STOP, MOVE, MOVE, SEARCH, REPORT)
+
+Income:
+  ✓ 500g accrued in tax pools (use TAX to collect)
+  ✓ Paid 6.5g in upkeep (units, ships, salaries)
+
+Tax:
+  ✓ Emperor Marcus: collected 70g in taxes from Madegi Doy (40 soldiers, 7 days, 1930g remains)
+  ✓ Emperor Marcus: collected 70g in taxes from Madegi Doy (40 soldiers, 7 days, 1860g remains)
+
+Sighting:
+  ✓ Emperor Marcus spotted Khan Tengri inside Madegi Doy with ~150 soldiers
+
+======================================================================
+WARNINGS & ERRORS
+======================================================================
+No warnings.
+
+======================================================================
+End of Turn 6 Report
+======================================================================

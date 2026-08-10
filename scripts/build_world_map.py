@@ -166,9 +166,7 @@ def build(index_path: Path, out_path: Path) -> list[str]:
             )
             continue
         if leg["quality"] not in QUALITY_MAP:
-            problems.append(
-                f"line {leg['lineno']}: unknown quality {leg['quality']!r}"
-            )
+            problems.append(f"line {leg['lineno']}: unknown quality {leg['quality']!r}")
             continue
         pair = frozenset({by_name[leg["from"]]["id"], by_name[leg["to"]]["id"]})
         if len(pair) == 1:

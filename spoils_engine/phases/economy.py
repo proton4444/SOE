@@ -6,7 +6,7 @@ import random
 from typing import Dict, List, Optional
 
 from spoils_engine.models import (
-    GameState, Ship, UnitType, ShipType, PopulationBand,
+    GameState, Ship, UnitType, ShipType,
     available_gold, debit_gold, credit_gold,
 )
 from spoils_engine.orders import (
@@ -14,10 +14,30 @@ from spoils_engine.orders import (
     BuildOrder, MineOrder, TradeOrder,
     InvestOrder,
 )
-from spoils_engine import config, items
+from spoils_engine import config, items, territory
 from spoils_engine.parser import get_player_leader
 from spoils_engine.turn_log import TurnLog
 from spoils_engine.phases.common import allocate_id
+
+
+def _extract_resource(city, resource_type: str, requested: int) -> int:
+    """Take renewable stock from a city, lazily initializing old maps."""
+    capacity = max(1.0, city.resource_richness.get(resource_type, 1.0)
+                   * config.RESOURCE_CAPACITY_PER_RICHNESS)
+    remaining = city.resource_reserves.setdefault(resource_type, capacity)
+    gathered = min(max(0, requested), int(remaining))
+    city.resource_reserves[resource_type] = max(0.0, remaining - gathered)
+    return gathered
+
+
+def recover_resources(game_state: GameState) -> None:
+    """Regenerate a fraction of every known resource stock each week."""
+    for city in game_state.world_map.cities.values():
+        for resource_type, remaining in list(city.resource_reserves.items()):
+            capacity = max(1.0, city.resource_richness.get(resource_type, 1.0)
+                           * config.RESOURCE_CAPACITY_PER_RICHNESS)
+            city.resource_reserves[resource_type] = min(
+                capacity, remaining + capacity * config.RESOURCE_WEEKLY_RECOVERY_RATE)
 
 
 def process_invest(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
@@ -100,12 +120,7 @@ def process_invest_weekly(game_state: GameState, turn_log: TurnLog,
         gain = min(spend, config.INVEST_POPULATION_GAIN_MAX)
         game_state.invest_pools[city_id] = round(pool - spend, 1)
         city.population = pop + gain
-        if city.population >= 1_000_000:
-            city.population_band = PopulationBand.LARGE
-        elif city.population >= 100_000:
-            city.population_band = PopulationBand.MEDIUM
-        elif city.population >= 10_000:
-            city.population_band = PopulationBand.SMALL
+        city.population_band = config.population_band_for(city.population)
 
         turn_log.add("income", city_id, "invest_growth",
                      f"{gain} gold invested in {city.name} was spent on growth: "
@@ -226,17 +241,25 @@ def process_tax(orders_by_player: Dict[str, List[Order]], game_state: GameState,
             if not city:
                 continue
 
-            # Check if location is secured by another faction.
-            # (The `continue` used here previously only advanced the inner
-            # faction loop, so the order went ahead and taxed anyway.)
-            blocked_by = next(
-                (f for f in game_state.factions.values()
-                 if f.id != player_id and actor.location_city_id in f.secured_city_ids),
-                None
-            )
-            if blocked_by:
+            # TAX collects where the character stands. When the order named a
+            # city, that has to be this one -- otherwise the player asked to
+            # tax one town and would silently have taxed another.
+            if order.stated_city_id and order.stated_city_id != city.id:
+                named = game_state.world_map.cities.get(order.stated_city_id)
+                named_name = named.name if named else "that location"
                 turn_log.add("tax", player_id, "tax_failed",
-                            f"{actor.name}: {city.name} is secured by {blocked_by.name}",
+                            f"{actor.name}: TAX collects in the character's own "
+                            f"location, and {actor.name} is in {city.name}, "
+                            f"not {named_name}",
+                            character_id=actor.id, success=False)
+                continue
+
+            authority_id = territory.administrative_faction_id(game_state, city.id)
+            if authority_id != player_id:
+                turn_log.add("tax", player_id, "tax_failed",
+                            f"{actor.name}: cannot tax {city.name} — "
+                            + territory.administration_denial(
+                                game_state, city.id, player_id),
                             character_id=actor.id, success=False)
                 continue
 
@@ -399,7 +422,10 @@ def process_collect(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                 daily_rate = 2
 
             richness = city.resource_richness.get(resource_type, 1.0)
-            resources_gathered = int(worker_count * order.duration_days * daily_rate * richness)
+            resources_gathered = _extract_resource(
+                city, resource_type,
+                int(worker_count * order.duration_days * daily_rate * richness),
+            )
 
             # Add resources to character's inventory
             if resource_type not in actor.resources:
@@ -464,6 +490,7 @@ def process_build(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                         faction_id=player_id,
                         location_city_id=actor.location_city_id,
                         ship_type=ShipType.GALLEY,
+                        owner_character_id=actor.id,
                         capacity=550
                     )
                     game_state.ships[ship_id] = new_ship
@@ -616,7 +643,10 @@ def process_mine(orders_by_player: Dict[str, List[Order]], game_state: GameState
 
             daily_rate = yield_rates.get(resource_type, 2)
             richness = city.resource_richness.get(resource_type, 1.0)
-            resources_mined = int(worker_count * order.duration_days * daily_rate * richness)
+            resources_mined = _extract_resource(
+                city, resource_type,
+                int(worker_count * order.duration_days * daily_rate * richness),
+            )
 
             # Add resources to character's inventory
             if resource_type not in actor.resources:

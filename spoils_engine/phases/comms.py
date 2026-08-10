@@ -11,7 +11,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     Order, MessageOrder, PostOrder, ReportOrder, AddressOrder, PasswordOrder,
 )
-from spoils_engine import config, fog, groups, order_queue
+from spoils_engine import config, fog, groups, order_queue, territory
 from spoils_engine.turn_log import TurnLog
 
 
@@ -134,10 +134,19 @@ def process_post(orders_by_player: Dict[str, List[Order]],
             if not city:
                 continue
 
-            if city.id not in faction.secured_city_ids:
+            if not territory.is_valid_occupation(game_state, player_id, city.id):
+                # POST needs occupation specifically, not sovereignty, so say
+                # which one is missing -- a sovereign who has not SECUREd their
+                # own town otherwise reads this as a bug.
+                occupier = territory.occupying_faction_id(game_state, city.id)
+                held = game_state.factions.get(occupier) if occupier else None
+                detail = (
+                    f"{held.name} has secured it" if held else
+                    "your faction has not secured it — POST needs a SECURE, "
+                    "and sovereignty alone is not enough"
+                )
                 turn_log.add("message", player_id, "post_failed",
-                            f"{actor.name} cannot post at {city.name}: your "
-                            f"faction has not secured it",
+                            f"{actor.name} cannot post at {city.name}: {detail}",
                             character_id=actor.id, location=city.id,
                             success=False)
                 continue
@@ -320,9 +329,12 @@ def expire_postings(game_state: GameState, turn_log: TurnLog):
     location." Ownership can change through combat, so this is checked at the
     end of every turn rather than only when a POST is issued.
     """
-    secured = set()
-    for faction in game_state.factions.values():
-        secured |= faction.secured_city_ids
+    secured = {
+        city_id
+        for faction in game_state.factions.values()
+        for city_id in faction.secured_city_ids
+        if territory.is_valid_occupation(game_state, faction.id, city_id)
+    }
 
     for city_id in list(game_state.posted_messages):
         if city_id in secured:

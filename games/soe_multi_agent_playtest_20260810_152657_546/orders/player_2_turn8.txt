@@ -1,0 +1,3 @@
+Have Khan Tengri tell Emperor Marcus "The Silver Horde will hold Madegi Doy and maintain peaceful neutrality if the Golden Empire does not attack".
+If Emperor Marcus attacks Khan Tengri, then have Khan Tengri fight Emperor Marcus; otherwise have Khan Tengri secure Madegi Doy.
+Have Khan Tengri wait for 1 day.

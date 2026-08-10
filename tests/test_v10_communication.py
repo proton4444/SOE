@@ -46,6 +46,9 @@ def world():
     gs.characters["e"] = models.Character(
         id="e", name="John May", faction_id="p2", location_city_id="c1",
         is_leader=True, gold=90)
+    gs.unit_stacks["garrison"] = models.UnitStack(
+        id="garrison", faction_id="p1", location_city_id="c1",
+        unit_type=UnitType.SOLDIER, count=1, owner_character_id="j")
     return gs
 
 

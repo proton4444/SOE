@@ -346,8 +346,59 @@ def test_invest_can_raise_a_population_band(state):
     gs.world_map.cities["city1"].population = 9_900
     run(gs, {"p1": parse("Invest 400 gold in Rome.", gs)})
     engine.process_invest_weekly(gs, engine.TurnLog(), random.Random(0))
-    assert gs.world_map.cities["city1"].population_band == models.PopulationBand.SMALL
+    assert gs.world_map.cities["city1"].population_band == models.PopulationBand.MEDIUM
     assert gs.world_map.cities["city1"].population >= 10_000
+
+
+def test_invest_uses_canonical_band_at_the_tiny_threshold(state):
+    gs = state
+    city = gs.world_map.cities["city1"]
+    city.population = 999
+    city.population_band = models.PopulationBand.TINY
+    gs.invest_pools[city.id] = 10
+
+    engine.process_invest_weekly(gs, engine.TurnLog(), random.Random(0))
+
+    assert city.population >= 1_000
+    assert city.population_band == config.population_band_for(city.population)
+
+
+def test_order_limit_accepts_exactly_the_configured_number(state):
+    parsed = parse("\n".join("Work." for _ in range(config.MAX_ORDERS_PER_PLAYER)), state)
+
+    assert len(parsed) == config.MAX_ORDERS_PER_PLAYER
+    assert not any(order.warnings for order in parsed)
+
+
+def test_order_limit_rejects_only_excess_commands_across_mixed_types(state):
+    commands = ["Work."] * 50 + ["Report."] * 50 + ["Invest 1 gold in Rome."]
+    parsed = parse("\n".join(commands), state)
+
+    assert len(parsed) == config.MAX_ORDERS_PER_PLAYER + 1
+    assert not any(order.warnings for order in parsed[:config.MAX_ORDERS_PER_PLAYER])
+    assert parsed[-1].warnings == [
+        "Order limit is 100 commands per turn; command 101 was rejected"
+    ]
+
+    _, log = run(state, {"p1": parsed})
+    assert not any(event.event_type == "invest" for event in log.events)
+
+
+def test_order_limit_excludes_repeat_markers_and_persisted_queue(state):
+    gs = state
+    gs.order_queues["c1"] = [orders.QueueEntry(order=orders.WorkOrder(
+        player_id="p1", actor_id="c1",
+    ))]
+    text = "Have Marcus repeatedly work 1 time.\n" + "\n".join(
+        "Work." for _ in range(config.MAX_ORDERS_PER_PLAYER - 1)
+    )
+    parsed = parse(text, gs)
+
+    assert sum(not isinstance(order, orders.RepeatOrder) for order in parsed) == 100
+    assert not any(order.warnings for order in parsed)
+
+    _, log = run(gs, {"p1": parsed})
+    assert sum(event.event_type == "work" for event in log.events) == 101
 
 
 # ---------------------------------------------------------------------------
@@ -365,7 +416,9 @@ def test_passage_moves_a_small_group(state):
     gs = state
     run(gs, {"p1": parse("Have Marcus definitely buy passage to Carthage.", gs)})
     assert gs.characters["c1"].location_city_id == "city2"
-    assert marcus_gold(gs) == BASE - 1  # fare: 1 person * 1g
+    # The carried purse contributes fractional encumbrance, rounded up with
+    # the character's own weight for passage fare.
+    assert marcus_gold(gs) == BASE - 2
 
 
 def test_passage_requires_a_direct_sealane(state):

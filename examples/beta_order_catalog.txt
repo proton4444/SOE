@@ -1,0 +1,127 @@
+# Spoils of Empire — beta order catalog
+# Paste-ready English orders for human / agent beta testers.
+# Replace character and city names with those in your report.
+# Comments start with #. End sentences with a period.
+#
+# Status: every rules.md command verb is recognised by the parser and has an
+# engine phase. Sub-rules may be partial — see docs/rules_gap.md.
+#
+# Engine-only extras (not in rules TOC): SCRY, RESURRECT, TRADE (resource
+# buy/sell), REPEAT (rules REPEATEDLY).
+
+# --- Movement ---
+Have Emperor Marcus go to Kitesta.
+Have Emperor Marcus travel to Riverton.
+Have Emperor Marcus sail to Albatross City.
+Have Emperor Marcus fly to Kitesta.
+Have Emperor Marcus teleport himself to Kitesta.
+Have Emperor Marcus definitely buy passage to Albatross City.
+
+# --- Recruitment / ships ---
+Recruit 20 soldiers in Madegi Doy.
+Hire 10 workers in Kitesta.
+Buy 1 galley in Madegi Doy.
+
+# --- Combat / prisoners ---
+Have Emperor Marcus attack Khan Tengri.
+Have Emperor Marcus capture Khan Tengri.
+Have Emperor Marcus free Khan Tengri.
+Have Emperor Marcus kill Khan Tengri.
+Have Emperor Marcus enslave Khan Tengri.
+Have Emperor Marcus interrogate Khan Tengri.
+
+# --- Economy ---
+Have Emperor Marcus tax.
+Have Emperor Marcus secure Madegi Doy.
+Have Emperor Marcus invest 50 gold in Madegi Doy.
+Buy 10 wood.
+Have Emperor Marcus sell 5 wood.
+Have Emperor Marcus collect wood.
+Have Emperor Marcus gather stone.
+Have Emperor Marcus mine iron.
+Have Emperor Marcus build 5 weapons.
+Have Emperor Marcus fortify Madegi Doy.
+Have Emperor Marcus unfortify Madegi Doy.
+Have Emperor Marcus work.
+Have Emperor Marcus train 10 soldiers.
+Have Emperor Marcus train 5 sailors.
+
+# --- Characters / groups ---
+Name male worker Julia Smithers.
+Promote Julia Smithers to Captain.
+Have Emperor Marcus assign 10 soldiers to Julia Smithers.
+Have Emperor Marcus give 20 gold to Julia Smithers.
+Have Julia Smithers join Emperor Marcus.
+Have Julia Smithers support Emperor Marcus.
+Have Emperor Marcus unload Julia Smithers.
+Have Emperor Marcus unname Julia Smithers.
+Create Red Guard using 20 soldiers.
+
+# --- Skills ---
+Have Emperor Marcus study combat.
+Have Emperor Marcus study magic.
+Have Emperor Marcus study religion.
+Have Emperor Marcus study sailing.
+Have Emperor Marcus teach combat to Julia Smithers.
+
+# --- Magic ---
+Have Emperor Marcus summon 1 demon.
+Have Emperor Marcus scry Kitesta.
+Have Emperor Marcus conjure a wand of teleport.
+Have Emperor Marcus conjure an amulet of combat.
+Have Emperor Marcus charge *Wameka* to 10 power.
+Have Emperor Marcus absorb 5 from *Wameka*.
+Have Emperor Marcus probe Khan Tengri.
+Have Emperor Marcus scan Kitesta.
+
+# --- Religion ---
+Have Emperor Marcus pray.
+Have Emperor Marcus preach.
+Have Emperor Marcus bless himself.
+Have Emperor Marcus bless Madegi Doy.
+Have Emperor Marcus curse Khan Tengri.
+Have Emperor Marcus heal himself.
+Have Emperor Marcus resurrect Julia Smithers.
+Have Emperor Marcus offer 50 gold to Bishop Nancy Lopenda.
+
+# --- Fog / stance ---
+Have Emperor Marcus lurk.
+Have Emperor Marcus noncom Julia Smithers.
+Have Emperor Marcus search.
+Have Emperor Marcus explore.
+
+# --- Diplomacy ---
+Enemy The Silver Horde.
+Ally The Silver Horde.
+Neutral The Silver Horde.
+
+# --- Communication / account ---
+Have Emperor Marcus say "Meet at Kitesta." to Khan Tengri.
+Say "Hello all." to everyone.
+Have Emperor Marcus post "No entry" in Madegi Doy.
+Have Emperor Marcus briefly report.
+Have Emperor Marcus query Julia Smithers.
+Address "player@example.com".
+Password MySecretPass99.
+
+# --- Finance / transfers ---
+Have Emperor Marcus get 10 gold from Julia Smithers.
+Have Emperor Marcus take 5 wood from Julia Smithers.
+Have Emperor Marcus transfer 10 gold to Julia Smithers.
+Have Emperor Marcus pay.
+Have Emperor Marcus borrow 50 gold.
+Have Emperor Marcus repay 10 gold.
+
+# --- Queue language ---
+Have Emperor Marcus wait for 1 week.
+Have Emperor Marcus wait for Julia Smithers.
+Have Emperor Marcus repeatedly tax 2 times.
+Have Emperor Marcus immediately halt.
+Have Julia Smithers stop.
+If Emperor Marcus has at least 100 gold, then have Emperor Marcus tax.
+If Emperor Marcus has any soldiers, then have him go to Kitesta, otherwise have him recruit 10 soldiers in Madegi Doy.
+
+# --- Chaining (HAVE / and / then) ---
+Have Emperor Marcus go to Kitesta and tax and secure Kitesta.
+Have Emperor Marcus wait for 1 week and then go to Riverton.
+Recruit 5 soldiers and 3 workers in Madegi Doy.

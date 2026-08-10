@@ -14,6 +14,7 @@ import random
 from typing import Dict, List, Tuple
 
 from spoils_engine.models import GameState
+from spoils_engine import config, territory
 from spoils_engine.orders import (
     Order, OfferOrder, actor_id_of,
 )
@@ -41,11 +42,12 @@ from spoils_engine.phases.combat_phase import (
 )
 from spoils_engine.phases.units import (
     process_work, process_train, process_unname, process_create,
-    process_elite_upkeep, process_assign, process_name, process_promote,
+    process_elite_upkeep, process_disband, process_assign, process_name, process_promote,
 )
 from spoils_engine.phases.economy import (
     process_invest, process_invest_weekly, process_income_and_upkeep,
     process_tax, process_trade, process_collect, process_build, process_mine,
+    recover_resources,
 )
 from spoils_engine.phases.offer_preach import process_preach, process_offer
 from spoils_engine.phases.conditionals import (
@@ -88,7 +90,7 @@ __all__ = [
     "process_magic_free_zones", "process_item_upkeep",
     "defending_side", "supporting_side", "process_combat",
     "process_work", "process_train", "process_unname", "process_create",
-    "process_elite_upkeep", "process_assign", "process_name", "process_promote",
+    "process_elite_upkeep", "process_disband", "process_assign", "process_name", "process_promote",
     "process_invest", "process_invest_weekly", "process_income_and_upkeep",
     "process_tax", "process_trade", "process_collect", "process_build", "process_mine",
     "process_preach", "process_offer",
@@ -109,38 +111,19 @@ __all__ = [
 ]
 
 
-def run_turn(
+def _run_order_batch(
     game_state: GameState,
     orders_by_player: Dict[str, List[Order]],
-    seed: int
-) -> Tuple[GameState, TurnLog]:
-    """
-    Process a complete game turn deterministically.
-
-    Orders are not executed straight from `orders_by_player`. They go onto each
-    character's persistent queue first, and the queue decides what this turn
-    actually runs -- which for an unblocked character is everything they were
-    just given. See `order_queue` for what holds work back.
-
-    Args:
-        game_state: Current game state (will be modified in-place)
-        orders_by_player: Dict mapping player_id -> list of orders submitted now
-        seed: RNG seed for deterministic execution
-
-    Returns:
-        Tuple of (updated_game_state, turn_log)
-    """
-    rng = random.Random(seed)
-    turn_log = TurnLog()
-
-    # Phase 0: Order queue. Everything below acts on what the queue released.
-    orders_by_player = order_queue.process_order_queue(
-        orders_by_player, game_state, turn_log
-    )
+    rng: random.Random,
+    turn_log: TurnLog,
+    weekly: bool = False,
+) -> None:
+    """Execute every order that becomes ready at one clock instant."""
 
     # Phase 0b: IF statements. A condition reached on the queue is judged
     # against the world it lands in, and its chosen branch joins the turn.
     process_if_orders(orders_by_player, game_state, turn_log)
+    turn_log.register_orders(orders_by_player)
 
     # Phase 1: Validation
     validate_orders(orders_by_player, game_state, turn_log)
@@ -171,6 +154,10 @@ def run_turn(
     process_passage(orders_by_player, game_state, turn_log, rng)
     sync_elite_locations(game_state)
 
+    # Travel can remove the last local occupation group. Recruitment must see
+    # the resulting authority, not an occupation expected later in the batch.
+    territory.reconcile_occupations(game_state)
+
     # Phase 3: Recruit & Buy
     process_recruit_and_buy(orders_by_player, game_state, turn_log, rng)
 
@@ -189,15 +176,22 @@ def run_turn(
     process_magic_free_zones(game_state, turn_log)
 
     # Phase 5: Combat
-    process_combat(orders_by_player, game_state, turn_log, rng)
+    territory.reconcile_occupations(game_state)
+    combat_authority = territory.administrative_snapshot(game_state)
+    process_combat(
+        orders_by_player, game_state, turn_log, rng,
+        fortification_authority=combat_authority,
+    )
 
     # Phase 5b: Capture (prisoner taking)
     process_capture(orders_by_player, game_state, turn_log, rng)
+    territory.reconcile_occupations(game_state)
 
-    # Phase 6: Income & Upkeep. The weekly INVEST check runs first so the
-    # growth it pays for counts in this turn's income.
-    process_invest_weekly(game_state, turn_log, rng)
-    process_income_and_upkeep(game_state, turn_log, rng)
+    # Phase 6: weekly economy runs only in the first hour batch.
+    if weekly:
+        process_invest_weekly(game_state, turn_log, rng)
+        process_income_and_upkeep(game_state, turn_log, rng)
+        recover_resources(game_state)
 
     # Phase 7: Location Control & Diplomacy & Unit Management & Economics & Training
     process_secure(orders_by_player, game_state, turn_log)
@@ -208,6 +202,7 @@ def run_turn(
     process_support(orders_by_player, game_state, turn_log)
     process_name(orders_by_player, game_state, turn_log)
     process_promote(orders_by_player, game_state, turn_log)
+    territory.reconcile_occupations(game_state)
     process_tax(orders_by_player, game_state, turn_log)
     process_trade(orders_by_player, game_state, turn_log)
     process_collect(orders_by_player, game_state, turn_log)
@@ -233,8 +228,13 @@ def run_turn(
     process_train(orders_by_player, game_state, turn_log)
     process_unname(orders_by_player, game_state, turn_log)
     process_create(orders_by_player, game_state, turn_log)
+    process_disband(orders_by_player, game_state, turn_log)
     process_invest(orders_by_player, game_state, turn_log)
     process_preach(orders_by_player, game_state, turn_log, rng)
+
+    # Late transfers, prisoner actions, and unit conversions may remove the
+    # final qualifying garrison before administrative/reporting behavior.
+    territory.reconcile_occupations(game_state)
 
     # Communication. SECURE has already resolved above, so a POST is judged
     # against who holds the town at the end of this turn, and REPORT last of
@@ -243,15 +243,38 @@ def run_turn(
     process_messages(orders_by_player, game_state, turn_log)
     process_post(orders_by_player, game_state, turn_log)
     process_report(orders_by_player, game_state, turn_log, rng)
+
+
+def run_turn(
+    game_state: GameState,
+    orders_by_player: Dict[str, List[Order]],
+    seed: int,
+) -> Tuple[GameState, TurnLog]:
+    """Process a reporting week while waking queues at exact game hours."""
+    rng = random.Random(seed)
+    turn_log = TurnLog()
+    start_hour = max(game_state.game_time_hours,
+                     game_state.turn_number * config.HOURS_PER_TURN)
+    end_hour = start_hour + config.HOURS_PER_TURN
+    game_state.game_time_hours = start_hour
+
+    # Intake happens once; later passes only wake queues already in progress.
+    ready = order_queue.process_order_queue(
+        orders_by_player, game_state, turn_log
+    )
+    _run_order_batch(game_state, ready, rng, turn_log, weekly=True)
+    while True:
+        wake_hour = order_queue.next_wake_hour(game_state, end_hour)
+        if wake_hour is None:
+            break
+        game_state.game_time_hours = wake_hour
+        ready = order_queue.resume_order_queue(game_state, turn_log)
+        if ready:
+            _run_order_batch(game_state, ready, rng, turn_log)
+
+    game_state.game_time_hours = end_hour
     report_pending_orders(game_state, turn_log)
-
-    # Phase 8: Fog of war — who noticed whom after all movement and status
-    # changes for the turn have settled.
     process_sightings(game_state, turn_log, rng)
-
-    # Phase 9: Cleanup. Item upkeep runs before `cleanup_turn` refills everyone
-    # to full power, so a crystal only charges off a possessor who really did
-    # end the turn at their natural maximum.
     expire_support(game_state, turn_log)
     expire_postings(game_state, turn_log)
     process_item_upkeep(game_state, turn_log)
@@ -259,6 +282,5 @@ def run_turn(
     sync_elite_locations(game_state)
     process_elite_upkeep(game_state, turn_log)
     cleanup_turn(game_state)
-
-    return (game_state, turn_log)
+    return game_state, turn_log
 

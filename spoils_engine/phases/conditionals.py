@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from spoils_engine.models import (
-    GameState, Character, UnitType, available_gold,
+    GameState, Character, UnitType,
 )
 from spoils_engine.orders import (
     Order, IfOrder,
 )
-from spoils_engine import groups
+from spoils_engine import groups, encumbrance
 from spoils_engine.parser import resolve_character
 from spoils_engine.turn_log import TurnLog
 
@@ -19,7 +19,7 @@ def _count_condition_units(subject: Character, unit: str, game_state: GameState)
     """Count what an IF condition asks about, per rules.md: recruitable
     ranks, creatures, items and power the character controls."""
     if unit == "gold":
-        return int(available_gold(subject, game_state.factions.get(subject.faction_id)))
+        return int(groups.group_gold(subject, game_state))
     if unit == "soldier":
         return groups.group_soldier_count(subject, game_state, UnitType.SOLDIER)
     if unit == "sailor":
@@ -29,40 +29,35 @@ def _count_condition_units(subject: Character, unit: str, game_state: GameState)
     if unit == "slave":
         return groups.group_soldier_count(subject, game_state, UnitType.SLAVE)
     if unit == "horse":
-        return subject.resources.get("horse", 0)
+        return groups.group_resource_count(subject, "horse", game_state)
     if unit == "catapult":
-        return subject.resources.get("catapult", 0)
+        return groups.group_resource_count(subject, "catapult", game_state)
     if unit == "weapon":
-        return subject.resources.get("weapon", 0)
+        return groups.group_resource_count(subject, "weapon", game_state)
     if unit == "armor":
-        return subject.resources.get("armor", 0)
+        return groups.group_resource_count(subject, "armor", game_state)
     if unit == "wood":
-        return subject.resources.get("wood", 0)
+        return groups.group_resource_count(subject, "wood", game_state)
     if unit == "stone":
-        return subject.resources.get("stone", 0)
+        return groups.group_resource_count(subject, "stone", game_state)
     if unit == "iron":
-        return subject.resources.get("iron", 0)
+        return groups.group_resource_count(subject, "iron", game_state)
     if unit == "copper":
-        return subject.resources.get("copper", 0)
+        return groups.group_resource_count(subject, "copper", game_state)
     if unit == "silver":
-        return subject.resources.get("silver", 0)
+        return groups.group_resource_count(subject, "silver", game_state)
     if unit == "gems":
-        return subject.resources.get("gems", 0)
+        return groups.group_resource_count(subject, "gems", game_state)
     if unit == "galley":
-        return sum(1 for ship in game_state.ships.values()
-                   if ship.faction_id == subject.faction_id
-                   and ship.location_city_id == subject.location_city_id)
+        return sum(1 for ship in groups.group_ships(subject, game_state)
+                   if ship.location_city_id == subject.location_city_id)
     if unit in ("skeleton", "zombie", "harpy", "minotaur", "griffin",
                 "chimera", "dragon", "demon"):
         return sum(creature.count for creature in game_state.summoned_creatures.values()
                    if creature.summoner_id == subject.id
                    and creature.creature_type.value == unit)
     if unit == "encumbrance":
-        # No encumbrance model; the group's size in people stands in for it.
-        return 1 + sum(
-            stack.count for stack in game_state.unit_stacks.values()
-            if stack.faction_id == subject.faction_id
-            and stack.location_city_id == subject.location_city_id)
+        return int(encumbrance.group_encumbrance(subject, game_state) + 0.999999)
     if unit == "power":
         if subject.magic_skill == 0 and subject.religion_skill == 0:
             return 0

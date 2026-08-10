@@ -11,7 +11,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     Order, MoveOrder, RepeatOrder,
 )
-from spoils_engine import pronouns
+from spoils_engine import config, pronouns
 from spoils_engine.parser.text import (
     normalize_text, extract_sentences, protect_quotes, restore_order_quotes, strip_repeatedly,
 )
@@ -48,7 +48,7 @@ from spoils_engine.parser.verbs_units import (
     parse_assign_order, parse_name_order, parse_promote_order,
     parse_get_order, parse_transfer_order, parse_unload_order,
     parse_pay_order, parse_borrow_order, parse_repay_order,
-    parse_unname_order, parse_create_order,
+    parse_unname_order, parse_create_order, parse_disband_order,
 )
 from spoils_engine.parser.control import (
     parse_if_order, parse_await_order, parse_repeat_order, parse_halt_order,
@@ -119,6 +119,7 @@ ORDER_KEYWORDS = {
     'train': ['train'],
     'unname': ['unname'],
     'create': ['create'],
+    'disband': ['disband'],
     'invest': ['invest'],
     'passage': ['passage'],
     'offer': ['offer'],
@@ -634,6 +635,11 @@ def _dispatch_clause(sentence: str, game_state: GameState,
         if order:
             return order
 
+    if any(kw in sentence for kw in ORDER_KEYWORDS['disband']):
+        order = parse_disband_order(sentence, game_state, player_id)
+        if order:
+            return order
+
     if any(kw in sentence for kw in ORDER_KEYWORDS['invest']):
         order = parse_invest_order(sentence, game_state, player_id)
         if order:
@@ -708,6 +714,7 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         # and tax" is four orders, all to the same character.
         have_target = ""
         prev_verb = ""
+        sentence_silent = False
 
         for clause in clauses:
             clause = clause.strip()
@@ -736,6 +743,9 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
                     clause = f"{prefix}{prev_verb} {clause}"
 
             clause_original = clause
+            quiet_clause = bool(re.search(r'\bquietly\b', clause))
+            if re.search(r'\bsilently\b', clause):
+                sentence_silent = True
             clause, repeat_times = strip_repeatedly(clause)
 
             order = _dispatch_clause(clause, game_state, player_id)
@@ -744,6 +754,11 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
                 prev_verb = verb
 
             if order:
+                # Information commands must always report their requested
+                # result even when they follow SILENTLY in the same sentence.
+                informational = {"REPORT", "INTERROGATE", "PROBE", "MESSAGE", "SCAN"}
+                order.silent = ((sentence_silent or quiet_clause)
+                                and order.order_type() not in informational)
                 # rules.md's HAVE form delegates to a named character, and
                 # that makes them a group leader. Not every parser routes
                 # through resolve_actor, so the delegation is recognised
@@ -777,6 +792,27 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
     # Put the players' own words back where the placeholders stand.
     for order in orders:
         restore_order_quotes(order, quoted)
+
+    # Limit newly submitted player commands before the persistent queue sees
+    # them. REPEAT is an internal marker emitted alongside one player command;
+    # IF branch orders are stored inside their top-level command and likewise
+    # are not counted again. Existing QueueEntry state never passes here.
+    submitted_count = 0
+    pending_repeat = None
+    for order in orders:
+        if isinstance(order, RepeatOrder):
+            pending_repeat = order
+            continue
+        submitted_count += 1
+        if submitted_count > config.MAX_ORDERS_PER_PLAYER:
+            warning = (
+                f"Order limit is {config.MAX_ORDERS_PER_PLAYER} commands per turn; "
+                f"command {submitted_count} was rejected"
+            )
+            order.warnings.append(warning)
+            if pending_repeat is not None:
+                pending_repeat.warnings.append(warning)
+        pending_repeat = None
 
     return orders
 

@@ -56,9 +56,7 @@ def normalise(img: Image.Image, mean: float, spread: float) -> Image.Image:
     a = np.asarray(img, dtype=np.float32)
     centred = a - a.mean()
     scale = spread / max(centred.std(), 1e-6)
-    return Image.fromarray(
-        np.clip(centred * scale + mean, 0, 255).astype(np.uint8)
-    )
+    return Image.fromarray(np.clip(centred * scale + mean, 0, 255).astype(np.uint8))
 
 
 def main() -> int:

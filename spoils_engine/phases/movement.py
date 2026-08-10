@@ -12,7 +12,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     Order, MoveOrder, SailOrder, PassageOrder,
 )
-from spoils_engine import config, groups
+from spoils_engine import config, groups, encumbrance
 from spoils_engine.turn_log import TurnLog
 from spoils_engine.phases.common import allocate_id
 from spoils_engine.phases.pathing import (
@@ -34,7 +34,6 @@ def process_movement(orders_by_player: Dict[str, List[Order]], game_state: GameS
             actor = game_state.characters.get(order.actor_id)
             if not actor:
                 continue
-
             # Find path
             path, cost = find_shortest_path(actor.location_city_id, order.destination_city_id, game_state)
 
@@ -96,12 +95,21 @@ def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState
             actor = game_state.characters.get(order.actor_id)
             if not actor:
                 continue
+            origin_city_id = actor.location_city_id
+            travelling = [
+                member for member in groups.group_members(actor.id, game_state)
+                if member.location_city_id == origin_city_id
+                and not member.is_dead and not member.is_prisoner
+            ]
+            travelling_group_ids = {actor.id, *(member.id for member in travelling)}
 
             # Find a ship at the actor's location
             ship = None
             if order.ship_id:
                 ship = game_state.ships.get(order.ship_id)
-                if not ship or ship.faction_id != player_id:
+                if (not ship or ship.faction_id != player_id
+                        or (ship.owner_character_id
+                            and ship.owner_character_id not in travelling_group_ids)):
                     turn_log.add("sail", player_id, "sail_failed",
                                 f"{actor.name}: specified ship not found or not owned",
                                 character_id=actor.id, success=False)
@@ -114,7 +122,10 @@ def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState
             else:
                 # Auto-select first available ship at location
                 for s in game_state.ships.values():
-                    if s.faction_id == player_id and s.location_city_id == actor.location_city_id:
+                    if (s.faction_id == player_id
+                            and (not s.owner_character_id
+                                 or s.owner_character_id in travelling_group_ids)
+                            and s.location_city_id == actor.location_city_id):
                         ship = s
                         break
 
@@ -133,11 +144,20 @@ def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState
                             character_id=actor.id, success=False)
                 continue
 
-            # Count sailors and rowers at this location
+            # Assigned units belong to the captain's group. Unassigned local
+            # stacks remain available as the faction's port crew, but a stack
+            # assigned to an unrelated character is neither crew nor cargo.
+            def travels_with_captain(stack: UnitStack) -> bool:
+                return (not stack.owner_character_id
+                        or stack.owner_character_id in travelling_group_ids)
+
+            # Count sailors and rowers available to this sailing group.
             sailors_count = 0
             total_crew = 0  # Everyone except captain can row
             for stack in game_state.unit_stacks.values():
-                if stack.faction_id == player_id and stack.location_city_id == actor.location_city_id:
+                if (stack.faction_id == player_id
+                        and stack.location_city_id == actor.location_city_id
+                        and travels_with_captain(stack)):
                     if stack.unit_type == UnitType.SAILOR:
                         sailors_count += stack.count
                     total_crew += stack.count
@@ -165,6 +185,8 @@ def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState
 
             ship.location_city_id = order.destination_city_id
             actor.location_city_id = order.destination_city_id
+            for member in travelling:
+                member.location_city_id = order.destination_city_id
 
             # Load units onto the ship, up to its capacity. Previously every
             # stack in the port sailed along regardless of capacity, so a
@@ -172,7 +194,9 @@ def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState
             berths = ship.capacity
             embarked = 0
             for stack in sorted(game_state.unit_stacks.values(), key=lambda s: s.id):
-                if stack.faction_id != player_id or stack.location_city_id != start_city.id:
+                if (stack.faction_id != player_id
+                        or stack.location_city_id != start_city.id
+                        or not travels_with_captain(stack)):
                     continue
                 if berths <= 0:
                     break
@@ -192,12 +216,14 @@ def process_sail(orders_by_player: Dict[str, List[Order]], game_state: GameState
                         location_city_id=order.destination_city_id,
                         unit_type=stack.unit_type,
                         count=boarding,
+                        owner_character_id=stack.owner_character_id,
                     )
                     berths = 0
                     embarked += boarding
 
             efficiency_note = f" (rowing efficiency: {rowing_efficiency * 100:.0f}%)" if rowing_efficiency < 1.0 else ""
             efficiency_note += f" carrying {embarked} units" if embarked else ""
+            efficiency_note += groups.describe_escort(travelling, actor, game_state)
             turn_log.add("sail", player_id, "sail",
                         f"{actor.name} sailed from {start_city.name} to {end_city.name}{efficiency_note}",
                         location=end_city.id, character_id=actor.id)
@@ -249,7 +275,8 @@ def process_passage(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                 people += sum(stack.count for stack in groups.owned_stacks(owner.id, game_state)
                               if stack.location_city_id == actor.location_city_id)
 
-            fare = people * config.PASSAGE_COST_PER_PERSON
+            cargo = encumbrance.group_encumbrance(actor, game_state)
+            fare = max(1, math.ceil(cargo * config.PASSAGE_COST_PER_PERSON))
             faction = game_state.factions.get(player_id)
             if not debit_gold(actor, faction, fare):
                 turn_log.add("passage", player_id, "passage_failed",
@@ -258,7 +285,7 @@ def process_passage(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                             character_id=actor.id, success=False)
                 continue
 
-            chance = config.PASSAGE_BASE_CHANCE - config.PASSAGE_SIZE_PENALTY_PER_100 * (people / 100.0)
+            chance = config.PASSAGE_BASE_CHANCE - config.PASSAGE_SIZE_PENALTY_PER_100 * (cargo / 100.0)
             if order.definitely:
                 chance += config.PASSAGE_DEFINITELY_BONUS
             chance = max(0.0, min(1.0, chance))

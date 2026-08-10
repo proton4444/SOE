@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Setup {{ room.code }} — Spoils of Empire{% endblock %}
+{% block content %}
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Gamemaster view</p>
+    <h1>Setup — {{ room.name }} <span class="code">{{ room.code }}</span></h1>
+    <p class="muted">Decide who plays every faction seat: a human, an external
+    agent, or a managed AI bot. Bot profiles are stored per faction — enabling
+    one on an empty seat claims the seat for the bot.</p>
+  </div>
+  <div class="row">
+    <a class="button ghost" href="/room/{{ room.code }}">Player room</a>
+    <a class="button ghost" href="/room/{{ room.code }}/master">Master dashboard</a>
+  </div>
+</div>
+
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+<section class="card">
+  <h2>Faction seats</h2>
+  <table class="players">
+    <tr>
+      <th>Slot</th><th>Faction</th><th>Seat</th><th>Key</th><th>Bot state</th>
+      <th>Model</th><th>Persona</th><th>T°</th><th>Bot</th><th></th>
+    </tr>
+    {% for s in slots %}
+    <tr>
+      <td>{{ s.slot + 1 }}</td>
+      <td>{{ s.faction_name }}</td>
+      <td>
+        {% if s.kind == "empty" %}<span class="muted">open</span>
+        {% else %}{{ s.display_name or "—" }} <span class="muted">({{ s.kind }})</span>{% endif %}
+      </td>
+      <td>
+        {% if s.key %}<code class="muted">{{ s.key }}</code>{% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td>
+        {% if s.has_profile %}
+          {% if s.profile.state == "error" %}<span class="wait">error</span>
+          {% elif s.profile.state == "submitted" %}<span class="ok">submitted</span>
+          {% else %}<span class="muted">{{ s.profile.state }}</span>{% endif %}
+          {% if s.profile.last_run_at %}<span class="muted" title="{{ s.profile.last_error }}">· {{ s.profile.last_run_at[:19]|replace("T", " ") }}</span>{% endif %}
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td colspan="5">
+        <form method="post" action="/room/{{ room.code }}/setup/agents/{{ s.faction_id }}" class="row setup-form">
+          <input name="model" value="{{ s.profile.model }}" placeholder="model (blank = SOE_LLM_MODEL)">
+          <input name="persona" value="{{ s.profile.persona }}" placeholder="persona, e.g. aggressive expansionist">
+          <input name="temperature" type="number" min="0" max="2" step="0.1" value="{{ s.profile.temperature }}">
+          <label class="check">
+            <input type="checkbox" name="enabled" {% if s.profile.enabled %}checked{% endif %}>
+            run as bot
+          </label>
+          <button type="submit" name="action" value="save">Save</button>
+          <button type="submit" name="action" value="clear" class="ghost">Clear</button>
+          {% if s.has_profile %}
+          <button type="submit" name="action" value="run" class="ghost">Run now</button>
+          {% endif %}
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">Seat keys are shown only on this host-protected page. A bot
+  seat is claimed the first time you enable it; the bot plays through the same
+  order pipeline as everyone else. <strong>Run now</strong> asks the model to
+  decide one turn's orders for that faction (needs <code>SOE_LLM_KEY</code>).</p>
+</section>
+{% endblock %}

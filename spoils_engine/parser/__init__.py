@@ -14,7 +14,7 @@ from spoils_engine.parser.text import (
     restore_order_quotes,
     strip_wand,
     strip_repeatedly,
-    parse_duration_days,
+    parse_duration_days, parse_duration_hours,
 )
 from spoils_engine.parser.resolve import (
     ResolvedEntity,
@@ -70,12 +70,12 @@ from spoils_engine.parser.verbs_units import (
     parse_assign_order, parse_name_order, parse_promote_order,
     parse_get_order, parse_transfer_order, parse_unload_order,
     parse_pay_order, parse_borrow_order, parse_repay_order,
-    parse_unname_order, parse_create_order,
+    parse_unname_order, parse_create_order, parse_disband_order,
 )
 
 __all__ = [
     "normalize_text", "extract_sentences", "protect_quotes", "restore_quotes",
-    "restore_order_quotes", "strip_wand", "strip_repeatedly", "parse_duration_days",
+    "restore_order_quotes", "strip_wand", "strip_repeatedly", "parse_duration_days", "parse_duration_hours",
     "ResolvedEntity", "resolve_character", "resolve_city", "get_player_leader",
     "OrderParserBase",
     "ORDER_KEYWORDS", "HAVE_PREFIX", "split_clauses", "parse_orders",
@@ -102,5 +102,5 @@ __all__ = [
     "parse_assign_order", "parse_name_order", "parse_promote_order",
     "parse_get_order", "parse_transfer_order", "parse_unload_order",
     "parse_pay_order", "parse_borrow_order", "parse_repay_order",
-    "parse_unname_order", "parse_create_order",
+    "parse_unname_order", "parse_create_order", "parse_disband_order",
 ]

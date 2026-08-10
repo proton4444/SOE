@@ -97,6 +97,47 @@ def _geography_lines(game_state: GameState, faction_id: str) -> list[str]:
     return lines
 
 
+def _authority_lines(game_state: GameState, faction_id: str) -> list[str]:
+    """
+    Who holds each city this faction can see, in the game's three senses.
+
+    Sovereignty, occupation and the right to administer are different things,
+    and a player who cannot tell them apart discovers the difference only when
+    a TAX, RECRUIT, FORTIFY, POST or SECURE order fails. Listed for the towns
+    this faction is sovereign over or has someone standing in -- the same reach
+    as the rest of the fogged view, so nothing foreign leaks.
+    """
+    from spoils_engine import territory
+
+    lines = ["=" * 70, "TERRITORIAL AUTHORITY", "=" * 70]
+    visible = sorted(
+        (cid for cid in game_state.world_map.cities
+         if territory.can_see_authority(game_state, cid, faction_id)),
+        key=lambda cid: game_state.world_map.cities[cid].name,
+    )
+    if not visible:
+        lines.append("You are sovereign nowhere and stand nowhere.")
+        lines.append("")
+        return lines
+
+    for city_id in visible:
+        held = territory.authority_names(game_state, city_id, faction_id)
+        if not held:
+            continue
+        city = game_state.world_map.cities[city_id]
+        lines.append(f"\n{city.name}")
+        lines.append(f"  Sovereign: {held['sovereign']}")
+        lines.append(f"  Occupier: {held['occupier']}")
+        lines.append(f"  Administrator: {held['administrator']}")
+        if territory.administrative_faction_id(game_state, city_id) != faction_id:
+            lines.append(
+                "  You may not tax, recruit, fortify, post or secure here "
+                "while another faction administers it.")
+
+    lines.append("")
+    return lines
+
+
 def generate_player_reports(game_state: GameState, turn_log: TurnLog,
                             orders_by_player: Dict[str, list]) -> Dict[str, str]:
     """
@@ -137,7 +178,10 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
             report_lines.append(f"{label}: {abs(faction.wage_debt):,.1f}g")
         if faction.loan_balance:
             report_lines.append(f"Bank loan: {faction.loan_balance:,.1f}g")
-        report_lines.append(f"Controlled Cities: {len(faction.controlled_city_ids)}")
+        # "Controlled" meant sovereignty here and read as though it also meant
+        # the right to tax and recruit, which an occupier can take away.
+        report_lines.append(
+            f"Cities you are sovereign over: {len(faction.controlled_city_ids)}")
 
         if faction.controlled_city_ids:
             city_names = []
@@ -260,6 +304,9 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
 
         report_lines.append("")
 
+        # Who holds what, before the roads out of it
+        report_lines.extend(_authority_lines(game_state, faction_id))
+
         # The lie of the land where this faction actually stands
         report_lines.extend(_geography_lines(game_state, faction_id))
 
@@ -306,7 +353,7 @@ def generate_player_reports(game_state: GameState, turn_log: TurnLog,
         # Collect warnings from orders
         if faction_id in orders_by_player:
             for order in orders_by_player[faction_id]:
-                if order.warnings:
+                if order.warnings and not order.silent:
                     warnings_found = True
                     report_lines.append(f"\nOrder: '{order.original_text[:60]}...'")
                     for warning in order.warnings:

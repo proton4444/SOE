@@ -560,21 +560,51 @@ and per-player agent keys are the credentials.
 
 ```bash
 pip install -r requirements.txt
-python -m uvicorn webapp.main:app --reload --port 8000
+set SOE_BETA_ACCESS_CODE=<private-invite-code>
+set SOE_COOKIE_SECURE=1
+python -m uvicorn webapp.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
-Open http://localhost:8000 to create or join a game. Turns resolve
-automatically once every joined player has submitted orders (the host can also
-resolve early — missing players count as empty orders). Every turn runs with a
+For the controlled beta, prefer [`docs/controlled_beta_runbook.md`](docs/controlled_beta_runbook.md)
+and `scripts/start_beta.ps1`; put HTTPS termination in front of the loopback
+server. Open the HTTPS host to create or join a game. The host resolves each turn
+after every joined player has submitted orders, or may explicitly force an early
+resolution where missing players count as empty orders. Every turn runs with a
 seed derived from the room code and turn number, so results are reproducible.
 
 Games live in `games/room_<code>/` — the CLI can still inspect and process the
 same games, and rooms are tracked in `server_data/rooms.json`.
 
+### Master dashboard
+
+The host browser session gets a **Master dashboard** link in the room header.
+It opens `/room/<code>/master`, which is host-cookie protected and shows turn
+readiness, faction resources, full city authority, recent gameplay events, and
+the all-visible live map. A redacted structured event stream is written to
+`games/room_<code>/turn_events.jsonl` after each successful resolution so the
+dashboard can explain what happened without exposing order text or credentials.
+The dashboard's gameplay feed is a per-turn **timeline** with engine-phase
+tags and filters, and the **auto-play** card runs every enabled bot and
+resolves turn after turn in the background (turns, delay, force, wait-for-
+humans options, cooperative stop). The same loop is available headless as
+`workflows/bot_loop.py`.
+
+For a small human gameplay check, run:
+
+```bash
+python scripts/gameplay_smoke.py
+```
+
+The command writes `games/gameplay_smoke/GAMEPLAY_REPORT.md`, exact orders,
+player reports, final state, and the same structured event format used by the
+master dashboard. It is a three-turn golden-path check, not a balance test.
+
 ### Agent API
 
-A player key (the `agent_key` from joining) is the only credential. Send it as
-an `X-Agent-Key` header or a `key` query parameter.
+A player key (the `agent_key` from joining) is the only credential. Send it in
+the `X-Agent-Key` header. Query-string keys remain supported for compatibility,
+but should not be used because URLs are commonly retained in logs and browser
+history.
 
 | Endpoint | What it does |
 |---|---|
@@ -585,6 +615,11 @@ an `X-Agent-Key` header or a `key` query parameter.
 | `GET /api/rooms/{code}/state` | Structured fog-of-war view (your characters, units, cities) |
 | `GET /api/rooms/{code}/report?turn=N` | Your text report for a resolved turn |
 | `POST /api/rooms/{code}/resolve` (host key) | Force the next turn (`force: true` skips the all-submitted check) |
+| `GET /api/rooms/{code}/agents` (host key) | Bot profiles per faction slot |
+| `PUT/DELETE /api/rooms/{code}/agents/{faction_id}` (host key) | Configure / remove a bot profile |
+| `POST /api/rooms/{code}/agents/{faction_id}/run` (host key) | One bot decides and submits a turn |
+| `POST /api/rooms/{code}/agents/run-all` (host key) | Every enabled bot plays its turn |
+| `GET /api/rooms/{code}/map?format=json\|svg\|png&turn=N` | Fog-of-war board for agents: json (coordinates + observed flags), svg, or png for vision models; `turn` rewinds to a resolved turn |
 
 Example agent loop:
 
@@ -610,6 +645,33 @@ while True:
 
 Note: a room currently resolves only when the host presses the button (or an
 agent calls `/resolve`). Scheduled auto-resolution is a natural next step.
+
+### Managed bots (war-room)
+
+The host can assign **AI bot players** to faction seats from the setup page
+(`/room/<code>/setup`, host session) or the agents API. A bot profile carries
+a model, a persona, and a temperature; enabling one on an empty seat claims it.
+The host can then run one bot (`POST .../agents/{faction_id}/run`) or all
+enabled bots (`.../agents/run-all`): each bot reads its fog-of-war state and
+latest report, asks the LLM for orders, and submits them through the normal
+pipeline — the same validation, the same readiness tracking.
+
+The LLM is configured by environment, never by the UI:
+
+```bash
+set SOE_LLM_BASE=https://openrouter.ai/api/v1   # default; any OpenAI-compatible endpoint works
+set SOE_LLM_KEY=<your key>                      # bots refuse to run without it
+set SOE_LLM_MODEL=openai/gpt-4o-mini            # default model
+```
+
+The strategist reply convention is: reasoning first, then a `--- ORDERS ---`
+marker line, then one order per line. Orders are submitted verbatim from the
+marker onward. Set `SOE_BOT_VISION=1` and use a vision-capable model (e.g.
+`openai/gpt-4o-mini`) to let the strategist also see a rendered PNG of its
+fog-of-war map each turn. See `docs/ai_dashboard_plan.md` for the roadmap.
+
+For beta readiness, known constraints, and the tester protocol, see
+[`docs/beta_readiness_2026-08.md`](docs/beta_readiness_2026-08.md).
 
 ## CLI Commands
 

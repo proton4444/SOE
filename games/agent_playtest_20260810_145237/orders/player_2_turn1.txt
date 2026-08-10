@@ -1,0 +1,8 @@
+﻿Recruit 40 soldiers and 50 sailors in Albatross City.
+Buy 1 galley in Albatross City.
+Offer 1800 gold to Wizard Ojibenmi and have him join Khan Tengri.
+Name male sailor Arslan Tideborn.
+Assign 40 soldiers and 49 sailors and 1 galley to Arslan Tideborn.
+Assign Wizard Ojibenmi to Arslan Tideborn.
+Assign Khan Tengri to Arslan Tideborn.
+Have Arslan Tideborn sail to outside Madegi Doy and cautiously attack Emperor Marcus.

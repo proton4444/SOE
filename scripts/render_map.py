@@ -103,22 +103,24 @@ def chaikin(poly: list[list[float]], iterations: int = 2) -> list[list[float]]:
         smoothed = []
         for i, point in enumerate(poly):
             nxt = poly[(i + 1) % len(poly)]
-            smoothed.append([
-                0.75 * point[0] + 0.25 * nxt[0],
-                0.75 * point[1] + 0.25 * nxt[1],
-            ])
-            smoothed.append([
-                0.25 * point[0] + 0.75 * nxt[0],
-                0.25 * point[1] + 0.75 * nxt[1],
-            ])
+            smoothed.append(
+                [
+                    0.75 * point[0] + 0.25 * nxt[0],
+                    0.75 * point[1] + 0.25 * nxt[1],
+                ]
+            )
+            smoothed.append(
+                [
+                    0.25 * point[0] + 0.75 * nxt[0],
+                    0.25 * point[1] + 0.75 * nxt[1],
+                ]
+            )
         poly = smoothed
     return poly
 
 
 def esc(text: str) -> str:
-    return (
-        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def tier_for(city: dict) -> tuple[float, str]:
@@ -147,9 +149,7 @@ def place_labels(cities: list[dict], to_xy, field_w: float, field_h: float):
     """
     placed: list[tuple[float, float, float, float]] = []
     results = []
-    order = sorted(
-        cities, key=lambda c: (-c["population"], c["name"])
-    )
+    order = sorted(cities, key=lambda c: (-c["population"], c["name"]))
     for city in order:
         x, y = to_xy(city["x_miles"], city["y_miles"])
         radius, _ = tier_for(city)
@@ -234,13 +234,14 @@ def occupied_rows(world: dict, geo: dict) -> int:
     return min(geo["grid"]["rows"], int(reach // cell) + 1)
 
 
-def render(world: dict, geo: dict, scale: float, rows: int,
-           textures: dict[str, str]) -> str:
+def render(
+    world: dict, geo: dict, scale: float, rows: int, textures: dict[str, str]
+) -> str:
     field_mi_w = geo["field_miles"][0]
     field_mi_h = rows * geo["grid"]["cell_miles"]
     fw, fh = field_mi_w * scale, field_mi_h * scale
-    margin = 46.0          # gutter holding the grid letters and numbers
-    band = 170.0           # title / legend band beneath the map
+    margin = 46.0  # gutter holding the grid letters and numbers
+    band = 170.0  # title / legend band beneath the map
     total_w = fw + margin * 2
     total_h = fh + margin * 2 + band
 
@@ -250,9 +251,7 @@ def render(world: dict, geo: dict, scale: float, rows: int,
     def path_of(poly: list[list[float]], smooth: bool = True) -> str:
         if smooth:
             poly = chaikin(poly)
-        pts = " ".join(
-            f"{x * scale:.1f},{y * scale:.1f}" for x, y in poly
-        )
+        pts = " ".join(f"{x * scale:.1f},{y * scale:.1f}" for x, y in poly)
         return f"M {pts} Z"
 
     out: list[str] = []
@@ -261,7 +260,7 @@ def render(world: dict, geo: dict, scale: float, rows: int,
     add(
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{total_w:.0f}" '
         f'height="{total_h:.0f}" viewBox="0 0 {total_w:.0f} {total_h:.0f}" '
-        f'font-family="Georgia, \'Times New Roman\', serif">'
+        f"font-family=\"Georgia, 'Times New Roman', serif\">"
     )
 
     # ---- defs: paper grain, coastal halo -------------------------------
@@ -290,7 +289,9 @@ def render(world: dict, geo: dict, scale: float, rows: int,
     add(texture_defs(textures, scale))
     add("</defs>")
 
-    add(f'<rect width="{total_w:.0f}" height="{total_h:.0f}" fill="{PALETTE["paper"]}"/>')
+    add(
+        f'<rect width="{total_w:.0f}" height="{total_h:.0f}" fill="{PALETTE["paper"]}"/>'
+    )
     add(f'<g transform="translate({margin},{margin})">')
     add(f'<rect width="{fw:.0f}" height="{fh:.0f}" fill="{PALETTE["sea"]}"/>')
     if "sea" in textures:
@@ -328,7 +329,10 @@ def render(world: dict, geo: dict, scale: float, rows: int,
     # ---- rivers and coastline ink --------------------------------------
     add(
         f'<g fill="{PALETTE["river"]}" opacity="0.9">'
-        + "".join(f'<path d="{d}"/>' for d in [path_of(q, smooth=False) for q in geo.get("rivers", [])])
+        + "".join(
+            f'<path d="{d}"/>'
+            for d in [path_of(q, smooth=False) for q in geo.get("rivers", [])]
+        )
         + "</g>"
     )
     add(
@@ -441,7 +445,9 @@ def render(world: dict, geo: dict, scale: float, rows: int,
     add("</g>")
 
     # ---- grid gutter labels ---------------------------------------------
-    add(f'<g font-size="{16 * scale / 1.6:.1f}" fill="{PALETTE["ink"]}" opacity="0.75">')
+    add(
+        f'<g font-size="{16 * scale / 1.6:.1f}" fill="{PALETTE["ink"]}" opacity="0.75">'
+    )
     for col in range(geo["grid"]["cols"]):
         gx = margin + (col + 0.5) * geo["grid"]["cell_miles"] * scale
         add(
@@ -481,8 +487,8 @@ def render_band(world, geo, scale, margin, fw, fh, band) -> str:
     out.append(
         f'<text x="0" y="60" font-size="{13 * scale / 1.6:.0f}" fill="{ink}" '
         f'opacity="0.7">The known world &#183; '
-        f'{len(world["cities"])} towns &#183; {len(world["roads"])} routes &#183; '
-        f'after the map by Rick Morneau</text>'
+        f"{len(world['cities'])} towns &#183; {len(world['roads'])} routes &#183; "
+        f"after the map by Rick Morneau</text>"
     )
 
     # scale bar: 400 miles, matching the original
@@ -494,7 +500,9 @@ def render_band(world, geo, scale, margin, fw, fh, band) -> str:
     )
     for i in range(5):
         tx = i * bar_len / 4
-        out.append(f'<line x1="{tx:.1f}" y1="{bar_y - 6}" x2="{tx:.1f}" y2="{bar_y + 6}"/>')
+        out.append(
+            f'<line x1="{tx:.1f}" y1="{bar_y - 6}" x2="{tx:.1f}" y2="{bar_y + 6}"/>'
+        )
     out.append("</g>")
     for i in range(5):
         tx = i * bar_len / 4
@@ -505,7 +513,7 @@ def render_band(world, geo, scale, margin, fw, fh, band) -> str:
     out.append(
         f'<text x="{bar_len / 2:.1f}" y="{bar_y + 24}" text-anchor="middle" '
         f'font-size="{12 * scale / 1.6:.0f}" fill="{ink}" opacity="0.75">miles '
-        f'&#183; one grid square = 100 miles</text>'
+        f"&#183; one grid square = 100 miles</text>"
     )
 
     fs = 12 * scale / 1.6
@@ -554,8 +562,8 @@ def render_band(world, geo, scale, margin, fw, fh, band) -> str:
     y = 28 + len(TIERS) * 20
     out.append(
         f'<path d="M {pop_x + 14 - RUIN_RADIUS:.1f},{y - RUIN_RADIUS:.1f} '
-        f'l {RUIN_RADIUS * 2:.1f},{RUIN_RADIUS * 2:.1f} '
-        f'M {pop_x + 14 - RUIN_RADIUS:.1f},{y + RUIN_RADIUS:.1f} '
+        f"l {RUIN_RADIUS * 2:.1f},{RUIN_RADIUS * 2:.1f} "
+        f"M {pop_x + 14 - RUIN_RADIUS:.1f},{y + RUIN_RADIUS:.1f} "
         f'l {RUIN_RADIUS * 2:.1f},{-RUIN_RADIUS * 2:.1f}" '
         f'stroke="{ink}" stroke-width="1"/>'
     )
@@ -594,13 +602,17 @@ def main() -> int:
     parser.add_argument("--world", type=Path, default=DEFAULT_WORLD)
     parser.add_argument("--geography", type=Path, default=DEFAULT_GEO)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--scale", type=float, default=1.6,
-                        help="pixels per mile")
-    parser.add_argument("--rows", type=int, default=0,
-                        help="grid rows to draw (0 = auto, drop empty ocean)")
+    parser.add_argument("--scale", type=float, default=1.6, help="pixels per mile")
+    parser.add_argument(
+        "--rows",
+        type=int,
+        default=0,
+        help="grid rows to draw (0 = auto, drop empty ocean)",
+    )
     parser.add_argument("--textures", type=Path, default=DEFAULT_TEXTURES)
-    parser.add_argument("--no-textures", action="store_true",
-                        help="render flat colour only")
+    parser.add_argument(
+        "--no-textures", action="store_true", help="render flat colour only"
+    )
     args = parser.parse_args()
 
     world = json.loads(args.world.read_text(encoding="utf-8"))
@@ -612,8 +624,9 @@ def main() -> int:
     textures = {} if args.no_textures else load_textures(args.textures)
     svg = render(world, geo, args.scale, rows, textures)
     args.out.write_text(svg, encoding="utf-8")
-    print(f"wrote {args.out} ({len(svg) / 1024:.0f} KB, "
-          f"{len(textures)} surface textures)")
+    print(
+        f"wrote {args.out} ({len(svg) / 1024:.0f} KB, {len(textures)} surface textures)"
+    )
     return 0
 
 

@@ -7,6 +7,7 @@ area of the engine they cover rather than by test style.
 
 import copy
 import json
+import random
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
@@ -289,6 +290,159 @@ def test_sail_requires_a_port_destination(two_faction_state):
     assert gs.ships["ship1"].location_city_id == "city1"
 
 
+def test_sail_moves_only_the_captains_group_and_unassigned_crew(two_faction_state):
+    gs = two_faction_state
+    gs.world_map.roads["sea1"] = models.Road(
+        id="sea1", from_city_id="city1", to_city_id="city2",
+        quality=models.RoadQuality.SEA,
+    )
+    gs.ships["ship1"] = models.Ship(
+        id="ship1", faction_id="p1", location_city_id="city1",
+        ship_type=models.ShipType.GALLEY, capacity=100,
+        owner_character_id="c1",
+    )
+    gs.characters["passenger"] = models.Character(
+        id="passenger", name="Lucia", faction_id="p1",
+        location_city_id="city1", group_leader_id="c1",
+    )
+    gs.characters["outsider"] = models.Character(
+        id="outsider", name="Cassius", faction_id="p1",
+        location_city_id="city1",
+    )
+    for stack_id, unit_type, owner in (
+        ("crew", models.UnitType.SAILOR, ""),
+        ("captain_unit", models.UnitType.SOLDIER, "c1"),
+        ("passenger_unit", models.UnitType.SOLDIER, "passenger"),
+        ("outsider_unit", models.UnitType.SOLDIER, "outsider"),
+    ):
+        gs.unit_stacks[stack_id] = models.UnitStack(
+            id=stack_id, faction_id="p1", location_city_id="city1",
+            unit_type=unit_type, count=10, owner_character_id=owner,
+        )
+
+    order = orders.SailOrder(
+        player_id="p1", actor_id="c1", destination_city_id="city2",
+        ship_id="ship1",
+    )
+    engine.run_turn(gs, {"p1": [order]}, seed=1)
+
+    assert gs.ships["ship1"].location_city_id == "city2"
+    assert gs.characters["c1"].location_city_id == "city2"
+    assert gs.characters["passenger"].location_city_id == "city2"
+    assert gs.unit_stacks["crew"].location_city_id == "city2"
+    assert gs.unit_stacks["captain_unit"].location_city_id == "city2"
+    assert gs.unit_stacks["passenger_unit"].location_city_id == "city2"
+    assert gs.characters["outsider"].location_city_id == "city1"
+    assert gs.unit_stacks["outsider_unit"].location_city_id == "city1"
+
+
+def test_same_turn_secure_contention_gives_the_city_to_nobody(two_faction_state):
+    """
+    Occupation used to fall to whichever faction the loop reached first.
+
+    Two armed factions inside one city is a military question, and a player
+    could settle it administratively by writing SECURE before the other did --
+    with one soldier, against any number. Now neither establishes anything
+    until one of them is actually put out.
+    """
+    gs = two_faction_state
+    gs.characters["c2"].location_city_id = "city1"
+    for faction_id, owner_id in (("p1", "c1"), ("p2", "c2")):
+        gs.unit_stacks[f"{faction_id}_garrison"] = models.UnitStack(
+            id=f"{faction_id}_garrison", faction_id=faction_id,
+            location_city_id="city1", unit_type=models.UnitType.SOLDIER,
+            count=1, owner_character_id=owner_id,
+        )
+    first = orders.SecureOrder(player_id="p1", actor_id="c1", city_id="city1")
+    second = orders.SecureOrder(player_id="p2", actor_id="c2", city_id="city1")
+
+    log = engine.TurnLog()
+    engine.process_secure({"p1": [first], "p2": [second]}, gs, log)
+
+    assert "city1" not in gs.factions["p1"].secured_city_ids
+    assert "city1" not in gs.factions["p2"].secured_city_ids
+    failures = [event for event in log.events if event.event_type == "secure_failed"]
+    assert {event.player_id for event in failures} == {"p1", "p2"}
+
+
+def test_heal_restores_a_living_injured_character(two_faction_state):
+    gs = two_faction_state
+    healer = gs.characters["c1"]
+    healer.religion_skill = healer.religious_power_current = 100
+    target = gs.characters["c2"]
+    target.location_city_id = "city1"
+    target.health = 25
+    order = orders.HealOrder(
+        player_id="p1", actor_id="c1", target_character_ids=["c2"],
+        heal_amounts={"c2": 30},
+    )
+
+    engine.process_magic({"p1": [order]}, gs, engine.TurnLog(), random.Random(1))
+
+    assert target.health == 55
+    assert target.is_dead is False
+
+
+def test_heal_does_not_revive_or_spend_power_on_a_dead_character(two_faction_state):
+    gs = two_faction_state
+    healer = gs.characters["c1"]
+    healer.religion_skill = healer.religious_power_current = 100
+    target = gs.characters["c2"]
+    target.location_city_id = "city1"
+    target.health = 0
+    target.is_dead = True
+    order = orders.HealOrder(
+        player_id="p1", actor_id="c1", target_character_ids=["c2"],
+    )
+    log = engine.TurnLog()
+
+    engine.process_magic({"p1": [order]}, gs, log, random.Random(1))
+
+    assert target.health == 0
+    assert target.is_dead is True
+    assert healer.religious_power_current == 100
+    assert [event.event_type for event in log.events] == ["heal_failed"]
+
+
+def test_heal_can_restore_zero_health_when_character_is_not_dead(two_faction_state):
+    gs = two_faction_state
+    healer = gs.characters["c1"]
+    healer.religion_skill = healer.religious_power_current = 100
+    target = gs.characters["c2"]
+    target.location_city_id = "city1"
+    target.health = 0
+    target.is_dead = False
+    order = orders.HealOrder(
+        player_id="p1", actor_id="c1", target_character_ids=["c2"],
+        heal_amounts={"c2": 20},
+    )
+
+    engine.process_magic({"p1": [order]}, gs, engine.TurnLog(), random.Random(1))
+
+    assert target.health == 20
+    assert target.is_dead is False
+
+
+def test_resurrection_remains_the_only_path_back_from_death(two_faction_state):
+    gs = two_faction_state
+    priest = gs.characters["c1"]
+    priest.religion_skill = 100
+    target = gs.characters["c2"]
+    target.location_city_id = "city1"
+    target.health = 0
+    target.is_dead = True
+    order = orders.ResurrectOrder(
+        player_id="p1", actor_id="c1", target_id="c2",
+    )
+
+    engine.process_religion(
+        {"p1": [order]}, gs, engine.TurnLog(), random.Random(1)
+    )
+
+    assert target.is_dead is False
+    assert target.health == 50
+
+
 # ============================================================================
 # ECONOMY
 # ============================================================================
@@ -300,10 +454,14 @@ def test_tax_blocked_in_city_secured_by_another_faction(two_faction_state):
     """
     gs = two_faction_state
     gs.factions["p2"].secured_city_ids.add("city1")
+    gs.characters["c2"].location_city_id = "city1"
     gs.tax_pools["city1"] = 500
     gs.unit_stacks["army"] = models.UnitStack(
         id="army", faction_id="p1", location_city_id="city1",
         unit_type=models.UnitType.SOLDIER, count=40)
+    gs.unit_stacks["occupiers"] = models.UnitStack(
+        id="occupiers", faction_id="p2", location_city_id="city1",
+        unit_type=models.UnitType.SOLDIER, count=10, owner_character_id="c2")
 
     treasury_before = gs.factions["p1"].treasury
     order = orders.TaxOrder(player_id="p1", actor_id="c1", city_id="city1", duration_days=7)

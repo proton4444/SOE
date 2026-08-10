@@ -122,6 +122,12 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                                     character_id=healer.id, success=False)
                         continue
 
+                    if target.is_dead:
+                        turn_log.add("magic", player_id, "heal_failed",
+                                    f"{healer.name}: {target.name} is dead and must be resurrected",
+                                    character_id=healer.id, success=False)
+                        continue
+
                     # Calculate heal amount
                     if target_id in order.heal_to_levels:
                         desired_level = min(100, order.heal_to_levels[target_id])
@@ -142,9 +148,6 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                     old_health = target.health
                     target.health = min(100, target.health + heal_amount)
                     healer.religious_power_current -= heal_amount
-
-                    if target.health > 0:
-                        target.is_dead = False
 
                     turn_log.add("magic", player_id, "heal",
                                 f"{healer.name} healed {target.name} from {old_health} to {target.health}",

@@ -19,6 +19,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Union, get_args, get_origin
 
+from spoils_engine import config
 from spoils_engine.models import (
     GameState, WorldMap, Faction, Character, UnitStack, Ship,
     City, Road, SummonedCreature, MagicalItem, EliteUnit
@@ -146,6 +147,8 @@ def _rebuild_queue_entry(data: dict) -> Optional[QueueEntry]:
         order=order,
         order_class=data["order_class"],
         release_turn=int(data.get("release_turn", -1)),
+        release_hour=int(data.get("release_hour", -1)),
+        check_hour=int(data.get("check_hour", -1)),
         repeat_remaining=int(data.get("repeat_remaining", 0)),
         block=_rebuild_queue(data.get("block") or []),
     )
@@ -175,6 +178,8 @@ def decode_game_state(data: dict) -> GameState:
 
     game_state = GameState(
         turn_number=data.get('turn_number', 0),
+        game_time_hours=data.get(
+            'game_time_hours', data.get('turn_number', 0) * config.HOURS_PER_TURN),
         world_map=world_map,
         factions=_rebuild_registry(data, 'factions', Faction),
         characters=_rebuild_registry(data, 'characters', Character),
@@ -247,6 +252,19 @@ def _migrate(game_state: GameState, data: dict) -> None:
             leader = next((c for c in members if c.is_leader), members[0])
             leader.gold += faction.treasury
             faction.treasury = 0.0
+
+    # Ships predating character/group ownership belong to the faction leader.
+    for ship in game_state.ships.values():
+        if ship.owner_character_id:
+            continue
+        raw_ship = (data.get("ships") or {}).get(ship.id) or {}
+        if "owner_character_id" in raw_ship:
+            continue
+        members = [c for c in game_state.characters.values()
+                   if c.faction_id == ship.faction_id]
+        if members:
+            ship.owner_character_id = next(
+                (c.id for c in members if c.is_leader), members[0].id)
 
 
 # ============================================================================

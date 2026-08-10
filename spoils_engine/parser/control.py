@@ -14,7 +14,7 @@ from spoils_engine.orders import (
 )
 from spoils_engine import config
 from spoils_engine.parser.text import (
-    parse_duration_days,
+    parse_duration_days, parse_duration_hours,
 )
 from spoils_engine.parser.resolve import (
     resolve_character, OrderParserBase,
@@ -72,30 +72,56 @@ def parse_if_order(sentence: str, game_state: GameState, player_id: str) -> Opti
     return order
 
 
-_CONDITION_ITEMS = (
-    "soldiers", "sailors", "workers", "slaves", "horses", "catapults",
-    "weapons", "armor", "galleys", "ships",
-    "skeletons", "zombies", "harpies", "minotaurs", "griffins", "chimeras",
-    "dragons", "demons",
-    "gold", "wood", "stone", "iron", "copper", "silver", "gems",
-    "encumbrance", "power",
-)
-
 _CONDITION_COMPARATORS = (
     "less than", "fewer than", "more than", "at least", "at most", "exactly",
 )
 
+# Every noun an IF condition may count, written both ways round.
+#
+# "If Joe has more than 100 soldiers" and "...more than 1 soldier" are the same
+# question, and a player writing the singular has to get the same answer. The
+# spellings used to be listed plural-only and singularised with `rstrip('s')`,
+# which missed every singular ("soldier" never matched `\bsoldiers\b", so the
+# condition counted nothing and took the wrong branch) and mangled the irregular
+# plural ("harpies" -> "harpie"). Both forms are written out here instead, so
+# nothing depends on guessing English.
+#
+# The canonical key on the right is what `conditionals._count_condition_units`
+# switches on. Matching is by whole word, so the plural spelling cannot be
+# mistaken for the singular one.
 _IF_UNIT_TO_KEY = {
-    "soldier": "soldier", "sailor": "sailor", "worker": "worker",
-    "slave": "slave", "horse": "horse", "catapult": "catapult",
-    "weapon": "weapon", "armor": "armor", "galley": "galley",
-    "ship": "galley", "skeleton": "skeleton", "zombie": "zombie",
-    "harpy": "harpy", "minotaur": "minotaur", "griffin": "griffin",
-    "chimera": "chimera", "dragon": "dragon", "demon": "demon",
-    "gold": "gold", "wood": "wood", "stone": "stone", "iron": "iron",
-    "copper": "copper", "silver": "silver", "gem": "gems", "gems": "gems",
-    "encumbrance": "encumbrance", "power": "power",
+    "soldier": "soldier", "soldiers": "soldier",
+    "sailor": "sailor", "sailors": "sailor",
+    "worker": "worker", "workers": "worker",
+    "slave": "slave", "slaves": "slave",
+    "horse": "horse", "horses": "horse",
+    "catapult": "catapult", "catapults": "catapult",
+    "weapon": "weapon", "weapons": "weapon",
+    "armor": "armor", "armors": "armor",
+    "galley": "galley", "galleys": "galley",
+    "ship": "galley", "ships": "galley",
+    "skeleton": "skeleton", "skeletons": "skeleton",
+    "zombie": "zombie", "zombies": "zombie",
+    "harpy": "harpy", "harpies": "harpy",
+    "minotaur": "minotaur", "minotaurs": "minotaur",
+    "griffin": "griffin", "griffins": "griffin",
+    "chimera": "chimera", "chimeras": "chimera",
+    "dragon": "dragon", "dragons": "dragon",
+    "demon": "demon", "demons": "demon",
+    "gold": "gold",
+    "wood": "wood",
+    "stone": "stone", "stones": "stone",
+    "iron": "iron",
+    "copper": "copper",
+    "silver": "silver",
+    "gem": "gems", "gems": "gems",
+    "encumbrance": "encumbrance",
+    "power": "power",
 }
+
+# Longest first, so "at most 3 ships" cannot be read as a bare "ship" before the
+# whole word is tried. Word boundaries do the real work; this only fixes order.
+_CONDITION_ITEMS = tuple(sorted(_IF_UNIT_TO_KEY, key=len, reverse=True))
 
 
 def parse_if_condition(text: str, game_state: GameState, player_id: str) -> Optional[dict]:
@@ -143,6 +169,13 @@ def parse_if_condition(text: str, game_state: GameState, player_id: str) -> Opti
             unit = item
             break
 
+    # A condition counting something the engine cannot count is not a condition
+    # the player can be allowed to act on: it used to evaluate against zero and
+    # quietly take a branch. The caller turns this into a parse warning naming
+    # the text it could not read.
+    if not unit:
+        return None
+
     if unit == "power" and not power_modifier:
         # rules.md: no modifier means the higher of magic and religion power.
         power_modifier = "either"
@@ -154,7 +187,7 @@ def parse_if_condition(text: str, game_state: GameState, player_id: str) -> Opti
         "subject_name": subject_name,
         "comparator": comparator,
         "amount": amount if amount is not None else 0,
-        "unit": _IF_UNIT_TO_KEY.get(unit.rstrip('s'), unit),
+        "unit": _IF_UNIT_TO_KEY.get(unit, unit),
         "power_modifier": power_modifier,
     }
 
@@ -221,11 +254,14 @@ def parse_await_order(sentence: str, game_state: GameState, player_id: str) -> O
     if turn_match:
         turns = max(0, int(turn_match.group(1)) - game_state.turn_number)
         order.duration_days = turns * config.DAYS_PER_TURN
+        order.duration_hours = turns * config.HOURS_PER_TURN
         return order
 
     duration = parse_duration_days(remainder)
+    duration_hours = parse_duration_hours(remainder)
     if duration is not None:
         order.duration_days = duration
+        order.duration_hours = duration_hours or duration * config.HOURS_PER_DAY
 
     # Whatever is left that is not a duration is a person to wait for.
     target_text = re.sub(r'\d+\s+(?:minute|hour|day|week|month)s?\b', '', remainder)
@@ -241,6 +277,7 @@ def parse_await_order(sentence: str, game_state: GameState, player_id: str) -> O
             # No deadline given: hold for a good while rather than forever, so
             # a target who never shows up does not strand the queue.
             order.duration_days = config.AWAIT_DEFAULT_DEADLINE_DAYS
+            order.duration_hours = order.duration_days * config.HOURS_PER_DAY
         return order
 
     if duration is None:

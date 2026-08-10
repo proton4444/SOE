@@ -169,6 +169,9 @@ class City:
     # the web map view; the engine ignores them for movement and rules.
     x: Optional[float] = None
     y: Optional[float] = None
+    # Renewable stock remaining for each gatherable resource. Missing entries
+    # are initialized from richness on first extraction for old maps/saves.
+    resource_reserves: dict[str, float] = field(default_factory=dict)
 
     def __hash__(self):
         return hash(self.id)
@@ -347,6 +350,7 @@ class Character:
     health: int = 100  # 0-100, 0 = dead
     is_dead: bool = False
     resources: dict[str, int] = field(default_factory=dict)  # Resource inventory
+    morale: int = 100
 
     @property
     def max_magic_power(self) -> int:
@@ -517,6 +521,7 @@ class Ship:
     location_city_id: str
     ship_type: ShipType
     capacity: int = 550  # Galley default
+    owner_character_id: str = ""
 
     @property
     def attack_value(self) -> int:
@@ -708,6 +713,9 @@ class GameState:
     invest_pools: dict[str, float] = field(default_factory=dict)
     # Named elite troop units, created by CREATE.
     elite_units: dict[str, EliteUnit] = field(default_factory=dict)
+    # Absolute game time. A turn still defines the reporting/upkeep cadence,
+    # but queued work can now wake at any hour inside that weekly window.
+    game_time_hours: int = 0
 
     def get_character_by_name(self, name: str, faction_id: Optional[str] = None) -> Optional[Character]:
         """

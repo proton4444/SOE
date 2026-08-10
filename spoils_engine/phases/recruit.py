@@ -12,7 +12,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     Order, RecruitOrder, BuyShipOrder,
 )
-from spoils_engine import config
+from spoils_engine import config, territory
 from spoils_engine.turn_log import TurnLog
 from spoils_engine.phases.common import allocate_id
 
@@ -35,8 +35,16 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                     continue
 
                 actor = game_state.characters.get(order.actor_id)
+                if not actor:
+                    continue
+                # "Go to Kitesta and recruit 10 soldiers" names no city for the
+                # recruiting, so the parser could only guess at where the actor
+                # would be -- and it guessed before the move. Read the real
+                # location now. A city the player did name stands as written.
+                if order.city_implicit and actor.location_city_id:
+                    order.city_id = actor.location_city_id
                 city = game_state.world_map.cities.get(order.city_id)
-                if not actor or not city:
+                if not city:
                     continue
 
                 # The actor must actually stand in the city: a chained order
@@ -48,6 +56,20 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                     turn_log.add("recruit", player_id, "recruit_failed",
                                 f"{actor.name} is not in {city.name}",
                                 location=city.id, character_id=actor.id, success=False)
+                    continue
+
+                authority_id = territory.administrative_faction_id(
+                    game_state, order.city_id)
+                # Unclaimed cities keep their existing open recruitment
+                # behavior; this model does not invent a neutral authority.
+                if authority_id is not None and authority_id != player_id:
+                    turn_log.add(
+                        "recruit", player_id, "recruit_failed",
+                        f"{actor.name}: cannot recruit in {city.name} — "
+                        + territory.administration_denial(
+                            game_state, city.id, player_id),
+                        location=city.id, character_id=actor.id, success=False,
+                    )
                     continue
 
                 # Check recruit cap
@@ -72,7 +94,9 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                     have = available_gold(actor, faction)
                     order.warnings.append(f"Insufficient gold (need {cost}, have {have})")
                     turn_log.add("recruit", player_id, "recruit_failed",
-                                f"Insufficient gold to recruit {order.count} {order.unit_type}",
+                                f"Insufficient gold to recruit {order.count} "
+                                f"{order.unit_type} in {city.name} "
+                                f"(need {cost:g}g, have {have:g}g)",
                                 location=city.id, character_id=actor.id, success=False)
                     continue
 
@@ -102,8 +126,12 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                     continue
 
                 actor = game_state.characters.get(order.actor_id)
+                if not actor:
+                    continue
+                if order.city_implicit and actor.location_city_id:
+                    order.city_id = actor.location_city_id
                 city = game_state.world_map.cities.get(order.city_id)
-                if not actor or not city:
+                if not city:
                     continue
 
                 # Buying a ship requires standing at the port (see the recruit
@@ -135,7 +163,8 @@ def process_recruit_and_buy(orders_by_player: Dict[str, List[Order]], game_state
                         id=ship_id,
                         faction_id=player_id,
                         location_city_id=order.city_id,
-                        ship_type=ship_type_enum
+                        ship_type=ship_type_enum,
+                        owner_character_id=actor.id,
                     )
                     game_state.ships[ship_id] = new_ship
 

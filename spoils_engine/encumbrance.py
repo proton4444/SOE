@@ -12,11 +12,9 @@ Appendix B also fixes the substance weights: a unit of every substance is worth
 one gold, so the heavy ones are the cheap ones. One horse carries 5000 gold, or
 500 silver, or 5 iron.
 
-Not everything in Appendix B is modelled yet. Horses, wagons, armour, weapons,
-catapults, battering rams and siege towers are not tracked as things a group
-carries, so they weigh nothing here. Everything the engine *does* track --
-people, soldiers, mined substances and purses -- is weighed exactly as the
-appendix says.
+Every cargo category represented by the engine is weighed here: people,
+unnamed units, substances, constructed equipment, horses and wagons, purses,
+and held magical items.
 """
 
 from __future__ import annotations
@@ -38,19 +36,20 @@ SUBSTANCE_ENCUMBRANCE: dict[str, float] = {
     "gold": 1.0 / 5000,
     "gems": 1.0 / 25_000,
     "gem": 1.0 / 25_000,  # tolerate the singular
-}
-
-# Appendix B values for things the engine does not yet track as cargo. Kept
-# here so the numbers are recorded in one place when they are wired up.
-UNMODELLED_ENCUMBRANCE: dict[str, float] = {
-    "horse": 2.0,          # *** no encumbrance on land; 2 when flown/teleported
-    "wagon": 10.0,         # *** on land only the wagons exceeding the horses count
+    "horse": 2.0,
+    "wagon": 10.0,
     "armor": 1.0 / 5,
     "weapon": 1.0 / 5,
     "catapult": 4.0,
     "battering_ram": 10.0,
+    "ram": 10.0,
     "siege_tower": 20.0,
+    "tower": 20.0,
 }
+
+# Compatibility export retained for callers that used the former gap table.
+UNMODELLED_ENCUMBRANCE: dict[str, float] = {}
+MAGICAL_ITEM_ENCUMBRANCE = 1.0 / 5
 
 
 def resource_encumbrance(resources: dict[str, int], gold: float = 0.0) -> float:
@@ -74,6 +73,10 @@ def character_encumbrance(character: Character, game_state: GameState) -> float:
     for stack in game_state.unit_stacks.values():
         if stack.owner_character_id == character.id:
             total += PERSON_ENCUMBRANCE * stack.count
+    total += MAGICAL_ITEM_ENCUMBRANCE * sum(
+        1 for item in game_state.magical_items.values()
+        if item.holder_character_id == character.id
+    )
     return total
 
 

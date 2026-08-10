@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 
 from spoils_engine.models import GameState, UnitType
-from spoils_engine import config, items
+from spoils_engine import config, items, territory
 
 
 # ============================================================================
@@ -42,7 +42,9 @@ class CombatResult:
 # COMBAT CALCULATION
 # ============================================================================
 
-def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState) -> float:
+def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState,
+                            member_ids: set[str] | None = None,
+                            fortification_authority: dict[str, str | None] | None = None) -> float:
     """
     Calculate total combat power of a faction at a location.
 
@@ -50,6 +52,8 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
     """
     base_power = 0.0
     best_combat_skill = 0
+    best_religion_skill = 0
+    morale_values = []
     soldier_count = 0
     weapon_count = 0
     armor_count = 0
@@ -60,36 +64,47 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
     # not contribute leadership or personal equipment to the power total.
     for char in game_state.characters.values():
         if (char.faction_id == faction_id and char.location_city_id == city_id
+                and (member_ids is None or char.id in member_ids)
                 and not char.is_dead and not getattr(char, "is_noncom", False)):
             best_combat_skill = max(best_combat_skill, char.combat_skill)
+            best_religion_skill = max(best_religion_skill, char.religion_skill)
+            morale_values.append(char.morale)
 
     # Add unit attack values
     for stack in game_state.unit_stacks.values():
-        if stack.faction_id == faction_id and stack.location_city_id == city_id:
+        if (stack.faction_id == faction_id and stack.location_city_id == city_id
+                and (member_ids is None or stack.owner_character_id in member_ids
+                     or not stack.owner_character_id)):
             base_power += stack.attack_value
             if stack.unit_type == UnitType.SOLDIER:
                 soldier_count += stack.count
 
     # Add ship attack values
     for ship in game_state.ships.values():
-        if ship.faction_id == faction_id and ship.location_city_id == city_id:
+        if (ship.faction_id == faction_id and ship.location_city_id == city_id
+                and (member_ids is None or ship.owner_character_id in member_ids
+                     or not ship.owner_character_id)):
             base_power += ship.attack_value
 
     # Add summoned creatures (they fight for their summoner)
     for creature in game_state.summoned_creatures.values():
         summoner = game_state.characters.get(creature.summoner_id)
-        if summoner and summoner.faction_id == faction_id and summoner.location_city_id == city_id:
+        if (summoner and summoner.faction_id == faction_id
+                and summoner.location_city_id == city_id
+                and (member_ids is None or summoner.id in member_ids)):
             base_power += creature.attack_value
 
     # Add elite troop units (they fight at their own combat level)
     for unit in game_state.elite_units.values():
-        if unit.faction_id == faction_id and unit.location_city_id == city_id:
+        if (unit.faction_id == faction_id and unit.location_city_id == city_id
+                and (member_ids is None or unit.leader_character_id in member_ids)):
             base_power += unit.attack_value
 
     # Apply skill multiplier
     # Apply equipment bonuses present on combatant characters at this location
     for char in game_state.characters.values():
         if (char.faction_id == faction_id and char.location_city_id == city_id
+                and (member_ids is None or char.id in member_ids)
                 and not char.is_dead and not getattr(char, "is_noncom", False)):
             weapon_count += char.resources.get("weapon", 0)
             armor_count += char.resources.get("armor", 0)
@@ -100,16 +115,22 @@ def calculate_faction_power(faction_id: str, city_id: str, game_state: GameState
         base_power += min(siege_power, soldier_count) * 3
 
     skill_multiplier = 1.0 + (best_combat_skill * config.COMBAT_SKILL_BONUS_PER_POINT)
+    morale = sum(morale_values) / len(morale_values) if morale_values else 100
+    morale_multiplier = max(0.5, morale / 100.0)
+    religion_multiplier = 1.0 + best_religion_skill / 200.0
 
     blessing_bonus = 1.0 + (game_state.location_blessings.get(city_id, 0) / 100)
     curse_penalty = 1.0 - (game_state.location_curses.get(city_id, 0) / 100)
 
-    total_power = base_power * skill_multiplier * blessing_bonus * max(0.5, curse_penalty)
+    total_power = (base_power * skill_multiplier * morale_multiplier
+                   * religion_multiplier * blessing_bonus * max(0.5, curse_penalty))
 
-    # Fortifications only benefit the faction holding the city
+    # Combat supplies a phase snapshot; other callers use current authority.
     city = game_state.world_map.cities.get(city_id)
-    faction = game_state.factions.get(faction_id)
-    if city and faction and city_id in faction.controlled_city_ids:
+    authority_id = (fortification_authority.get(city_id)
+                    if fortification_authority is not None
+                    else territory.administrative_faction_id(game_state, city_id))
+    if city and authority_id == faction_id:
         total_power *= 1.0 + (city.fortification_level / 100)
 
     return total_power
@@ -238,7 +259,8 @@ class CombatResolver:
 # ============================================================================
 
 def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
-                     game_state: GameState, rng: random.Random) -> dict[str, int]:
+                     game_state: GameState, rng: random.Random,
+                     member_ids: set[str] | None = None) -> dict[str, int]:
     """
     Apply casualties to a faction's forces at a location.
 
@@ -250,11 +272,14 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
     soldier_count = sum(
         stack.count for stack in game_state.unit_stacks.values()
         if stack.faction_id == faction_id and stack.location_city_id == city_id
+        and (member_ids is None or stack.owner_character_id in member_ids
+             or not stack.owner_character_id)
         and stack.unit_type == UnitType.SOLDIER
     )
     armor_available = sum(
         char.resources.get("armor", 0) for char in game_state.characters.values()
         if char.faction_id == faction_id and char.location_city_id == city_id
+        and (member_ids is None or char.id in member_ids)
     )
     if soldier_count > 0:
         armor_mitigation = 1.0 - min(armor_available, soldier_count) / (soldier_count * 4)
@@ -266,7 +291,8 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
     # Apply to characters (damage proportional to casualty rate)
     blessed_here = city_id in game_state.location_blessings
     for char in game_state.characters.values():
-        if char.faction_id == faction_id and char.location_city_id == city_id and not char.is_dead:
+        if (char.faction_id == faction_id and char.location_city_id == city_id
+                and (member_ids is None or char.id in member_ids) and not char.is_dead):
             # A magical ring divides the chance of being hit, and a blessing
             # adds a point to its protection factor. Someone with no ring is
             # unaffected either way.
@@ -285,7 +311,9 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
 
     # Apply to unit stacks
     for stack in list(game_state.unit_stacks.values()):
-        if stack.faction_id == faction_id and stack.location_city_id == city_id:
+        if (stack.faction_id == faction_id and stack.location_city_id == city_id
+                and (member_ids is None or stack.owner_character_id in member_ids
+                     or not stack.owner_character_id)):
             casualties = int(stack.count * casualty_rate)
             stack.count -= casualties
             losses['units'] += casualties
@@ -296,7 +324,8 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
 
     # Apply to elite units (soldiers taking losses like any other force)
     for unit in list(game_state.elite_units.values()):
-        if unit.faction_id == faction_id and unit.location_city_id == city_id:
+        if (unit.faction_id == faction_id and unit.location_city_id == city_id
+                and (member_ids is None or unit.leader_character_id in member_ids)):
             casualties = int(unit.size * casualty_rate)
             unit.size -= casualties
             losses['units'] += casualties
@@ -306,7 +335,9 @@ def apply_casualties(faction_id: str, city_id: str, casualty_rate: float,
 
     # Apply to ships (probabilistic)
     for ship in list(game_state.ships.values()):
-        if ship.faction_id == faction_id and ship.location_city_id == city_id:
+        if (ship.faction_id == faction_id and ship.location_city_id == city_id
+                and (member_ids is None or ship.owner_character_id in member_ids
+                     or not ship.owner_character_id)):
             if rng.random() < casualty_rate:
                 del game_state.ships[ship.id]
                 losses['ships'] += 1

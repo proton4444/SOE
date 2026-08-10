@@ -189,7 +189,7 @@ def test_charge_keeps_its_own_item_list_but_splits_at_give(court):
 def test_buy_and_go_and_give_it(court):
     orders = parse(court, "Buy 1 horse and go to Umadosh and give it to "
                           "Bill May.")
-    assert types(orders) == ["BUY_SHIP", "MOVE", "ASSIGN"]
+    assert types(orders) == ["TRADE", "MOVE", "ASSIGN"]
     assert not orders[1].warnings
     # it = "1 horse": the give order's subject says so (horses are not
     # transferable in the engine, so the order carries an honest warning).
@@ -214,7 +214,7 @@ def test_the_two_thems_refer_to_different_lists(court):
     text = ("Purchase 20 horses and assign them and 2 sailors to Watusingi, "
             "and have him go to Madegi Doy and assign them to Joe Flint.")
     orders = parse(court, text)
-    assert types(orders) == ["BUY_SHIP", "ASSIGN", "ASSIGN", "MOVE",
+    assert types(orders) == ["TRADE", "ASSIGN", "ASSIGN", "MOVE",
                              "ASSIGN", "ASSIGN"]
     assert "watusingi" in orders[1].warnings[0]  # the first them = 20 horses
     assert "watusingi" in orders[2].warnings[0]  # the 2 sailors
@@ -229,7 +229,7 @@ def test_only_the_last_list_is_assigned(court):
     # commands" -- only the 10 horses are assigned.
     orders = parse(court, "Recruit 10 soldiers and buy 10 horses and assign "
                           "them to Joe Flint.")
-    assert types(orders) == ["RECRUIT", "BUY_SHIP", "ASSIGN"]
+    assert types(orders) == ["RECRUIT", "TRADE", "ASSIGN"]
     assert orders[2].unit_type == "HORSE" or "horses" in orders[2].warnings[0]
     assert "soldier" not in str(orders[2].warnings)
 

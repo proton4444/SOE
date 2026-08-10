@@ -168,6 +168,10 @@ def load_map_from_json(map_file: Path, *, strict: bool = True) -> WorldMap:
             population=population,
             fortification_level=fortification_level,
             resource_richness=resource_richness,
+            resource_reserves={
+                str(k): float(v)
+                for k, v in (city_data.get("resource_reserves") or {}).items()
+            },
             x=x,
             y=y,
         )
@@ -664,6 +668,7 @@ def save_map_to_json(world_map: WorldMap, map_file: Path) -> None:
             "grid_ref": city.grid_ref,
             "fortification_level": city.fortification_level,
             "resource_richness": dict(city.resource_richness),
+            "resource_reserves": dict(city.resource_reserves),
         }
         if city.x is not None:
             entry["x"] = city.x

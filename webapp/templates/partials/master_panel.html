@@ -1,0 +1,175 @@
+<div id="master-dashboard"
+     hx-get="/room/{{ room.code }}/master/panel{% if phase %}?phase={{ phase }}{% endif %}{% if faction %}&faction={{ faction }}{% endif %}" hx-trigger="every 5s"
+     hx-swap="outerHTML">
+  <section class="master-hero card">
+    <div class="master-hero-copy">
+      <p class="eyebrow">Turn control</p>
+      <h2>{{ headline }}</h2>
+      {% if last_resolution %}
+      <p class="muted">Last resolution: turn {{ last_resolution.turn }} was {{ last_resolution.status }}{% if last_resolution.seed %} with seed {{ last_resolution.seed }}{% endif %}.</p>
+      {% else %}
+      <p class="muted">No turn has been resolved yet. The first turn is waiting for player orders.</p>
+      {% endif %}
+    </div>
+    <div class="master-hero-actions">
+      <span class="health-pill {{ health }}">{{ health }}</span>
+      <form method="post" action="/room/{{ room.code }}/master/resolve"
+            hx-post="/room/{{ room.code }}/master/resolve"
+            hx-target="#master-dashboard" hx-swap="outerHTML">
+        <button type="submit"{% if not status.all_submitted or not joined %} disabled{% endif %}>Resolve turn {{ status.next_turn }}</button>
+      </form>
+    </div>
+  </section>
+
+  {% if notice %}<p class="notice master-notice">{{ notice }}</p>{% endif %}
+
+  <section class="card">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">War room</p>
+        <h2>Auto-play</h2>
+      </div>
+      {% if autoplay.running %}
+        <span class="health-pill ready">running</span>
+      {% else %}
+        <span class="health-pill waiting">idle</span>
+      {% endif %}
+    </div>
+    {% if autoplay.running %}
+      <p class="muted">Room {{ autoplay.code }} · {{ autoplay.turns_done }}/{{ autoplay.turns_planned }} turn(s)
+      · {{ autoplay.last_result or "warming up" }}</p>
+      {% if autoplay.last_error %}<p class="notice error">{{ autoplay.last_error }}</p>{% endif %}
+      <div class="resolution-list autoplay-log">
+        {% for line in autoplay.log|reverse %}
+        <div class="resolution-row muted">{{ line }}</div>
+        {% endfor %}
+      </div>
+      <form method="post" action="/room/{{ room.code }}/master/autoplay"
+            hx-post="/room/{{ room.code }}/master/autoplay"
+            hx-target="#master-dashboard" hx-swap="outerHTML">
+        <button type="submit" name="action" value="stop" class="ghost">Stop auto-play</button>
+      </form>
+    {% else %}
+      <form method="post" action="/room/{{ room.code }}/master/autoplay"
+            hx-post="/room/{{ room.code }}/master/autoplay"
+            hx-target="#master-dashboard" hx-swap="outerHTML"
+            class="row autoplay-form">
+        <label>Turns <input name="turns" type="number" min="1" value="10"></label>
+        <label>Delay s <input name="delay" type="number" min="0.5" step="0.5" value="5"></label>
+        <label class="check"><input type="checkbox" name="force"> force resolve</label>
+        <label class="check"><input type="checkbox" name="wait_humans"> wait for humans</label>
+        <button type="submit" name="action" value="start">Start auto-play</button>
+      </form>
+      <p class="muted">Runs every enabled bot, then resolves when everyone is
+      in (or immediately with force). Human seats without orders count as
+      empty only when forced — tick <em>wait for humans</em> to hold until they
+      submit. Stops itself after the planned turns or when you press stop.</p>
+    {% endif %}
+  </section>
+
+  <section class="master-kpis">
+    <div class="metric card"><span class="metric-label">Current turn</span><strong>{{ last_turn }}</strong><small>next: {{ status.next_turn }}</small></div>
+    <div class="metric card"><span class="metric-label">Players in</span><strong>{{ joined }}/{{ room.slots }}</strong><small>claimed seats</small></div>
+    <div class="metric card"><span class="metric-label">Orders in</span><strong>{{ submitted }}/{{ joined }}</strong><small>for turn {{ status.next_turn }}</small></div>
+    <div class="metric card"><span class="metric-label">Queued actors</span><strong>{{ pending_queue_count }}</strong><small>orders surviving a turn</small></div>
+  </section>
+
+  <section class="card">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Seats and resources</p>
+        <h2>Faction standings</h2>
+      </div>
+      <span class="muted">Gold includes character purses and legacy treasury.</span>
+    </div>
+    <div class="table-scroll">
+      <table class="master-table standings">
+        <thead>
+          <tr><th>Faction</th><th>Player</th><th>Gold</th><th>Forces</th><th>Characters</th><th>Sovereign</th><th>Occupied</th><th>Next turn</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for faction in factions %}
+          <tr>
+            <td><span class="faction-dot" style="background: {{ faction.color }}"></span><strong>{{ faction.name }}</strong>{% if faction.is_npc %}<span class="tag">NPC</span>{% endif %}</td>
+            <td>{{ faction.player }}<br><span class="muted">{{ faction.start_city }}</span></td>
+            <td>{{ "%.1f"|format(faction.gold) }}g</td>
+            <td>{{ faction.soldiers }} soldiers<br><span class="muted">{{ faction.ships }} ship{% if faction.ships != 1 %}s{% endif %}</span></td>
+            <td>{{ faction.free_characters }} free<br><span class="muted">{{ faction.prisoners }} prisoner{% if faction.prisoners != 1 %}s{% endif %}, {{ faction.dead }} dead</span></td>
+            <td>{{ faction.sovereign_count }}</td>
+            <td>{{ faction.secured_count }}</td>
+             <td>{% if faction.submitted %}<span class="ok">submitted</span>{% elif faction.kind == "empty" %}<span class="muted">seat open</span>{% else %}<span class="wait">waiting</span>{% endif %}</td>
+             <td><button type="button" class="inspect-button"
+                       hx-get="/room/{{ room.code }}/master/player/{{ faction.id }}"
+                       hx-target="#master-player-inspector"
+                       hx-swap="innerHTML">Inspect</button></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="legend-note"><strong>Sovereign</strong> is the enduring claim. <strong>Occupied</strong> is temporary operational control created by SECURE and maintained by a qualifying garrison.</p>
+  </section>
+
+  <div class="two-col master-columns">
+    <section class="card">
+      <div class="section-head"><div><p class="eyebrow">Event monitor</p><h2>Gameplay timeline</h2></div><span class="muted">newest turn at top</span></div>
+      <div class="filter-chips" role="tablist" aria-label="Filter timeline">
+        <a class="chip {{ 'active' if not phase else '' }}" role="tab" aria-selected="{{ 'true' if not phase else 'false' }}"
+           hx-get="/room/{{ room.code }}/master/panel" hx-target="#master-dashboard" hx-swap="outerHTML">all</a>
+        {% for p in phases %}
+        <a class="chip {{ 'active' if phase == p else '' }}" role="tab" aria-selected="{{ 'true' if phase == p else 'false' }}"
+           hx-get="/room/{{ room.code }}/master/panel?phase={{ p }}" hx-target="#master-dashboard" hx-swap="outerHTML">{{ p }}</a>
+        {% endfor %}
+      </div>
+      {% if timeline %}
+      <div class="timeline">
+        {% for group in timeline|reverse %}
+        <details class="timeline-turn" {% if loop.first %}open{% endif %}>
+          <summary><span class="event-turn">T{{ group.turn }}</span>
+            <span class="muted">{{ group.events|length }} event(s)</span></summary>
+          <div class="event-list">
+            {% for event in group.events %}
+            <div class="event-row {{ 'event-fail' if not event.success else '' }}">
+              <span class="event-turn">T{{ event.turn }}</span>
+              {% if event.phase %}<span class="tag">{{ event.phase }}</span>{% endif %}
+              <span class="event-type">{{ event.event_type|replace('_', ' ') }}</span>
+              <div><strong>{{ event.faction_name }}</strong><br><span>{{ event.description }}</span></div>
+            </div>
+            {% endfor %}
+          </div>
+        </details>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">No structured gameplay events yet. Resolve a turn to populate the timeline.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="section-head"><div><p class="eyebrow">Resolution trail</p><h2>System history</h2></div><span class="muted">recovery-safe metadata</span></div>
+      {% if resolution_events %}
+      <div class="resolution-list">
+        {% for event in resolution_events|reverse %}
+        <div class="resolution-row"><span class="event-turn">T{{ event.turn }}</span><strong class="{{ 'ok' if event.status == 'completed' else 'event-fail' }}">{{ event.status }}</strong><span class="muted">{{ event.at[:19]|replace('T', ' ') }}</span></div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">No resolution has started.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="section-head"><div><p class="eyebrow">Authority ledger</p><h2>Every city</h2></div><span class="muted">master-only full visibility</span></div>
+    <div class="table-scroll">
+      <table class="master-table city-ledger">
+        <thead><tr><th>City</th><th>Region</th><th>Sovereign</th><th>Occupier</th><th>Administrator</th><th>Fortification</th></tr></thead>
+        <tbody>
+        {% for city in city_rows %}
+          <tr><td><strong>{{ city.name }}</strong></td><td>{{ city.region }}</td><td>{{ city.sovereign }}</td><td>{{ city.occupier }}</td><td>{{ city.administrator }}</td><td>{{ city.fortification }}%</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

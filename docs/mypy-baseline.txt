@@ -1,0 +1,10 @@
+Spoils of Empire mypy baseline
+==============================
+
+Baseline error count: 589
+
+Reproduce with:
+    mypy spoils_engine webapp cli.py --no-incremental
+
+The baseline is a count gate for the controlled beta. New code must not increase
+the count. This is intentionally not a repository-wide cleanup target.

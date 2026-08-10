@@ -1,0 +1,306 @@
+{
+  "turn_number": 1,
+  "world_map": {
+    "cities": {
+      "madegi_doy": {
+        "id": "madegi_doy",
+        "name": "Madegi Doy",
+        "population_band": "1M+",
+        "terrain": [
+          "coastal",
+          "plains"
+        ],
+        "region": "Main Continent",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
+      },
+      "kitesta": {
+        "id": "kitesta",
+        "name": "Kitesta",
+        "population_band": "100k-999k",
+        "terrain": [
+          "plains",
+          "river"
+        ],
+        "region": "Main Continent",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
+      },
+      "riverton": {
+        "id": "riverton",
+        "name": "Riverton",
+        "population_band": "10k-99k",
+        "terrain": [
+          "forest",
+          "river"
+        ],
+        "region": "Main Continent",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
+      },
+      "albatross_city": {
+        "id": "albatross_city",
+        "name": "Albatross City",
+        "population_band": "100k-999k",
+        "terrain": [
+          "coastal",
+          "mountains"
+        ],
+        "region": "Northern Island",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
+      },
+      "peshandi": {
+        "id": "peshandi",
+        "name": "Peshandi",
+        "population_band": "< 10k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Main Continent",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": null
+      }
+    },
+    "roads": {
+      "road_1": {
+        "id": "road_1",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "kitesta",
+        "quality": "good",
+        "bidirectional": true
+      },
+      "road_2": {
+        "id": "road_2",
+        "from_city_id": "kitesta",
+        "to_city_id": "riverton",
+        "quality": "fair",
+        "bidirectional": true
+      },
+      "road_3": {
+        "id": "road_3",
+        "from_city_id": "riverton",
+        "to_city_id": "peshandi",
+        "quality": "poor",
+        "bidirectional": true
+      },
+      "road_4": {
+        "id": "road_4",
+        "from_city_id": "peshandi",
+        "to_city_id": "madegi_doy",
+        "quality": "fair",
+        "bidirectional": true
+      },
+      "sea_1": {
+        "id": "sea_1",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "albatross_city",
+        "quality": "sea",
+        "bidirectional": true
+      }
+    }
+  },
+  "factions": {
+    "player_1": {
+      "id": "player_1",
+      "name": "The Golden Empire",
+      "controlled_city_ids": [
+        "madegi_doy"
+      ],
+      "secured_city_ids": [],
+      "treasury": 0,
+      "wage_debt": 0.0,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": false
+    },
+    "player_2": {
+      "id": "player_2",
+      "name": "The Silver Horde",
+      "controlled_city_ids": [
+        "kitesta"
+      ],
+      "secured_city_ids": [],
+      "treasury": 0,
+      "wage_debt": 0.0,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": false
+    },
+    "independent": {
+      "id": "independent",
+      "name": "The Free Cities",
+      "controlled_city_ids": [],
+      "secured_city_ids": [],
+      "treasury": 0.0,
+      "wage_debt": 1.2,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": true
+    }
+  },
+  "characters": {
+    "char_player_1_leader": {
+      "id": "char_player_1_leader",
+      "name": "Emperor Marcus",
+      "faction_id": "player_1",
+      "location_city_id": "madegi_doy",
+      "is_leader": true,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 1000.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 10,
+      "magic_skill": 5,
+      "magic_power_current": 5,
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {}
+    },
+    "char_player_2_leader": {
+      "id": "char_player_2_leader",
+      "name": "Khan Tengri",
+      "faction_id": "player_2",
+      "location_city_id": "kitesta",
+      "is_leader": true,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 1000.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 10,
+      "magic_skill": 5,
+      "magic_power_current": 5,
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {}
+    },
+    "char_independent_1": {
+      "id": "char_independent_1",
+      "name": "Wizard Ojibenmi",
+      "faction_id": "independent",
+      "location_city_id": "albatross_city",
+      "is_leader": true,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 0.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 0,
+      "magic_skill": 60,
+      "magic_power_current": 60,
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {}
+    },
+    "char_independent_2": {
+      "id": "char_independent_2",
+      "name": "Bishop Nancy Lopenda",
+      "faction_id": "independent",
+      "location_city_id": "madegi_doy",
+      "is_leader": false,
+      "gender": "female",
+      "title": "bishop",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 0.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 0,
+      "magic_skill": 0,
+      "magic_power_current": 0,
+      "religion_skill": 45,
+      "religious_power_current": 45,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {}
+    }
+  },
+  "unit_stacks": {},
+  "ships": {},
+  "summoned_creatures": {},
+  "magical_items": {},
+  "posted_messages": {},
+  "tax_pools": {
+    "madegi_doy": 500,
+    "kitesta": 200
+  },
+  "location_blessings": {},
+  "location_curses": {},
+  "order_queues": {},
+  "invest_pools": {},
+  "elite_units": {}
+}

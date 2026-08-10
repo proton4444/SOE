@@ -45,21 +45,21 @@ MAX_ORPHAN_MILES = 60.0
 # Region name, the bounding box of its blue label in raster pixels, and
 # whether the letters are legible beyond doubt.
 LABELS: list[tuple[str, tuple[int, int, int, int], bool]] = [
-    ("Farsanya",     (57, 59, 92, 68),      True),
-    ("Kyupaa",       (323, 47, 367, 60),    True),
-    ("Olighotsi",    (196, 63, 240, 74),    True),
-    ("Uutani",       (290, 63, 315, 70),    True),
-    ("Boriagris",    (291, 123, 330, 133),  True),
-    ("Ajd",          (209, 142, 227, 151),  False),
-    ("Piram Atanki", (35, 167, 68, 183),    True),
-    ("Juansaye",     (496, 174, 532, 183),  False),
-    ("Ipsen",        (271, 219, 301, 227),  False),
-    ("Lanotro",      (147, 261, 178, 268),  True),
-    ("Rechig",       (42, 262, 73, 272),    True),
-    ("Slamoniya",    (389, 292, 450, 304),  True),
-    ("Hamrika",      (238, 304, 277, 313),  True),
-    ("Taatun",       (320, 304, 343, 310),  False),
-    ("Jlokdiri",     (122, 322, 153, 329),  True),
+    ("Farsanya", (57, 59, 92, 68), True),
+    ("Kyupaa", (323, 47, 367, 60), True),
+    ("Olighotsi", (196, 63, 240, 74), True),
+    ("Uutani", (290, 63, 315, 70), True),
+    ("Boriagris", (291, 123, 330, 133), True),
+    ("Ajd", (209, 142, 227, 151), False),
+    ("Piram Atanki", (35, 167, 68, 183), True),
+    ("Juansaye", (496, 174, 532, 183), False),
+    ("Ipsen", (271, 219, 301, 227), False),
+    ("Lanotro", (147, 261, 178, 268), True),
+    ("Rechig", (42, 262, 73, 272), True),
+    ("Slamoniya", (389, 292, 450, 304), True),
+    ("Hamrika", (238, 304, 277, 313), True),
+    ("Taatun", (320, 304, 343, 310), False),
+    ("Jlokdiri", (122, 322, 153, 329), True),
 ]
 
 
@@ -160,7 +160,9 @@ def main() -> int:
     if args.report:
         for index, (name, certain) in sorted(claims.items(), key=lambda kv: kv[1][0]):
             mark = "" if certain else "  (name uncertain)"
-            print(f"  {name:14} coastline {index:2}  {counts.get(name, 0):3} towns{mark}")
+            print(
+                f"  {name:14} coastline {index:2}  {counts.get(name, 0):3} towns{mark}"
+            )
         for line in orphans:
             print(f"  ! {line}")
     return 0

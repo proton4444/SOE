@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Dict, List
 
 from spoils_engine.models import (
-    GameState,
+    GameState, LocationPosition,
 )
 from spoils_engine.orders import (
     Order, SecureOrder, FortifyOrder, UnfortifyOrder, AllyOrder, EnemyOrder,
     NeutralOrder, NoncomOrder, LurkOrder,
 )
-from spoils_engine import groups
+from spoils_engine import groups, territory
 from spoils_engine.turn_log import TurnLog
 
 
@@ -29,8 +29,7 @@ def process_secure(orders_by_player: Dict[str, List[Order]], game_state: GameSta
             if not actor:
                 continue
 
-            # Get actor's current location
-            city_id = actor.location_city_id
+            city_id = order.city_id or actor.location_city_id
             city = game_state.world_map.cities.get(city_id)
             if not city:
                 continue
@@ -39,13 +38,53 @@ def process_secure(orders_by_player: Dict[str, List[Order]], game_state: GameSta
             if not faction:
                 continue
 
-            # Check if location is already secured by someone else
-            for other_faction in game_state.factions.values():
-                if other_faction.id != player_id and city_id in other_faction.secured_city_ids:
-                    turn_log.add("secure", player_id, "secure_failed",
-                                f"{actor.name}: {city.name} already secured by {other_faction.name}",
-                                location=city_id, character_id=actor.id, success=False)
-                    continue
+            if not territory.has_qualifying_garrison(game_state, actor, city_id):
+                # One message used to cover three quite different problems, so
+                # a player could not tell whether to march, step inside the
+                # walls, or bring soldiers. Same rule, named precisely.
+                if actor.location_city_id != city_id:
+                    reason = f"{actor.name} is not in {city.name}"
+                elif actor.location_position != LocationPosition.INSIDE:
+                    reason = (f"{actor.name} is {actor.location_position.value} "
+                              f"{city.name}, and SECURE requires being inside "
+                              f"the walls")
+                else:
+                    reason = (f"{actor.name} has no ordinary soldiers in their "
+                              f"group in {city.name} (elite units do not count)")
+                turn_log.add(
+                    "secure", player_id, "secure_failed",
+                    f"{actor.name}: cannot secure {city.name} — {reason}",
+                    location=city_id, character_id=actor.id, success=False,
+                )
+                continue
+
+            other_faction = next((
+                candidate for candidate in game_state.factions.values()
+                if candidate.id != player_id
+                and territory.is_valid_occupation(
+                    game_state, candidate.id, city_id)
+            ), None)
+            if other_faction:
+                turn_log.add("secure", player_id, "secure_failed",
+                            f"{actor.name}: {city.name} already secured by {other_faction.name}",
+                            location=city_id, character_id=actor.id, success=False)
+                continue
+
+            # Establishing occupation needs the place militarily settled: no
+            # other faction may still be standing inside under arms. Holding
+            # one is a separate question, answered by reconciliation, so a
+            # faction already occupying here is only renewing and is not asked
+            # to clear the ground again.
+            if (not territory.is_valid_occupation(game_state, player_id, city_id)
+                    and territory.has_competing_qualifying_garrison(
+                        game_state, city_id, player_id)):
+                turn_log.add(
+                    "secure", player_id, "secure_failed",
+                    f"{actor.name}: cannot secure {city.name} — another "
+                    f"faction still maintains an armed garrison inside",
+                    location=city_id, character_id=actor.id, success=False,
+                )
+                continue
 
             # Secure the location
             faction.secured_city_ids.add(city_id)
@@ -69,6 +108,18 @@ def process_fortifications(orders_by_player: Dict[str, List[Order]], game_state:
                 city_id = order.city_id or actor.location_city_id
                 city = game_state.world_map.cities.get(city_id)
                 if not city:
+                    continue
+
+                if territory.administrative_faction_id(game_state, city_id) != player_id:
+                    verb = ("unfortify" if isinstance(order, UnfortifyOrder)
+                            else "fortify")
+                    turn_log.add(
+                        "fortify", player_id, "fortify_failed",
+                        f"{actor.name}: cannot {verb} {city.name} — "
+                        + territory.administration_denial(
+                            game_state, city_id, player_id),
+                        character_id=actor.id, location=city_id, success=False,
+                    )
                     continue
 
                 current = city.fortification_level

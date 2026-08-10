@@ -1,0 +1,97 @@
+======================================================================
+SPOILS OF EMPIRE - Turn 3
+Faction: The Golden Empire (player_1)
+======================================================================
+
+======================================================================
+FACTION SUMMARY
+======================================================================
+Character gold (total): 919.6g
+Cities you are sovereign over: 1
+  Madegi Doy
+
+======================================================================
+YOUR CHARACTERS
+======================================================================
+
+Emperor Marcus (ID: char_player_1_leader) [leader]
+  Location: Madegi Doy
+  Gold: 919.6g
+  Combat Skill: 10
+  Magic Skill: 7 (Power: 7/7)
+  Movement Points: 10
+
+======================================================================
+YOUR UNITS
+======================================================================
+
+At Madegi Doy:
+  30 workers
+  20 soldiers
+
+======================================================================
+YOUR SHIPS
+======================================================================
+No ships.
+
+======================================================================
+YOUR ELITE TROOPS
+======================================================================
+No elite troops.
+
+======================================================================
+TERRITORIAL AUTHORITY
+======================================================================
+
+Madegi Doy
+  Sovereign: The Golden Empire (you)
+  Occupier: The Golden Empire (you)
+  Administrator: The Golden Empire (you)
+
+======================================================================
+THE LIE OF THE LAND
+======================================================================
+
+Madegi Doy -- Main Continent
+  Terrain: coastal, plains
+  -> Albatross City: sea lane, 201 miles, 20.1 mv
+  -> Kitesta: excellent road, 94 miles, 4.7 mv
+  -> Peshandi: fair road, 92 miles, 13.8 mv
+
+======================================================================
+TURN EVENTS
+======================================================================
+
+Queue:
+  ✓ Emperor Marcus halted: 5 queued order(s) cancelled
+  ✓ Emperor Marcus waits 7 day(s)
+  ✓ Emperor Marcus is waiting (168 more hour(s))
+  ✓ Emperor Marcus: 6 pending (AWAIT, OFFER, AWAIT, MOVE, SECURE, REPORT)
+
+Recruit:
+  ✓ Emperor Marcus recruited 20 soldier in Madegi Doy for 20g
+
+Income:
+  ✓ 500g accrued in tax pools (use TAX to collect)
+  ✓ Paid 2.8g in upkeep (units, ships, salaries)
+
+Tax:
+  ✓ Emperor Marcus: collected 35g in taxes from Madegi Doy (20 soldiers, 7 days, 1465.0g remains)
+
+Secure:
+  ✓ Emperor Marcus secured Madegi Doy
+
+Message:
+  ✓ Your password has been changed
+  ✓ Emperor Marcus sent a message to Khan Tengri
+
+======================================================================
+WARNINGS & ERRORS
+======================================================================
+
+Order: 'have bishop nancy lopenda join emperor marcus...'
+  ⚠ Character does not belong to you
+
+======================================================================
+End of Turn 3 Report
+======================================================================

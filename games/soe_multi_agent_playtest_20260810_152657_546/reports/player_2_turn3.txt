@@ -1,0 +1,94 @@
+======================================================================
+SPOILS OF EMPIRE - Turn 3
+Faction: The Silver Horde (player_2)
+======================================================================
+
+======================================================================
+FACTION SUMMARY
+======================================================================
+Character gold (total): 976.0g
+Cities you are sovereign over: 1
+  Albatross City
+
+======================================================================
+YOUR CHARACTERS
+======================================================================
+
+Khan Tengri (ID: char_player_2_leader) [leader]
+  Location: Albatross City
+  Gold: 976.0g
+  Combat Skill: 10
+  Magic Skill: 5 (Power: 5/5)
+  Movement Points: 10
+
+======================================================================
+YOUR UNITS
+======================================================================
+
+At Albatross City:
+  50 soldiers
+  10 sailors
+  25 soldiers
+  5 sailors
+
+======================================================================
+YOUR SHIPS
+======================================================================
+No ships.
+
+======================================================================
+YOUR ELITE TROOPS
+======================================================================
+No elite troops.
+
+======================================================================
+TERRITORIAL AUTHORITY
+======================================================================
+
+Albatross City
+  Sovereign: The Silver Horde (you)
+  Occupier: none
+  Administrator: The Silver Horde (you)
+
+======================================================================
+THE LIE OF THE LAND
+======================================================================
+
+Albatross City -- Northern Island
+  Terrain: coastal, mountains
+  -> Madegi Doy: sea lane, 201 miles, 20.1 mv
+
+======================================================================
+TURN EVENTS
+======================================================================
+
+Queue:
+  ✓ Khan Tengri waits 1 day(s)
+  ✓ Khan Tengri is waiting (24 more hour(s))
+  ✓ Khan Tengri has finished waiting
+
+Recruit:
+  ✓ Khan Tengri recruited 25 soldier in Albatross City for 25g
+  ✓ Khan Tengri recruited 5 sailor in Albatross City for 5g
+
+Income:
+  ✓ 500g accrued in tax pools (use TAX to collect)
+  ✓ Paid 9.0g in upkeep (units, ships, salaries)
+
+Sighting:
+  ✓ Khan Tengri spotted Wizard Ojibenmi inside Albatross City
+
+======================================================================
+WARNINGS & ERRORS
+======================================================================
+
+Order: 'have khan tengri build 1 ship at albatross city...'
+  ⚠ Could not parse order: 'have khan tengri build 1 ship at albatross city'
+  ⚠ No actor specified
+
+Order: 'have khan tengri offer to recruit wizard ojibenmi...'
+  ⚠ Character 'recruit wizard ojibenmi' not found
+
+======================================================================
+End of Turn 3 Report
+======================================================================

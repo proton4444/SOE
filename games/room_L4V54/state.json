@@ -1,0 +1,4960 @@
+{
+  "turn_number": 0,
+  "world_map": {
+    "cities": {
+      "agnok": {
+        "id": "agnok",
+        "name": "Agnok",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Olighotsi",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "A6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 59000,
+        "x": 0.3971,
+        "y": 0.0988,
+        "resource_reserves": {}
+      },
+      "agriponga": {
+        "id": "agriponga",
+        "name": "Agriponga",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 19000,
+        "x": 0.7029,
+        "y": 0.5863,
+        "resource_reserves": {}
+      },
+      "ajapit": {
+        "id": "ajapit",
+        "name": "Ajapit",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8100,
+        "x": 0.6625,
+        "y": 0.2988,
+        "resource_reserves": {}
+      },
+      "ajok": {
+        "id": "ajok",
+        "name": "Ajok",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8800,
+        "x": 0.7875,
+        "y": 0.4238,
+        "resource_reserves": {}
+      },
+      "al_jitiin": {
+        "id": "al_jitiin",
+        "name": "Al Jitiin",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 37000,
+        "x": 0.8067,
+        "y": 0.3513,
+        "resource_reserves": {}
+      },
+      "al_katib": {
+        "id": "al_katib",
+        "name": "Al Katib",
+        "population_band": "10k-99k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 82000,
+        "x": 0.7702,
+        "y": 0.3513,
+        "resource_reserves": {}
+      },
+      "al_qibnosh": {
+        "id": "al_qibnosh",
+        "name": "Al Qibnosh",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 61000,
+        "x": 0.8452,
+        "y": 0.1313,
+        "resource_reserves": {}
+      },
+      "al_waduula": {
+        "id": "al_waduula",
+        "name": "Al Waduula",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 85,
+        "x": 0.7933,
+        "y": 0.1363,
+        "resource_reserves": {}
+      },
+      "amesbok": {
+        "id": "amesbok",
+        "name": "Amesbok",
+        "population_band": "10k-99k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Uutani",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 88000,
+        "x": 0.524,
+        "y": 0.1013,
+        "resource_reserves": {}
+      },
+      "amingi": {
+        "id": "amingi",
+        "name": "Amingi",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "G5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 5300,
+        "x": 0.3837,
+        "y": 0.6012,
+        "resource_reserves": {}
+      },
+      "amniteh": {
+        "id": "amniteh",
+        "name": "Amniteh",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 340,
+        "x": 0.7394,
+        "y": 0.5437,
+        "resource_reserves": {}
+      },
+      "andima": {
+        "id": "andima",
+        "name": "Andima",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Boriagris",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 950,
+        "x": 0.4394,
+        "y": 0.3638,
+        "resource_reserves": {}
+      },
+      "arabuut": {
+        "id": "arabuut",
+        "name": "Arabuut",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 800,
+        "x": 0.7298,
+        "y": 0.2863,
+        "resource_reserves": {}
+      },
+      "ash_beduun": {
+        "id": "ash_beduun",
+        "name": "Ash Beduun",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 870,
+        "x": 0.7702,
+        "y": 0.1737,
+        "resource_reserves": {}
+      },
+      "ashton": {
+        "id": "ashton",
+        "name": "Ashton",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "G7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7500,
+        "x": 0.476,
+        "y": 0.6412,
+        "resource_reserves": {}
+      },
+      "benkamu": {
+        "id": "benkamu",
+        "name": "Benkamu",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Rechig",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 36000,
+        "x": 0.1144,
+        "y": 0.4363,
+        "resource_reserves": {}
+      },
+      "bepri": {
+        "id": "bepri",
+        "name": "Bepri",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 850,
+        "x": 0.6163,
+        "y": 0.1237,
+        "resource_reserves": {}
+      },
+      "bok_tan_lai": {
+        "id": "bok_tan_lai",
+        "name": "Bok Tan Lai",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Olighotsi",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 41000,
+        "x": 0.2952,
+        "y": 0.2712,
+        "resource_reserves": {}
+      },
+      "brinda": {
+        "id": "brinda",
+        "name": "Brinda",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "F5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7300,
+        "x": 0.3837,
+        "y": 0.5637,
+        "resource_reserves": {}
+      },
+      "chamuka": {
+        "id": "chamuka",
+        "name": "Chamuka",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 80,
+        "x": 0.1548,
+        "y": 0.5212,
+        "resource_reserves": {}
+      },
+      "chandri_oasis": {
+        "id": "chandri_oasis",
+        "name": "Chandri Oasis",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Piram Atanki",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 35,
+        "x": 0.1356,
+        "y": 0.3412,
+        "resource_reserves": {}
+      },
+      "chet_kop": {
+        "id": "chet_kop",
+        "name": "Chet Kop",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "F5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 39900,
+        "x": 0.3779,
+        "y": 0.5012,
+        "resource_reserves": {}
+      },
+      "chin_bai_lo": {
+        "id": "chin_bai_lo",
+        "name": "Chin Bai Lo",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "C4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.2356,
+        "y": 0.2338,
+        "resource_reserves": {}
+      },
+      "chista": {
+        "id": "chista",
+        "name": "Chista",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 870,
+        "x": 0.8163,
+        "y": 0.1737,
+        "resource_reserves": {}
+      },
+      "chukra": {
+        "id": "chukra",
+        "name": "Chukra",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 330,
+        "x": 0.7587,
+        "y": 0.4263,
+        "resource_reserves": {}
+      },
+      "daft": {
+        "id": "daft",
+        "name": "Daft",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 1100,
+        "x": 0.5933,
+        "y": 0.5012,
+        "resource_reserves": {}
+      },
+      "dairy": {
+        "id": "dairy",
+        "name": "Dairy",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Hamrika",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9100,
+        "x": 0.5048,
+        "y": 0.6262,
+        "resource_reserves": {}
+      },
+      "death_valley": {
+        "id": "death_valley",
+        "name": "Death Valley",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Ipsen",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "E7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.5125,
+        "y": 0.4387,
+        "resource_reserves": {}
+      },
+      "dembo_tapi": {
+        "id": "dembo_tapi",
+        "name": "Dembo Tapi",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 950,
+        "x": 0.1702,
+        "y": 0.5387,
+        "resource_reserves": {}
+      },
+      "dip_krat": {
+        "id": "dip_krat",
+        "name": "Dip Krat",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 430,
+        "x": 0.424,
+        "y": 0.4037,
+        "resource_reserves": {}
+      },
+      "drap": {
+        "id": "drap",
+        "name": "Drap",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 750,
+        "x": 0.7452,
+        "y": 0.2687,
+        "resource_reserves": {}
+      },
+      "ebos": {
+        "id": "ebos",
+        "name": "Ebos",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Uutani",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "B7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 850,
+        "x": 0.5125,
+        "y": 0.1062,
+        "resource_reserves": {}
+      },
+      "embaniosta": {
+        "id": "embaniosta",
+        "name": "Embaniosta",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Juansaye",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 440,
+        "x": 0.9221,
+        "y": 0.3212,
+        "resource_reserves": {}
+      },
+      "erichosi": {
+        "id": "erichosi",
+        "name": "Erichosi",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 770,
+        "x": 0.699,
+        "y": 0.5138,
+        "resource_reserves": {}
+      },
+      "eyebi_goma": {
+        "id": "eyebi_goma",
+        "name": "Eyebi Goma",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 83,
+        "x": 0.4606,
+        "y": 0.2988,
+        "resource_reserves": {}
+      },
+      "fet_stiak": {
+        "id": "fet_stiak",
+        "name": "Fet Stiak",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Uutani",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7600,
+        "x": 0.5433,
+        "y": 0.1013,
+        "resource_reserves": {}
+      },
+      "fitlochry": {
+        "id": "fitlochry",
+        "name": "Fitlochry",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 710,
+        "x": 0.5106,
+        "y": 0.5112,
+        "resource_reserves": {}
+      },
+      "frakota": {
+        "id": "frakota",
+        "name": "Frakota",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Farsanya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 49800,
+        "x": 0.1202,
+        "y": 0.1237,
+        "resource_reserves": {}
+      },
+      "glasston": {
+        "id": "glasston",
+        "name": "Glasston",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Taatun",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7500,
+        "x": 0.6029,
+        "y": 0.6388,
+        "resource_reserves": {}
+      },
+      "gobyak": {
+        "id": "gobyak",
+        "name": "Gobyak",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Piram Atanki",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "C1",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.0663,
+        "y": 0.2662,
+        "resource_reserves": {}
+      },
+      "gram": {
+        "id": "gram",
+        "name": "Gram",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 4300,
+        "x": 0.6529,
+        "y": 0.5587,
+        "resource_reserves": {}
+      },
+      "grusa": {
+        "id": "grusa",
+        "name": "Grusa",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 560,
+        "x": 0.6125,
+        "y": 0.1363,
+        "resource_reserves": {}
+      },
+      "guriyombro": {
+        "id": "guriyombro",
+        "name": "Guriyombro",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 370,
+        "x": 0.4894,
+        "y": 0.3762,
+        "resource_reserves": {}
+      },
+      "hakkaba": {
+        "id": "hakkaba",
+        "name": "Hakkaba",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Piram Atanki",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "D2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.1067,
+        "y": 0.3337,
+        "resource_reserves": {}
+      },
+      "han_sheg": {
+        "id": "han_sheg",
+        "name": "Han Sheg",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 770,
+        "x": 0.3567,
+        "y": 0.4688,
+        "resource_reserves": {}
+      },
+      "hantiri": {
+        "id": "hantiri",
+        "name": "Hantiri",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "H5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9300,
+        "x": 0.376,
+        "y": 0.6238,
+        "resource_reserves": {}
+      },
+      "harkanipot": {
+        "id": "harkanipot",
+        "name": "Harkanipot",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7700,
+        "x": 0.374,
+        "y": 0.0988,
+        "resource_reserves": {}
+      },
+      "hen_s_nest": {
+        "id": "hen_s_nest",
+        "name": "Hen's Nest",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "H8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8100,
+        "x": 0.5221,
+        "y": 0.6112,
+        "resource_reserves": {}
+      },
+      "ho_man_gai": {
+        "id": "ho_man_gai",
+        "name": "Ho Man Gai",
+        "population_band": "1k-9k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 2100,
+        "x": 0.424,
+        "y": 0.4012,
+        "resource_reserves": {}
+      },
+      "huch": {
+        "id": "huch",
+        "name": "Huch",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 90,
+        "x": 0.6356,
+        "y": 0.1263,
+        "resource_reserves": {}
+      },
+      "ibrina": {
+        "id": "ibrina",
+        "name": "Ibrina",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Boriagris",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 63000,
+        "x": 0.4413,
+        "y": 0.3088,
+        "resource_reserves": {}
+      },
+      "igorash": {
+        "id": "igorash",
+        "name": "Igorash",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Juansaye",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 760,
+        "x": 0.9202,
+        "y": 0.3162,
+        "resource_reserves": {}
+      },
+      "im_prok": {
+        "id": "im_prok",
+        "name": "Im Prok",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Uutani",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 57000,
+        "x": 0.5375,
+        "y": 0.1412,
+        "resource_reserves": {}
+      },
+      "imayasa": {
+        "id": "imayasa",
+        "name": "Imayasa",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 55,
+        "x": 0.6029,
+        "y": 0.4338,
+        "resource_reserves": {}
+      },
+      "imbri_jadut": {
+        "id": "imbri_jadut",
+        "name": "Imbri Jadut",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8800,
+        "x": 0.6356,
+        "y": 0.3987,
+        "resource_reserves": {}
+      },
+      "imrehesh": {
+        "id": "imrehesh",
+        "name": "Imrehesh",
+        "population_band": "10k-99k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 64100,
+        "x": 0.6644,
+        "y": 0.3438,
+        "resource_reserves": {}
+      },
+      "inichi": {
+        "id": "inichi",
+        "name": "Inichi",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 6800,
+        "x": 0.7529,
+        "y": 0.5463,
+        "resource_reserves": {}
+      },
+      "iriap": {
+        "id": "iriap",
+        "name": "Iriap",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Uutani",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 85,
+        "x": 0.5067,
+        "y": 0.1313,
+        "resource_reserves": {}
+      },
+      "irontown": {
+        "id": "irontown",
+        "name": "Irontown",
+        "population_band": "1k-9k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 1400,
+        "x": 0.1548,
+        "y": 0.4763,
+        "resource_reserves": {}
+      },
+      "isweni": {
+        "id": "isweni",
+        "name": "Isweni",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Boriagris",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "C6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7300,
+        "x": 0.4452,
+        "y": 0.2812,
+        "resource_reserves": {}
+      },
+      "ito_kiryo": {
+        "id": "ito_kiryo",
+        "name": "Ito Kiryo",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 920,
+        "x": 0.6471,
+        "y": 0.4288,
+        "resource_reserves": {}
+      },
+      "ituud": {
+        "id": "ituud",
+        "name": "Ituud",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7100,
+        "x": 0.824,
+        "y": 0.4662,
+        "resource_reserves": {}
+      },
+      "ivriot": {
+        "id": "ivriot",
+        "name": "Ivriot",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9700,
+        "x": 0.6548,
+        "y": 0.1288,
+        "resource_reserves": {}
+      },
+      "jamis": {
+        "id": "jamis",
+        "name": "Jamis",
+        "population_band": "100k+",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Juansaye",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 125000,
+        "x": 0.9163,
+        "y": 0.2662,
+        "resource_reserves": {}
+      },
+      "je_bin_noi": {
+        "id": "je_bin_noi",
+        "name": "Je Bin Noi",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9800,
+        "x": 0.376,
+        "y": 0.4037,
+        "resource_reserves": {}
+      },
+      "jinindo": {
+        "id": "jinindo",
+        "name": "Jinindo",
+        "population_band": "100k+",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Boriagris",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "C7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 132000,
+        "x": 0.4952,
+        "y": 0.2412,
+        "resource_reserves": {}
+      },
+      "jumlah": {
+        "id": "jumlah",
+        "name": "Jumlah",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 540,
+        "x": 0.7913,
+        "y": 0.0663,
+        "resource_reserves": {}
+      },
+      "kalioti": {
+        "id": "kalioti",
+        "name": "Kalioti",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9400,
+        "x": 0.6913,
+        "y": 0.2963,
+        "resource_reserves": {}
+      },
+      "kanterat": {
+        "id": "kanterat",
+        "name": "Kanterat",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 390,
+        "x": 0.3856,
+        "y": 0.4963,
+        "resource_reserves": {}
+      },
+      "kitesta": {
+        "id": "kitesta",
+        "name": "Kitesta",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Piram Atanki",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 97000,
+        "x": 0.1356,
+        "y": 0.2612,
+        "resource_reserves": {}
+      },
+      "kobrusaya": {
+        "id": "kobrusaya",
+        "name": "Kobrusaya",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Ipsen",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 140,
+        "x": 0.4913,
+        "y": 0.4387,
+        "resource_reserves": {}
+      },
+      "kobya_tesh": {
+        "id": "kobya_tesh",
+        "name": "Kobya Tesh",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 6200,
+        "x": 0.2279,
+        "y": 0.3038,
+        "resource_reserves": {}
+      },
+      "koi_jai": {
+        "id": "koi_jai",
+        "name": "Koi Jai",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Ajd",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7900,
+        "x": 0.3837,
+        "y": 0.2838,
+        "resource_reserves": {}
+      },
+      "koping": {
+        "id": "koping",
+        "name": "Koping",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 670,
+        "x": 0.6702,
+        "y": 0.5162,
+        "resource_reserves": {}
+      },
+      "krijiya": {
+        "id": "krijiya",
+        "name": "Krijiya",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 510,
+        "x": 0.3606,
+        "y": 0.0988,
+        "resource_reserves": {}
+      },
+      "krikot": {
+        "id": "krikot",
+        "name": "Krikot",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 85,
+        "x": 0.8067,
+        "y": 0.2537,
+        "resource_reserves": {}
+      },
+      "krom": {
+        "id": "krom",
+        "name": "Krom",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 280,
+        "x": 0.7798,
+        "y": 0.1187,
+        "resource_reserves": {}
+      },
+      "kutwapa": {
+        "id": "kutwapa",
+        "name": "Kutwapa",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 910,
+        "x": 0.7702,
+        "y": 0.3812,
+        "resource_reserves": {}
+      },
+      "lardiff": {
+        "id": "lardiff",
+        "name": "Lardiff",
+        "population_band": "1k-9k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 2300,
+        "x": 0.6144,
+        "y": 0.5437,
+        "resource_reserves": {}
+      },
+      "limano": {
+        "id": "limano",
+        "name": "Limano",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7700,
+        "x": 0.6202,
+        "y": 0.5463,
+        "resource_reserves": {}
+      },
+      "londanum": {
+        "id": "londanum",
+        "name": "Londanum",
+        "population_band": "100k+",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "H7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 134000,
+        "x": 0.4413,
+        "y": 0.6262,
+        "resource_reserves": {}
+      },
+      "lumpis": {
+        "id": "lumpis",
+        "name": "Lumpis",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 4300,
+        "x": 0.3279,
+        "y": 0.0887,
+        "resource_reserves": {}
+      },
+      "madegi_doy": {
+        "id": "madegi_doy",
+        "name": "Madegi Doy",
+        "population_band": "10k-99k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Rechig",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 35000,
+        "x": 0.1394,
+        "y": 0.5238,
+        "resource_reserves": {}
+      },
+      "majipon": {
+        "id": "majipon",
+        "name": "Majipon",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8900,
+        "x": 0.8067,
+        "y": 0.2988,
+        "resource_reserves": {}
+      },
+      "marshgate": {
+        "id": "marshgate",
+        "name": "Marshgate",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "F6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8100,
+        "x": 0.4529,
+        "y": 0.5887,
+        "resource_reserves": {}
+      },
+      "matui_poo": {
+        "id": "matui_poo",
+        "name": "Matui Poo",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "A4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.301,
+        "y": 0.0813,
+        "resource_reserves": {}
+      },
+      "misuun": {
+        "id": "misuun",
+        "name": "Misuun",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 930,
+        "x": 0.7433,
+        "y": 0.3962,
+        "resource_reserves": {}
+      },
+      "mitess": {
+        "id": "mitess",
+        "name": "Mitess",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Uutani",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "B7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.5087,
+        "y": 0.1462,
+        "resource_reserves": {}
+      },
+      "mpuchanti": {
+        "id": "mpuchanti",
+        "name": "Mpuchanti",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": true,
+        "grid_ref": "G5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.376,
+        "y": 0.6262,
+        "resource_reserves": {}
+      },
+      "musuut": {
+        "id": "musuut",
+        "name": "Musuut",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 60,
+        "x": 0.6721,
+        "y": 0.1037,
+        "resource_reserves": {}
+      },
+      "najulash": {
+        "id": "najulash",
+        "name": "Najulash",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 470,
+        "x": 0.724,
+        "y": 0.4637,
+        "resource_reserves": {}
+      },
+      "nandigwa": {
+        "id": "nandigwa",
+        "name": "Nandigwa",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8200,
+        "x": 0.1702,
+        "y": 0.5387,
+        "resource_reserves": {}
+      },
+      "ndigana": {
+        "id": "ndigana",
+        "name": "Ndigana",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "H5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 750,
+        "x": 0.376,
+        "y": 0.6238,
+        "resource_reserves": {}
+      },
+      "nig_panal": {
+        "id": "nig_panal",
+        "name": "Nig Panal",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7500,
+        "x": 0.7471,
+        "y": 0.1487,
+        "resource_reserves": {}
+      },
+      "nin_dau": {
+        "id": "nin_dau",
+        "name": "Nin Dau",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Ajd",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 4500,
+        "x": 0.3702,
+        "y": 0.3412,
+        "resource_reserves": {}
+      },
+      "nintili": {
+        "id": "nintili",
+        "name": "Nintili",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Boriagris",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 740,
+        "x": 0.4606,
+        "y": 0.2637,
+        "resource_reserves": {}
+      },
+      "nodim": {
+        "id": "nodim",
+        "name": "Nodim",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Jlokdiri",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8400,
+        "x": 0.2144,
+        "y": 0.6188,
+        "resource_reserves": {}
+      },
+      "noy_shakh": {
+        "id": "noy_shakh",
+        "name": "Noy Shakh",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Uutani",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "B7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9900,
+        "x": 0.5087,
+        "y": 0.1462,
+        "resource_reserves": {}
+      },
+      "nugget": {
+        "id": "nugget",
+        "name": "Nugget",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 730,
+        "x": 0.6548,
+        "y": 0.5337,
+        "resource_reserves": {}
+      },
+      "omiasto": {
+        "id": "omiasto",
+        "name": "Omiasto",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Uutani",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 950,
+        "x": 0.5433,
+        "y": 0.1363,
+        "resource_reserves": {}
+      },
+      "orionista": {
+        "id": "orionista",
+        "name": "Orionista",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 8200,
+        "x": 0.776,
+        "y": 0.5863,
+        "resource_reserves": {}
+      },
+      "orpayn": {
+        "id": "orpayn",
+        "name": "Orpayn",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "E9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.6587,
+        "y": 0.4637,
+        "resource_reserves": {}
+      },
+      "orpwach_kotya": {
+        "id": "orpwach_kotya",
+        "name": "Orpwach Kotya",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 510,
+        "x": 0.6779,
+        "y": 0.4888,
+        "resource_reserves": {}
+      },
+      "pikyak": {
+        "id": "pikyak",
+        "name": "Pikyak",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 840,
+        "x": 0.2087,
+        "y": 0.3162,
+        "resource_reserves": {}
+      },
+      "plugby": {
+        "id": "plugby",
+        "name": "Plugby",
+        "population_band": "1k-9k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 3100,
+        "x": 0.1548,
+        "y": 0.4788,
+        "resource_reserves": {}
+      },
+      "pomye": {
+        "id": "pomye",
+        "name": "Pomye",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 42000,
+        "x": 0.6529,
+        "y": 0.0612,
+        "resource_reserves": {}
+      },
+      "pritwa_fas": {
+        "id": "pritwa_fas",
+        "name": "Pritwa Fas",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 5600,
+        "x": 0.2048,
+        "y": 0.2863,
+        "resource_reserves": {}
+      },
+      "pudokam_shnet": {
+        "id": "pudokam_shnet",
+        "name": "Pudokam Shnet",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "C8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.5221,
+        "y": 0.2637,
+        "resource_reserves": {}
+      },
+      "pukani": {
+        "id": "pukani",
+        "name": "Pukani",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Jlokdiri",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9700,
+        "x": 0.1875,
+        "y": 0.6488,
+        "resource_reserves": {}
+      },
+      "purkamiya": {
+        "id": "purkamiya",
+        "name": "Purkamiya",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 920,
+        "x": 0.7798,
+        "y": 0.4037,
+        "resource_reserves": {}
+      },
+      "qa_ip": {
+        "id": "qa_ip",
+        "name": "Qa'ip",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "E2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.1298,
+        "y": 0.4763,
+        "resource_reserves": {}
+      },
+      "qita_wuswus": {
+        "id": "qita_wuswus",
+        "name": "Qita Wuswus",
+        "population_band": "< 1k",
+        "terrain": [
+          "swamp"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "C10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.7606,
+        "y": 0.2562,
+        "resource_reserves": {}
+      },
+      "ramatiib": {
+        "id": "ramatiib",
+        "name": "Ramatiib",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Juansaye",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D13",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 6800,
+        "x": 0.924,
+        "y": 0.3013,
+        "resource_reserves": {}
+      },
+      "ridindi": {
+        "id": "ridindi",
+        "name": "Ridindi",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 72,
+        "x": 0.426,
+        "y": 0.4163,
+        "resource_reserves": {}
+      },
+      "rigby": {
+        "id": "rigby",
+        "name": "Rigby",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Taatun",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 3500,
+        "x": 0.5817,
+        "y": 0.6438,
+        "resource_reserves": {}
+      },
+      "riska": {
+        "id": "riska",
+        "name": "Riska",
+        "population_band": "< 1k",
+        "terrain": [
+          "mountains"
+        ],
+        "region": "Uutani",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 85,
+        "x": 0.5471,
+        "y": 0.1288,
+        "resource_reserves": {}
+      },
+      "rockville": {
+        "id": "rockville",
+        "name": "Rockville",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Ipsen",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 95,
+        "x": 0.4856,
+        "y": 0.4437,
+        "resource_reserves": {}
+      },
+      "salem": {
+        "id": "salem",
+        "name": "Salem",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": true,
+        "grid_ref": "G7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 41000,
+        "x": 0.5125,
+        "y": 0.6212,
+        "resource_reserves": {}
+      },
+      "senheim": {
+        "id": "senheim",
+        "name": "Senheim",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 3100,
+        "x": 0.699,
+        "y": 0.5587,
+        "resource_reserves": {}
+      },
+      "shaduf": {
+        "id": "shaduf",
+        "name": "Shaduf",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9700,
+        "x": 0.7702,
+        "y": 0.4612,
+        "resource_reserves": {}
+      },
+      "shinoop": {
+        "id": "shinoop",
+        "name": "Shinoop",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Jlokdiri",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 4900,
+        "x": 0.2087,
+        "y": 0.6212,
+        "resource_reserves": {}
+      },
+      "shunyo": {
+        "id": "shunyo",
+        "name": "Shunyo",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 560,
+        "x": 0.4337,
+        "y": 0.5062,
+        "resource_reserves": {}
+      },
+      "sidnaya": {
+        "id": "sidnaya",
+        "name": "Sidnaya",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Lanotro",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9500,
+        "x": 0.2433,
+        "y": 0.4988,
+        "resource_reserves": {}
+      },
+      "stanley": {
+        "id": "stanley",
+        "name": "Stanley",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "F7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 680,
+        "x": 0.4644,
+        "y": 0.5112,
+        "resource_reserves": {}
+      },
+      "sutkra": {
+        "id": "sutkra",
+        "name": "Sutkra",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 5900,
+        "x": 0.7702,
+        "y": 0.0437,
+        "resource_reserves": {}
+      },
+      "tagoom": {
+        "id": "tagoom",
+        "name": "Tagoom",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Juansaye",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 55,
+        "x": 0.9221,
+        "y": 0.2338,
+        "resource_reserves": {}
+      },
+      "tama_oasis": {
+        "id": "tama_oasis",
+        "name": "Tama Oasis",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Piram Atanki",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 25,
+        "x": 0.1144,
+        "y": 0.3088,
+        "resource_reserves": {}
+      },
+      "tashendi": {
+        "id": "tashendi",
+        "name": "Tashendi",
+        "population_band": "100k+",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Jlokdiri",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 110000,
+        "x": 0.2183,
+        "y": 0.6562,
+        "resource_reserves": {}
+      },
+      "timbi": {
+        "id": "timbi",
+        "name": "Timbi",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D6",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 7800,
+        "x": 0.4317,
+        "y": 0.3688,
+        "resource_reserves": {}
+      },
+      "tuus_gan": {
+        "id": "tuus_gan",
+        "name": "Tuus Gan",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 750,
+        "x": 0.6683,
+        "y": 0.1713,
+        "resource_reserves": {}
+      },
+      "ubitia": {
+        "id": "ubitia",
+        "name": "Ubitia",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Uutani",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 860,
+        "x": 0.5394,
+        "y": 0.1062,
+        "resource_reserves": {}
+      },
+      "udandi": {
+        "id": "udandi",
+        "name": "Udandi",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E8",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 34000,
+        "x": 0.5837,
+        "y": 0.4012,
+        "resource_reserves": {}
+      },
+      "ujrimuta": {
+        "id": "ujrimuta",
+        "name": "Ujrimuta",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Farsanya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 400,
+        "x": 0.099,
+        "y": 0.0988,
+        "resource_reserves": {}
+      },
+      "ukrukru": {
+        "id": "ukrukru",
+        "name": "Ukrukru",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Boriagris",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "D7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.5125,
+        "y": 0.3312,
+        "resource_reserves": {}
+      },
+      "umadosh": {
+        "id": "umadosh",
+        "name": "Umadosh",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Jlokdiri",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 53000,
+        "x": 0.2087,
+        "y": 0.6212,
+        "resource_reserves": {}
+      },
+      "unza_ipani": {
+        "id": "unza_ipani",
+        "name": "Unza Ipani",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Hamrika",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "H5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 48400,
+        "x": 0.4106,
+        "y": 0.6388,
+        "resource_reserves": {}
+      },
+      "urian": {
+        "id": "urian",
+        "name": "Urian",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "A11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.8144,
+        "y": 0.0762,
+        "resource_reserves": {}
+      },
+      "ustip_dah": {
+        "id": "ustip_dah",
+        "name": "Ustip Dah",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Uutani",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "A7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.5163,
+        "y": 0.0988,
+        "resource_reserves": {}
+      },
+      "utini": {
+        "id": "utini",
+        "name": "Utini",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Piram Atanki",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 910,
+        "x": 0.126,
+        "y": 0.3063,
+        "resource_reserves": {}
+      },
+      "vayoni": {
+        "id": "vayoni",
+        "name": "Vayoni",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Lanotro",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 82000,
+        "x": 0.2644,
+        "y": 0.4612,
+        "resource_reserves": {}
+      },
+      "vokritya": {
+        "id": "vokritya",
+        "name": "Vokritya",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "E12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.8317,
+        "y": 0.4487,
+        "resource_reserves": {}
+      },
+      "vropa": {
+        "id": "vropa",
+        "name": "Vropa",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Farsanya",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "A3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.1125,
+        "y": 0.0862,
+        "resource_reserves": {}
+      },
+      "wan_tong": {
+        "id": "wan_tong",
+        "name": "Wan Tong",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Ajd",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "D5",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 6600,
+        "x": 0.3779,
+        "y": 0.3013,
+        "resource_reserves": {}
+      },
+      "wibera": {
+        "id": "wibera",
+        "name": "Wibera",
+        "population_band": "1k-9k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 5300,
+        "x": 0.1548,
+        "y": 0.4763,
+        "resource_reserves": {}
+      },
+      "winis": {
+        "id": "winis",
+        "name": "Winis",
+        "population_band": "1k-9k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Hamrika",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "G7",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9300,
+        "x": 0.5183,
+        "y": 0.6012,
+        "resource_reserves": {}
+      },
+      "wishiyam": {
+        "id": "wishiyam",
+        "name": "Wishiyam",
+        "population_band": "< 1k",
+        "terrain": [
+          "desert"
+        ],
+        "region": "Olighotsi",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": true,
+        "grid_ref": "B4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.2683,
+        "y": 0.1487,
+        "resource_reserves": {}
+      },
+      "yakaboti": {
+        "id": "yakaboti",
+        "name": "Yakaboti",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "A10",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.6933,
+        "y": 0.0488,
+        "resource_reserves": {}
+      },
+      "yamach": {
+        "id": "yamach",
+        "name": "Yamach",
+        "population_band": "1k-9k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Rechig",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E2",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 9300,
+        "x": 0.0837,
+        "y": 0.4838,
+        "resource_reserves": {}
+      },
+      "yamdis": {
+        "id": "yamdis",
+        "name": "Yamdis",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Kyupaa",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "B9",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 980,
+        "x": 0.6471,
+        "y": 0.1537,
+        "resource_reserves": {}
+      },
+      "yangi_utoran": {
+        "id": "yangi_utoran",
+        "name": "Yangi Utoran",
+        "population_band": "10k-99k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Olighotsi",
+        "is_port": true,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "A4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 78100,
+        "x": 0.2913,
+        "y": 0.0988,
+        "resource_reserves": {}
+      },
+      "yash_min": {
+        "id": "yash_min",
+        "name": "Yash Min",
+        "population_band": "< 1k",
+        "terrain": [
+          "plain"
+        ],
+        "region": "Juansaye",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "C12",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 980,
+        "x": 0.9221,
+        "y": 0.2338,
+        "resource_reserves": {}
+      },
+      "yomwiti": {
+        "id": "yomwiti",
+        "name": "Yomwiti",
+        "population_band": "< 1k",
+        "terrain": [
+          "forest"
+        ],
+        "region": "Slamoniya",
+        "is_port": false,
+        "is_ruin": false,
+        "is_magic_free": false,
+        "grid_ref": "E11",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 720,
+        "x": 0.801,
+        "y": 0.4788,
+        "resource_reserves": {}
+      },
+      "zibrakhi": {
+        "id": "zibrakhi",
+        "name": "Zibrakhi",
+        "population_band": "< 1k",
+        "terrain": [
+          "hills"
+        ],
+        "region": "Jlokdiri",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "G3",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.1971,
+        "y": 0.6613,
+        "resource_reserves": {}
+      },
+      "zubisi": {
+        "id": "zubisi",
+        "name": "Zubisi",
+        "population_band": "< 1k",
+        "terrain": [
+          "swamp"
+        ],
+        "region": "Lanotro",
+        "is_port": false,
+        "is_ruin": true,
+        "is_magic_free": false,
+        "grid_ref": "F4",
+        "fortification_level": 0,
+        "resource_richness": {},
+        "population": 0,
+        "x": 0.2644,
+        "y": 0.5262,
+        "resource_reserves": {}
+      }
+    },
+    "roads": {
+      "agnok__amesbok__sea": {
+        "id": "agnok__amesbok__sea",
+        "from_city_id": "agnok",
+        "to_city_id": "amesbok",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 127.0
+      },
+      "agnok__harkanipot__fair": {
+        "id": "agnok__harkanipot__fair",
+        "from_city_id": "agnok",
+        "to_city_id": "harkanipot",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 44.0
+      },
+      "agnok__isweni__poor": {
+        "id": "agnok__isweni__poor",
+        "from_city_id": "agnok",
+        "to_city_id": "isweni",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 145.0
+      },
+      "agnok__isweni__sea": {
+        "id": "agnok__isweni__sea",
+        "from_city_id": "agnok",
+        "to_city_id": "isweni",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 151.0
+      },
+      "agnok__krijiya__fair": {
+        "id": "agnok__krijiya__fair",
+        "from_city_id": "agnok",
+        "to_city_id": "krijiya",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 51.0
+      },
+      "agnok__yangi_utoran__sea": {
+        "id": "agnok__yangi_utoran__sea",
+        "from_city_id": "agnok",
+        "to_city_id": "yangi_utoran",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 218.0
+      },
+      "agriponga__inichi__good": {
+        "id": "agriponga__inichi__good",
+        "from_city_id": "agriponga",
+        "to_city_id": "inichi",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 82.0
+      },
+      "agriponga__limano__good": {
+        "id": "agriponga__limano__good",
+        "from_city_id": "agriponga",
+        "to_city_id": "limano",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 128.0
+      },
+      "agriponga__limano__sea": {
+        "id": "agriponga__limano__sea",
+        "from_city_id": "agriponga",
+        "to_city_id": "limano",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 128.0
+      },
+      "agriponga__orionista__excellent": {
+        "id": "agriponga__orionista__excellent",
+        "from_city_id": "agriponga",
+        "to_city_id": "orionista",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 103.0
+      },
+      "agriponga__orionista__sea": {
+        "id": "agriponga__orionista__sea",
+        "from_city_id": "agriponga",
+        "to_city_id": "orionista",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 107.0
+      },
+      "ajapit__grusa__fair": {
+        "id": "ajapit__grusa__fair",
+        "from_city_id": "ajapit",
+        "to_city_id": "grusa",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 74.0
+      },
+      "ajapit__im_prok__sea": {
+        "id": "ajapit__im_prok__sea",
+        "from_city_id": "ajapit",
+        "to_city_id": "im_prok",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 156.0
+      },
+      "ajapit__kalioti__sea": {
+        "id": "ajapit__kalioti__sea",
+        "from_city_id": "ajapit",
+        "to_city_id": "kalioti",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 111.0
+      },
+      "ajapit__musuut__fair": {
+        "id": "ajapit__musuut__fair",
+        "from_city_id": "ajapit",
+        "to_city_id": "musuut",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 57.0
+      },
+      "ajapit__tuus_gan__fair": {
+        "id": "ajapit__tuus_gan__fair",
+        "from_city_id": "ajapit",
+        "to_city_id": "tuus_gan",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 44.0
+      },
+      "ajok__al_katib__good": {
+        "id": "ajok__al_katib__good",
+        "from_city_id": "ajok",
+        "to_city_id": "al_katib",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 71.0
+      },
+      "ajok__al_katib__sea": {
+        "id": "ajok__al_katib__sea",
+        "from_city_id": "ajok",
+        "to_city_id": "al_katib",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 42.0
+      },
+      "ajok__misuun__good": {
+        "id": "ajok__misuun__good",
+        "from_city_id": "ajok",
+        "to_city_id": "misuun",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 77.0
+      },
+      "ajok__shaduf__sea": {
+        "id": "ajok__shaduf__sea",
+        "from_city_id": "ajok",
+        "to_city_id": "shaduf",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 71.0
+      },
+      "ajok__yomwiti__good": {
+        "id": "ajok__yomwiti__good",
+        "from_city_id": "ajok",
+        "to_city_id": "yomwiti",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 40.0
+      },
+      "al_jitiin__embaniosta__good": {
+        "id": "al_jitiin__embaniosta__good",
+        "from_city_id": "al_jitiin",
+        "to_city_id": "embaniosta",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 56.0
+      },
+      "al_jitiin__embaniosta__sea": {
+        "id": "al_jitiin__embaniosta__sea",
+        "from_city_id": "al_jitiin",
+        "to_city_id": "embaniosta",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 54.0
+      },
+      "al_jitiin__ituud__good": {
+        "id": "al_jitiin__ituud__good",
+        "from_city_id": "al_jitiin",
+        "to_city_id": "ituud",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 75.0
+      },
+      "al_jitiin__ituud__sea": {
+        "id": "al_jitiin__ituud__sea",
+        "from_city_id": "al_jitiin",
+        "to_city_id": "ituud",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 236.0
+      },
+      "al_katib__kutwapa__excellent": {
+        "id": "al_katib__kutwapa__excellent",
+        "from_city_id": "al_katib",
+        "to_city_id": "kutwapa",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 62.0
+      },
+      "al_katib__majipon__sea": {
+        "id": "al_katib__majipon__sea",
+        "from_city_id": "al_katib",
+        "to_city_id": "majipon",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 98.0
+      },
+      "al_katib__purkamiya__good": {
+        "id": "al_katib__purkamiya__good",
+        "from_city_id": "al_katib",
+        "to_city_id": "purkamiya",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 65.0
+      },
+      "al_katib__shaduf__sea": {
+        "id": "al_katib__shaduf__sea",
+        "from_city_id": "al_katib",
+        "to_city_id": "shaduf",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 99.0
+      },
+      "al_qibnosh__ash_beduun__good": {
+        "id": "al_qibnosh__ash_beduun__good",
+        "from_city_id": "al_qibnosh",
+        "to_city_id": "ash_beduun",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 143.0
+      },
+      "al_qibnosh__jamis__sea": {
+        "id": "al_qibnosh__jamis__sea",
+        "from_city_id": "al_qibnosh",
+        "to_city_id": "jamis",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 166.0
+      },
+      "al_qibnosh__jumlah__good": {
+        "id": "al_qibnosh__jumlah__good",
+        "from_city_id": "al_qibnosh",
+        "to_city_id": "jumlah",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 115.0
+      },
+      "al_qibnosh__krom__fair": {
+        "id": "al_qibnosh__krom__fair",
+        "from_city_id": "al_qibnosh",
+        "to_city_id": "krom",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 64.0
+      },
+      "al_qibnosh__sutkra__sea": {
+        "id": "al_qibnosh__sutkra__sea",
+        "from_city_id": "al_qibnosh",
+        "to_city_id": "sutkra",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 208.0
+      },
+      "al_waduula__chista__poor": {
+        "id": "al_waduula__chista__poor",
+        "from_city_id": "al_waduula",
+        "to_city_id": "chista",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 52.0
+      },
+      "amesbok__ebos__good": {
+        "id": "amesbok__ebos__good",
+        "from_city_id": "amesbok",
+        "to_city_id": "ebos",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 45.0
+      },
+      "amesbok__iriap__good": {
+        "id": "amesbok__iriap__good",
+        "from_city_id": "amesbok",
+        "to_city_id": "iriap",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 40.0
+      },
+      "amesbok__noy_shakh__sea": {
+        "id": "amesbok__noy_shakh__sea",
+        "from_city_id": "amesbok",
+        "to_city_id": "noy_shakh",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 167.0
+      },
+      "amesbok__omiasto__sea": {
+        "id": "amesbok__omiasto__sea",
+        "from_city_id": "amesbok",
+        "to_city_id": "omiasto",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 205.0
+      },
+      "amingi__mpuchanti__poor": {
+        "id": "amingi__mpuchanti__poor",
+        "from_city_id": "amingi",
+        "to_city_id": "mpuchanti",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 34.0
+      },
+      "amingi__unza_ipani__good": {
+        "id": "amingi__unza_ipani__good",
+        "from_city_id": "amingi",
+        "to_city_id": "unza_ipani",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 72.0
+      },
+      "amniteh__orionista__fair": {
+        "id": "amniteh__orionista__fair",
+        "from_city_id": "amniteh",
+        "to_city_id": "orionista",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 70.0
+      },
+      "amniteh__shaduf__fair": {
+        "id": "amniteh__shaduf__fair",
+        "from_city_id": "amniteh",
+        "to_city_id": "shaduf",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 98.0
+      },
+      "andima__ibrina__fair": {
+        "id": "andima__ibrina__fair",
+        "from_city_id": "andima",
+        "to_city_id": "ibrina",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 59.0
+      },
+      "andima__ibrina__sea": {
+        "id": "andima__ibrina__sea",
+        "from_city_id": "andima",
+        "to_city_id": "ibrina",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 49.0
+      },
+      "andima__ridindi__fair": {
+        "id": "andima__ridindi__fair",
+        "from_city_id": "andima",
+        "to_city_id": "ridindi",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 59.0
+      },
+      "arabuut__drap__good": {
+        "id": "arabuut__drap__good",
+        "from_city_id": "arabuut",
+        "to_city_id": "drap",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 26.0
+      },
+      "arabuut__kalioti__excellent": {
+        "id": "arabuut__kalioti__excellent",
+        "from_city_id": "arabuut",
+        "to_city_id": "kalioti",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 58.0
+      },
+      "arabuut__majipon__excellent": {
+        "id": "arabuut__majipon__excellent",
+        "from_city_id": "arabuut",
+        "to_city_id": "majipon",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 115.0
+      },
+      "arabuut__qita_wuswus__poor": {
+        "id": "arabuut__qita_wuswus__poor",
+        "from_city_id": "arabuut",
+        "to_city_id": "qita_wuswus",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 55.0
+      },
+      "ash_beduun__chista__good": {
+        "id": "ash_beduun__chista__good",
+        "from_city_id": "ash_beduun",
+        "to_city_id": "chista",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 80.0
+      },
+      "ash_beduun__nig_panal__good": {
+        "id": "ash_beduun__nig_panal__good",
+        "from_city_id": "ash_beduun",
+        "to_city_id": "nig_panal",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 34.0
+      },
+      "ashton__marshgate__good": {
+        "id": "ashton__marshgate__good",
+        "from_city_id": "ashton",
+        "to_city_id": "marshgate",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 107.0
+      },
+      "ashton__salem__good": {
+        "id": "ashton__salem__good",
+        "from_city_id": "ashton",
+        "to_city_id": "salem",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 52.0
+      },
+      "benkamu__chandri_oasis__good": {
+        "id": "benkamu__chandri_oasis__good",
+        "from_city_id": "benkamu",
+        "to_city_id": "chandri_oasis",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 43.0
+      },
+      "benkamu__kitesta__sea": {
+        "id": "benkamu__kitesta__sea",
+        "from_city_id": "benkamu",
+        "to_city_id": "kitesta",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 410.0
+      },
+      "benkamu__madegi_doy__sea": {
+        "id": "benkamu__madegi_doy__sea",
+        "from_city_id": "benkamu",
+        "to_city_id": "madegi_doy",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 180.0
+      },
+      "benkamu__qa_ip__poor": {
+        "id": "benkamu__qa_ip__poor",
+        "from_city_id": "benkamu",
+        "to_city_id": "qa_ip",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 48.0
+      },
+      "benkamu__utini__fair": {
+        "id": "benkamu__utini__fair",
+        "from_city_id": "benkamu",
+        "to_city_id": "utini",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 58.0
+      },
+      "benkamu__yamach__good": {
+        "id": "benkamu__yamach__good",
+        "from_city_id": "benkamu",
+        "to_city_id": "yamach",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 98.0
+      },
+      "bepri__fet_stiak__good": {
+        "id": "bepri__fet_stiak__good",
+        "from_city_id": "bepri",
+        "to_city_id": "fet_stiak",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 57.0
+      },
+      "bepri__huch__poor": {
+        "id": "bepri__huch__poor",
+        "from_city_id": "bepri",
+        "to_city_id": "huch",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 23.0
+      },
+      "bepri__ivriot__good": {
+        "id": "bepri__ivriot__good",
+        "from_city_id": "bepri",
+        "to_city_id": "ivriot",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 41.0
+      },
+      "bok_tan_lai__chin_bai_lo__poor": {
+        "id": "bok_tan_lai__chin_bai_lo__poor",
+        "from_city_id": "bok_tan_lai",
+        "to_city_id": "chin_bai_lo",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "bok_tan_lai__frakota__sea": {
+        "id": "bok_tan_lai__frakota__sea",
+        "from_city_id": "bok_tan_lai",
+        "to_city_id": "frakota",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 281.0
+      },
+      "bok_tan_lai__kitesta__sea": {
+        "id": "bok_tan_lai__kitesta__sea",
+        "from_city_id": "bok_tan_lai",
+        "to_city_id": "kitesta",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 325.0
+      },
+      "bok_tan_lai__koi_jai__good": {
+        "id": "bok_tan_lai__koi_jai__good",
+        "from_city_id": "bok_tan_lai",
+        "to_city_id": "koi_jai",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 117.0
+      },
+      "bok_tan_lai__vayoni__sea": {
+        "id": "bok_tan_lai__vayoni__sea",
+        "from_city_id": "bok_tan_lai",
+        "to_city_id": "vayoni",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 147.0
+      },
+      "bok_tan_lai__wan_tong__good": {
+        "id": "bok_tan_lai__wan_tong__good",
+        "from_city_id": "bok_tan_lai",
+        "to_city_id": "wan_tong",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 111.0
+      },
+      "brinda__chet_kop__good": {
+        "id": "brinda__chet_kop__good",
+        "from_city_id": "brinda",
+        "to_city_id": "chet_kop",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 85.0
+      },
+      "brinda__marshgate__good": {
+        "id": "brinda__marshgate__good",
+        "from_city_id": "brinda",
+        "to_city_id": "marshgate",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 93.0
+      },
+      "brinda__shunyo__fair": {
+        "id": "brinda__shunyo__fair",
+        "from_city_id": "brinda",
+        "to_city_id": "shunyo",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 66.0
+      },
+      "chamuka__dembo_tapi__poor": {
+        "id": "chamuka__dembo_tapi__poor",
+        "from_city_id": "chamuka",
+        "to_city_id": "dembo_tapi",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 44.0
+      },
+      "chamuka__plugby__poor": {
+        "id": "chamuka__plugby__poor",
+        "from_city_id": "chamuka",
+        "to_city_id": "plugby",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 55.0
+      },
+      "chandri_oasis__tama_oasis__good": {
+        "id": "chandri_oasis__tama_oasis__good",
+        "from_city_id": "chandri_oasis",
+        "to_city_id": "tama_oasis",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 49.0
+      },
+      "chet_kop__dip_krat__fair": {
+        "id": "chet_kop__dip_krat__fair",
+        "from_city_id": "chet_kop",
+        "to_city_id": "dip_krat",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 97.0
+      },
+      "chet_kop__han_sheg__good": {
+        "id": "chet_kop__han_sheg__good",
+        "from_city_id": "chet_kop",
+        "to_city_id": "han_sheg",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 67.0
+      },
+      "chet_kop__sidnaya__sea": {
+        "id": "chet_kop__sidnaya__sea",
+        "from_city_id": "chet_kop",
+        "to_city_id": "sidnaya",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 119.0
+      },
+      "chista__drap__good": {
+        "id": "chista__drap__good",
+        "from_city_id": "chista",
+        "to_city_id": "drap",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 140.0
+      },
+      "chista__yash_min__good": {
+        "id": "chista__yash_min__good",
+        "from_city_id": "chista",
+        "to_city_id": "yash_min",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 58.0
+      },
+      "chukra__najulash__fair": {
+        "id": "chukra__najulash__fair",
+        "from_city_id": "chukra",
+        "to_city_id": "najulash",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 30.0
+      },
+      "daft__fitlochry__fair": {
+        "id": "daft__fitlochry__fair",
+        "from_city_id": "daft",
+        "to_city_id": "fitlochry",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 59.0
+      },
+      "daft__lardiff__fair": {
+        "id": "daft__lardiff__fair",
+        "from_city_id": "daft",
+        "to_city_id": "lardiff",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 84.0
+      },
+      "daft__winis__fair": {
+        "id": "daft__winis__fair",
+        "from_city_id": "daft",
+        "to_city_id": "winis",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 56.0
+      },
+      "dairy__londanum__good": {
+        "id": "dairy__londanum__good",
+        "from_city_id": "dairy",
+        "to_city_id": "londanum",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 75.0
+      },
+      "dairy__londanum__sea": {
+        "id": "dairy__londanum__sea",
+        "from_city_id": "dairy",
+        "to_city_id": "londanum",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 72.0
+      },
+      "dairy__winis__good": {
+        "id": "dairy__winis__good",
+        "from_city_id": "dairy",
+        "to_city_id": "winis",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 64.0
+      },
+      "death_valley__rockville__poor": {
+        "id": "death_valley__rockville__poor",
+        "from_city_id": "death_valley",
+        "to_city_id": "rockville",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 39.0
+      },
+      "dembo_tapi__pukani__fair": {
+        "id": "dembo_tapi__pukani__fair",
+        "from_city_id": "dembo_tapi",
+        "to_city_id": "pukani",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 73.0
+      },
+      "dembo_tapi__umadosh__fair": {
+        "id": "dembo_tapi__umadosh__fair",
+        "from_city_id": "dembo_tapi",
+        "to_city_id": "umadosh",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 46.0
+      },
+      "ebos__mitess__poor": {
+        "id": "ebos__mitess__poor",
+        "from_city_id": "ebos",
+        "to_city_id": "mitess",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 72.0
+      },
+      "ebos__noy_shakh__good": {
+        "id": "ebos__noy_shakh__good",
+        "from_city_id": "ebos",
+        "to_city_id": "noy_shakh",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 41.0
+      },
+      "embaniosta__igorash__fair": {
+        "id": "embaniosta__igorash__fair",
+        "from_city_id": "embaniosta",
+        "to_city_id": "igorash",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 88.0
+      },
+      "embaniosta__ramatiib__good": {
+        "id": "embaniosta__ramatiib__good",
+        "from_city_id": "embaniosta",
+        "to_city_id": "ramatiib",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 94.0
+      },
+      "embaniosta__ramatiib__sea": {
+        "id": "embaniosta__ramatiib__sea",
+        "from_city_id": "embaniosta",
+        "to_city_id": "ramatiib",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 128.0
+      },
+      "erichosi__inichi__fair": {
+        "id": "erichosi__inichi__fair",
+        "from_city_id": "erichosi",
+        "to_city_id": "inichi",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 81.0
+      },
+      "eyebi_goma__isweni__fair": {
+        "id": "eyebi_goma__isweni__fair",
+        "from_city_id": "eyebi_goma",
+        "to_city_id": "isweni",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 36.0
+      },
+      "fet_stiak__omiasto__good": {
+        "id": "fet_stiak__omiasto__good",
+        "from_city_id": "fet_stiak",
+        "to_city_id": "omiasto",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 80.0
+      },
+      "fet_stiak__omiasto__sea": {
+        "id": "fet_stiak__omiasto__sea",
+        "from_city_id": "fet_stiak",
+        "to_city_id": "omiasto",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 74.0
+      },
+      "fet_stiak__pomye__sea": {
+        "id": "fet_stiak__pomye__sea",
+        "from_city_id": "fet_stiak",
+        "to_city_id": "pomye",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 122.0
+      },
+      "fitlochry__stanley__fair": {
+        "id": "fitlochry__stanley__fair",
+        "from_city_id": "fitlochry",
+        "to_city_id": "stanley",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 73.0
+      },
+      "frakota__kitesta__sea": {
+        "id": "frakota__kitesta__sea",
+        "from_city_id": "frakota",
+        "to_city_id": "kitesta",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 172.0
+      },
+      "frakota__ujrimuta__good": {
+        "id": "frakota__ujrimuta__good",
+        "from_city_id": "frakota",
+        "to_city_id": "ujrimuta",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 33.0
+      },
+      "frakota__yangi_utoran__sea": {
+        "id": "frakota__yangi_utoran__sea",
+        "from_city_id": "frakota",
+        "to_city_id": "yangi_utoran",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 232.0
+      },
+      "glasston__nugget__fair": {
+        "id": "glasston__nugget__fair",
+        "from_city_id": "glasston",
+        "to_city_id": "nugget",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 99.0
+      },
+      "glasston__rigby__good": {
+        "id": "glasston__rigby__good",
+        "from_city_id": "glasston",
+        "to_city_id": "rigby",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 85.0
+      },
+      "glasston__winis__fair": {
+        "id": "glasston__winis__fair",
+        "from_city_id": "glasston",
+        "to_city_id": "winis",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 123.0
+      },
+      "gobyak__hakkaba__poor": {
+        "id": "gobyak__hakkaba__poor",
+        "from_city_id": "gobyak",
+        "to_city_id": "hakkaba",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 93.0
+      },
+      "gram__limano__good": {
+        "id": "gram__limano__good",
+        "from_city_id": "gram",
+        "to_city_id": "limano",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 40.0
+      },
+      "gram__senheim__good": {
+        "id": "gram__senheim__good",
+        "from_city_id": "gram",
+        "to_city_id": "senheim",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 64.0
+      },
+      "grusa__im_prok__good": {
+        "id": "grusa__im_prok__good",
+        "from_city_id": "grusa",
+        "to_city_id": "im_prok",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "grusa__riska__poor": {
+        "id": "grusa__riska__poor",
+        "from_city_id": "grusa",
+        "to_city_id": "riska",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 65.0
+      },
+      "guriyombro__ibrina__good": {
+        "id": "guriyombro__ibrina__good",
+        "from_city_id": "guriyombro",
+        "to_city_id": "ibrina",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 93.0
+      },
+      "guriyombro__kobrusaya__fair": {
+        "id": "guriyombro__kobrusaya__fair",
+        "from_city_id": "guriyombro",
+        "to_city_id": "kobrusaya",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "guriyombro__udandi__fair": {
+        "id": "guriyombro__udandi__fair",
+        "from_city_id": "guriyombro",
+        "to_city_id": "udandi",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 125.0
+      },
+      "guriyombro__ukrukru__poor": {
+        "id": "guriyombro__ukrukru__poor",
+        "from_city_id": "guriyombro",
+        "to_city_id": "ukrukru",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 65.0
+      },
+      "hakkaba__tama_oasis__poor": {
+        "id": "hakkaba__tama_oasis__poor",
+        "from_city_id": "hakkaba",
+        "to_city_id": "tama_oasis",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 32.0
+      },
+      "han_sheg__je_bin_noi__good": {
+        "id": "han_sheg__je_bin_noi__good",
+        "from_city_id": "han_sheg",
+        "to_city_id": "je_bin_noi",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 63.0
+      },
+      "hantiri__salem__sea": {
+        "id": "hantiri__salem__sea",
+        "from_city_id": "hantiri",
+        "to_city_id": "salem",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 230.0
+      },
+      "hantiri__unza_ipani__good": {
+        "id": "hantiri__unza_ipani__good",
+        "from_city_id": "hantiri",
+        "to_city_id": "unza_ipani",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 60.0
+      },
+      "hantiri__unza_ipani__sea": {
+        "id": "hantiri__unza_ipani__sea",
+        "from_city_id": "hantiri",
+        "to_city_id": "unza_ipani",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 75.0
+      },
+      "harkanipot__lumpis__good": {
+        "id": "harkanipot__lumpis__good",
+        "from_city_id": "harkanipot",
+        "to_city_id": "lumpis",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 76.0
+      },
+      "hen_s_nest__limano__good": {
+        "id": "hen_s_nest__limano__good",
+        "from_city_id": "hen_s_nest",
+        "to_city_id": "limano",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 131.0
+      },
+      "hen_s_nest__limano__sea": {
+        "id": "hen_s_nest__limano__sea",
+        "from_city_id": "hen_s_nest",
+        "to_city_id": "limano",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 137.0
+      },
+      "hen_s_nest__londanum__excellent": {
+        "id": "hen_s_nest__londanum__excellent",
+        "from_city_id": "hen_s_nest",
+        "to_city_id": "londanum",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 140.0
+      },
+      "hen_s_nest__londanum__sea": {
+        "id": "hen_s_nest__londanum__sea",
+        "from_city_id": "hen_s_nest",
+        "to_city_id": "londanum",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 116.0
+      },
+      "hen_s_nest__rigby__good": {
+        "id": "hen_s_nest__rigby__good",
+        "from_city_id": "hen_s_nest",
+        "to_city_id": "rigby",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 45.0
+      },
+      "ho_man_gai__nin_dau__fair": {
+        "id": "ho_man_gai__nin_dau__fair",
+        "from_city_id": "ho_man_gai",
+        "to_city_id": "nin_dau",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 56.0
+      },
+      "ibrina__nintili__excellent": {
+        "id": "ibrina__nintili__excellent",
+        "from_city_id": "ibrina",
+        "to_city_id": "nintili",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 53.0
+      },
+      "ibrina__nintili__sea": {
+        "id": "ibrina__nintili__sea",
+        "from_city_id": "ibrina",
+        "to_city_id": "nintili",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 39.0
+      },
+      "ibrina__timbi__good": {
+        "id": "ibrina__timbi__good",
+        "from_city_id": "ibrina",
+        "to_city_id": "timbi",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "igorash__kutwapa__fair": {
+        "id": "igorash__kutwapa__fair",
+        "from_city_id": "igorash",
+        "to_city_id": "kutwapa",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 77.0
+      },
+      "igorash__ramatiib__fair": {
+        "id": "igorash__ramatiib__fair",
+        "from_city_id": "igorash",
+        "to_city_id": "ramatiib",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 121.0
+      },
+      "im_prok__jinindo__sea": {
+        "id": "im_prok__jinindo__sea",
+        "from_city_id": "im_prok",
+        "to_city_id": "jinindo",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 117.0
+      },
+      "im_prok__noy_shakh__good": {
+        "id": "im_prok__noy_shakh__good",
+        "from_city_id": "im_prok",
+        "to_city_id": "noy_shakh",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 62.0
+      },
+      "im_prok__noy_shakh__sea": {
+        "id": "im_prok__noy_shakh__sea",
+        "from_city_id": "im_prok",
+        "to_city_id": "noy_shakh",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 63.0
+      },
+      "im_prok__ubitia__fair": {
+        "id": "im_prok__ubitia__fair",
+        "from_city_id": "im_prok",
+        "to_city_id": "ubitia",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 35.0
+      },
+      "imayasa__udandi__fair": {
+        "id": "imayasa__udandi__fair",
+        "from_city_id": "imayasa",
+        "to_city_id": "udandi",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 45.0
+      },
+      "imbri_jadut__imrehesh__good": {
+        "id": "imbri_jadut__imrehesh__good",
+        "from_city_id": "imbri_jadut",
+        "to_city_id": "imrehesh",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 85.0
+      },
+      "imbri_jadut__ito_kiryo__good": {
+        "id": "imbri_jadut__ito_kiryo__good",
+        "from_city_id": "imbri_jadut",
+        "to_city_id": "ito_kiryo",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 37.0
+      },
+      "imbri_jadut__udandi__good": {
+        "id": "imbri_jadut__udandi__good",
+        "from_city_id": "imbri_jadut",
+        "to_city_id": "udandi",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 56.0
+      },
+      "imrehesh__ito_kiryo__sea": {
+        "id": "imrehesh__ito_kiryo__sea",
+        "from_city_id": "imrehesh",
+        "to_city_id": "ito_kiryo",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 61.0
+      },
+      "imrehesh__kalioti__excellent": {
+        "id": "imrehesh__kalioti__excellent",
+        "from_city_id": "imrehesh",
+        "to_city_id": "kalioti",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "imrehesh__kalioti__sea": {
+        "id": "imrehesh__kalioti__sea",
+        "from_city_id": "imrehesh",
+        "to_city_id": "kalioti",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "imrehesh__misuun__good": {
+        "id": "imrehesh__misuun__good",
+        "from_city_id": "imrehesh",
+        "to_city_id": "misuun",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 84.0
+      },
+      "inichi__senheim__fair": {
+        "id": "inichi__senheim__fair",
+        "from_city_id": "inichi",
+        "to_city_id": "senheim",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 72.0
+      },
+      "iriap__omiasto__good": {
+        "id": "iriap__omiasto__good",
+        "from_city_id": "iriap",
+        "to_city_id": "omiasto",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 51.0
+      },
+      "iriap__ustip_dah__poor": {
+        "id": "iriap__ustip_dah__poor",
+        "from_city_id": "iriap",
+        "to_city_id": "ustip_dah",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 37.0
+      },
+      "irontown__kobya_tesh__fair": {
+        "id": "irontown__kobya_tesh__fair",
+        "from_city_id": "irontown",
+        "to_city_id": "kobya_tesh",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 84.0
+      },
+      "irontown__plugby__fair": {
+        "id": "irontown__plugby__fair",
+        "from_city_id": "irontown",
+        "to_city_id": "plugby",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 48.0
+      },
+      "irontown__vayoni__good": {
+        "id": "irontown__vayoni__good",
+        "from_city_id": "irontown",
+        "to_city_id": "vayoni",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 88.0
+      },
+      "isweni__jinindo__good": {
+        "id": "isweni__jinindo__good",
+        "from_city_id": "isweni",
+        "to_city_id": "jinindo",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 93.0
+      },
+      "isweni__jinindo__sea": {
+        "id": "isweni__jinindo__sea",
+        "from_city_id": "isweni",
+        "to_city_id": "jinindo",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 100.0
+      },
+      "isweni__koi_jai__good": {
+        "id": "isweni__koi_jai__good",
+        "from_city_id": "isweni",
+        "to_city_id": "koi_jai",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 73.0
+      },
+      "ito_kiryo__misuun__fair": {
+        "id": "ito_kiryo__misuun__fair",
+        "from_city_id": "ito_kiryo",
+        "to_city_id": "misuun",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 111.0
+      },
+      "ito_kiryo__orpwach_kotya__good": {
+        "id": "ito_kiryo__orpwach_kotya__good",
+        "from_city_id": "ito_kiryo",
+        "to_city_id": "orpwach_kotya",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 80.0
+      },
+      "ituud__orionista__good": {
+        "id": "ituud__orionista__good",
+        "from_city_id": "ituud",
+        "to_city_id": "orionista",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 149.0
+      },
+      "ituud__orionista__sea": {
+        "id": "ituud__orionista__sea",
+        "from_city_id": "ituud",
+        "to_city_id": "orionista",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 151.0
+      },
+      "ituud__shaduf__good": {
+        "id": "ituud__shaduf__good",
+        "from_city_id": "ituud",
+        "to_city_id": "shaduf",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 98.0
+      },
+      "ituud__vokritya__poor": {
+        "id": "ituud__vokritya__poor",
+        "from_city_id": "ituud",
+        "to_city_id": "vokritya",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 52.0
+      },
+      "ivriot__pomye__good": {
+        "id": "ivriot__pomye__good",
+        "from_city_id": "ivriot",
+        "to_city_id": "pomye",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 55.0
+      },
+      "ivriot__yamdis__fair": {
+        "id": "ivriot__yamdis__fair",
+        "from_city_id": "ivriot",
+        "to_city_id": "yamdis",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 45.0
+      },
+      "jamis__krikot__fair": {
+        "id": "jamis__krikot__fair",
+        "from_city_id": "jamis",
+        "to_city_id": "krikot",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "jamis__kutwapa__excellent": {
+        "id": "jamis__kutwapa__excellent",
+        "from_city_id": "jamis",
+        "to_city_id": "kutwapa",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 57.0
+      },
+      "jamis__majipon__excellent": {
+        "id": "jamis__majipon__excellent",
+        "from_city_id": "jamis",
+        "to_city_id": "majipon",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 67.0
+      },
+      "jamis__majipon__sea": {
+        "id": "jamis__majipon__sea",
+        "from_city_id": "jamis",
+        "to_city_id": "majipon",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 73.0
+      },
+      "jamis__ramatiib__good": {
+        "id": "jamis__ramatiib__good",
+        "from_city_id": "jamis",
+        "to_city_id": "ramatiib",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 132.0
+      },
+      "jamis__ramatiib__sea": {
+        "id": "jamis__ramatiib__sea",
+        "from_city_id": "jamis",
+        "to_city_id": "ramatiib",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 186.0
+      },
+      "jamis__yash_min__good": {
+        "id": "jamis__yash_min__good",
+        "from_city_id": "jamis",
+        "to_city_id": "yash_min",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 57.0
+      },
+      "je_bin_noi__nin_dau__good": {
+        "id": "je_bin_noi__nin_dau__good",
+        "from_city_id": "je_bin_noi",
+        "to_city_id": "nin_dau",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 64.0
+      },
+      "jinindo__nintili__excellent": {
+        "id": "jinindo__nintili__excellent",
+        "from_city_id": "jinindo",
+        "to_city_id": "nintili",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 40.0
+      },
+      "jinindo__nintili__sea": {
+        "id": "jinindo__nintili__sea",
+        "from_city_id": "jinindo",
+        "to_city_id": "nintili",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 39.0
+      },
+      "jumlah__sutkra__fair": {
+        "id": "jumlah__sutkra__fair",
+        "from_city_id": "jumlah",
+        "to_city_id": "sutkra",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 49.0
+      },
+      "jumlah__urian__poor": {
+        "id": "jumlah__urian__poor",
+        "from_city_id": "jumlah",
+        "to_city_id": "urian",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 35.0
+      },
+      "kalioti__nig_panal__sea": {
+        "id": "kalioti__nig_panal__sea",
+        "from_city_id": "kalioti",
+        "to_city_id": "nig_panal",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 219.0
+      },
+      "kanterat__shunyo__fair": {
+        "id": "kanterat__shunyo__fair",
+        "from_city_id": "kanterat",
+        "to_city_id": "shunyo",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 75.0
+      },
+      "kitesta__kobya_tesh__good": {
+        "id": "kitesta__kobya_tesh__good",
+        "from_city_id": "kitesta",
+        "to_city_id": "kobya_tesh",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 93.0
+      },
+      "kitesta__pritwa_fas__good": {
+        "id": "kitesta__pritwa_fas__good",
+        "from_city_id": "kitesta",
+        "to_city_id": "pritwa_fas",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 63.0
+      },
+      "kitesta__tama_oasis__good": {
+        "id": "kitesta__tama_oasis__good",
+        "from_city_id": "kitesta",
+        "to_city_id": "tama_oasis",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 63.0
+      },
+      "kobya_tesh__pikyak__fair": {
+        "id": "kobya_tesh__pikyak__fair",
+        "from_city_id": "kobya_tesh",
+        "to_city_id": "pikyak",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 64.0
+      },
+      "kobya_tesh__utini__fair": {
+        "id": "kobya_tesh__utini__fair",
+        "from_city_id": "kobya_tesh",
+        "to_city_id": "utini",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 55.0
+      },
+      "koi_jai__timbi__good": {
+        "id": "koi_jai__timbi__good",
+        "from_city_id": "koi_jai",
+        "to_city_id": "timbi",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 109.0
+      },
+      "koping__senheim__fair": {
+        "id": "koping__senheim__fair",
+        "from_city_id": "koping",
+        "to_city_id": "senheim",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 74.0
+      },
+      "krikot__majipon__fair": {
+        "id": "krikot__majipon__fair",
+        "from_city_id": "krikot",
+        "to_city_id": "majipon",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 49.0
+      },
+      "kutwapa__majipon__excellent": {
+        "id": "kutwapa__majipon__excellent",
+        "from_city_id": "kutwapa",
+        "to_city_id": "majipon",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 43.0
+      },
+      "lardiff__nugget__poor": {
+        "id": "lardiff__nugget__poor",
+        "from_city_id": "lardiff",
+        "to_city_id": "nugget",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 63.0
+      },
+      "lardiff__orpwach_kotya__poor": {
+        "id": "lardiff__orpwach_kotya__poor",
+        "from_city_id": "lardiff",
+        "to_city_id": "orpwach_kotya",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 107.0
+      },
+      "londanum__salem__excellent": {
+        "id": "londanum__salem__excellent",
+        "from_city_id": "londanum",
+        "to_city_id": "salem",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 98.0
+      },
+      "londanum__salem__sea": {
+        "id": "londanum__salem__sea",
+        "from_city_id": "londanum",
+        "to_city_id": "salem",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 94.0
+      },
+      "lumpis__yangi_utoran__good": {
+        "id": "lumpis__yangi_utoran__good",
+        "from_city_id": "lumpis",
+        "to_city_id": "yangi_utoran",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 61.0
+      },
+      "madegi_doy__plugby__good": {
+        "id": "madegi_doy__plugby__good",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "plugby",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 67.0
+      },
+      "madegi_doy__pukani__sea": {
+        "id": "madegi_doy__pukani__sea",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "pukani",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 140.0
+      },
+      "madegi_doy__shinoop__good": {
+        "id": "madegi_doy__shinoop__good",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "shinoop",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 71.0
+      },
+      "madegi_doy__yamach__good": {
+        "id": "madegi_doy__yamach__good",
+        "from_city_id": "madegi_doy",
+        "to_city_id": "yamach",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 74.0
+      },
+      "marshgate__stanley__fair": {
+        "id": "marshgate__stanley__fair",
+        "from_city_id": "marshgate",
+        "to_city_id": "stanley",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 86.0
+      },
+      "matui_poo__yangi_utoran__poor": {
+        "id": "matui_poo__yangi_utoran__poor",
+        "from_city_id": "matui_poo",
+        "to_city_id": "yangi_utoran",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 42.0
+      },
+      "misuun__najulash__fair": {
+        "id": "misuun__najulash__fair",
+        "from_city_id": "misuun",
+        "to_city_id": "najulash",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 71.0
+      },
+      "najulash__yomwiti__poor": {
+        "id": "najulash__yomwiti__poor",
+        "from_city_id": "najulash",
+        "to_city_id": "yomwiti",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 115.0
+      },
+      "nandigwa__sidnaya__good": {
+        "id": "nandigwa__sidnaya__good",
+        "from_city_id": "nandigwa",
+        "to_city_id": "sidnaya",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 100.0
+      },
+      "nandigwa__umadosh__good": {
+        "id": "nandigwa__umadosh__good",
+        "from_city_id": "nandigwa",
+        "to_city_id": "umadosh",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 49.0
+      },
+      "ndigana__unza_ipani__good": {
+        "id": "ndigana__unza_ipani__good",
+        "from_city_id": "ndigana",
+        "to_city_id": "unza_ipani",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 64.0
+      },
+      "nig_panal__pomye__sea": {
+        "id": "nig_panal__pomye__sea",
+        "from_city_id": "nig_panal",
+        "to_city_id": "pomye",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 119.0
+      },
+      "nig_panal__sutkra__fair": {
+        "id": "nig_panal__sutkra__fair",
+        "from_city_id": "nig_panal",
+        "to_city_id": "sutkra",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 117.0
+      },
+      "nig_panal__sutkra__sea": {
+        "id": "nig_panal__sutkra__sea",
+        "from_city_id": "nig_panal",
+        "to_city_id": "sutkra",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 109.0
+      },
+      "nin_dau__wan_tong__good": {
+        "id": "nin_dau__wan_tong__good",
+        "from_city_id": "nin_dau",
+        "to_city_id": "wan_tong",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 51.0
+      },
+      "nodim__pukani__good": {
+        "id": "nodim__pukani__good",
+        "from_city_id": "nodim",
+        "to_city_id": "pukani",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 56.0
+      },
+      "nodim__tashendi__good": {
+        "id": "nodim__tashendi__good",
+        "from_city_id": "nodim",
+        "to_city_id": "tashendi",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 39.0
+      },
+      "omiasto__ubitia__fair": {
+        "id": "omiasto__ubitia__fair",
+        "from_city_id": "omiasto",
+        "to_city_id": "ubitia",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 58.0
+      },
+      "orpayn__orpwach_kotya__poor": {
+        "id": "orpayn__orpwach_kotya__poor",
+        "from_city_id": "orpayn",
+        "to_city_id": "orpwach_kotya",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 38.0
+      },
+      "plugby__wibera__fair": {
+        "id": "plugby__wibera__fair",
+        "from_city_id": "plugby",
+        "to_city_id": "wibera",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 60.0
+      },
+      "pomye__yakaboti__poor": {
+        "id": "pomye__yakaboti__poor",
+        "from_city_id": "pomye",
+        "to_city_id": "yakaboti",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 58.0
+      },
+      "pudokam_shnet__ukrukru__poor": {
+        "id": "pudokam_shnet__ukrukru__poor",
+        "from_city_id": "pudokam_shnet",
+        "to_city_id": "ukrukru",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 74.0
+      },
+      "pukani__shinoop__good": {
+        "id": "pukani__shinoop__good",
+        "from_city_id": "pukani",
+        "to_city_id": "shinoop",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 48.0
+      },
+      "pukani__tashendi__sea": {
+        "id": "pukani__tashendi__sea",
+        "from_city_id": "pukani",
+        "to_city_id": "tashendi",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 114.0
+      },
+      "purkamiya__shaduf__good": {
+        "id": "purkamiya__shaduf__good",
+        "from_city_id": "purkamiya",
+        "to_city_id": "shaduf",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 76.0
+      },
+      "rockville__stanley__fair": {
+        "id": "rockville__stanley__fair",
+        "from_city_id": "rockville",
+        "to_city_id": "stanley",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 64.0
+      },
+      "shaduf__yomwiti__good": {
+        "id": "shaduf__yomwiti__good",
+        "from_city_id": "shaduf",
+        "to_city_id": "yomwiti",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 59.0
+      },
+      "sidnaya__tashendi__sea": {
+        "id": "sidnaya__tashendi__sea",
+        "from_city_id": "sidnaya",
+        "to_city_id": "tashendi",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 315.0
+      },
+      "sidnaya__vayoni__good": {
+        "id": "sidnaya__vayoni__good",
+        "from_city_id": "sidnaya",
+        "to_city_id": "vayoni",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 67.0
+      },
+      "sidnaya__vayoni__sea": {
+        "id": "sidnaya__vayoni__sea",
+        "from_city_id": "sidnaya",
+        "to_city_id": "vayoni",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 117.0
+      },
+      "sidnaya__wibera__good": {
+        "id": "sidnaya__wibera__good",
+        "from_city_id": "sidnaya",
+        "to_city_id": "wibera",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 77.0
+      },
+      "sidnaya__zubisi__poor": {
+        "id": "sidnaya__zubisi__poor",
+        "from_city_id": "sidnaya",
+        "to_city_id": "zubisi",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 63.0
+      },
+      "tagoom__yash_min__fair": {
+        "id": "tagoom__yash_min__fair",
+        "from_city_id": "tagoom",
+        "to_city_id": "yash_min",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 47.0
+      },
+      "tashendi__umadosh__excellent": {
+        "id": "tashendi__umadosh__excellent",
+        "from_city_id": "tashendi",
+        "to_city_id": "umadosh",
+        "quality": "excellent",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "tashendi__umadosh__sea": {
+        "id": "tashendi__umadosh__sea",
+        "from_city_id": "tashendi",
+        "to_city_id": "umadosh",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 68.0
+      },
+      "tashendi__unza_ipani__sea": {
+        "id": "tashendi__unza_ipani__sea",
+        "from_city_id": "tashendi",
+        "to_city_id": "unza_ipani",
+        "quality": "sea",
+        "bidirectional": true,
+        "distance_miles": 150.0
+      },
+      "timbi__wan_tong__good": {
+        "id": "timbi__wan_tong__good",
+        "from_city_id": "timbi",
+        "to_city_id": "wan_tong",
+        "quality": "good",
+        "bidirectional": true,
+        "distance_miles": 85.0
+      },
+      "tuus_gan__yamdis__fair": {
+        "id": "tuus_gan__yamdis__fair",
+        "from_city_id": "tuus_gan",
+        "to_city_id": "yamdis",
+        "quality": "fair",
+        "bidirectional": true,
+        "distance_miles": 40.0
+      },
+      "ujrimuta__vropa__poor": {
+        "id": "ujrimuta__vropa__poor",
+        "from_city_id": "ujrimuta",
+        "to_city_id": "vropa",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 34.0
+      },
+      "umadosh__zibrakhi__poor": {
+        "id": "umadosh__zibrakhi__poor",
+        "from_city_id": "umadosh",
+        "to_city_id": "zibrakhi",
+        "quality": "poor",
+        "bidirectional": true,
+        "distance_miles": 45.0
+      }
+    }
+  },
+  "factions": {
+    "player_1": {
+      "id": "player_1",
+      "name": "The Golden Empire",
+      "controlled_city_ids": [
+        "kobya_tesh"
+      ],
+      "secured_city_ids": [],
+      "treasury": 0,
+      "wage_debt": 0.0,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": false
+    },
+    "player_2": {
+      "id": "player_2",
+      "name": "The Silver Horde",
+      "controlled_city_ids": [
+        "omiasto"
+      ],
+      "secured_city_ids": [],
+      "treasury": 0,
+      "wage_debt": 0.0,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": false
+    },
+    "independent": {
+      "id": "independent",
+      "name": "The Free Cities",
+      "controlled_city_ids": [],
+      "secured_city_ids": [],
+      "treasury": 0.0,
+      "wage_debt": 0.0,
+      "loan_balance": 0.0,
+      "loan_grace_turns": 0,
+      "allies": [],
+      "enemies": [],
+      "email": "",
+      "password": "",
+      "is_npc": true
+    }
+  },
+  "characters": {
+    "char_player_1_leader": {
+      "id": "char_player_1_leader",
+      "name": "Emperor Marcus",
+      "faction_id": "player_1",
+      "location_city_id": "kobya_tesh",
+      "is_leader": true,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 1000.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 10,
+      "magic_skill": 5,
+      "magic_power_current": 5,
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {},
+      "morale": 100
+    },
+    "char_player_2_leader": {
+      "id": "char_player_2_leader",
+      "name": "Khan Tengri",
+      "faction_id": "player_2",
+      "location_city_id": "omiasto",
+      "is_leader": true,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 1000.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 10,
+      "magic_skill": 5,
+      "magic_power_current": 5,
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {},
+      "morale": 100
+    },
+    "char_independent_1": {
+      "id": "char_independent_1",
+      "name": "Wizard Ojibenmi",
+      "faction_id": "independent",
+      "location_city_id": "kitesta",
+      "is_leader": false,
+      "gender": "male",
+      "title": "",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 0.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 0,
+      "magic_skill": 60,
+      "magic_power_current": 60,
+      "religion_skill": 0,
+      "religious_power_current": 0,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {},
+      "morale": 100
+    },
+    "char_independent_2": {
+      "id": "char_independent_2",
+      "name": "Bishop Nancy Lopenda",
+      "faction_id": "independent",
+      "location_city_id": "madegi_doy",
+      "is_leader": false,
+      "gender": "female",
+      "title": "bishop",
+      "is_prisoner": false,
+      "captor_id": "",
+      "group_leader_id": "",
+      "supporting_id": "",
+      "support_until_turn": -1,
+      "gold": 0.0,
+      "is_noncom": false,
+      "is_lurking": false,
+      "location_position": "inside",
+      "movement_points": 10,
+      "combat_skill": 0,
+      "magic_skill": 0,
+      "magic_power_current": 0,
+      "religion_skill": 45,
+      "religious_power_current": 45,
+      "trading_skill": 0,
+      "sailing_skill": 0,
+      "health": 100,
+      "is_dead": false,
+      "resources": {},
+      "morale": 100
+    }
+  },
+  "unit_stacks": {},
+  "ships": {},
+  "summoned_creatures": {},
+  "magical_items": {},
+  "posted_messages": {},
+  "tax_pools": {},
+  "location_blessings": {},
+  "location_curses": {},
+  "order_queues": {},
+  "invest_pools": {},
+  "elite_units": {},
+  "game_time_hours": 0
+}

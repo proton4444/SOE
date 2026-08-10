@@ -73,3 +73,9 @@ Thumbs.db
 
 # Web server runtime data
 server_data/
+
+# Local artifacts
+nul
+_tmp_map.svg
+.playwright-mcp/
+

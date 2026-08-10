@@ -1,0 +1,109 @@
+======================================================================
+SPOILS OF EMPIRE - Turn 3
+Faction: The Silver Horde (player_2)
+======================================================================
+
+======================================================================
+FACTION SUMMARY
+======================================================================
+Character gold (total): 0.0g
+Wage debt: 6.0g
+Cities you are sovereign over: 1
+  Albatross City
+
+======================================================================
+YOUR CHARACTERS
+======================================================================
+
+Khan Tengri (ID: char_player_2_leader) [leader]
+  Location: Albatross City
+  Gold: 0.0g
+  Combat Skill: 10
+  Magic Skill: 5 (Power: 5/5)
+  Movement Points: 10
+
+======================================================================
+YOUR UNITS
+======================================================================
+No units.
+
+======================================================================
+YOUR SHIPS
+======================================================================
+
+At Albatross City:
+  1 galley
+
+======================================================================
+YOUR ELITE TROOPS
+======================================================================
+No elite troops.
+
+======================================================================
+TERRITORIAL AUTHORITY
+======================================================================
+
+Albatross City
+  Sovereign: The Silver Horde (you)
+  Occupier: none
+  Administrator: The Silver Horde (you)
+
+======================================================================
+THE LIE OF THE LAND
+======================================================================
+
+Albatross City -- Northern Island
+  Terrain: coastal, mountains
+  -> Madegi Doy: sea lane, 201 miles, 20.1 mv
+
+======================================================================
+TURN EVENTS
+======================================================================
+
+Recruit:
+  ✗ Insufficient gold to recruit 1 soldier in Albatross City (need 1g, have 0g)
+  ✗ Insufficient gold to recruit 30 soldier in Albatross City (need 30g, have 0g)
+  ✗ Insufficient gold to recruit 10 sailor in Albatross City (need 10g, have 0g)
+
+Combat:
+  ✗ Khan Tengri could not attack: Emperor Marcus is not present in Albatross City; no attack takes place
+
+Pay:
+  ✗ Khan Tengri: nothing to pay
+
+Income:
+  ✓ 500g accrued in tax pools (use TAX to collect)
+  ✓ Paid 0.0g in upkeep (units, ships, salaries); 2.0g added to wage debt
+  ✗ Wage debt: 6.0g (use PAY to settle)
+
+Tax:
+  ✗ Khan Tengri: no soldiers available to collect taxes
+
+Trade:
+  ✗ Khan Tengri: not enough galley to sell
+
+Sighting:
+  ✓ Khan Tengri spotted Wizard Ojibenmi inside Albatross City
+
+Message:
+  ✓ Emperor Marcus says to Khan Tengri: "The Golden Empire seeks peaceful development and open trade. We propose mutual non-aggression while our empires establish themselves"
+
+======================================================================
+WARNINGS & ERRORS
+======================================================================
+
+Order: 'have khan tengri recruit 1 soldier...'
+  ⚠ Insufficient gold (need 1, have 0.0)
+
+Order: 'have khan tengri recruit 30 soldiers...'
+  ⚠ Insufficient gold (need 30, have 0.0)
+
+Order: 'have khan tengri recruit 10 sailors...'
+  ⚠ Insufficient gold (need 10, have 0.0)
+
+Order: 'have khan tengri tell emperor marcus The Silver Horde is reb...'
+  ⚠ 'have khan tengri buy passage to madegi doy' follows the message and was ignored — put a period after the closing quote to start a new order
+
+======================================================================
+End of Turn 3 Report
+======================================================================

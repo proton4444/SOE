@@ -78,8 +78,9 @@ def build_candidates(world: dict, raster: Path) -> tuple[dict, list[str]]:
     candidates: dict[str, np.ndarray] = {}
     notes: list[str] = []
     for city in world["cities"]:
-        wanted = [TERRAIN_ORDER.index(t) + 1 for t in city["terrain"]
-                  if t in TERRAIN_ORDER]
+        wanted = [
+            TERRAIN_ORDER.index(t) + 1 for t in city["terrain"] if t in TERRAIN_ORDER
+        ]
 
         def window_for(pad: float):
             x0, x1, y0, y1 = cell_box(city["grid_ref"])
@@ -107,18 +108,22 @@ def build_candidates(world: dict, raster: Path) -> tuple[dict, list[str]]:
                 break
         if chosen is None:
             cx, cy = window_for(0.0)
-            chosen = (np.ones((cy.sum(), cx.sum()), bool), cx, cy,
-                      "no land nearby; anywhere in cell")
+            chosen = (
+                np.ones((cy.sum(), cx.sum()), bool),
+                cx,
+                cy,
+                "no land nearby; anywhere in cell",
+            )
 
         mask, cx, cy, why = chosen
         if why:
-            notes.append(f"{city['name']} ({city['grid_ref']}, "
-                         f"{'/'.join(city['terrain'])}): {why}")
+            notes.append(
+                f"{city['name']} ({city['grid_ref']}, "
+                f"{'/'.join(city['terrain'])}): {why}"
+            )
 
         ys, xs = np.nonzero(mask)
-        candidates[city["id"]] = np.column_stack(
-            (cols_mi[cx][xs], rows_mi[cy][ys])
-        )
+        candidates[city["id"]] = np.column_stack((cols_mi[cx][xs], rows_mi[cy][ys]))
     return candidates, notes
 
 
@@ -144,9 +149,7 @@ def solve(world: dict, candidates: dict, iterations: int) -> tuple[dict, dict]:
         x0, x1, y0, y1 = cell_box(city["grid_ref"])
         centre = np.array([(x0 + x1) / 2, (y0 + y1) / 2])
         cand = candidates[city["id"]]
-        pos[index[city["id"]]] = cand[
-            np.argmin(((cand - centre) ** 2).sum(axis=1))
-        ]
+        pos[index[city["id"]]] = cand[np.argmin(((cand - centre) ** 2).sum(axis=1))]
 
     detour = {"land": 1.15, "sea": 1.15}
     for _ in range(iterations):
@@ -230,9 +233,7 @@ def main() -> int:
         city["x"] = round(float(x) / span_x, 4)
         city["y"] = round(float(y) / span_y, 4)
 
-    args.world.write_text(
-        json.dumps(world, indent=2) + "\n", encoding="utf-8"
-    )
+    args.world.write_text(json.dumps(world, indent=2) + "\n", encoding="utf-8")
     print(f"placed {len(placed)} towns in {args.world}")
     for key, value in stats.items():
         print(f"  {key}: {value}")

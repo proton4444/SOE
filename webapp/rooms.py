@@ -40,6 +40,10 @@ ROOMS_FILE = SERVER_DATA / "rooms.json"
 MAX_PLAYERS = 6
 
 
+class RoomRegistryError(RuntimeError):
+    """The persisted room registry cannot be trusted for startup."""
+
+
 @dataclass
 class RoomPlayer:
     slot: int
@@ -81,10 +85,7 @@ class Room:
 
     def all_submitted(self, turn: int) -> bool:
         submitted = self.submissions.get(turn, {})
-        return all(
-            p.faction_id in submitted
-            for p in self.joined_players()
-        )
+        return all(p.faction_id in submitted for p in self.joined_players())
 
     def player_by_key(self, key: str) -> RoomPlayer | None:
         for p in self.players:
@@ -127,8 +128,12 @@ class RoomStore:
             return
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return
+        except (json.JSONDecodeError, OSError) as exc:
+            # Starting with an empty registry would hide live games and could
+            # cause an operator to create conflicting replacement rooms.
+            raise RoomRegistryError(
+                "The persisted room registry is unreadable; restore a backup before starting."
+            ) from exc
         for raw in data.get("rooms", []):
             room = _room_from_dict(raw)
             if room:
@@ -201,7 +206,9 @@ class RoomStore:
                 raise RoomError("Give yourself a name.")
             existing = self._player_named(room, display_name)
             if existing:
-                return room, existing
+                # A display name is public lobby metadata, not proof of identity.
+                # Returning it here would disclose the existing player's key.
+                raise RoomError("That name is already taken in this game.")
             for player in room.players:
                 if player.kind == "empty":
                     player.display_name = display_name
@@ -213,7 +220,10 @@ class RoomStore:
 
     def _player_named(self, room: Room, display_name: str) -> RoomPlayer | None:
         for player in room.players:
-            if player.kind != "empty" and player.display_name.lower() == display_name.lower():
+            if (
+                player.kind != "empty"
+                and player.display_name.lower() == display_name.lower()
+            ):
                 return player
         return None
 
@@ -243,10 +253,13 @@ def _room_from_dict(raw: dict) -> Room | None:
     try:
         raw = dict(raw)
         players = [_player_from_dict(p) for p in raw.pop("players", [])]
+        for field_name in ("submissions", "reports"):
+            values = raw.get(field_name) or {}
+            raw[field_name] = {int(turn): payload for turn, payload in values.items()}
         room = Room(**raw)
         room.players = players
         return room
-    except (TypeError, KeyError, ValueError):
+    except (AttributeError, TypeError, KeyError, ValueError):
         return None
 
 

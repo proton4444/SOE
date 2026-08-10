@@ -1,0 +1,81 @@
+{
+  "verdict": "PASS",
+  "turns_completed": 3,
+  "event_count": 35,
+  "warning_count": 0,
+  "error": "",
+  "checks": [
+    {
+      "name": "three turns resolved",
+      "passed": true,
+      "detail": "engine turn is 3"
+    },
+    {
+      "name": "orders were understood",
+      "passed": true,
+      "detail": "0 parser warnings"
+    },
+    {
+      "name": "movement and combat happened",
+      "passed": true,
+      "detail": "Emperor Marcus won the Kitesta engagement"
+    },
+    {
+      "name": "occupation changed the board",
+      "passed": true,
+      "detail": "Kitesta is secured by The Golden Empire"
+    },
+    {
+      "name": "reports and state were written",
+      "passed": true,
+      "detail": "final state and player report are present"
+    }
+  ],
+  "final": {
+    "turn": 3,
+    "factions": {
+      "player_1": {
+        "name": "The Golden Empire",
+        "sovereign_cities": [
+          "madegi_doy"
+        ],
+        "occupied_cities": [
+          "kitesta"
+        ],
+        "gold": 1176.0,
+        "soldiers": 80,
+        "free_characters": 1,
+        "prisoners": 0,
+        "dead": 0,
+        "leaders": [
+          {
+            "name": "Emperor Marcus",
+            "city": "kitesta",
+            "dead": false,
+            "prisoner": false
+          }
+        ]
+      },
+      "player_2": {
+        "name": "The Silver Horde",
+        "sovereign_cities": [
+          "kitesta"
+        ],
+        "occupied_cities": [],
+        "gold": 1005.7,
+        "soldiers": 1,
+        "free_characters": 1,
+        "prisoners": 0,
+        "dead": 0,
+        "leaders": [
+          {
+            "name": "Khan Tengri",
+            "city": "kitesta",
+            "dead": false,
+            "prisoner": false
+          }
+        ]
+      }
+    }
+  }
+}

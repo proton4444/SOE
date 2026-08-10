@@ -35,6 +35,12 @@ class Order(ABC):
     # rules want its results suppressed on the status report. Parsed and
     # recorded; report suppression is not implemented yet.
     silent: bool = False
+    # True when the parser filled `city_id` from wherever the actor happened to
+    # be standing, because the order named no city. That fill is only a guess:
+    # "go to Kitesta and recruit 10 soldiers" is parsed before the move runs,
+    # so execution re-reads the actor's real location. Default False keeps an
+    # order built in code, or restored from an older save, taken at its word.
+    city_implicit: bool = False
 
     @abstractmethod
     def order_type(self) -> str:
@@ -147,6 +153,9 @@ class AttackOrder(Order):
     location_city_id: str = ""
     target_faction_id: str = ""
     target_name: str = ""
+    target_character_id: str = ""
+    stance: str = "normal"
+    definitely: bool = False
 
     def order_type(self) -> str:
         return "ATTACK"
@@ -397,6 +406,8 @@ class AssignOrder(Order):
     item_ids: list[str] = field(default_factory=list)
     item_names: list[str] = field(default_factory=list)
     resources: dict[str, int] = field(default_factory=dict)
+    elite_unit_ids: list[str] = field(default_factory=list)
+    elite_unit_names: list[str] = field(default_factory=list)
 
     def order_type(self) -> str:
         return "ASSIGN"
@@ -478,6 +489,7 @@ class AwaitOrder(Order):
     actor_id: str = ""
     duration_days: int = 7
     target_id: str = ""
+    duration_hours: int = 0
 
     def order_type(self) -> str:
         return "AWAIT"
@@ -973,10 +985,15 @@ class TaxOrder(Order):
         actor_id: Character collecting taxes
         city_id: City where taxes are collected (actor's location)
         duration_days: Number of days to collect (alpha: simplified to 1 turn)
+        stated_city_id: The city the player wrote into the order, if any. TAX
+            always collects where the character stands, so this is not a target
+            -- it is what the order claimed, and execution refuses when the
+            character turns out to be somewhere else.
     """
     actor_id: str = ""
     city_id: str = ""
     duration_days: int = 7  # Default 1 week
+    stated_city_id: str = ""
 
     def order_type(self) -> str:
         return "TAX"
@@ -1202,6 +1219,17 @@ class CreateOrder(Order):
 
 
 @dataclass
+class DisbandOrder(Order):
+    """Return an elite unit's surviving soldiers to its leader's group."""
+    actor_id: str = ""
+    elite_unit_id: str = ""
+    elite_unit_name: str = ""
+
+    def order_type(self) -> str:
+        return "DISBAND"
+
+
+@dataclass
 class InvestOrder(Order):
     """Invest gold in a town's growth. The investor need not be present.
 
@@ -1345,6 +1373,7 @@ def create_order_from_type(order_type: str, player_id: str, original_text: str =
         "TRAIN": TrainOrder,
         "UNNAME": UnnameOrder,
         "CREATE": CreateOrder,
+        "DISBAND": DisbandOrder,
         "INVEST": InvestOrder,
         "PASSAGE": PassageOrder,
         "PREACH": PreachOrder,
@@ -1428,6 +1457,10 @@ class QueueEntry:
     release_turn: int = -1
     repeat_remaining: int = 0
     block: list["QueueEntry"] = field(default_factory=list)
+    # Absolute hour deadline. ``release_turn`` remains for old save files and
+    # is migrated when a queue entry is first examined.
+    release_hour: int = -1
+    check_hour: int = -1
 
     def __post_init__(self):
         if self.order is not None and not self.order_class:

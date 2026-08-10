@@ -1,0 +1,114 @@
+======================================================================
+SPOILS OF EMPIRE - Turn 1
+Faction: The Silver Horde (player_2)
+======================================================================
+
+======================================================================
+FACTION SUMMARY
+======================================================================
+Character gold (total): 0.0g
+Wage debt: 2.0g
+Cities you are sovereign over: 1
+  Albatross City
+
+======================================================================
+YOUR CHARACTERS
+======================================================================
+
+Khan Tengri (ID: char_player_2_leader) [leader]
+  Location: Albatross City
+  Gold: 0.0g
+  Combat Skill: 10
+  Magic Skill: 5 (Power: 5/5)
+  Movement Points: 10
+
+======================================================================
+YOUR UNITS
+======================================================================
+No units.
+
+======================================================================
+YOUR SHIPS
+======================================================================
+
+At Albatross City:
+  1 galley
+
+======================================================================
+YOUR ELITE TROOPS
+======================================================================
+No elite troops.
+
+======================================================================
+TERRITORIAL AUTHORITY
+======================================================================
+
+Albatross City
+  Sovereign: The Silver Horde (you)
+  Occupier: none
+  Administrator: The Silver Horde (you)
+
+======================================================================
+THE LIE OF THE LAND
+======================================================================
+
+Albatross City -- Northern Island
+  Terrain: coastal, mountains
+  -> Madegi Doy: sea lane, 201 miles, 20.1 mv
+
+======================================================================
+TURN EVENTS
+======================================================================
+
+Groups:
+  ✓ Wizard Ojibenmi joined Khan Tengri's group
+
+Buy Ship:
+  ✓ Khan Tengri bought 1 galley in Albatross City for 1000g
+
+Income:
+  ✓ 500g accrued in tax pools (use TAX to collect)
+  ✓ Paid 0.0g in upkeep (units, ships, salaries); 2.0g added to wage debt
+  ✗ Wage debt: 2.0g (use PAY to settle)
+
+Offer:
+  ✗ Khan Tengri: insufficient gold to offer 1800g to Wizard Ojibenmi
+
+======================================================================
+WARNINGS & ERRORS
+======================================================================
+
+Order: '﻿recruit 40 soldiers and 50 sailors in albatross city...'
+  ⚠ Could not parse order: '﻿recruit 40 soldiers and 50 sailors in albatross city'
+  ⚠ No actor specified
+
+Order: 'name male sailor arslan tideborn...'
+  ⚠ Character player_2 not found
+
+Order: 'assign 40 soldiers to arslan tideborn...'
+  ⚠ Recipient 'arslan tideborn' not found
+  ⚠ Recipient not found
+
+Order: 'assign 49 sailors to arslan tideborn...'
+  ⚠ Recipient 'arslan tideborn' not found
+  ⚠ Recipient not found
+
+Order: 'assign 1 galley to arslan tideborn...'
+  ⚠ Recipient 'arslan tideborn' not found
+  ⚠ Recipient not found
+
+Order: 'assign wizard ojibenmi to arslan tideborn...'
+  ⚠ Recipient 'arslan tideborn' not found
+  ⚠ Recipient not found
+
+Order: 'assign khan tengri to arslan tideborn...'
+  ⚠ Recipient 'arslan tideborn' not found
+  ⚠ Recipient not found
+
+Order: 'have arslan tideborn sail to outside madegi doy and cautious...'
+  ⚠ Character 'arslan tideborn' not found
+  ⚠ No actor specified
+
+======================================================================
+End of Turn 1 Report
+======================================================================

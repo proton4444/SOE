@@ -10,7 +10,7 @@ from spoils_engine.models import (
 )
 from spoils_engine.orders import (
     Order, AssignOrder, NameOrder,
-    PromoteOrder, WorkOrder, TrainOrder, UnnameOrder, CreateOrder,
+    PromoteOrder, WorkOrder, TrainOrder, UnnameOrder, CreateOrder, DisbandOrder,
 )
 from spoils_engine import config, groups, items
 from spoils_engine.turn_log import TurnLog
@@ -315,6 +315,28 @@ def process_elite_upkeep(game_state: GameState, turn_log: TurnLog) -> None:
                         f"level {unit.combat_level}",
                         character_id=leader.id if leader else "")
 
+
+def process_disband(orders_by_player: Dict[str, List[Order]],
+                    game_state: GameState, turn_log: TurnLog) -> None:
+    for player_id, orders in orders_by_player.items():
+        for order in orders:
+            if not isinstance(order, DisbandOrder) or order.warnings:
+                continue
+            actor = game_state.characters.get(order.actor_id)
+            unit = game_state.elite_units.get(order.elite_unit_id)
+            if (not actor or not unit or unit.faction_id != player_id
+                    or unit.leader_character_id != actor.id):
+                turn_log.add("disband", player_id, "disband_failed",
+                             f"{getattr(actor, 'name', 'Character')}: does not lead "
+                             f"{order.elite_unit_name}", character_id=order.actor_id,
+                             success=False)
+                continue
+            _add_group_units(actor, game_state, UnitType.SOLDIER, unit.size)
+            del game_state.elite_units[unit.id]
+            turn_log.add("disband", player_id, "disband",
+                         f"{actor.name} disbanded {unit.name}; {unit.size} soldiers "
+                         "returned to the group", character_id=actor.id)
+
 def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
     """Process ASSIGN/GIVE orders for unit/gold transfers."""
     for player_id, orders in orders_by_player.items():
@@ -383,6 +405,26 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             f"{donor.name} gave {items.describe(item, game_state)} "
                             f"to {recipient.name}",
                             character_id=donor.id)
+
+            for unit_id, unit_name in zip(order.elite_unit_ids,
+                                          order.elite_unit_names):
+                unit = game_state.elite_units.get(unit_id)
+                if (not unit or unit.leader_character_id != donor.id
+                        or unit.faction_id != player_id):
+                    turn_log.add("assign", player_id, "assign_failed",
+                                 f"{donor.name} does not lead {unit_name}",
+                                 character_id=donor.id, success=False)
+                    continue
+                if recipient.faction_id != player_id:
+                    turn_log.add("assign", player_id, "assign_failed",
+                                 f"Elite unit {unit_name} cannot cross factions",
+                                 character_id=donor.id, success=False)
+                    continue
+                unit.leader_character_id = recipient.id
+                unit.location_city_id = recipient.location_city_id
+                turn_log.add("assign", player_id, "assign_elite",
+                             f"{donor.name} assigned {unit.name} to {recipient.name}",
+                             character_id=donor.id)
 
             # Assign named characters into the recipient's group. rules.md:
             # they keep whoever was assigned to them.

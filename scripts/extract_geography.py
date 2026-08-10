@@ -122,8 +122,7 @@ def terrain_rasters(raster: Path) -> tuple[np.ndarray, np.ndarray]:
     chrome = chrome_mask(rgb)
     speckle = mask_for(rgb, [SWAMP_SPECKLE]) & ~chrome
     raw = {
-        name: mask_for(rgb, cols) & ~chrome
-        for name, cols in TERRAIN_COLOURS.items()
+        name: mask_for(rgb, cols) & ~chrome for name, cols in TERRAIN_COLOURS.items()
     }
 
     # Sea lanes are drawn in the same yellow as desert fill. Desert is a blob
@@ -134,7 +133,9 @@ def terrain_rasters(raster: Path) -> tuple[np.ndarray, np.ndarray]:
     # are swamp, the rest stay forest.
     forest_labels, forest_count = ndimage.label(raw["forest"] | speckle)
     swamp_ids = set(np.unique(forest_labels[speckle])) - {0}
-    swamp = np.isin(forest_labels, list(swamp_ids)) if swamp_ids else np.zeros_like(speckle)
+    swamp = (
+        np.isin(forest_labels, list(swamp_ids)) if swamp_ids else np.zeros_like(speckle)
+    )
     raw["swamp"] = swamp
     raw["forest"] = (raw["forest"] | speckle) & ~swamp
 
@@ -154,9 +155,7 @@ def terrain_rasters(raster: Path) -> tuple[np.ndarray, np.ndarray]:
         assigned[raw[name]] = i
     gaps = land & (assigned == 0)
     if gaps.any():
-        _, (iy, ix) = ndimage.distance_transform_edt(
-            assigned == 0, return_indices=True
-        )
+        _, (iy, ix) = ndimage.distance_transform_edt(assigned == 0, return_indices=True)
         assigned[gaps] = assigned[iy[gaps], ix[gaps]]
 
     rivers = mask_for(rgb, [RIVER_COLOUR]) & ~chrome & land
@@ -173,9 +172,7 @@ def build(raster: Path, out: Path, debug: bool) -> dict:
         "coastlines": trace(land, min_area_px=12, simplify_px=0.6),
         "rivers": trace(rivers, min_area_px=6, simplify_px=0.5),
         "terrain": {
-            name: trace(
-                (assigned == i) & land, min_area_px=10, simplify_px=0.8
-            )
+            name: trace((assigned == i) & land, min_area_px=10, simplify_px=0.8)
             for i, name in enumerate(TERRAIN_ORDER, start=1)
         },
     }
@@ -185,9 +182,12 @@ def build(raster: Path, out: Path, debug: bool) -> dict:
 
     if debug:
         palette = {
-            "plain": (120, 200, 90), "forest": (34, 110, 50),
-            "swamp": (70, 120, 110), "desert": (232, 210, 140),
-            "hills": (196, 150, 95), "mountains": (150, 145, 140),
+            "plain": (120, 200, 90),
+            "forest": (34, 110, 50),
+            "swamp": (70, 120, 110),
+            "desert": (232, 210, 140),
+            "hills": (196, 150, 95),
+            "mountains": (150, 145, 140),
         }
         canvas = np.full((*assigned.shape, 3), (150, 200, 230), dtype=np.uint8)
         for i, name in enumerate(TERRAIN_ORDER, start=1):

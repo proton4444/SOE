@@ -7,9 +7,9 @@ dropped: they went stale as the code moved. Use the named modules instead.
 
 | Axis | Coverage |
 |---|---|
-| Command verbs recognised | **89 of 89 (100%)** — as of v1.1.0 every verb in `rules.md` is recognised |
-| Order-language features | **8 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns, `and`-chained commands, `IF`, `THEN`) — `QUIETLY`/`SILENTLY` parse but do not yet suppress report lines |
-| Turn model | Persistent order queue, advanced one pass per weekly turn; the rules specify hour-level asynchronous time |
+| Command verbs recognised | **89 of 89 (100%)** — as of v1.1.0 every verb in `rules.md` is recognised; re-audited 2026-08 for beta (see `examples/beta_order_catalog.txt`, `scripts/beta_order_surface.py`) |
+| Order-language features | **9 of 9** (`HAVE` delegation, `and` target lists, `REPEATEDLY`, groups, pronouns, `and`-chained commands, `IF`, `THEN`, `QUIETLY`/`SILENTLY`) |
+| Turn model | Persistent order queue with hour-resolution wakeups inside each weekly reporting/upkeep turn |
 
 Counted by cross-referencing the command sections of `rules.md` against
 `parser.ORDER_KEYWORDS`. "Recognised" means the parser routes the verb and the
@@ -44,8 +44,8 @@ this list until v0.9 aligned them with the rules' `REPEATEDLY` and `WAIT FOR`.
 | `UNTIL` conditions | partial — `wait until turn N`, not dates or loop terminators |
 | `and` to chain commands | implemented — one sentence carries several orders; see `parser.split_clauses` |
 | `THEN` sequencing | implemented — a clause separator (`wait for 2 weeks and then go to Salem`); a pause across turns still comes from the queue behind a WAIT |
-| `QUIETLY` / `SILENTLY` | partial — both parse as clause adverbs, but report-line suppression is not implemented (the `silent` flag is recorded on the order and unused) |
-| `IF` statements | implemented — condition evaluated when the order is reached on the queue; `else`/`otherwise` supported; scope is the rest of the sentence; never nested. Conditions: gold, recruitable ranks, resources, galleys, summoned creatures, magic/religious power, encumbrance (by group size). Evaluated at turn start, so conditions reflect the state the character begins the turn with rather than after this turn's own preceding orders (see Partial). |
+| `QUIETLY` / `SILENTLY` | implemented — `quietly` covers one command, `silently` covers the rest of its sentence, and both suppress success and error output except for information commands |
+| `IF` statements | implemented — condition evaluated when the order is reached on the queue; `else`/`otherwise` supported; scope is the rest of the sentence; never nested. Conditions include group gold, ranks, resources, galleys, creatures, power, and full group encumbrance. |
 | Pronouns (him/her/them/it) | implemented (resolved before verb dispatch; see `pronouns.py`) |
 
 ## The structural gap
@@ -60,12 +60,9 @@ across turns, and `HALT`/`STOP` cancel what has not started. A queued order is
 validated when it executes rather than when it was written, so it is judged
 against the world it lands in.
 
-What is left of the gap is **granularity**, not structure. The queue advances
-one pass per weekly turn, so it measures game time in turns where the rules
-measure it in hours: a one-hour wait and a one-day wait both cost a turn, and a
-loop body runs at most once per turn. Sub-turn scheduling — and with it `until
-<date>` and the rules' partial-progress rules for an interrupted BUILD — is the
-remaining work, and it is now an increment on the queue rather than a rewrite.
+The queue now wakes at exact hour deadlines inside the weekly reporting and
+upkeep window. Calendar-date `until` syntax and proportional progress for an
+interrupted long job remain separate gaps.
 
 ## Implemented end-to-end
 
@@ -93,7 +90,8 @@ and are covered by tests.
   to a week (`process_income_and_upkeep`), travel with their group leader
   (`sync_elite_locations`), and cannot TAX/SECURE/BUILD/MINE/WORK/GATHER or
   row because they are not characters and never receive orders. The status
-  report shows them (`reporting`).
+  report shows them (`reporting`). They can be assigned to another
+  same-faction group leader or disbanded back into ordinary soldiers.
 - **INVEST** — gold goes into a per-city pool (`GameState.invest_pools`);
   each week the check (`engine.process_invest_weekly`) spends about
   population/100 gold and raises the population by the same amount (with
@@ -101,9 +99,7 @@ and are covered by tests.
   until first measured) and step up their income band when growth crosses a
   threshold. Ruins cannot be invested in; the investor need not be present.
 - **BUY PASSAGE** — travel one direct sealane hop without owning a ship, at a
-  fare equal to the party's size in gold. The rules charge the group's
-  encumbrance instead, which `encumbrance.group_encumbrance` can now supply;
-  head-count stands in until that is switched over. Passage may fail — the
+  fare equal to the group's full encumbrance in gold. Passage may fail — the
   bigger the group the worse the odds —
   and `definitely` helps. A failure refunds the fare. (`engine.process_passage`)
 - **PREACH** — donations scale with religion skill, location population and a
@@ -124,8 +120,8 @@ and are covered by tests.
   chosen branch's orders run (`engine.process_if_orders`). Conditions cover
   gold, soldiers/sailors/workers/slaves, resources, catapults/weapons/armor,
   galleys, summoned creatures, magic/religious power (with `magic`/`religion`
-  modifiers, or the higher of the two), and encumbrance (approximated by
-  group head-count). Pronoun resolution already handled "take it" style
+  modifiers, or the higher of the two), and full group encumbrance. Pronoun
+  resolution already handled "take it" style
   amounts before IF parsing.
 - **THEN sequencing** — `then` chains clauses like `and` ("wait for 2 weeks
   and then go to Salem" is a WAIT then a GO; the queue already holds orders
@@ -240,16 +236,10 @@ and are covered by tests.
 
 ## Partial
 
-- **Order-queue timing** is turn-granular. A wait of one hour and a wait of one
-  day both cost a turn, and a loop body runs at most once per turn, because the
-  engine has no clock finer than a weekly turn. An IF condition is evaluated at
-  the start of the turn it is reached, against the world as the character
-  begins it — not after this same turn's preceding orders have run, which the
-  rules' asynchronous engine would provide.
 - **TRAIN** converts what one week can produce rather than holding the order
-  across several turns; the rules' training spans days, which the queue could
-  model once sub-turn time exists.
-- **BUY PASSAGE** prices a party by head-count instead of encumbrance, and the
+  across several clock wakeups; the rules' longer training jobs remain a
+  single calculated batch.
+- **BUY PASSAGE** prices a party by full group encumbrance, and the
   rules' `via` multi-stop form (`Travel to Im Prok via Amesbok`) is not
   parsed — each hop must be ordered separately, as the rules allow.
 - **OFFER** acceptance is deterministic (no hidden variation between NPCs),
@@ -257,8 +247,6 @@ and are covered by tests.
   characters who might jump ship when unpaid — is not modelled. An NPC is
   resolved for orders (including "have <npc> come to ...") from the turn they
   are offered to.
-- **CREATE** elite units can neither be handed to another group leader nor
-  disbanded once formed; they follow their creator's group for life.
 - **INVEST** uses the city's exact `population` when the map provides one,
   and the band-midpoint until a city without one is first measured, so a
   TINY town's weekly spend is approximated; the population growth cap keeps
@@ -271,10 +259,9 @@ and are covered by tests.
 - **Gold** is held per character as of v0.8. Legacy `Faction.treasury` still
   acts as a spend fall-back and migrates onto the leader when an old save is
   loaded. Multi-item GET lists remain simplified.
-- **Group possession** covers characters and unit stacks. Ships, resources and
-  gold are still held by their character rather than travelling with a group as
-  a single pool, and combat still totals a faction's strength at a location
-  rather than resolving group by group.
+- **Group possession** aggregates member purses/resources and assigns ships to
+  character groups. Ordered combat resolves the named attacker and defender
+  groups rather than every same-faction force at the location.
 - **SCAN** works off a real orb and prices distance in map miles (one power
   per ten miles, per the rules) when the route carries `distance_miles`;
   maps without mileages fall back to the movement-cost conversion
@@ -290,11 +277,10 @@ and are covered by tests.
 - **Magical items** are not lost or looted when their holder dies: an item stays
   with the body rather than falling to the victor, because `rules.md` does not
   say what should happen and the items are indestructible. Item weight and
-  encumbrance are likewise unmodelled, so carrying six crystals costs nothing.
+  encumbrance are included in the shared cargo calculation.
 - **QUERY** parses and reports, but it is not yet more immediate than `REPORT`.
   The rules have QUERY reach a subordinate who is busy and get an answer out of
-  turn; the engine has no sub-turn clock, so both verbs answer at the same
-  point in the turn.
+  turn; both verbs currently answer in their normal ready-order batch.
 - **REPORT** does not scale its detail with city size or group size the way the
   rules describe. It uses the same fog roll as an end-of-turn sighting.
 - **Pronouns** resolve position-by-position: each `him`/`her`/`it`/`them`
@@ -314,28 +300,9 @@ and are covered by tests.
 
 ## Not implemented
 
-- Sub-turn game time, and with it the rules' partial-progress accounting for a
-  BUILD or FORTIFY interrupted part-way through, `until <date>` and
-  hour-level waits.
-- Horses, wagons, armour, weapons, catapults, battering rams and siege towers
-  as *carried* things. `encumbrance.py` weighs people, unit stacks, mined
-  substances and purses to Appendix B, which is what `FLY` and `TELEPORT` now
-  charge for; the Appendix B figures for the rest are recorded in
-  `UNMODELLED_ENCUMBRANCE` but contribute nothing until those items are tracked
-  as cargo. With them absent, the horse/wagon rules that lighten a group on
-  land, and the land-speed bonus for horses, are also still missing.
-  `BUY PASSAGE` fares and IF encumbrance checks continue to use head-count and
-  could now be switched to `encumbrance.group_encumbrance`.
-- Item weight: magical items are weightless, so carrying six crystals costs
-  nothing to fly.
-- `QUIETLY`/`SILENTLY` report suppression (the adverbs parse; the `silent`
-  flag on orders is recorded and unused).
-- Retreat and morale in combat.
-- Elite troops' restrictions are enforced structurally (they cannot take
-  orders), but they cannot be reassigned between leaders or disbanded.
-- Group-level possession of ships, resources and gold; combat still totals a
-  faction's strength at a location rather than resolving group by group.
-- Resource depletion (accumulation and its cap are in; depletion is not).
+- Calendar-date `until` syntax and partial-progress accounting when BUILD or
+  FORTIFY is interrupted part-way through.
+- The land-only horse/wagon encumbrance exceptions and horse speed bonus.
 - Religion's `PREACH` follower variety and the wider miracle table.
 - Named-character hiring, education and the starting-character creation phase.
 

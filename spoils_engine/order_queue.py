@@ -22,7 +22,6 @@ Only four things ever hold work back:
 """
 
 import copy
-import math
 from typing import Dict, List, Optional
 
 from spoils_engine import config
@@ -65,6 +64,33 @@ def process_order_queue(orders_by_player: Dict[str, List[Order]],
     released = _enqueue(orders_by_player, game_state, turn_log)
     _drain(game_state, turn_log, released)
     return released
+
+
+def resume_order_queue(game_state: GameState, turn_log) -> Dict[str, List[Order]]:
+    """Wake queues after the game clock advances inside the current turn."""
+    released: Dict[str, List[Order]] = {}
+    _drain(game_state, turn_log, released)
+    return released
+
+
+def next_wake_hour(game_state: GameState, end_hour: int) -> Optional[int]:
+    """Earliest queued wait check that falls inside this processing window."""
+    wakeups = []
+    now = current_hour(game_state)
+    for queue in game_state.order_queues.values():
+        if not queue or not isinstance(queue[0].order, AwaitOrder):
+            continue
+        entry = queue[0]
+        candidate = entry.check_hour if entry.order.target_id else entry.release_hour
+        if candidate > now and candidate < end_hour:
+            wakeups.append(candidate)
+    return min(wakeups) if wakeups else None
+
+
+def current_hour(game_state: GameState) -> int:
+    """Absolute game hour, including migration for directly-built old states."""
+    return max(game_state.game_time_hours,
+               game_state.turn_number * config.HOURS_PER_TURN)
 
 
 # ============================================================================
@@ -111,7 +137,7 @@ def turns_for_days(days: int) -> int:
     """
     if days <= 0:
         return 0
-    return max(1, math.ceil(days / config.DAYS_PER_TURN))
+    return max(1, (days + config.DAYS_PER_TURN - 1) // config.DAYS_PER_TURN)
 
 
 # ============================================================================
@@ -150,7 +176,8 @@ def _apply_halts(orders_by_player: Dict[str, List[Order]],
 
 def _running_wait(queue: List[QueueEntry]) -> Optional[QueueEntry]:
     """The head entry if it is a wait that has already started, else None."""
-    if queue and isinstance(queue[0].order, AwaitOrder) and queue[0].release_turn >= 0:
+    if (queue and isinstance(queue[0].order, AwaitOrder)
+            and (queue[0].release_hour >= 0 or queue[0].release_turn >= 0)):
         return queue[0]
     return None
 
@@ -347,8 +374,21 @@ def _resolve_wait(actor: Character, entry: QueueEntry, order: AwaitOrder,
     player_id = order.player_id
     target = game_state.characters.get(order.target_id) if order.target_id else None
 
-    if entry.release_turn < 0:
-        entry.release_turn = game_state.turn_number + turns_for_days(order.duration_days)
+    now = current_hour(game_state)
+    if entry.release_hour < 0:
+        # Migrate an in-flight turn-granular wait, otherwise start a new
+        # hour-granular deadline from the current clock position.
+        if entry.release_turn >= 0:
+            entry.release_hour = entry.release_turn * config.HOURS_PER_TURN
+        else:
+            duration = getattr(order, "duration_hours", 0)
+            if duration <= 0:
+                duration = order.duration_days * config.HOURS_PER_DAY
+            entry.release_hour = now + duration
+            entry.release_turn = (
+                entry.release_hour + config.HOURS_PER_TURN - 1
+            ) // config.HOURS_PER_TURN
+        entry.check_hour = min(entry.release_hour, now + 4)
         if order.target_id and not target:
             turn_log.add("queue", player_id, "await_failed",
                          f"{actor.name} was told to wait for someone who does not exist",
@@ -364,24 +404,25 @@ def _resolve_wait(actor: Character, entry: QueueEntry, order: AwaitOrder,
                          f"{target.name} reached {actor.name}; the wait is over",
                          character_id=actor.id)
             return True
-        if game_state.turn_number >= entry.release_turn:
+        if now >= entry.release_hour:
             turn_log.add("queue", player_id, "await_expired",
                          f"{actor.name} gave up waiting for {target.name}",
                          character_id=actor.id, success=False)
             return True
+        entry.check_hour = min(entry.release_hour, now + 4)
         turn_log.add("queue", player_id, "await_waiting",
                      f"{actor.name} is still waiting for {target.name}",
                      character_id=actor.id)
         return False
 
-    if game_state.turn_number >= entry.release_turn:
+    if now >= entry.release_hour:
         turn_log.add("queue", player_id, "await_finished",
                      f"{actor.name} has finished waiting", character_id=actor.id)
         return True
 
-    turns_left = entry.release_turn - game_state.turn_number
+    hours_left = entry.release_hour - now
     turn_log.add("queue", player_id, "await_waiting",
-                 f"{actor.name} is waiting ({turns_left} more turn(s))",
+                 f"{actor.name} is waiting ({hours_left} more hour(s))",
                  character_id=actor.id)
     return False
 

@@ -11,7 +11,7 @@ from spoils_engine.models import (
 from spoils_engine.orders import (
     AssignOrder, NameOrder,
     PromoteOrder, GetOrder, TransferOrder, UnloadOrder, PayOrder, BorrowOrder, RepayOrder,
-    UnnameOrder, CreateOrder,
+    UnnameOrder, CreateOrder, DisbandOrder,
 )
 from spoils_engine import items
 from spoils_engine.parser.text import (
@@ -129,6 +129,13 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
                 order.item_names.append(item.name)
                 continue
 
+            elite = next((unit for unit in game_state.elite_units.values()
+                          if unit.name.casefold() == name.casefold()), None)
+            if elite:
+                order.elite_unit_ids.append(elite.id)
+                order.elite_unit_names.append(elite.name)
+                continue
+
             # A counted kind in a name list: "assign 10 soldiers and Doctor
             # McCoy to Joe Flint". One kind fills the transfer; the splitter
             # turns several kinds into one order each, so this is rare.
@@ -188,6 +195,25 @@ def parse_assign_order(sentence: str, game_state: GameState, player_id: str) -> 
         return order
 
     return None
+
+
+def parse_disband_order(sentence: str, game_state: GameState,
+                         player_id: str) -> Optional[DisbandOrder]:
+    parser = OrderParserBase(game_state, player_id, sentence)
+    order = parser.create_order(DisbandOrder)
+    match = re.search(r'^(?:have\s+(.+?)\s+)?disband\s+(.+)$', sentence)
+    if not match:
+        return None
+    if not parser.resolve_actor(order, match.group(1).strip() if match.group(1) else None):
+        return order
+    name = match.group(2).strip()
+    elite = next((unit for unit in game_state.elite_units.values()
+                  if unit.name.casefold() == name.casefold()), None)
+    if not elite:
+        return parser.add_warning(order, f"Elite unit '{name}' not found")
+    order.elite_unit_id = elite.id
+    order.elite_unit_name = elite.name
+    return order
 
 
 def _fill_assign(order: AssignOrder, kind: str, quantity: int,

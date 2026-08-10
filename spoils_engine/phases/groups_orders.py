@@ -118,8 +118,18 @@ def process_support(orders_by_player: Dict[str, List[Order]], game_state: GameSt
                 actor.support_until_turn = -1  # until halted
                 window = " until halted"
 
+            # Spelled out because every part of this surprised a playtester.
+            # rules.md: a supporter joins "if and when he attacks someone
+            # else", stays a separate group ("combat leadership ... limited to
+            # a single group"), and must already be standing where the fight
+            # happens -- the rules' own examples GO there first. None of that
+            # is a defensive pact and none of it merges the two groups.
             turn_log.add("groups", player_id, "support",
-                         f"{actor.name} will fight alongside {target.name}{window}",
+                         f"{actor.name} will join {target.name}'s attacks"
+                         f"{window}, fighting as a separate group in whatever "
+                         f"town they both stand in. SUPPORT does not merge the "
+                         f"groups, does not move {actor.name}, and does not "
+                         f"help {target.name} defend.",
                          character_id=actor.id)
 
 

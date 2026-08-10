@@ -42,6 +42,10 @@ MILES_PER_MOVE_POINT = 10
 # and the natural healing rate already assumes a seven-day turn. Order-queue
 # waits expressed in days are converted with this.
 DAYS_PER_TURN = 7
+HOURS_PER_DAY = 24
+HOURS_PER_TURN = DAYS_PER_TURN * HOURS_PER_DAY
+RESOURCE_CAPACITY_PER_RICHNESS = 10_000
+RESOURCE_WEEKLY_RECOVERY_RATE = 0.10
 
 # rules.md: "1 month in Spoils of Empire is exactly 30 days."
 DAYS_PER_MONTH = 30

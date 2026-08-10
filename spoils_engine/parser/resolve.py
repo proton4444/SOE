@@ -55,9 +55,9 @@ def resolve_character(name_text: str, game_state: GameState,
         # offer is accepted (see engine.process_offer).
         char = game_state.get_character_by_name(name_text)
         if not char:
-            words = name_text.split()
-            if words and words[0] in TITLE_WORDS:
-                char = game_state.get_character_by_name(" ".join(words[1:]))
+            without_title = strip_leading_title(name_text, game_state)
+            if without_title:
+                char = game_state.get_character_by_name(without_title)
         if char and _is_npc(char, game_state):
             return ResolvedEntity(char.id, char.name)
         if not enemy_ok:
@@ -67,6 +67,14 @@ def resolve_character(name_text: str, game_state: GameState,
     char = game_state.get_character_by_name(name_text)
     if char:
         return ResolvedEntity(char.id, char.name)
+
+    # A title is ignored on a target too, so "attack Wizard Yemishoka" and
+    # "attack Regent Aurelia" find the same people the player's own orders do.
+    without_title = strip_leading_title(name_text, game_state)
+    if without_title:
+        char = game_state.get_character_by_name(without_title)
+        if char:
+            return ResolvedEntity(char.id, char.name)
 
     return ResolvedEntity("", name_text, found=False)
 
@@ -81,14 +89,35 @@ def _is_npc(char: Character, game_state: GameState) -> bool:
 # they are mandatory." A player writes "Assign 200 soldiers to Captain Bill
 # Jones" and means Bill Jones, so a leading title word is dropped before the
 # name lookup.
+def strip_leading_title(name_text: str, game_state: Optional[GameState] = None) -> str:
+    """
+    `name_text` without its leading title word, or "" when it has none.
+
+    TITLE_WORDS holds the standard ranks. PROMOTE, though, lets a player invent
+    a title ("Promote Aurelia to Regent"), so a word actually worn as a title
+    somewhere in this game counts as well -- otherwise "attack Regent Aurelia"
+    goes looking for a character of that full name and quietly finds nobody.
+    """
+    words = name_text.split()
+    if len(words) < 2:
+        return ""
+    first = words[0].lower()
+    if first in TITLE_WORDS:
+        return " ".join(words[1:])
+    if game_state and any(
+            first in char.title.lower().split()
+            for char in game_state.characters.values() if char.title):
+        return " ".join(words[1:])
+    return ""
+
+
 def _match_without_title(name_text: str, game_state: GameState,
                          player_id: str) -> Optional[Character]:
     """A character whose name follows a leading title word."""
-    words = name_text.split()
-    if not words or words[0] not in TITLE_WORDS:
+    without_title = strip_leading_title(name_text, game_state)
+    if not without_title:
         return None
-    return game_state.get_character_by_name(
-        " ".join(words[1:]), faction_id=player_id)
+    return game_state.get_character_by_name(without_title, faction_id=player_id)
 
 
 def resolve_city(name_text: str, game_state: GameState) -> ResolvedEntity:
@@ -187,7 +216,15 @@ class OrderParserBase:
 
         Returns:
             True if resolved successfully, False otherwise
+
+        Note:
+            `order.city_implicit` records that the player named no city. The
+            parse-time fill is then only a default: the order was written about
+            wherever the character turns out to be standing, and a MOVE earlier
+            in the same sentence has not happened yet. Execution re-reads the
+            actor's location in that case.
         """
+        order.city_implicit = not city_name
         if city_name:
             resolved = resolve_city(city_name, self.game_state)
             if not resolved.found:

@@ -13,8 +13,14 @@ from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("SOE_DATA_DIR", str(Path(tempfile.gettempdir()) / f"soe_test_{uuid.uuid4().hex[:8]}"))
-os.environ.setdefault("SOE_GAMES_DIR", str(Path(tempfile.gettempdir()) / f"soe_games_{uuid.uuid4().hex[:8]}"))
+os.environ.setdefault(
+    "SOE_DATA_DIR",
+    str(Path(tempfile.gettempdir()) / f"soe_test_{uuid.uuid4().hex[:8]}"),
+)
+os.environ.setdefault(
+    "SOE_GAMES_DIR",
+    str(Path(tempfile.gettempdir()) / f"soe_games_{uuid.uuid4().hex[:8]}"),
+)
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -26,11 +32,15 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def _clean_store():
     from webapp import rooms
+    from webapp.ai import registry as ai_registry
     from webapp.rooms import ROOMS_FILE
 
     rooms.default_store()._rooms.clear()
+    ai_registry.default_registry()._profiles.clear()
     if ROOMS_FILE.exists():
         ROOMS_FILE.unlink()
+    if ai_registry.AGENTS_FILE.exists():
+        ai_registry.AGENTS_FILE.unlink()
     yield
 
 
@@ -54,7 +64,7 @@ def test_create_room_initialises_an_engine_game():
     assert state_file.exists()
     state = state_file.read_text(encoding="utf-8")
     assert '"turn_number": 0' in state
-    assert 'player_1' in state and 'player_2' in state
+    assert "player_1" in state and "player_2" in state
     # Default map is the full world when present.
     assert room["map_file"] == "soe_world.json" or room["map_file"].endswith(".json")
     if (Path(__file__).resolve().parent.parent / "maps" / "soe_world.json").exists():
@@ -90,20 +100,77 @@ def test_join_claims_slots_and_returns_key():
     assert p1["agent_key"].startswith("soe_")
     assert p1["agent_key"] != p2["agent_key"]
 
-    # Re-joining with the same name returns the same player.
-    again = _join(room["code"], room["pin"], "Alice")
-    assert again["faction_id"] == p1["faction_id"]
-    assert again["agent_key"] == p1["agent_key"]
+    # A public display name must never be enough to recover another player's key.
+    again = client.post(
+        "/api/join",
+        json={"code": room["code"], "pin": room["pin"], "name": "Alice"},
+    )
+    assert again.status_code == 400
+    assert "already taken" in again.json()["detail"]
+    assert p1["agent_key"] not in again.text
 
 
 def test_join_rejects_wrong_pin_and_full_room():
     room = _create_room(slots=2)
-    resp = client.post("/api/join", json={"code": room["code"], "pin": "0000", "name": "X"})
+    resp = client.post(
+        "/api/join", json={"code": room["code"], "pin": "0000", "name": "X"}
+    )
     assert resp.status_code == 400
     _join(room["code"], room["pin"], "A")
     _join(room["code"], room["pin"], "B")
-    resp = client.post("/api/join", json={"code": room["code"], "pin": room["pin"], "name": "C"})
+    resp = client.post(
+        "/api/join", json={"code": room["code"], "pin": room["pin"], "name": "C"}
+    )
     assert resp.status_code == 400
+
+
+def test_beta_invite_gate_and_secure_browser_cookie(monkeypatch):
+    from webapp import main
+
+    monkeypatch.setattr(main, "BETA_ACCESS_CODE", "invite-only")
+    denied = client.post("/api/rooms", json={"name": "Blocked", "slots": 2})
+    assert denied.status_code == 403
+
+    created = client.post(
+        "/create",
+        data={"name": "Invited", "slots": 2, "beta_invite": "invite-only"},
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+
+    monkeypatch.setattr(main, "COOKIE_SECURE", True)
+    secure_created = client.post(
+        "/create",
+        data={"name": "Secure", "slots": 2, "beta_invite": "invite-only"},
+        follow_redirects=False,
+    )
+    assert secure_created.status_code == 303
+    assert "Secure" in secure_created.headers["set-cookie"]
+
+
+def test_health_check_is_non_sensitive_and_reports_storage_paths():
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["single_worker_required"] is True
+    assert "agent_key" not in response.text
+    assert "host_key" not in response.text
+
+
+def test_human_join_cannot_take_over_an_existing_display_name():
+    room = _create_room()
+    _join(room["code"], room["pin"], "Alice")
+
+    resp = client.post(
+        "/join",
+        data={"code": room["code"], "pin": room["pin"], "display_name": "Alice"},
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert "error=" in resp.headers["location"]
+    assert resp.cookies.get(f"soe_player_{room['code']}") is None
 
 
 def test_orders_parse_feedback_and_are_stored():
@@ -111,7 +178,9 @@ def test_orders_parse_feedback_and_are_stored():
     p1 = _join(room["code"], room["pin"], "Alice")
     resp = client.post(
         f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
-        json={"orders": "Recruit 20 soldiers in Madegi Doy.\nHave Emperor Marcus go to Kitesta."},
+        json={
+            "orders": "Recruit 20 soldiers in Madegi Doy.\nHave Emperor Marcus go to Kitesta."
+        },
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -151,22 +220,34 @@ def test_turn_resolves_when_all_submitted():
     )
 
     # Not ready while someone is missing.
-    resp = client.post(f"/api/rooms/{room['code']}/resolve", json={}, headers={"X-Agent-Key": room["host_key"]})
+    resp = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
     assert resp.status_code == 409
     assert "Bob" in resp.json()["detail"]
 
     # Ready after both submit.
     client.post(
         f"/api/rooms/{room['code']}/orders?key={p2['agent_key']}",
-        json={"orders": "Recruit 30 soldiers in Albatross City.\nHave Khan Tengri go to Madegi Doy."},
+        json={
+            "orders": "Recruit 30 soldiers in Albatross City.\nHave Khan Tengri go to Madegi Doy."
+        },
     )
-    resp = client.post(f"/api/rooms/{room['code']}/resolve", json={}, headers={"X-Agent-Key": room["host_key"]})
+    resp = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["turn"] == 1
 
     # State advanced, reports exist for both players.
-    status = client.get(f"/api/rooms/{room['code']}/status", headers={"X-Agent-Key": p1["agent_key"]})
+    status = client.get(
+        f"/api/rooms/{room['code']}/status", headers={"X-Agent-Key": p1["agent_key"]}
+    )
     assert status.json()["turn"] == 1
     assert status.json()["available_reports"] == [1]
 
@@ -179,10 +260,151 @@ def test_turn_resolves_when_all_submitted():
         assert player["faction_name"] in report.json()["report"]
 
 
+def test_turn_resolution_creates_a_verified_pre_turn_backup_and_a_safe_event_log():
+    from webapp import backups
+
+    room = _create_room()
+    p1 = _join(room["code"], room["pin"], "Alice")
+    client.post(
+        f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
+        json={"orders": "Recruit 20 soldiers."},
+    )
+
+    response = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={"force": True},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
+    assert response.status_code == 200
+
+    backup_root = backups.BACKUP_ROOT / f"room_{room['code']}"
+    backup_path = next(path for path in backup_root.iterdir() if path.is_dir())
+    manifest = backups.validate_backup(backup_path)
+    assert manifest["room_code"] == room["code"]
+    assert manifest["turn"] == 1
+    assert manifest["authoritative_turn"] == 0
+    assert '"turn_number": 0' in (backup_path / "game" / "state.json").read_text()
+
+    events = (
+        Path(os.environ["SOE_GAMES_DIR"])
+        / f"room_{room['code']}"
+        / "resolution_events.jsonl"
+    ).read_text()
+    assert '"status":"started"' in events
+    assert '"status":"completed"' in events
+    assert p1["agent_key"] not in events
+
+
+def test_failed_pre_turn_backup_blocks_resolution(monkeypatch):
+    from webapp import backups
+
+    room = _create_room()
+    p1 = _join(room["code"], room["pin"], "Alice")
+
+    def fail_backup(*args, **kwargs):
+        raise backups.BackupError("test failure")
+
+    monkeypatch.setattr(backups, "create_pre_turn_backup", fail_backup)
+    response = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={"force": True},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
+    assert response.status_code == 503
+    assert "backup failed" in response.json()["detail"]
+
+    state = json.loads(
+        (
+            Path(os.environ["SOE_GAMES_DIR"]) / f"room_{room['code']}" / "state.json"
+        ).read_text()
+    )
+    assert state["turn_number"] == 0
+    events = (
+        Path(os.environ["SOE_GAMES_DIR"])
+        / f"room_{room['code']}"
+        / "resolution_events.jsonl"
+    ).read_text()
+    assert '"status":"backup_failed"' in events
+    assert p1["agent_key"] not in events
+
+
+def test_pre_turn_backup_can_restore_game_and_server_state(tmp_path):
+    from webapp import backups
+    from webapp.rooms import RoomStore
+    from spoils_engine import storage
+
+    room = _create_room()
+    p1 = _join(room["code"], room["pin"], "Alice")
+    client.post(
+        f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
+        json={"orders": "Recruit 20 soldiers."},
+    )
+    response = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={"force": True},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
+    assert response.status_code == 200
+
+    backup_path = next(
+        path
+        for path in (backups.BACKUP_ROOT / f"room_{room['code']}").iterdir()
+        if path.is_dir()
+    )
+    restored_data = tmp_path / "server_data"
+    restored_games = tmp_path / "games"
+    manifest = backups.restore_backup(
+        backup_path,
+        rooms_file=restored_data / "rooms.json",
+        games_root=restored_games,
+    )
+    restored_state = storage.load_game_state(restored_games / f"room_{room['code']}")
+    restored_store = RoomStore(restored_data / "rooms.json")
+    assert manifest["authoritative_turn"] == 0
+    assert restored_state is not None and restored_state.turn_number == 0
+    assert restored_store.get(room["code"]).last_resolved_turn == 0
+
+
+def test_corrupt_room_registry_fails_closed(tmp_path):
+    from webapp.rooms import RoomRegistryError, RoomStore
+
+    registry = tmp_path / "rooms.json"
+    registry.write_text("not-json", encoding="utf-8")
+    with pytest.raises(RoomRegistryError):
+        RoomStore(registry)
+
+
+def test_room_and_game_survive_store_reload_after_a_resolved_turn():
+    from spoils_engine import storage
+    from webapp.rooms import RoomStore, ROOMS_FILE, GAMES_ROOT
+
+    room = _create_room()
+    p1 = _join(room["code"], room["pin"], "Alice")
+    client.post(
+        f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
+        json={"orders": "Recruit 20 soldiers."},
+    )
+    response = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={"force": True},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
+    assert response.status_code == 200
+
+    reloaded_store = RoomStore(ROOMS_FILE)
+    reloaded_room = reloaded_store.get(room["code"])
+    reloaded_state = storage.load_game_state(GAMES_ROOT / f"room_{room['code']}")
+    assert reloaded_room is not None and reloaded_room.last_resolved_turn == 1
+    assert reloaded_state is not None and reloaded_state.turn_number == 1
+    assert 1 in reloaded_room.reports
+
+
 def test_agent_state_view_is_structured_and_fogged():
     room = _create_room()
     p1 = _join(room["code"], room["pin"], "Alice")
-    state = client.get(f"/api/rooms/{room['code']}/state", headers={"X-Agent-Key": p1["agent_key"]}).json()
+    state = client.get(
+        f"/api/rooms/{room['code']}/state", headers={"X-Agent-Key": p1["agent_key"]}
+    ).json()
 
     assert state["faction_id"] == "player_1"
     assert state["faction_name"] == "The Golden Empire"
@@ -207,7 +429,11 @@ def test_host_force_resolve_runs_with_empty_orders():
         f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
         json={"orders": "Recruit 20 soldiers in Madegi Doy."},
     )
-    resp = client.post(f"/api/rooms/{room['code']}/resolve", json={"force": True}, headers={"X-Agent-Key": room["host_key"]})
+    resp = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={"force": True},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
     assert resp.status_code == 200, resp.text
     assert resp.json()["turn"] == 1
 
@@ -221,7 +447,11 @@ def test_resolve_is_deterministic_per_room_and_turn():
             f"/api/rooms/{room['code']}/orders?key={p['agent_key']}",
             json={"orders": "Recruit 20 soldiers."},
         )
-    first = client.post(f"/api/rooms/{room['code']}/resolve", json={}, headers={"X-Agent-Key": room["host_key"]})
+    first = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
     seed_a = first.json()["seed"]
 
     room2 = _create_room()
@@ -232,7 +462,11 @@ def test_resolve_is_deterministic_per_room_and_turn():
             f"/api/rooms/{room2['code']}/orders?key={p['agent_key']}",
             json={"orders": "Recruit 20 soldiers."},
         )
-    second = client.post(f"/api/rooms/{room2['code']}/resolve", json={}, headers={"X-Agent-Key": room2["host_key"]})
+    second = client.post(
+        f"/api/rooms/{room2['code']}/resolve",
+        json={},
+        headers={"X-Agent-Key": room2["host_key"]},
+    )
     seed_b = second.json()["seed"]
 
     assert seed_a != seed_b  # different rooms, different seeds
@@ -264,28 +498,29 @@ def test_start_cities_are_seeded_random_but_reproducible():
     assert service._room_seed(room["code"]) == service._room_seed(room["code"])
 
     # Start cities are visible in the lobby status, by display name.
-    status = client.get(f"/api/rooms/{room['code']}/status",
-                        headers={"X-Agent-Key": room["host_key"]}).json()
+    status = client.get(
+        f"/api/rooms/{room['code']}/status", headers={"X-Agent-Key": room["host_key"]}
+    ).json()
     names = {c["id"]: c["name"] for c in load_raw_map(room["map_file"])["cities"]}
-    assert [p["start_city"] for p in status["players"]] == [
-        names[s] for s in starts
-    ]
+    assert [p["start_city"] for p in status["players"]] == [names[s] for s in starts]
 
 
 def test_map_is_the_first_impact_of_the_landing_page():
     page = client.get("/")
     assert page.status_code == 200
     # The hero SVG map renders with cities and road/sea links.
-    assert '<svg' in page.text
+    assert "<svg" in page.text
     assert "Madegi Doy" in page.text
     # Default is the full world map when present.
     assert "soe_world.json" in page.text or "sample_map.json" in page.text
     assert "sea lane" in page.text or "≈" in page.text or "Soe World" in page.text
     # The map picker wires the chosen map into the create form.
     assert 'name="map_file"' in page.text
-    assert 'value="soe_world.json"' in page.text or 'value="sample_map.json"' in page.text
+    assert (
+        'value="soe_world.json"' in page.text or 'value="sample_map.json"' in page.text
+    )
     # Full world uses traced geography (15 landmasses), not road-hull merge.
-    if "soe_world.json" in page.text and "value=\"soe_world.json\"" in page.text:
+    if "soe_world.json" in page.text and 'value="soe_world.json"' in page.text:
         assert "15 landmasses" in page.text or "Slamoniya" in page.text
         assert "soe-map-geo" in page.text
 
@@ -303,19 +538,38 @@ def test_map_preview_endpoint_serves_svg():
     assert resp.status_code == 404
 
 
-def test_map_positions_use_explicit_coords_and_fall_back_to_layout(tmp_path, monkeypatch):
+def test_map_positions_use_explicit_coords_and_fall_back_to_layout(
+    tmp_path, monkeypatch
+):
     from webapp import mapview
 
     monkeypatch.setattr(mapview, "_map_path", lambda name: tmp_path / name)
 
     custom = tmp_path / "custom.json"
-    custom.write_text(json.dumps({
-        "cities": [
-            {"id": "a", "name": "A", "population_band": "< 10k", "x": 0.0, "y": 0.0},
-            {"id": "b", "name": "B", "population_band": "< 10k", "x": 1.0, "y": 1.0},
-        ],
-        "roads": [],
-    }), encoding="utf-8")
+    custom.write_text(
+        json.dumps(
+            {
+                "cities": [
+                    {
+                        "id": "a",
+                        "name": "A",
+                        "population_band": "< 10k",
+                        "x": 0.0,
+                        "y": 0.0,
+                    },
+                    {
+                        "id": "b",
+                        "name": "B",
+                        "population_band": "< 10k",
+                        "x": 1.0,
+                        "y": 1.0,
+                    },
+                ],
+                "roads": [],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     # Hand-placed coordinates are used when present for every city.
     pos = mapview.positions("custom.json")
@@ -324,14 +578,19 @@ def test_map_positions_use_explicit_coords_and_fall_back_to_layout(tmp_path, mon
 
     # No coordinates -> deterministic force layout still works.
     no_coords = tmp_path / "auto.json"
-    no_coords.write_text(json.dumps({
-        "cities": [
-            {"id": "a", "name": "A", "population_band": "< 10k"},
-            {"id": "b", "name": "B", "population_band": "< 10k"},
-            {"id": "c", "name": "C", "population_band": "< 10k"},
-        ],
-        "roads": [],
-    }), encoding="utf-8")
+    no_coords.write_text(
+        json.dumps(
+            {
+                "cities": [
+                    {"id": "a", "name": "A", "population_band": "< 10k"},
+                    {"id": "b", "name": "B", "population_band": "< 10k"},
+                    {"id": "c", "name": "C", "population_band": "< 10k"},
+                ],
+                "roads": [],
+            }
+        ),
+        encoding="utf-8",
+    )
     pos_a = mapview.positions("auto.json")
     pos_b = mapview.positions("auto.json")
     assert pos_a == pos_b  # deterministic
@@ -388,7 +647,8 @@ def test_player_state_does_not_leak_rival_garrisons():
 
     state = service.load_state(room_obj)
     far_city = next(
-        cid for cid in state.world_map.cities
+        cid
+        for cid in state.world_map.cities
         if cid not in {p1.start_city, p2.start_city}
     )
     # Rival secures its own home and a city nobody is watching.
@@ -424,9 +684,7 @@ def test_player_state_reveals_a_garrison_once_a_scout_stands_there():
     state = service.load_state(room_obj)
     state.factions[p2.faction_id].secured_city_ids = {p2.start_city}
     # Move player 1's leader onto the rival's seat.
-    leader = next(
-        c for c in state.characters.values() if c.faction_id == p1.faction_id
-    )
+    leader = next(c for c in state.characters.values() if c.faction_id == p1.faction_id)
     leader.location_city_id = p2.start_city
     storage.save_game_state(state, room_obj.game_dir())
 
@@ -435,6 +693,181 @@ def test_player_state_reveals_a_garrison_once_a_scout_stands_there():
 
     assert seen["observed"] is True
     assert seen["secured_by"] == p2.faction_id
+
+
+def test_master_dashboard_is_host_only_and_explains_a_resolved_turn():
+    room = _create_room(slots=2)
+    p1 = _join(room["code"], room["pin"], "Alice")
+    p2 = _join(room["code"], room["pin"], "Bob")
+
+    denied = client.get(f"/room/{room['code']}/master")
+    assert denied.status_code == 403
+
+    client.cookies.set(f"soe_host_{room['code']}", room["host_key"])
+    before = client.get(f"/room/{room['code']}/master")
+    assert before.status_code == 200
+    assert "Gamemaster view" in before.text
+    assert "Waiting for 2 player(s)" in before.text
+    assert "host_key" not in before.text
+
+    status = client.get(
+        f"/api/rooms/{room['code']}/status",
+        headers={"X-Agent-Key": room["host_key"]},
+    ).json()
+    starts = {p["faction_id"]: p["start_city"] for p in status["players"]}
+
+    for player, orders in (
+        (p1, f"Have Emperor Marcus recruit 10 soldiers in {starts['player_1']}."),
+        (p2, f"Have Khan Tengri recruit 10 soldiers in {starts['player_2']}."),
+    ):
+        response = client.post(
+            f"/api/rooms/{room['code']}/orders?key={player['agent_key']}",
+            json={"orders": orders},
+        )
+        assert response.status_code == 200
+
+    resolved = client.post(
+        f"/api/rooms/{room['code']}/resolve",
+        json={},
+        headers={"X-Agent-Key": room["host_key"]},
+    )
+    assert resolved.status_code == 200
+
+    after = client.get(f"/room/{room['code']}/master")
+    assert after.status_code == 200
+    assert "Current turn" in after.text
+    assert "Gameplay timeline" in after.text
+    assert "recruited" in after.text
+    assert "Sovereign" in after.text
+
+    from pathlib import Path
+    import os
+
+    events = (
+        Path(os.environ["SOE_GAMES_DIR"]) / f"room_{room['code']}" / "turn_events.jsonl"
+    )
+    assert events.exists()
+
+
+def test_master_can_inspect_one_players_resources_and_commands_without_credentials():
+    from spoils_engine import storage
+    from webapp import service
+    from webapp.rooms import default_store
+
+    room = _create_room(slots=2)
+    p1 = _join(room["code"], room["pin"], "Alice")
+    _join(room["code"], room["pin"], "Bob")
+    room_obj = default_store().get(room["code"])
+    state = service.load_state(room_obj)
+    leader = next(c for c in state.characters.values() if c.faction_id == "player_1")
+    leader.resources = {"wood": 12, "stone": 3}
+    storage.save_game_state(state, room_obj.game_dir())
+
+    start_city = next(
+        p["start_city"]
+        for p in client.get(
+            f"/api/rooms/{room['code']}/status",
+            headers={"X-Agent-Key": room["host_key"]},
+        ).json()["players"]
+        if p["faction_id"] == "player_1"
+    )
+    response = client.post(
+        f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
+        json={"orders": f"Recruit 7 soldiers in {start_city}."},
+    )
+    assert response.status_code == 200
+
+    denied = client.get(f"/room/{room['code']}/master/player/player_1")
+    assert denied.status_code == 403
+
+    client.cookies.set(f"soe_host_{room['code']}", room["host_key"])
+    detail = client.get(f"/room/{room['code']}/master/player/player_1")
+    assert detail.status_code == 200
+    assert "Resources and obligations" in detail.text
+    assert "12 wood" in detail.text
+    assert "Recruit 7 soldiers" in detail.text
+    assert "Submitted commands" in detail.text
+    assert room["host_key"] not in detail.text
+    assert p1["agent_key"] not in detail.text
+
+
+def test_player_state_separates_sovereign_occupier_and_administrator():
+    """
+    An agent reading this view must not have to infer authority from one field.
+
+    Sovereignty, occupation and the right to administer are three claims, and
+    which of them a faction holds is what decides whether TAX, RECRUIT and
+    FORTIFY work. They are reported only where the seat already has eyes.
+    """
+    from spoils_engine import models, storage
+    from webapp import service
+    from webapp.rooms import default_store
+
+    room = _create_room(slots=2)
+    room_obj = default_store().get(room["code"])
+    p1, p2 = room_obj.players[0], room_obj.players[1]
+
+    state = service.load_state(room_obj)
+    far_city = next(
+        cid
+        for cid in state.world_map.cities
+        if cid not in {p1.start_city, p2.start_city}
+    )
+    # The rival marches into player 1's home city and holds it.
+    rival = next(c for c in state.characters.values() if c.faction_id == p2.faction_id)
+    rival.location_city_id = p1.start_city
+    rival.location_position = models.LocationPosition.INSIDE
+    state.unit_stacks["invader"] = models.UnitStack(
+        id="invader",
+        faction_id=p2.faction_id,
+        location_city_id=p1.start_city,
+        unit_type=models.UnitType.SOLDIER,
+        count=50,
+        owner_character_id=rival.id,
+    )
+    state.factions[p2.faction_id].secured_city_ids = {p1.start_city, far_city}
+    storage.save_game_state(state, room_obj.game_dir())
+
+    by_id = {
+        c["id"]: c for c in service.player_state(room_obj, p1.faction_id)["cities"]
+    }
+
+    home = by_id[p1.start_city]
+    assert home["sovereign"] == p1.faction_id
+    assert home["occupier"] == p2.faction_id
+    assert home["administrator"] == p2.faction_id
+
+    # And nothing about a city this seat cannot see.
+    assert by_id[far_city]["observed"] is False
+    assert by_id[far_city]["sovereign"] is None
+    assert by_id[far_city]["occupier"] is None
+    assert by_id[far_city]["administrator"] is None
+
+
+def test_player_state_filters_notices_by_city_observation():
+    from spoils_engine import storage
+    from webapp import service
+    from webapp.rooms import default_store
+
+    room = _create_room(slots=2)
+    room_obj = default_store().get(room["code"])
+    p1, p2 = room_obj.players[0], room_obj.players[1]
+    state = service.load_state(room_obj)
+    hidden_city = next(
+        city_id
+        for city_id in state.world_map.cities
+        if city_id not in {p1.start_city, p2.start_city}
+    )
+    state.posted_messages[p1.start_city] = "Visible notice"
+    state.posted_messages[hidden_city] = "Secret notice"
+    storage.save_game_state(state, room_obj.game_dir())
+
+    view = service.player_state(room_obj, p1.faction_id)
+
+    assert view["posted_messages"] == {p1.start_city: "Visible notice"}
+    assert isinstance(view["posted_messages"], dict)
+    hidden = next(city for city in view["cities"] if city["id"] == hidden_city)
+    assert hidden["observed"] is False
 
 
 def _join_as_player(room, display_name="Cartographer"):
@@ -486,7 +919,8 @@ def test_map_overlay_hides_what_a_seat_cannot_see():
 
     state = service.load_state(room_obj)
     far_city = next(
-        cid for cid in state.world_map.cities
+        cid
+        for cid in state.world_map.cities
         if cid not in {p1.start_city, p2.start_city}
     )
     state.factions[p2.faction_id].controlled_city_ids.add(far_city)
@@ -522,3 +956,191 @@ def test_map_overlay_is_none_without_a_seat():
     room_obj = default_store().get(room["code"])
     assert service.map_overlay(room_obj, None) is None
     assert service.map_overlay(room_obj, "no_such_faction") is None
+
+
+# ============================================================================
+# agent registry (war-room bots)
+# ============================================================================
+
+
+def _host_key(room: dict) -> str:
+    return room["host_key"]
+
+
+def _auth(key: str) -> dict:
+    return {"X-Agent-Key": key}
+
+
+def test_agent_crud_requires_host_key():
+    room = _create_room()
+    guest = _join(room["code"], room["pin"], "Alice")
+    for method, url in (
+        ("get", f"/api/rooms/{room['code']}/agents"),
+        ("put", f"/api/rooms/{room['code']}/agents/player_1"),
+        ("delete", f"/api/rooms/{room['code']}/agents/player_1"),
+    ):
+        resp = client.request(method, url)
+        assert resp.status_code == 401, (method, resp.text)
+        resp = client.request(method, url, headers=_auth(guest["agent_key"]))
+        assert resp.status_code == 403, (method, resp.text)
+
+
+def test_agent_upsert_persists_and_lists():
+    room = _create_room()
+    url = f"/api/rooms/{room['code']}/agents/player_1"
+    resp = client.put(
+        url,
+        headers=_auth(_host_key(room)),
+        json={
+            "model": "soe-strategist",
+            "persona": "Aggressive expansionist, hoards gold.",
+            "temperature": 0.4,
+            "enabled": True,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["faction_id"] == "player_1"
+    assert body["enabled"] is True
+    assert body["temperature"] == 0.4
+
+    listed = client.get(
+        f"/api/rooms/{room['code']}/agents", headers=_auth(_host_key(room))
+    ).json()
+    assert listed["agents"]["player_1"]["model"] == "soe-strategist"
+
+    # Status marks the faction as a bot.
+    status = client.get(
+        f"/api/rooms/{room['code']}/status", headers=_auth(_host_key(room))
+    ).json()
+    bot_rows = [p for p in status["players"] if p["faction_id"] == "player_1"]
+    assert bot_rows[0]["bot"] is True
+
+
+def test_agent_partial_update_keeps_fields():
+    room = _create_room()
+    url = f"/api/rooms/{room['code']}/agents/player_1"
+    client.put(url, headers=_auth(_host_key(room)), json={"persona": "Quiet."})
+    resp = client.put(url, headers=_auth(_host_key(room)), json={"enabled": True})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["persona"] == "Quiet."
+    assert body["enabled"] is True
+
+
+def test_agent_validation_and_unknown_faction():
+    room = _create_room()
+    base = f"/api/rooms/{room['code']}/agents"
+    h = _auth(_host_key(room))
+
+    assert (
+        client.put(f"{base}/player_1", headers=h, json={"temperature": 9}).status_code
+        == 400
+    )
+    assert (
+        client.put(f"{base}/player_1", headers=h, json={"enabled": "yes"}).status_code
+        == 400
+    )
+    assert (
+        client.put(f"{base}/player_1", headers=h, json={"model": 42}).status_code == 400
+    )
+    assert client.put(f"{base}/nope", headers=h, json={}).status_code == 404
+    assert client.delete(f"{base}/nope", headers=h).status_code == 404
+    assert client.delete(f"{base}/player_1", headers=h).status_code == 404
+
+
+def test_agent_delete_removes_profile_and_bot_flag():
+    room = _create_room()
+    base = f"/api/rooms/{room['code']}/agents"
+    h = _auth(_host_key(room))
+    client.put(f"{base}/player_1", headers=h, json={"enabled": True})
+
+    resp = client.delete(f"{base}/player_1", headers=h)
+    assert resp.status_code == 200
+    assert client.get(base, headers=h).json()["agents"] == {}
+    status = client.get(
+        f"/api/rooms/{room['code']}/status", headers=_auth(_host_key(room))
+    ).json()
+    assert status["players"][0]["bot"] is False
+
+
+def test_setup_page_requires_host_cookie_and_renders_slots():
+    room = _create_room()
+    url = f"/room/{room['code']}/setup"
+
+    anon = client.get(url)
+    assert anon.status_code == 403
+
+    client.cookies.set(f"soe_host_{room['code']}", _host_key(room))
+    try:
+        page = client.get(url)
+        assert page.status_code == 200
+        assert "Faction seats" in page.text
+        assert "The Golden Empire" in page.text
+        assert "The Silver Horde" in page.text
+        assert "run as bot" in page.text
+    finally:
+        client.cookies.delete(f"soe_host_{room['code']}")
+
+
+def test_setup_form_claims_empty_seat_and_saves_profile():
+    room = _create_room()
+    client.cookies.set(f"soe_host_{room['code']}", _host_key(room))
+    try:
+        resp = client.post(
+            f"/room/{room['code']}/setup/agents/player_2",
+            data={
+                "model": "soe-field",
+                "persona": "Gather taxes, recruit.",
+                "temperature": "0",
+                "enabled": "on",
+                "action": "save",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert f"/room/{room['code']}/setup" in resp.headers["location"]
+
+        from webapp.ai import default_registry
+        from webapp.rooms import default_store
+
+        profile = default_registry().get(room["code"], "player_2")
+        assert profile is not None
+        assert profile.enabled is True
+        assert profile.model == "soe-field"
+
+        seat = next(
+            p
+            for p in default_store().get(room["code"]).players
+            if p.faction_id == "player_2"
+        )
+        assert seat.kind == "agent"
+        assert seat.agent_key.startswith("soe_")
+        assert seat.display_name == "bot"
+
+        page = client.get(f"/room/{room['code']}/setup")
+        assert seat.agent_key in page.text
+    finally:
+        client.cookies.delete(f"soe_host_{room['code']}")
+
+
+def test_setup_form_clear_removes_profile():
+    room = _create_room()
+    client.cookies.set(f"soe_host_{room['code']}", _host_key(room))
+    try:
+        client.post(
+            f"/room/{room['code']}/setup/agents/player_1",
+            data={"enabled": "on", "action": "save"},
+        )
+        resp = client.post(
+            f"/room/{room['code']}/setup/agents/player_1",
+            data={"action": "clear"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+
+        from webapp.ai import default_registry
+
+        assert default_registry().get(room["code"], "player_1") is None
+    finally:
+        client.cookies.delete(f"soe_host_{room['code']}")

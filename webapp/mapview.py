@@ -79,6 +79,7 @@ class MapLayout:
             self.pad_y + (float(my) / self.field_h_mi) * self.map_h,
         )
 
+
 # Road stroke: (color, width, dasharray)
 _ROAD_STYLES = {
     RoadQuality.EXCELLENT: ("#6fbf73", 3.8, "none"),
@@ -233,10 +234,7 @@ def positions(map_file: str) -> dict[str, tuple[float, float]]:
     roads = data.get("roads") or []
 
     have_coords = all(
-        (
-            isinstance(c.get("x"), (int, float))
-            and isinstance(c.get("y"), (int, float))
-        )
+        (isinstance(c.get("x"), (int, float)) and isinstance(c.get("y"), (int, float)))
         or (
             isinstance(c.get("x_miles"), (int, float))
             and isinstance(c.get("y_miles"), (int, float))
@@ -372,7 +370,9 @@ def _map_title(map_file: str, cities: list[dict], masses: Optional[list] = None)
     if n == 1:
         return f"{name} — {masses[0]['name']}"
     if islands:
-        return f"{name} — {n} landmasses ({islands} island{'s' if islands != 1 else ''})"
+        return (
+            f"{name} — {n} landmasses ({islands} island{'s' if islands != 1 else ''})"
+        )
     return f"{name} — {n} landmasses"
 
 
@@ -388,14 +388,18 @@ def _chaikin(
         smoothed: list[list[float]] = []
         for i, point in enumerate(pts):
             nxt = pts[(i + 1) % len(pts)]
-            smoothed.append([
-                0.75 * point[0] + 0.25 * nxt[0],
-                0.75 * point[1] + 0.25 * nxt[1],
-            ])
-            smoothed.append([
-                0.25 * point[0] + 0.75 * nxt[0],
-                0.25 * point[1] + 0.75 * nxt[1],
-            ])
+            smoothed.append(
+                [
+                    0.75 * point[0] + 0.25 * nxt[0],
+                    0.75 * point[1] + 0.25 * nxt[1],
+                ]
+            )
+            smoothed.append(
+                [
+                    0.25 * point[0] + 0.75 * nxt[0],
+                    0.25 * point[1] + 0.75 * nxt[1],
+                ]
+            )
         pts = smoothed
     return [(p[0], p[1]) for p in pts]
 
@@ -431,7 +435,9 @@ def _dist_to_poly(mx: float, my: float, poly: list) -> float:
         if dx == 0 and dy == 0:
             d = math.hypot(mx - x1, my - y1)
         else:
-            t = max(0.0, min(1.0, ((mx - x1) * dx + (my - y1) * dy) / (dx * dx + dy * dy)))
+            t = max(
+                0.0, min(1.0, ((mx - x1) * dx + (my - y1) * dy) / (dx * dx + dy * dy))
+            )
             d = math.hypot(mx - (x1 + t * dx), my - (y1 + t * dy))
         if d < best:
             best = d
@@ -453,9 +459,7 @@ def _poly_area_miles(poly: list) -> float:
 
 def _majority_region(cities: list[dict], by_id: dict) -> Optional[str]:
     regions = [
-        by_id[c].get("region")
-        for c in cities
-        if c in by_id and by_id[c].get("region")
+        by_id[c].get("region") for c in cities if c in by_id and by_id[c].get("region")
     ]
     if not regions:
         return None
@@ -520,18 +524,20 @@ def landmasses_from_geography(
             for cid in cids
             if cid in by_id
         ]
-        masses.append({
-            "name": name,
-            "kind": kind,
-            "city_ids": cids,
-            "city_names": [
-                by_id[cid].get("name") or cid for cid in cids if cid in by_id
-            ],
-            "points": pts,
-            "hull": hull,
-            "source": "geography",
-            "area_miles": area,
-        })
+        masses.append(
+            {
+                "name": name,
+                "kind": kind,
+                "city_ids": cids,
+                "city_names": [
+                    by_id[cid].get("name") or cid for cid in cids if cid in by_id
+                ],
+                "points": pts,
+                "hull": hull,
+                "source": "geography",
+                "area_miles": area,
+            }
+        )
 
     masses.sort(key=lambda m: (-len(m["city_ids"]), m["name"]))
     for i, m in enumerate(masses):
@@ -600,17 +606,19 @@ def compute_landmasses(
         if "island" in name.lower():
             kind = "island"
 
-        masses.append({
-            "name": name,
-            "kind": kind,
-            "city_ids": comp,
-            "city_names": [
-                by_id[cid].get("name") or cid for cid in comp if cid in by_id
-            ],
-            "points": pts,
-            "hull": _landmass_hull(pts),
-            "source": "roads",
-        })
+        masses.append(
+            {
+                "name": name,
+                "kind": kind,
+                "city_ids": comp,
+                "city_names": [
+                    by_id[cid].get("name") or cid for cid in comp if cid in by_id
+                ],
+                "points": pts,
+                "hull": _landmass_hull(pts),
+                "source": "roads",
+            }
+        )
 
     masses.sort(key=lambda m: (-len(m["city_ids"]), m["name"]))
     for i, m in enumerate(masses):
@@ -619,7 +627,9 @@ def compute_landmasses(
     return masses
 
 
-def _landmass_hull(points: list[tuple[float, float]], pad: float = 72.0) -> list[tuple[float, float]]:
+def _landmass_hull(
+    points: list[tuple[float, float]], pad: float = 72.0
+) -> list[tuple[float, float]]:
     """Convex hull expanded outward for a readable shoreline confine."""
     if not points:
         return []
@@ -752,8 +762,8 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     label_plan = _plan_city_labels(cities, pos)
     ordered = sorted(
         pos.items(),
-        key=lambda item: -_BAND_RADIUS.get(
-            by_id.get(item[0], {}).get("population_band"), 8
+        key=lambda item: (
+            -_BAND_RADIUS.get(by_id.get(item[0], {}).get("population_band"), 8)
         ),
     )
     for cid, (x, y) in ordered:
@@ -873,10 +883,7 @@ def _boxes_overlap(
     pad: float = 2.0,
 ) -> bool:
     return not (
-        a[2] + pad < b[0]
-        or b[2] + pad < a[0]
-        or a[3] + pad < b[1]
-        or b[3] + pad < a[1]
+        a[2] + pad < b[0] or b[2] + pad < a[0] or a[3] + pad < b[1] or b[3] + pad < a[1]
     )
 
 
@@ -887,14 +894,14 @@ def _label_candidates(
     gap = max(3.0, font_size * 0.35)
     r = radius + gap
     return [
-        (x, y - r - font_size * 0.15, "middle"),           # above
-        (x, y + r + font_size * 0.75, "middle"),           # below
-        (x + r + 2, y + font_size * 0.3, "start"),         # right
-        (x - r - 2, y + font_size * 0.3, "end"),           # left
-        (x + r * 0.7, y - r * 0.7 - font_size * 0.1, "start"),   # NE
-        (x - r * 0.7, y - r * 0.7 - font_size * 0.1, "end"),     # NW
+        (x, y - r - font_size * 0.15, "middle"),  # above
+        (x, y + r + font_size * 0.75, "middle"),  # below
+        (x + r + 2, y + font_size * 0.3, "start"),  # right
+        (x - r - 2, y + font_size * 0.3, "end"),  # left
+        (x + r * 0.7, y - r * 0.7 - font_size * 0.1, "start"),  # NE
+        (x - r * 0.7, y - r * 0.7 - font_size * 0.1, "end"),  # NW
         (x + r * 0.7, y + r * 0.7 + font_size * 0.55, "start"),  # SE
-        (x - r * 0.7, y + r * 0.7 + font_size * 0.55, "end"),    # SW
+        (x - r * 0.7, y + r * 0.7 + font_size * 0.55, "end"),  # SW
     ]
 
 
@@ -1008,9 +1015,7 @@ def _plan_city_labels(
                 display_name=short,
                 text_anchor="middle",
             )
-            box = _label_box_at(
-                x, y - (base_r + tiny * 0.9), short, tiny, "middle"
-            )
+            box = _label_box_at(x, y - (base_r + tiny * 0.9), short, tiny, "middle")
             placed_boxes.append(box)
 
     return plan
@@ -1020,8 +1025,8 @@ def render_map_fragment(map_file: str, overlay: Optional[dict] = None) -> str:
     """SVG + HTML island index for HTMX swaps."""
     return (
         f'<div class="map-panel-inner">'
-        f'{render_svg(map_file, overlay)}'
-        f'{islands_html(map_file)}'
+        f"{render_svg(map_file, overlay)}"
+        f"{islands_html(map_file)}"
         f"</div>"
     )
 
@@ -1053,10 +1058,10 @@ def islands_html(map_file: str) -> str:
         )
     n_islands = stats["islands"]
     summary = (
-        f'{stats["landmasses"]} landmass'
-        f'{"es" if stats["landmasses"] != 1 else ""}'
-        f' · {n_islands} island{"s" if n_islands != 1 else ""}'
-        f' (sea lanes do not join land)'
+        f"{stats['landmasses']} landmass"
+        f"{'es' if stats['landmasses'] != 1 else ''}"
+        f" · {n_islands} island{'s' if n_islands != 1 else ''}"
+        f" (sea lanes do not join land)"
     )
     return (
         f'<div class="island-index" aria-label="Landmasses and islands">'
@@ -1090,7 +1095,9 @@ def legend_svg() -> str:
             f'<line x1="6" y1="{y}" x2="44" y2="{y}" stroke="{color}" stroke-width="3" '
             f'stroke-dasharray="{dash}" stroke-linecap="round"/>'
         )
-        parts.append(f'<text x="54" y="{y + 4}" fill="#9aa7b8" font-size="11">{label}</text>')
+        parts.append(
+            f'<text x="54" y="{y + 4}" fill="#9aa7b8" font-size="11">{label}</text>'
+        )
 
     y_mf = 28 + 5 * 18 + 6
     parts.append(
@@ -1241,17 +1248,17 @@ def _background(layout: MapLayout) -> str:
 
 
 def _title_block(stats: dict, dense: bool = False) -> str:
-    bits = [f'{stats["cities"]} cities']
+    bits = [f"{stats['cities']} cities"]
     if stats.get("landmasses"):
-        bits.append(f'{stats["landmasses"]} landmasses')
+        bits.append(f"{stats['landmasses']} landmasses")
     if stats.get("islands"):
-        bits.append(f'{stats["islands"]} island{"s" if stats["islands"] != 1 else ""}')
+        bits.append(f"{stats['islands']} island{'s' if stats['islands'] != 1 else ''}")
     if stats["roads"]:
-        bits.append(f'{stats["roads"]} roads')
+        bits.append(f"{stats['roads']} roads")
     if stats["sea_lanes"]:
-        bits.append(f'{stats["sea_lanes"]} sea lanes')
+        bits.append(f"{stats['sea_lanes']} sea lanes")
     if stats["ports"]:
-        bits.append(f'{stats["ports"]} ports')
+        bits.append(f"{stats['ports']} ports")
     meta = " · ".join(bits)
     hint = ""
     if dense:
@@ -1315,7 +1322,7 @@ def _landmasses_svg(
         else:
             tip_cities = ", ".join(name_list)
         tip = _esc(
-            f'{m["name"]} ({m["kind"]}) — {n} cit{"ies" if n != 1 else "y"}: '
+            f"{m['name']} ({m['kind']}) — {n} cit{'ies' if n != 1 else 'y'}: "
             + tip_cities
         )
         parts.append(
@@ -1343,13 +1350,13 @@ def _landmasses_svg(
             f'<text class="map-label land-label" x="{cx:.1f}" y="{label_y:.1f}" '
             f'text-anchor="middle" fill="{m["stroke"]}" font-size="{name_size}" '
             f'letter-spacing="1.6" font-weight="bold">'
-            f'{_esc(m["name"].upper())}</text>'
+            f"{_esc(m['name'].upper())}</text>"
         )
         if not dense:
             parts.append(
                 f'<text class="map-meta land-label-meta" x="{cx:.1f}" y="{label_y + 15:.1f}" '
                 f'text-anchor="middle" fill="#7f8794" font-size="10">'
-                f'{m["kind"]} · {n} cit{"ies" if n != 1 else "y"}</text>'
+                f"{m['kind']} · {n} cit{'ies' if n != 1 else 'y'}</text>"
             )
         parts.append("</g>")
     parts.append("</g>")
@@ -1375,8 +1382,8 @@ def _island_index_svg(masses: list[dict], layout: MapLayout) -> str:
             f'fill="{m["fill"]}" stroke="{m["stroke"]}" stroke-width="1.2"/>'
         )
         line = (
-            f'{m["index"]}. {m["name"]} — {m["kind"]} — '
-            f'{len(m["city_ids"])} cit{"ies" if len(m["city_ids"]) != 1 else "y"}'
+            f"{m['index']}. {m['name']} — {m['kind']} — "
+            f"{len(m['city_ids'])} cit{'ies' if len(m['city_ids']) != 1 else 'y'}"
         )
         parts.append(
             f'<text x="{x0 + 18}" y="{y + 2}" fill="#b8c2d0" font-size="12" '
@@ -1455,7 +1462,9 @@ def _route_svg(
         title_bits.append("of 10 mv/turn")
     title = _esc(" · ".join(title_bits))
 
-    chunks = [f'<g class="map-route map-route-{_esc(str(quality or "road"))}" data-road="{rid}">']
+    chunks = [
+        f'<g class="map-route map-route-{_esc(str(quality or "road"))}" data-road="{rid}">'
+    ]
     chunks.append(f"<title>{title}</title>")
 
     if quality == "sea":
@@ -1559,12 +1568,12 @@ def _overlay_key_svg(overlay: dict) -> str:
         f'rx="8" fill="#0d1017" fill-opacity="0.80" stroke="#2b3340" stroke-width="1"/>',
         f'<text x="{x:.1f}" y="{y - 6:.1f}" fill="#c9a24b" font-size="11" '
         f'font-weight="bold" class="map-meta">TURN '
-        f'{_esc(str(overlay.get("turn", 0)))} — WHO HOLDS WHAT</text>',
+        f"{_esc(str(overlay.get('turn', 0)))} — WHO HOLDS WHAT</text>",
     ]
     for i, f in enumerate(factions):
         row_y = y + 12 + i * row_h
         is_you = f.get("id") == overlay.get("faction_id")
-        label = f'{f.get("name", "?")}{" (you)" if is_you else ""}'
+        label = f"{f.get('name', '?')}{' (you)' if is_you else ''}"
         held = f.get("cities", 0)
         chunks.append(
             f'<circle cx="{x + 6:.1f}" cy="{row_y - 4:.1f}" r="5.5" '
@@ -1582,7 +1591,9 @@ def _overlay_key_svg(overlay: dict) -> str:
     return "\n".join(chunks)
 
 
-def _marks_svg(marks: dict, x: float, y: float, radius: float) -> tuple[list[str], list[str]]:
+def _marks_svg(
+    marks: dict, x: float, y: float, radius: float
+) -> tuple[list[str], list[str]]:
     """
     Live-game decoration for one city: holder ring, own-force badge.
 
@@ -1616,7 +1627,14 @@ def _marks_svg(marks: dict, x: float, y: float, radius: float) -> tuple[list[str
     elif marks.get("observed"):
         tips.append("no one holds this")
 
-    if marks.get("secured_by_name"):
+    # The pennant can only show one thing, and sovereignty is not the same as
+    # the right to tax or recruit here. Where this player is entitled to know,
+    # the tooltip names all three so the map explains the orders that fail.
+    if marks.get("administrator_name"):
+        tips.append(f"sovereign: {marks['sovereign_name']}")
+        tips.append(f"occupier: {marks['occupier_name']}")
+        tips.append(f"administrator: {marks['administrator_name']}")
+    elif marks.get("secured_by_name"):
         tips.append(f"secured by {marks['secured_by_name']}")
 
     chars = int(marks.get("characters") or 0)
@@ -1625,11 +1643,11 @@ def _marks_svg(marks: dict, x: float, y: float, radius: float) -> tuple[list[str
     if chars or units or ships:
         bits = []
         if chars:
-            bits.append(f"{chars}†")   # dagger: characters
+            bits.append(f"{chars}†")  # dagger: characters
         if units:
-            bits.append(f"{units}▲")   # triangle: soldiers
+            bits.append(f"{units}▲")  # triangle: soldiers
         if ships:
-            bits.append(f"{ships}⚓")   # anchor: ships
+            bits.append(f"{ships}⚓")  # anchor: ships
         badge = " ".join(bits)
         bx, by = x - radius - 8, y - radius - 4
         width = 11 + 15 * len(bits)
@@ -1643,12 +1661,13 @@ def _marks_svg(marks: dict, x: float, y: float, radius: float) -> tuple[list[str
             f'font-size="10" text-anchor="middle" class="map-meta">{_esc(badge)}</text>'
         )
         detail = []
+        subject = "on the board" if marks.get("master") else "of your faction"
         if chars:
-            detail.append(f"{chars} of your characters")
+            detail.append(f"{chars} characters {subject}")
         if units:
-            detail.append(f"{units} of your soldiers")
+            detail.append(f"{units} soldiers {subject}")
         if ships:
-            detail.append(f"{ships} of your ships")
+            detail.append(f"{ships} ships {subject}")
         tips.append("; ".join(detail))
 
     return chunks, tips
@@ -1740,8 +1759,7 @@ def _city_svg(
         meta_cls += " city-meta-hover"
 
     chunks = [
-        f'<g class="map-city-hit" data-city="{cid}" tabindex="0">'
-        f"<title>{tip}</title>"
+        f'<g class="map-city-hit" data-city="{cid}" tabindex="0"><title>{tip}</title>'
     ]
 
     # Hit area (invisible) for easier hover / focus.
@@ -1806,7 +1824,9 @@ def _city_svg(
     chunks.extend(mark_chunks)
 
     if plan.name_mode != "never":
-        stroke_w = 2.2 if plan.name_size >= 11 else (1.7 if plan.name_size >= 8.5 else 1.35)
+        stroke_w = (
+            2.2 if plan.name_size >= 11 else (1.7 if plan.name_size >= 8.5 else 1.35)
+        )
         # Slightly softer ink for the smallest labels so clusters stay legible.
         name_fill = "#e8e4d8" if plan.name_size >= 8.5 else "#c8c4b8"
         weight = "bold" if plan.name_size >= 9.0 else "normal"

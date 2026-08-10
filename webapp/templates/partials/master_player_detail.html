@@ -1,0 +1,75 @@
+<div class="inspector-title">
+  <div>
+    <p class="eyebrow">Player control / faction detail</p>
+    <h2>{{ faction.name }}{% if faction.is_npc %} <span class="tag">NPC</span>{% endif %}</h2>
+    <p class="muted">{{ faction.player }}{% if faction.start_city %} · starts in {{ faction.start_city }}{% endif %} · state turn {{ turn }}, next orders turn {{ next_turn }}</p>
+  </div>
+  <span class="health-pill {{ 'ready' if submission.submitted else 'waiting' }}">{% if submission.submitted %}orders submitted{% else %}no orders{% endif %}</span>
+</div>
+
+<div class="inspector-kpis">
+  <div class="inspector-stat"><span>Spendable gold</span><strong>{{ "%.1f"|format(faction.gold) }}g</strong><small>treasury {{ "%.1f"|format(faction.treasury) }}g</small></div>
+  <div class="inspector-stat"><span>Resources</span><strong>{{ resources|length }}</strong><small>{{ resources.values()|sum }} total units</small></div>
+  <div class="inspector-stat"><span>Characters</span><strong>{{ characters|length }}</strong><small>{{ characters|selectattr("status", "equalto", "active")|list|length }} active</small></div>
+  <div class="inspector-stat"><span>Persistent queue</span><strong>{{ queued_commands|length }}</strong><small>commands after turn resolution</small></div>
+</div>
+
+<div class="inspector-grid">
+  <section class="inspector-block">
+    <div class="section-head"><div><p class="eyebrow">Inventory</p><h3>Resources and obligations</h3></div></div>
+    <div class="resource-list">
+      {% for name, amount in resources.items() %}<span><strong>{{ amount }}</strong> {{ name }}</span>{% else %}<span class="muted">No carried resources.</span>{% endfor %}
+    </div>
+    <dl class="detail-list">
+      <div><dt>Wage debt</dt><dd>{{ "%.1f"|format(faction.wage_debt) }}g</dd></div>
+      <div><dt>Loan balance</dt><dd>{{ "%.1f"|format(faction.loan_balance) }}g</dd></div>
+      <div><dt>Sovereign cities</dt><dd>{{ faction.sovereign_cities|length }}</dd></div>
+      <div><dt>Occupied cities</dt><dd>{{ faction.secured_cities|length }}</dd></div>
+    </dl>
+    {% if faction.sovereign_cities %}<p class="detail-label">Sovereign</p><p class="detail-values">{{ faction.sovereign_cities|join(", ") }}</p>{% endif %}
+    {% if faction.secured_cities %}<p class="detail-label">Occupied</p><p class="detail-values">{{ faction.secured_cities|join(", ") }}</p>{% endif %}
+  </section>
+
+  <section class="inspector-block">
+    <div class="section-head"><div><p class="eyebrow">Diplomacy</p><h3>Current relationships</h3></div></div>
+    <p class="detail-label">Allies</p><p class="detail-values">{{ faction.allies|join(", ") or "None" }}</p>
+    <p class="detail-label">Enemies</p><p class="detail-values">{{ faction.enemies|join(", ") or "None" }}</p>
+    <div class="entity-summary"><span>{{ units|sum(attribute="count") }} units</span><span>{{ ships|length }} ships</span><span>{{ items|length }} items</span><span>{{ elite_units|length }} elite</span></div>
+    {% if units %}<div class="compact-table"><table><thead><tr><th>Units</th><th>Count</th><th>Location</th><th>Owner</th></tr></thead><tbody>{% for unit in units %}<tr><td>{{ unit.type }}</td><td>{{ unit.count }}</td><td>{{ unit.location }}</td><td>{{ unit.owner }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </section>
+</div>
+
+<section class="inspector-block">
+  <div class="section-head"><div><p class="eyebrow">Named assets</p><h3>Characters and holdings</h3></div><span class="muted">live state</span></div>
+  <div class="character-grid">
+    {% for character in characters %}
+    <article class="character-card">
+      <div class="character-card-head"><strong>{% if character.title %}{{ character.title }} {% endif %}{{ character.name }}</strong><span class="status-{{ character.status }}">{{ character.status }}</span></div>
+      <p class="muted">{{ character.location }} · {{ character.position }} · {{ character.health }}% health · {{ character.movement }} MP</p>
+      <p class="character-stats">{{ "%.1f"|format(character.gold) }}g · combat {{ character.combat }} · magic {{ character.magic }} · religion {{ character.religion }}</p>
+      <p class="detail-values">{% for name, amount in character.resources.items() %}{{ amount }} {{ name }}{% if not loop.last %}, {% endif %}{% else %}no resources{% endfor %}</p>
+    </article>
+    {% else %}<p class="muted">No characters in this faction.</p>{% endfor %}
+  </div>
+</section>
+
+<div class="inspector-grid">
+  <section class="inspector-block command-block">
+    <div class="section-head"><div><p class="eyebrow">Orders for turn {{ next_turn }}</p><h3>Submitted commands</h3></div><span class="muted">{{ submission.parsed }} parsed</span></div>
+    {% if submission.warnings %}<div class="command-warning">{{ submission.warnings|join(" · ") }}</div>{% endif %}
+    {% if submission.text %}<pre class="command-text">{{ submission.text }}</pre>{% else %}<p class="muted">No commands submitted for the next turn.</p>{% endif %}
+    {% if submission.commands %}<div class="command-list">{% for command in submission.commands %}<div class="command-row"><span class="event-type">{{ command.type }}</span><div><strong>{{ command.actor or "faction command" }}</strong><br><span>{{ command.text }}</span></div></div>{% endfor %}</div>{% endif %}
+  </section>
+
+  <section class="inspector-block command-block">
+    <div class="section-head"><div><p class="eyebrow">Carry-over work</p><h3>Persistent command queue</h3></div><span class="muted">{{ queued_commands|length }} pending</span></div>
+    {% if queued_commands %}<div class="command-list">{% for command in queued_commands %}<div class="command-row"><span class="event-type">{{ command.type }}</span><div><strong>{{ command.actor or "faction command" }}</strong><br><span>{{ command.text }}</span><small class="queue-meta">release T{{ command.release_turn }}{% if command.repeat_remaining == -1 %} · repeats until halted{% elif command.repeat_remaining %} · {{ command.repeat_remaining }} repeats left{% endif %}</small></div></div>{% endfor %}</div>{% else %}<p class="muted">No persistent commands are queued.</p>{% endif %}
+  </section>
+</div>
+
+{% if latest_report %}
+<details class="inspector-report">
+  <summary>Latest resolved report · turn {{ turn }}</summary>
+  <pre class="report">{{ latest_report }}</pre>
+</details>
+{% endif %}

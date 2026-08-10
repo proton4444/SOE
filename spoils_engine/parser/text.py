@@ -138,6 +138,23 @@ def parse_duration_days(sentence: str) -> Optional[int]:
     days = int(match.group(1)) * TIME_UNIT_DAYS[match.group(2)]
     return max(1, math.ceil(days))
 
+
+def parse_duration_hours(sentence: str) -> Optional[int]:
+    """Read a rules duration at the clock's one-hour resolution."""
+    match = re.search(
+        r'(\d+)\s+(minute|hour|day|week|month)s?\b', sentence
+    )
+    if not match:
+        return None
+    hours_per_unit = {
+        'minute': 1 / 60,
+        'hour': 1,
+        'day': config.HOURS_PER_DAY,
+        'week': 7 * config.HOURS_PER_DAY,
+        'month': config.DAYS_PER_MONTH * config.HOURS_PER_DAY,
+    }
+    return max(1, math.ceil(int(match.group(1)) * hours_per_unit[match.group(2)]))
+
 def strip_repeatedly(sentence: str) -> tuple[str, Optional[int]]:
     """
     Lift the adverb `repeatedly` (and its loop count) off a sentence.

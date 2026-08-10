@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Master dashboard {{ room.code }} - Spoils of Empire{% endblock %}
+{% block content %}
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Gamemaster view</p>
+    <h1>{{ room.name }} <span class="code">{{ room.code }}</span></h1>
+    <p class="muted">Full board state, turn readiness, and the latest resolved actions.</p>
+  </div>
+  <div class="row">
+    <a class="button ghost" href="/room/{{ room.code }}/setup">Setup</a>
+    <a class="button ghost" href="/room/{{ room.code }}">Player room</a>
+  </div>
+</div>
+
+{% include "partials/master_panel.html" %}
+
+<section id="master-player-inspector" class="card master-inspector">
+  <div class="inspector-empty">
+    <p class="eyebrow">Player control</p>
+    <h2>Select a faction to inspect</h2>
+    <p class="muted">Review live resources, units, characters, submitted commands, and persistent queues without leaving the dashboard.</p>
+  </div>
+</section>
+
+<section class="card master-map-card">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Operational map</p>
+      <h2>Who is where</h2>
+    </div>
+    <span class="muted">refreshes every 10 seconds</span>
+  </div>
+  <div id="master-map" class="map-panel map-frame-room"
+       hx-get="/room/{{ room.code }}/master/map" hx-trigger="every 10s"
+       hx-swap="innerHTML">
+    {{ map_svg|safe }}
+  </div>
+  {{ map_islands|safe }}
+</section>
+{% endblock %}

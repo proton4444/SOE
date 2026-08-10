@@ -311,6 +311,29 @@ def parse_support_order(sentence: str, game_state: GameState, player_id: str) ->
 
     return order
 
+def _split_swallowed_command(part: str) -> tuple[str, str]:
+    """
+    Split a recipient phrase where the next order ran into it.
+
+    SAY names its recipient last -- `say "..." to <who>` -- so the name runs to
+    the end of the sentence. Leave the period off and the following command
+    lands inside it: "Say "Ready" to Aurelia" then "Report" arrives as one
+    recipient called `aurelia report`. rules.md recovers from a parse error by
+    ignoring input to the next period, so the swallowed command is not obeyed;
+    the player has to be told which words went missing, or the lost order is
+    invisible. Returns (recipient, swallowed text), the latter "" when the
+    phrase does not run into a command word.
+    """
+    # Lazy import: dispatch imports this module.
+    from spoils_engine.parser.dispatch import _COMMAND_VERBS
+
+    words = part.split()
+    for index in range(1, len(words)):
+        if words[index] in _COMMAND_VERBS:
+            return " ".join(words[:index]), " ".join(words[index:])
+    return part, ""
+
+
 def _resolve_recipients(text: str, order, game_state: GameState,
                         parser: "OrderParserBase") -> None:
     """
@@ -325,24 +348,40 @@ def _resolve_recipients(text: str, order, game_state: GameState,
         part = part.strip().rstrip('.')
         if not part:
             continue
-        if part == "everyone":
-            order.to_everyone = True
-            continue
+        if not _resolve_one_recipient(part, order, game_state, parser):
+            # Only once the whole phrase has failed is a command word inside it
+            # blamed, so a recipient whose name happens to contain one is safe.
+            head, swallowed = _split_swallowed_command(part)
+            if swallowed and _resolve_one_recipient(head, order, game_state,
+                                                    parser):
+                parser.add_warning(
+                    order,
+                    f"'{swallowed}' ran into the recipient and was ignored — "
+                    f"put a period after '{head}' to start a new order")
+            else:
+                parser.add_warning(order, f"No character or town called '{part}'")
 
-        city = resolve_city(part, game_state)
-        if city.found:
-            order.recipient_city_id = city.entity_id
-            order.recipient_city_name = city.entity_name
-            continue
 
-        # enemy_ok: a message is not an order, so it may name anybody.
-        person = resolve_character(part, game_state, parser.player_id,
-                                   enemy_ok=True)
-        if not person.found:
-            parser.add_warning(order, f"No character or town called '{part}'")
-            continue
-        order.recipient_ids.append(person.entity_id)
-        order.recipient_names.append(person.entity_name)
+def _resolve_one_recipient(part: str, order, game_state: GameState,
+                           parser: "OrderParserBase") -> bool:
+    """Record one addressee. Returns False when the name matches nothing."""
+    if part == "everyone":
+        order.to_everyone = True
+        return True
+
+    city = resolve_city(part, game_state)
+    if city.found:
+        order.recipient_city_id = city.entity_id
+        order.recipient_city_name = city.entity_name
+        return True
+
+    # enemy_ok: a message is not an order, so it may name anybody.
+    person = resolve_character(part, game_state, parser.player_id, enemy_ok=True)
+    if not person.found:
+        return False
+    order.recipient_ids.append(person.entity_id)
+    order.recipient_names.append(person.entity_name)
+    return True
 
 
 def parse_message_order(sentence: str, game_state: GameState,

@@ -129,6 +129,33 @@ def parse_buy_ship_order(sentence: str, game_state: GameState, player_id: str) -
 
     return None
 
+# A city named after TAX, with or without a preposition: "tax Kitesta",
+# "tax in Kitesta", "tax for 2 weeks in Kitesta".
+_TAX_PLACE = re.compile(r'\btax\b(?:\s+for\s+\d+\s+\w+)?(?:\s+(?:in|at|from))?\s+(.+?)\s*$')
+
+
+def _tax_named_city(sentence: str, game_state: GameState) -> Optional[str]:
+    """
+    The city a TAX order names, if it names one that exists.
+
+    rules.md: "A character that is given a TAX command will attempt to collect
+    taxes in his current location." TAX has no location argument, so the parser
+    used to drop the words after it -- and "tax Kitesta" became a tax on
+    whichever town the character had actually reached. Nothing here changes
+    where taxes come from; the named city is kept so execution can check it
+    against where the character is standing, and refuse rather than quietly
+    tax somewhere else.
+
+    Anything that is not a known city is left alone, so wordings the parser
+    already tolerated keep working.
+    """
+    match = _TAX_PLACE.search(sentence)
+    if not match:
+        return None
+    resolved = resolve_city(match.group(1).strip(), game_state)
+    return resolved.entity_id if resolved.found else None
+
+
 def parse_tax_order(sentence: str, game_state: GameState, player_id: str) -> Optional[TaxOrder]:
     """
     Parse a TAX order.
@@ -137,9 +164,14 @@ def parse_tax_order(sentence: str, game_state: GameState, player_id: str) -> Opt
         - "tax"
         - "tax for 2 weeks"
         - "have Captain Jones tax for 14 days"
+        - "tax Kitesta" / "tax in Kitesta" (checked against where the actor is)
     """
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(TaxOrder)
+
+    named_city = _tax_named_city(sentence, game_state)
+    if named_city:
+        order.stated_city_id = named_city
 
     # Pattern: "tax for <number> <unit>"
     # Example: "tax for 2 weeks"
