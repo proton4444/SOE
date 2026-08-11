@@ -15,7 +15,7 @@ import os
 import re
 from datetime import datetime, timezone
 
-from spoils_engine import parser
+from soe import parser
 
 from webapp import service
 from webapp.ai import brain, subagents
@@ -164,7 +164,7 @@ def _system_prompt(room: Room, player: RoomPlayer, profile: AgentProfile) -> str
     persona = profile.persona.strip()
     persona_lines = f"\nPersona: {persona}" if persona else ""
     return (
-        "You are the strategist for a faction in Spoils of Empire, a "
+        "You are the strategist for a faction in SOE, a "
         "deterministic PBEM fantasy strategy game.\n"
         f"Game: {room.name} (map {room.map_file}). "
         f"You play {player.faction_name}. Next turn: {room.next_turn()}."
@@ -230,8 +230,8 @@ def _user_context(room: Room, player: RoomPlayer) -> str:
         "=== YOUR LAST TURN REPORT ===\n"
         f"{report}\n\n"
         "=== ORDER SYNTAX EXAMPLES ===\n"
-        "Have Emperor Marcus go to Kitesta.\n"
-        "Recruit 20 soldiers in Madegi Doy.\n"
+        "Have Emperor Marcus go to Redport.\n"
+        "Recruit 20 soldiers in Highfell.\n"
         "Tax.\n"
         "Have Emperor Marcus attack Khan Tengri.\n"
         "Work for 1 week.\n"

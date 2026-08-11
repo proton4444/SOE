@@ -1,5 +1,5 @@
 """
-Web server for Spoils of Empire — humans in the browser, agents over JSON.
+Web server for SOE — humans in the browser, agents over JSON.
 
 Run locally with:
     uvicorn webapp.main:app --port 8000
@@ -29,15 +29,22 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from spoils_engine import __version__, map_loader
+from soe import __version__, map_loader
 
 from webapp import backups, mapimg, mapview, service
 from webapp.ai import autoplay, brain, orchestrator
 from webapp.ai.registry import AgentProfile, default_registry
 from webapp.observability import logger, request_id
-from webapp.rooms import GAMES_ROOT, SERVER_DATA, Room, RoomError, default_store
+from webapp.rooms import (
+    GAMES_ROOT,
+    SERVER_DATA,
+    Room,
+    RoomError,
+    RoomPlayer,
+    default_store,
+)
 
-app = FastAPI(title="Spoils of Empire", version=__version__)
+app = FastAPI(title="SOE", version=__version__)
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -123,7 +130,9 @@ def _resolve_room(code: str) -> Room:
     return room
 
 
-def _player_for(room: Room, request: Request, key: Optional[str]) -> Room | None:
+def _player_for(
+    room: Room, request: Request, key: Optional[str]
+) -> RoomPlayer | None:
     if key:
         return room.player_by_key(key)
     cookie = request.cookies.get(_player_cookie_name(room.code))
@@ -132,7 +141,7 @@ def _player_for(room: Room, request: Request, key: Optional[str]) -> Room | None
     return None
 
 
-def _submission_text(room: Room, player: Room | None) -> str:
+def _submission_text(room: Room, player: RoomPlayer | None) -> str:
     if not player:
         return ""
     return (
@@ -143,7 +152,11 @@ def _submission_text(room: Room, player: Room | None) -> str:
 
 
 def _panel_context(
-    request: Request, room: Room, player, is_host: bool, notice: str = ""
+    request: Request,
+    room: Room,
+    player: RoomPlayer | None,
+    is_host: bool,
+    notice: str = "",
 ) -> dict:
     return {
         "room": room,

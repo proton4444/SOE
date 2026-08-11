@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from spoils_engine import models, engine, orders, parser, storage, config
-from spoils_engine.combat import calculate_faction_power, casualty_rates
+from soe import models, engine, orders, parser, storage, config
+from soe.combat import calculate_faction_power, casualty_rates
 
 
 @pytest.fixture
@@ -274,7 +274,7 @@ def test_queued_orders_are_executed_not_just_logged(two_faction_state):
 
 def test_buy_resource_is_trade_not_ship(two_faction_state):
     """Buy N <resource> must not be swallowed by the galley purchase parser."""
-    from spoils_engine import parser
+    from soe import parser
     gs = two_faction_state
     orders = parser.parse_orders('Buy 10 wood.', gs, 'p1')
     assert len(orders) == 1
@@ -298,8 +298,8 @@ def test_subturn_wait_releases_following_order_in_same_week(two_faction_state):
 
 
 def test_complete_encumbrance_counts_cargo_items_and_if(two_faction_state):
-    from spoils_engine import encumbrance
-    from spoils_engine.phases.conditionals import _count_condition_units
+    from soe import encumbrance
+    from soe.phases.conditionals import _count_condition_units
     gs = two_faction_state
     actor = gs.characters["c1"]
     actor.resources.update({"horse": 2, "armor": 5})
@@ -309,7 +309,7 @@ def test_complete_encumbrance_counts_cargo_items_and_if(two_faction_state):
 
 
 def test_ship_and_resources_are_scoped_to_character_group(two_faction_state):
-    from spoils_engine import groups
+    from soe import groups
     gs = two_faction_state
     leader = gs.characters["c1"]
     member = models.Character(id="c1b", name="Julia", faction_id="p1",
@@ -325,7 +325,7 @@ def test_ship_and_resources_are_scoped_to_character_group(two_faction_state):
 
 
 def test_resource_extraction_depletes_and_recovers(two_faction_state):
-    from spoils_engine.phases.economy import _extract_resource, recover_resources
+    from soe.phases.economy import _extract_resource, recover_resources
     gs = two_faction_state
     city = gs.world_map.cities["city1"]
     city.resource_richness["wood"] = 1.0
@@ -337,7 +337,7 @@ def test_resource_extraction_depletes_and_recovers(two_faction_state):
 
 
 def test_quietly_is_recorded_and_suppresses_events(two_faction_state):
-    from spoils_engine import parser
+    from soe import parser
     gs = two_faction_state
     parsed = parser.parse_orders("Quietly work.", gs, "p1")
     assert parsed[0].silent is True
@@ -347,7 +347,7 @@ def test_quietly_is_recorded_and_suppresses_events(two_faction_state):
 
 
 def test_elite_units_can_be_reassigned_and_disbanded(two_faction_state):
-    from spoils_engine import groups
+    from soe import groups
     gs = two_faction_state
     gs.characters["c1b"] = models.Character(
         id="c1b", name="Julia", faction_id="p1", location_city_id="city1")

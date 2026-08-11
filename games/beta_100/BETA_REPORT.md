@@ -1,4 +1,4 @@
-# Spoils of Empire — Beta 100-turn system test
+# SOE — Beta 100-turn system test
 
 - **Game ID:** `beta_100`
 - **Map:** `sample_map.json`

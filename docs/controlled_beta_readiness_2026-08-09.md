@@ -52,14 +52,14 @@ This is not a public-beta approval.
 ## Verification
 
 - Runtime tests: `python -m pytest tests/ -q` -> **423 passed**.
-- Bandit: `bandit -r spoils_engine webapp cli.py -q -f json` -> **6 low,
+- Bandit: `bandit -r soe webapp cli.py -q -f json` -> **6 low,
   0 medium, 0 high**.
-- Mypy baseline: `mypy spoils_engine webapp cli.py --no-incremental` -> **589
+- Mypy baseline: `mypy soe webapp cli.py --no-incremental` -> **589
   errors**; `.\scripts\check_mypy_baseline.ps1` passes at 589.
 - Ruff: `ruff check webapp tests/test_webapp.py scripts` -> **pass**.
 - Compile check: `python -m compileall -q webapp scripts` -> **pass**.
 - Package check: `python -m pip wheel . --no-deps --wheel-dir <temporary-dir>`
-  -> **wheel built** (`spoils_engine-1.1.0a0-py3-none-any.whl`). The wheel is
+  -> **wheel built** (`soe-1.1.0a0-py3-none-any.whl`). The wheel is
   the core engine/CLI artifact and does not contain `webapp`; controlled beta
   deployment is from the source checkout, not from the wheel.
   `python -m build` is currently shadowed by the repository's generated local
@@ -218,10 +218,10 @@ certificates, invite codes, or agent keys into this document.
 ## Accepted technical debt
 
 - Six existing low-severity Bandit findings remain accepted: `B311` at
-  `spoils_engine/engine.py:239`, `spoils_engine/parser/verbs_units.py:282`,
-  `spoils_engine/phases/economy.py:105`,
-  `spoils_engine/phases/intel.py:254`, and `webapp/service.py:118`; plus
-  parser quote-token `B105` at `spoils_engine/parser/text.py:35`. No
+  `soe/engine.py:239`, `soe/parser/verbs_units.py:282`,
+  `soe/phases/economy.py:105`,
+  `soe/phases/intel.py:254`, and `webapp/service.py:118`; plus
+  parser quote-token `B105` at `soe/parser/text.py:35`. No
   medium/high findings were reported.
 - The existing mypy debt remains **589 errors**, measured by the exact targeted
   command above. The baseline gate prevents count growth but is not a cleanup
@@ -311,8 +311,8 @@ python -c "from pathlib import Path; from webapp.backups import validate_backup;
 
 # Runtime and accepted-debt checks.
 python -m pytest tests/ -q
-bandit -r spoils_engine webapp cli.py
-mypy spoils_engine webapp cli.py --no-incremental
+bandit -r soe webapp cli.py
+mypy soe webapp cli.py --no-incremental
 .\scripts\check_mypy_baseline.ps1
 
 # Core package build check; web beta deployment is from source, not this wheel.

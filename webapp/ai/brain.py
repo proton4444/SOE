@@ -148,7 +148,7 @@ def _post_once(
         "Content-Type": "application/json",
         # OpenRouter attribution headers; a neutral title is fine.
         "HTTP-Referer": "https://github.com/anomalyco/opencode",
-        "X-Title": "Spoils of Empire",
+        "X-Title": "SOE",
     }
     try:
         with httpx.Client(timeout=TIMEOUT_SECONDS) as client:

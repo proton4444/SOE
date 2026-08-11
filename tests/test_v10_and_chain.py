@@ -1,20 +1,20 @@
 """
 Tests for `and`-chained commands.
 
-`rules.md` lets one sentence carry several orders: "Assign 20 soldiers and 23
-horses to Bill Jenkins, and have him go to Riverton and attack Mike May" is
+the design lets one sentence carry several orders: "Assign 20 soldiers and 23
+horses to Bill Jenkins, and have him go to Ashford and attack Mike May" is
 three commands. `and` also joins items within one command, so the splitter
 only breaks a sentence where the clause so far is a complete command and the
 tail starts a new one -- with a verb, with `have`, or with a quantity that
 continues the previous verb. The HAVE form's actor stays on the clauses that
-follow it ("have him go to Riverton and tax for 3 weeks, and go to Ennistown
+follow it ("have him go to Ashford and tax for 3 weeks, and go to Ennistown
 and tax" is four orders to the same character).
 """
 
 import pytest
 
-from spoils_engine import engine, models, parser, pronouns
-from spoils_engine.models import ItemType, PopulationBand
+from soe import engine, models, parser, pronouns
+from soe.models import ItemType, PopulationBand
 
 
 @pytest.fixture
@@ -22,10 +22,10 @@ def court():
     """A leader, a court of named characters, and cities to move between."""
     gs = models.GameState()
     gs.turn_number = 1
-    for cid, name in [("c1", "Madegi Doy"), ("c2", "Riverton"),
-                      ("c3", "Tashendi"), ("c4", "Umadosh"),
-                      ("c5", "Kitesta"), ("c6", "Ennistown"),
-                      ("c7", "Hampton"), ("c8", "Irontown"),
+    for cid, name in [("c1", "Highfell"), ("c2", "Ashford"),
+                      ("c3", "Velika"), ("c4", "Calder"),
+                      ("c5", "Redport"), ("c6", "Ennistown"),
+                      ("c7", "Hampton"), ("c8", "Ironvale"),
                       ("c9", "Nandigwa"), ("c10", "Bindy Village")]:
         gs.world_map.cities[cid] = models.City(
             id=cid, name=name, population_band=PopulationBand.MEDIUM)
@@ -39,7 +39,7 @@ def court():
 
     court = [
         ("l", "Billy Jones", "male", True),
-        ("j", "Joe Flint", "male", False),
+        ("j", "Alan Reed", "male", False),
         ("m", "Doctor McCoy", "male", False),
         ("d", "Donald Nap", "male", False),
         ("b", "Mark Bolton", "male", False),
@@ -85,7 +85,7 @@ def court():
         id="i2", name="*Wasute*", item_type=ItemType.CRYSTAL,
         holder_character_id="l", power_current=5, power_max=80)
     gs.magical_items["i3"] = models.MagicalItem(
-        id="i3", name="*Nenikasta*", item_type=ItemType.WAND,
+        id="i3", name="*Velika*", item_type=ItemType.WAND,
         holder_character_id="h", power_current=30, power_max=60)
     return gs
 
@@ -104,7 +104,7 @@ def types(orders):
 
 def test_assign_have_and_attack_is_three_orders(court):
     orders = parse(court, "Assign 20 soldiers and 23 horses to Bill Jenkins, "
-                         "and have him go to Riverton and attack Mike May.")
+                         "and have him go to Ashford and attack Mike May.")
     assert types(orders) == ["ASSIGN", "ASSIGN", "MOVE", "ATTACK"]
     # The chain split around the item list, not inside it.
     assert not orders[0].warnings
@@ -117,15 +117,15 @@ def test_assign_have_and_attack_is_three_orders(court):
 
 
 def test_the_have_actor_stays_for_the_whole_tax_chain(court):
-    # rules.md's longest chained example.
+    # the design's longest chained example.
     text = ("Assign 200 soldiers to Captain Bill Jones. Have him go to "
-            "Riverton and tax for 3 weeks, and go to Ennistown and tax, and "
+            "Ashford and tax for 3 weeks, and go to Ennistown and tax, and "
             "go to Hampton and tax for 3 days and go to Bindy Village and "
             "tax for 12 hours.")
     orders = parse(court, text)
     assert types(orders) == ["ASSIGN", "MOVE", "TAX", "MOVE", "TAX",
                              "MOVE", "TAX", "MOVE", "TAX"]
-    # Titles are ignored (rules.md), so the assign reaches Bill Jones...
+    # Titles are ignored (the design), so the assign reaches Bill Jones...
     assert not orders[0].warnings
     assert orders[0].recipient_id == "bj"
     # ...and the sticky HAVE sends every clause to the same character.
@@ -146,7 +146,7 @@ def test_gold_to_nancy_and_horses_to_bill_elides_the_second_give(court):
 
 def test_recruit_soldiers_and_workers_is_two_recruits(court):
     orders = parse(court, "Have Mary Anderson recruit 5 soldiers and 3 "
-                          "workers and come to Tashendi and assign them "
+                          "workers and come to Velika and assign them "
                           "to me.")
     assert types(orders) == ["RECRUIT", "RECRUIT", "MOVE", "ASSIGN", "ASSIGN"]
     assert orders[0].count == 5 and orders[0].unit_type == "soldier"
@@ -169,7 +169,7 @@ def test_assign_20_soldiers_and_23_horses_replicates_the_target(court):
 def test_mixed_names_and_counts_assign_each_to_the_recipient(court):
     orders = parse(court, "Assign Bishop Sami Lukasa and Simon Peres and "
                           "200 soldiers to John Parker, and have him go to "
-                          "Riverton and capture 30 soldiers.")
+                          "Ashford and capture 30 soldiers.")
     assert types(orders) == ["ASSIGN", "ASSIGN", "MOVE", "CAPTURE"]
     assert orders[0].character_names == ["Bishop Sami Lukasa", "Simon Peres"]
     assert orders[0].recipient_id == "dd"
@@ -187,7 +187,7 @@ def test_charge_keeps_its_own_item_list_but_splits_at_give(court):
 
 
 def test_buy_and_go_and_give_it(court):
-    orders = parse(court, "Buy 1 horse and go to Umadosh and give it to "
+    orders = parse(court, "Buy 1 horse and go to Calder and give it to "
                           "Bill May.")
     assert types(orders) == ["TRADE", "MOVE", "ASSIGN"]
     assert not orders[1].warnings
@@ -197,22 +197,22 @@ def test_buy_and_go_and_give_it(court):
 
 
 def test_charge_and_give_it_to_me(court):
-    orders = parse(court, "Have Ameriki charge Nenikasta to 30 points and "
+    orders = parse(court, "Have Ameriki charge Velika to 30 points and "
                           "give it to me.")
     assert types(orders) == ["CHARGE", "ASSIGN"]
     assert orders[0].actor_id == "h"
     assert orders[0].targets[0].item_id == "i3"
     assert orders[1].donor_id == "h"      # sticky HAVE
     assert orders[1].recipient_id == "l"  # me = the leader
-    assert orders[1].item_names == ["*Nenikasta*"]
+    assert orders[1].item_names == ["*Velika*"]
     assert not any(o.warnings for o in orders)
 
 
 def test_the_two_thems_refer_to_different_lists(court):
-    # rules.md: "the first them refers to 20 horses. The second them refers
+    # Design: "the first them refers to 20 horses. The second them refers
     # to 20 horses and 2 sailors."
     text = ("Purchase 20 horses and assign them and 2 sailors to Watusingi, "
-            "and have him go to Madegi Doy and assign them to Joe Flint.")
+            "and have him go to Highfell and assign them to Alan Reed.")
     orders = parse(court, text)
     assert types(orders) == ["TRADE", "ASSIGN", "ASSIGN", "MOVE",
                              "ASSIGN", "ASSIGN"]
@@ -221,14 +221,14 @@ def test_the_two_thems_refer_to_different_lists(court):
     assert "horses" in orders[4].warnings[0]  # second them = horses and sailors
     assert not orders[5].warnings
     assert orders[4].recipient_id == "j" and orders[5].recipient_id == "j"
-    assert orders[3].actor_id == "j"  # him = Joe Flint (named later)
+    assert orders[3].actor_id == "j"  # him = Alan Reed (named later)
 
 
 def test_only_the_last_list_is_assigned(court):
-    # rules.md: "them can never refer to entities mentioned in separate
+    # Design: "them can never refer to entities mentioned in separate
     # commands" -- only the 10 horses are assigned.
     orders = parse(court, "Recruit 10 soldiers and buy 10 horses and assign "
-                          "them to Joe Flint.")
+                          "them to Alan Reed.")
     assert types(orders) == ["RECRUIT", "TRADE", "ASSIGN"]
     assert orders[2].unit_type == "HORSE" or "horses" in orders[2].warnings[0]
     assert "soldier" not in str(orders[2].warnings)
@@ -246,9 +246,9 @@ def test_mass_nouns_take_it_and_split_on_and(court):
 
 
 def test_have_him_to_go_form(court):
-    # rules.md writes "have him to go to Kitesta".
+    # the design writes "have him to go to Redport".
     orders = parse(court, "Give 50 armor to Thomas Ames and have him to go "
-                          "to Kitesta and give it to Phil Lucas.")
+                          "to Redport and give it to Phil Lucas.")
     assert types(orders) == ["ASSIGN", "MOVE", "ASSIGN"]
     assert orders[0].resources == {"armor": 50}
     assert orders[1].actor_id == "t" and orders[1].destination_city_id == "c5"
@@ -257,7 +257,7 @@ def test_have_him_to_go_form(court):
 
 
 def test_collect_and_give_what_was_gathered(court):
-    # rules.md: "the pronoun it can be used to refer to whatever was
+    # Design: "the pronoun it can be used to refer to whatever was
     # successfully collected."
     orders = parse(court, "Have George Doone go to Nandigwa and collect wood "
                           "for 5 days and give it to me.")
@@ -287,10 +287,10 @@ def test_skill_lists_are_not_split(court):
 
 
 def test_city_waypoints_are_not_split(court):
-    # "have him travel to Willis Grove and Riverton" is one journey, so the
+    # "have him travel to Willis Grove and Ashford" is one journey, so the
     # `and` stays inside the move clause. Multi-stop routing is a separate
     # gap; what is pinned here is that the chain does not cut the sentence.
-    orders = parse(court, "Have Joe Flint go to Madegi Doy and Riverton.")
+    orders = parse(court, "Have Alan Reed go to Highfell and Ashford.")
     assert types(orders) == ["MOVE"]
     assert orders[0].actor_id == "j"
     assert orders[0].warnings  # the second city is not a routable stop
@@ -299,7 +299,7 @@ def test_city_waypoints_are_not_split(court):
 def test_a_failed_chained_clause_keeps_its_neighbours(court):
     # An error in one clause drops only that clause; the rest of the chain
     # and the other sentences are untouched.
-    orders = parse(court, "Go to Irontown and sail to Atlantis.")
+    orders = parse(court, "Go to Ironvale and sail to Atlantis.")
     assert types(orders) == ["MOVE", "SAIL"]
     assert not orders[0].warnings
     assert "atlantis" in orders[1].warnings[0]
@@ -313,7 +313,7 @@ def test_him_binds_to_what_was_named_before_each_position(court):
     # The rules' own command-language example: the first `him` is Bill
     # Gershwin; the second is King Bodo Bunji, named in between.
     text = ("Assign 20 soldiers and 2 workers and 200 gold and 22 horses to "
-            "Bill Gershwin. Have him go to Riverton, and say \"Here is the "
+            "Bill Gershwin. Have him go to Ashford, and say \"Here is the "
             "money I promised you.\" to King Bodo Bunji, and give him 100 "
             "gold.")
     orders = parse(court, text)
@@ -328,25 +328,25 @@ def test_him_binds_to_what_was_named_before_each_position(court):
 
 
 def test_him_in_have_position_can_be_the_agent(court):
-    # rules.md: "him refers to Joe Flint" even though Joe Flint is the
+    # Design: "him refers to Alan Reed" even though Alan Reed is the
     # agent of the first command.
-    orders = parse(court, "Have Joe Flint give 10 horses to Billy Jones and "
-                          "have him go to Madegi Doy.")
+    orders = parse(court, "Have Alan Reed give 10 horses to Billy Jones and "
+                          "have him go to Highfell.")
     assert types(orders) == ["ASSIGN", "MOVE"]
     assert orders[1].actor_id == "j"
 
 
 def test_him_is_not_the_agent_of_an_earlier_command(court):
-    # rules.md: him is Mark Bolton, because Donald Nap is the agent.
+    # Design: him is Mark Bolton, because Donald Nap is the agent.
     orders = parse(court, "Have Mark Bolton study combat for 4 weeks. Have "
-                          "Donald Nap go to Madegi Doy and give him 100 gold.")
+                          "Donald Nap go to Highfell and give him 100 gold.")
     assert types(orders) == ["STUDY", "MOVE", "ASSIGN"]
     assert orders[2].donor_id == "d" and orders[2].recipient_id == "b"
 
 
 def test_mccoy_in_a_list_is_still_not_a_referent(court):
-    orders = parse(court, "Assign 10 soldiers and Doctor McCoy to Joe Flint "
-                          "and have him go to Tashendi.")
+    orders = parse(court, "Assign 10 soldiers and Doctor McCoy to Alan Reed "
+                          "and have him go to Velika.")
     assert types(orders) == ["ASSIGN", "MOVE"]
     assert orders[1].actor_id == "j"
 
@@ -355,10 +355,10 @@ def test_resolution_rewrites_the_two_thems(court):
     context = pronouns.ReferentContext()
     result = pronouns.resolve(
         "purchase 20 horses and assign them and 2 sailors to watusingi and "
-        "have him go to madegi doy and assign them to joe flint",
+        "have him go to highfell and assign them to alan reed",
         context, court, "p1")
     assert "assign 20 horses and 2 sailors to watusingi" in result
-    assert result.endswith("assign 20 horses and 2 sailors to joe flint")
+    assert result.endswith("assign 20 horses and 2 sailors to alan reed")
 
 
 def test_bare_mass_noun_gives_it_something_to_stand_for(court):
@@ -379,7 +379,7 @@ def test_resource_give_and_take_move_through_the_engine(court):
     gs.characters["l"].resources["stone"] = 40
     gs.characters["l"].resources["wood"] = 25
     orders = parser.parse_orders(
-        "Give 10 stone to Joe Flint. Have him take 5 wood from me.",
+        "Give 10 stone to Alan Reed. Have him take 5 wood from me.",
         gs, "p1")
     engine.run_turn(gs, {"p1": orders}, seed=42)
     assert gs.characters["l"].resources["stone"] == 30

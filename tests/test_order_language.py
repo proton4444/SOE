@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import pytest
 
-from spoils_engine import engine, models, parser, reporting, territory
-from spoils_engine.models import LocationPosition, PopulationBand, UnitType
-from spoils_engine.orders import AttackOrder, MoveOrder
-from spoils_engine.parser.control import parse_if_condition
+from soe import engine, models, parser, reporting, territory
+from soe.models import LocationPosition, PopulationBand, UnitType
+from soe.orders import AttackOrder, MoveOrder
+from soe.parser.control import parse_if_condition
 
 
 # ============================================================================
@@ -28,43 +28,43 @@ from spoils_engine.parser.control import parse_if_condition
 @pytest.fixture
 def board() -> models.GameState:
     """
-    Alpha is sovereign in Kitesta; Beta sits one good road away in Riverton.
+    Alpha is sovereign in Redport; Beta sits one good road away in Ashford.
 
     Beta's Borin leads an army large enough that an attack is never declined
     for poor odds, so these tests measure the order language rather than dice.
     """
     gs = models.GameState()
     gs.turn_number = 1
-    gs.world_map.cities["riverton"] = models.City(
-        id="riverton", name="Riverton", population_band=PopulationBand.MEDIUM)
-    gs.world_map.cities["kitesta"] = models.City(
-        id="kitesta", name="Kitesta", population_band=PopulationBand.MEDIUM)
+    gs.world_map.cities["ashford"] = models.City(
+        id="ashford", name="Ashford", population_band=PopulationBand.MEDIUM)
+    gs.world_map.cities["redport"] = models.City(
+        id="redport", name="Redport", population_band=PopulationBand.MEDIUM)
     gs.world_map.roads["road"] = models.Road(
-        id="road", from_city_id="riverton", to_city_id="kitesta",
+        id="road", from_city_id="ashford", to_city_id="redport",
         quality=models.RoadQuality.EXCELLENT)
 
     gs.factions["alpha"] = models.Faction(
-        id="alpha", name="Alpha", controlled_city_ids={"kitesta"})
+        id="alpha", name="Alpha", controlled_city_ids={"redport"})
     gs.factions["beta"] = models.Faction(
-        id="beta", name="Beta", controlled_city_ids={"riverton"})
+        id="beta", name="Beta", controlled_city_ids={"ashford"})
 
     gs.characters["aurelia"] = models.Character(
         id="aurelia", name="Aurelia", title="Regent", faction_id="alpha",
-        location_city_id="kitesta", is_leader=True, combat_skill=10, gold=500)
+        location_city_id="redport", is_leader=True, combat_skill=10, gold=500)
     gs.characters["borin"] = models.Character(
         id="borin", name="Borin", faction_id="beta",
-        location_city_id="riverton", is_leader=True, movement_points=100,
+        location_city_id="ashford", is_leader=True, movement_points=100,
         combat_skill=30, gold=5_000)
     gs.characters["vesna"] = models.Character(
         id="vesna", name="Vesna", faction_id="beta",
-        location_city_id="riverton", group_leader_id="borin",
+        location_city_id="ashford", group_leader_id="borin",
         movement_points=100, gold=100)
 
     gs.unit_stacks["alpha_garrison"] = models.UnitStack(
-        id="alpha_garrison", faction_id="alpha", location_city_id="kitesta",
+        id="alpha_garrison", faction_id="alpha", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=20, owner_character_id="aurelia")
     gs.unit_stacks["beta_army"] = models.UnitStack(
-        id="beta_army", faction_id="beta", location_city_id="riverton",
+        id="beta_army", faction_id="beta", location_city_id="ashford",
         unit_type=UnitType.SOLDIER, count=600, owner_character_id="borin")
     return gs
 
@@ -103,7 +103,7 @@ def test_attack_binds_a_plain_name(board):
 
 
 def test_attack_ignores_a_title_on_the_target(board):
-    """rules.md: titles are ignored except in the NAME and PROMOTE commands."""
+    """Design: titles are ignored except in the NAME and PROMOTE commands."""
     order = one(board, "Attack Regent Aurelia.")
     assert not order.warnings
     assert order.target_character_id == "aurelia"
@@ -115,22 +115,22 @@ def test_attack_target_name_is_reported_as_the_real_name(board):
 
 
 @pytest.mark.parametrize("text", [
-    "Attack Regent Aurelia in Kitesta.",
-    "Attack Aurelia in Kitesta.",
-    "Attack Aurelia at Kitesta.",
+    "Attack Regent Aurelia in Redport.",
+    "Attack Aurelia in Redport.",
+    "Attack Aurelia at Redport.",
 ])
 def test_attack_rejects_a_location_qualifier_instead_of_swallowing_it(board, text):
     """
     ATTACK takes a name and nothing else, so a location must be refused loudly.
 
-    The playtest wrote `ATTACK Regent Aurelia in Kitesta`, the parser accepted
+    The playtest wrote `ATTACK Regent Aurelia in Redport`, the parser accepted
     it, hunted for a character of that entire name, found none, and the attack
     never happened without a word said.
     """
     order = one(board, text)
     assert order.warnings, "an unsupported location must not parse silently"
     warning = order.warnings[0]
-    assert "go to kitesta and attack" in warning, warning
+    assert "go to redport and attack" in warning, warning
     # Crucially: it did not bind some other target on the way past.
     assert not order.target_character_id
 
@@ -139,7 +139,7 @@ def test_attack_keeps_a_name_that_really_contains_in(board):
     """A location is only blamed once the whole phrase has failed as a name."""
     board.characters["odd"] = models.Character(
         id="odd", name="Ivar in Chains", faction_id="alpha",
-        location_city_id="kitesta")
+        location_city_id="redport")
     order = one(board, "Attack Ivar in Chains.")
     assert not order.warnings
     assert order.target_character_id == "odd"
@@ -153,19 +153,19 @@ def test_attack_on_an_unknown_name_says_so(board):
 
 def test_attack_after_go_binds_the_named_target(board):
     """The supported way to attack elsewhere: GO in the same sentence."""
-    orders = parse(board, "Have Borin go to Kitesta and attack Aurelia.")
+    orders = parse(board, "Have Borin go to Redport and attack Aurelia.")
     attacks = [o for o in orders if isinstance(o, AttackOrder)]
     moves = [o for o in orders if isinstance(o, MoveOrder)]
     assert len(attacks) == 1 and len(moves) == 1
     assert not attacks[0].warnings
     assert attacks[0].target_character_id == "aurelia"
-    assert moves[0].destination_city_id == "kitesta"
+    assert moves[0].destination_city_id == "redport"
 
 
 # ============================================================================
 # 1b -- ATTACK TARGET PRESENCE
 #
-# rules.md, ATTACK: "If John May is not present, then no attack will take
+# the design, ATTACK: "If Bram Kell is not present, then no attack will take
 # place." The engine used to read an absent target as "defender_power == 0",
 # which is not the same question: unowned stacks bypass the group filter and
 # the defender's allies are added on top, so an ATTACK aimed at a character
@@ -173,16 +173,16 @@ def test_attack_after_go_binds_the_named_target(board):
 # a victory over the person who was never there.
 # ============================================================================
 
-def _borin_stands_in_kitesta(board) -> None:
+def _borin_stands_in_redport(board) -> None:
     """Put the attacker in the target's city so only presence is under test."""
-    board.characters["borin"].location_city_id = "kitesta"
-    board.unit_stacks["beta_army"].location_city_id = "kitesta"
+    board.characters["borin"].location_city_id = "redport"
+    board.unit_stacks["beta_army"].location_city_id = "redport"
 
 
 def _aurelia_is_elsewhere(board) -> None:
     """Move the named target, and her own troops, out of the attacked city."""
-    board.characters["aurelia"].location_city_id = "riverton"
-    board.unit_stacks["alpha_garrison"].location_city_id = "riverton"
+    board.characters["aurelia"].location_city_id = "ashford"
+    board.unit_stacks["alpha_garrison"].location_city_id = "ashford"
 
 
 def battles(log) -> list:
@@ -192,15 +192,15 @@ def battles(log) -> list:
 
 def test_absent_target_is_not_replaced_by_loose_faction_soldiers(board):
     """
-    THE BUG: Aurelia was in Riverton and still lost a battle in Kitesta.
+    THE BUG: Aurelia was in Ashford and still lost a battle in Redport.
 
     Unowned stacks count for a faction whoever is asked about, so the soldiers
     she had left behind stood in for her and took 123 casualties.
     """
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
     _aurelia_is_elsewhere(board)
     board.unit_stacks["alpha_loose"] = models.UnitStack(
-        id="alpha_loose", faction_id="alpha", location_city_id="kitesta",
+        id="alpha_loose", faction_id="alpha", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=200)
 
     gs, log = run(board, {"beta": "Have Borin definitely attack Aurelia."})
@@ -214,13 +214,13 @@ def test_absent_target_is_not_replaced_by_loose_faction_soldiers(board):
 
 def test_absent_target_is_not_replaced_by_another_character(board):
     """A second character of the same faction is not a substitute target."""
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
     _aurelia_is_elsewhere(board)
     board.characters["cassian"] = models.Character(
         id="cassian", name="Cassian", faction_id="alpha",
-        location_city_id="kitesta", combat_skill=5)
+        location_city_id="redport", combat_skill=5)
     board.unit_stacks["cassian_men"] = models.UnitStack(
-        id="cassian_men", faction_id="alpha", location_city_id="kitesta",
+        id="cassian_men", faction_id="alpha", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=200, owner_character_id="cassian")
 
     gs, log = run(board, {"beta": "Have Borin definitely attack Aurelia."})
@@ -241,13 +241,13 @@ def test_absent_target_is_not_replaced_by_her_allies(board):
     Allied strength was added after the group filter, so it alone could carry
     a battle the named defender was not present for.
     """
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
     _aurelia_is_elsewhere(board)
     board.factions["gamma"] = models.Faction(id="gamma", name="Gamma")
     board.factions["alpha"].allies.add("gamma")
     board.factions["gamma"].allies.add("alpha")
     board.unit_stacks["gamma_men"] = models.UnitStack(
-        id="gamma_men", faction_id="gamma", location_city_id="kitesta",
+        id="gamma_men", faction_id="gamma", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=200)
 
     gs, log = run(board, {"beta": "Have Borin definitely attack Aurelia."})
@@ -263,44 +263,44 @@ def test_hidden_movement_evades_a_targeted_attack(board):
     This is the gameplay point of the rule: an ATTACK aimed at a name can be
     dodged by leaving, and what stays behind is not conscripted into the fight.
     """
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
     board.characters["aurelia"].movement_points = 100
     board.unit_stacks["alpha_loose"] = models.UnitStack(
-        id="alpha_loose", faction_id="alpha", location_city_id="kitesta",
+        id="alpha_loose", faction_id="alpha", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=200)
 
     gs, log = run(board, {
-        "alpha": "Have Aurelia go to Riverton.",
+        "alpha": "Have Aurelia go to Ashford.",
         "beta": "Have Borin definitely attack Aurelia.",
     })
 
-    assert gs.characters["aurelia"].location_city_id == "riverton"
+    assert gs.characters["aurelia"].location_city_id == "ashford"
     assert not battles(log), descriptions(log, "beta")
     assert gs.unit_stacks["alpha_loose"].count == 200
 
 
 def test_absent_target_failure_does_not_name_where_she_went(board):
     """The attacker learns not-here, which marching in would have told them."""
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
     _aurelia_is_elsewhere(board)
 
     gs, log = run(board, {"beta": "Have Borin definitely attack Aurelia."})
 
     failures = descriptions(log, "beta", "attack_failed")
     assert failures, descriptions(log, "beta")
-    assert "Riverton" not in failures[0], failures[0]
+    assert "Ashford" not in failures[0], failures[0]
     assert "no attack takes place" in failures[0]
 
 
 def test_present_target_still_fights_a_normal_battle(board):
     """CONTROL -- the fix must not narrow an attack that finds its target."""
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
 
     gs, log = run(board, {"beta": "Have Borin definitely attack Aurelia."})
 
     fought = battles(log)
     assert fought, descriptions(log, "beta")
-    assert all(e.location_city_id == "kitesta" for e in fought)
+    assert all(e.location_city_id == "redport" for e in fought)
     assert gs.unit_stacks["alpha_garrison"].count < 20, "defender took no losses"
 
 
@@ -308,18 +308,18 @@ def test_present_target_still_draws_her_allies_into_the_battle(board):
     """
     CONTROL -- alliance behaviour is unchanged when the target really is here.
 
-    rules.md: personnel useful in the attack "will automatically come to his
+    Design: personnel useful in the attack "will automatically come to his
     aid", and a defender's allies present at the battle share the casualties.
     """
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
     board.factions["gamma"] = models.Faction(id="gamma", name="Gamma")
     board.factions["alpha"].allies.add("gamma")
     board.factions["gamma"].allies.add("alpha")
     board.unit_stacks["gamma_men"] = models.UnitStack(
-        id="gamma_men", faction_id="gamma", location_city_id="kitesta",
+        id="gamma_men", faction_id="gamma", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=200)
 
-    assert engine.defending_side("alpha", "beta", "kitesta", board) == ["alpha", "gamma"]
+    assert engine.defending_side("alpha", "beta", "redport", board) == ["alpha", "gamma"]
 
     gs, log = run(board, {"beta": "Have Borin definitely attack Aurelia."})
 
@@ -331,43 +331,43 @@ def test_move_then_attack_still_reads_the_arrival_city_for_presence(board):
     """
     Presence is judged where the attacker ends up, not where the order parsed.
 
-    Borin parses this in Riverton, where Aurelia is not; the march succeeds and
-    the battle must be fought against her in Kitesta.
+    Borin parses this in Ashford, where Aurelia is not; the march succeeds and
+    the battle must be fought against her in Redport.
     """
     gs, log = run(board, {
-        "beta": "Have Borin go to Kitesta. Have Borin definitely attack Aurelia.",
+        "beta": "Have Borin go to Redport. Have Borin definitely attack Aurelia.",
     })
 
-    assert gs.characters["borin"].location_city_id == "kitesta"
+    assert gs.characters["borin"].location_city_id == "redport"
     fought = battles(log)
     assert fought, descriptions(log, "beta")
-    assert all(e.location_city_id == "kitesta" for e in fought)
+    assert all(e.location_city_id == "redport" for e in fought)
 
 
 def test_failed_move_checks_presence_at_the_city_actually_reached(board):
-    """The mirror: a march that failed judges presence back home in Riverton."""
+    """The mirror: a march that failed judges presence back home in Ashford."""
     board.characters["borin"].movement_points = 0
 
     gs, log = run(board, {
-        "beta": "Have Borin go to Kitesta. Have Borin definitely attack Aurelia.",
+        "beta": "Have Borin go to Redport. Have Borin definitely attack Aurelia.",
     })
 
-    assert gs.characters["borin"].location_city_id == "riverton"
+    assert gs.characters["borin"].location_city_id == "ashford"
     assert not battles(log), descriptions(log, "beta")
     failures = descriptions(log, "beta", "attack_failed")
-    assert failures and "Aurelia is not present in Riverton" in failures[0]
+    assert failures and "Aurelia is not present in Ashford" in failures[0]
 
 
 def test_faction_attack_without_a_name_is_not_gated_on_presence(board):
     """
     An ATTACK that names nobody has no absentee -- it must still resolve.
 
-    rules.md points a nameless ATTACK at whoever secures the location, so the
+    the design points a nameless ATTACK at whoever secures the location, so the
     presence gate applies only when the player actually named a character.
     """
-    _borin_stands_in_kitesta(board)
+    _borin_stands_in_redport(board)
     order = AttackOrder(player_id="beta", actor_id="borin",
-                        location_city_id="kitesta", target_faction_id="alpha",
+                        location_city_id="redport", target_faction_id="alpha",
                         target_name="Alpha", definitely=True)
     gs, log = engine.run_turn(board, {"beta": [order]}, seed=7)
 
@@ -386,50 +386,50 @@ def test_move_then_attack_fights_where_the_attacker_arrived(board):
     just left, where it found nobody.
     """
     gs, log = run(board, {
-        "beta": "Have Borin go to Kitesta. Have Borin definitely attack Aurelia.",
+        "beta": "Have Borin go to Redport. Have Borin definitely attack Aurelia.",
     })
-    assert gs.characters["borin"].location_city_id == "kitesta"
+    assert gs.characters["borin"].location_city_id == "redport"
     battles = [e for e in log.events
                if e.phase == "combat" and e.event_type in ("victory", "defeat")]
     assert battles, descriptions(log, "beta")
-    assert all(e.location_city_id == "kitesta" for e in battles)
+    assert all(e.location_city_id == "redport" for e in battles)
 
 
 def test_failed_move_leaves_the_attack_where_the_attacker_really_is(board):
     """
     A march that never happened must not be pretended into the attack.
 
-    No rollback and no chaining: the ATTACK still runs, from Riverton, and
+    No rollback and no chaining: the ATTACK still runs, from Ashford, and
     fails there for the honest reason that the target is somewhere else.
     """
     board.characters["borin"].movement_points = 0
     gs, log = run(board, {
-        "beta": "Have Borin go to Kitesta. Have Borin definitely attack Aurelia.",
+        "beta": "Have Borin go to Redport. Have Borin definitely attack Aurelia.",
     })
-    assert gs.characters["borin"].location_city_id == "riverton"
+    assert gs.characters["borin"].location_city_id == "ashford"
     failures = descriptions(log, "beta", "attack_failed")
     assert failures, descriptions(log, "beta")
-    assert "Aurelia is not present in Riverton" in failures[0]
+    assert "Aurelia is not present in Ashford" in failures[0]
 
 
 def test_move_then_recruit_uses_the_new_location(board):
     """The same parse-time freeze made a chained RECRUIT fail after a good move."""
-    board.factions["beta"].controlled_city_ids.add("kitesta")
+    board.factions["beta"].controlled_city_ids.add("redport")
     board.factions["alpha"].controlled_city_ids.clear()
     gs, log = run(board, {
-        "beta": "Have Borin go to Kitesta and recruit 5 soldiers.",
+        "beta": "Have Borin go to Redport and recruit 5 soldiers.",
     })
-    assert gs.characters["borin"].location_city_id == "kitesta"
+    assert gs.characters["borin"].location_city_id == "redport"
     recruited = [s for s in gs.unit_stacks.values()
-                 if s.location_city_id == "kitesta" and s.faction_id == "beta"]
+                 if s.location_city_id == "redport" and s.faction_id == "beta"]
     assert recruited, descriptions(log, "beta")
 
 
 def test_recruit_in_a_named_city_is_still_taken_at_its_word(board):
     """Naming the city keeps the old meaning: be there, or fail saying so."""
-    _, log = run(board, {"beta": "Have Borin recruit 5 soldiers in Kitesta."})
+    _, log = run(board, {"beta": "Have Borin recruit 5 soldiers in Redport."})
     failures = descriptions(log, "beta", "recruit_failed")
-    assert failures and "is not in Kitesta" in failures[0]
+    assert failures and "is not in Redport" in failures[0]
 
 
 # ============================================================================
@@ -543,7 +543,7 @@ def test_a_message_does_not_silently_eat_the_next_order(board):
     """
     Without the period the next command lands inside the recipient name.
 
-    rules.md recovers by ignoring input to the next period, so REPORT is not
+    the design recovers by ignoring input to the next period, so REPORT is not
     obeyed -- but the player is told exactly which words went missing instead
     of being handed "no character called 'aurelia report'".
     """
@@ -578,57 +578,57 @@ def test_plain_tax_is_local_and_says_nothing_about_a_city(board):
 
 
 def test_tax_naming_a_city_is_recorded_not_discarded(board):
-    order = one(board, "Have Borin tax Kitesta.")
-    assert order.stated_city_id == "kitesta"
+    order = one(board, "Have Borin tax Redport.")
+    assert order.stated_city_id == "redport"
 
 
 def test_tax_naming_a_city_the_actor_is_not_in_refuses(board):
     """
     The playtest wrote a city and was taxed somewhere else entirely.
 
-    rules.md: TAX "will attempt to collect taxes in his current location", so
+    Design: TAX "will attempt to collect taxes in his current location", so
     the named city is a claim to check, never a target to travel to.
     """
-    gs, log = run(board, {"beta": "Have Borin tax Kitesta."})
+    gs, log = run(board, {"beta": "Have Borin tax Redport."})
     failures = descriptions(log, "beta", "tax_failed")
     assert failures, descriptions(log, "beta")
-    assert "Borin is in Riverton, not Kitesta" in failures[0]
+    assert "Borin is in Ashford, not Redport" in failures[0]
     assert not any(e.event_type == "tax_success" for e in log.events)
 
 
 def test_tax_naming_the_city_the_actor_reached_is_honoured(board):
     """Order, warning and report all name one place -- and it collects."""
-    board.tax_pools["kitesta"] = 400
-    board.factions["beta"].controlled_city_ids.add("kitesta")
+    board.tax_pools["redport"] = 400
+    board.factions["beta"].controlled_city_ids.add("redport")
     board.factions["alpha"].controlled_city_ids.clear()
     gs, log = run(board, {
-        "beta": "Have Borin go to Kitesta. Have Borin tax Kitesta.",
+        "beta": "Have Borin go to Redport. Have Borin tax Redport.",
     })
     collected = descriptions(log, "beta", "tax_success")
-    assert collected and "Kitesta" in collected[0], descriptions(log, "beta")
+    assert collected and "Redport" in collected[0], descriptions(log, "beta")
 
 
 # ============================================================================
 # 6 -- TERRITORIAL AUTHORITY PRESENTATION
 # ============================================================================
 
-def _occupy_kitesta_with_beta(gs: models.GameState) -> None:
-    """Beta's army stands inside Kitesta and holds it."""
-    gs.characters["borin"].location_city_id = "kitesta"
+def _occupy_redport_with_beta(gs: models.GameState) -> None:
+    """Beta's army stands inside Redport and holds it."""
+    gs.characters["borin"].location_city_id = "redport"
     gs.characters["borin"].location_position = LocationPosition.INSIDE
-    gs.unit_stacks["beta_army"].location_city_id = "kitesta"
-    gs.factions["beta"].secured_city_ids.add("kitesta")
+    gs.unit_stacks["beta_army"].location_city_id = "redport"
+    gs.factions["beta"].secured_city_ids.add("redport")
 
 
 def test_authority_names_the_three_claims_apart(board):
-    _occupy_kitesta_with_beta(board)
-    held = territory.authority_ids(board, "kitesta")
+    _occupy_redport_with_beta(board)
+    held = territory.authority_ids(board, "redport")
     assert held == {"sovereign": "alpha", "occupier": "beta",
                     "administrator": "beta"}
 
 
 def test_sovereign_report_shows_a_foreign_occupier_of_their_own_city(board):
-    _occupy_kitesta_with_beta(board)
+    _occupy_redport_with_beta(board)
     report = reporting.generate_player_reports(
         board, engine.TurnLog(), {})["alpha"]
     assert "TERRITORIAL AUTHORITY" in report
@@ -640,12 +640,12 @@ def test_sovereign_report_shows_a_foreign_occupier_of_their_own_city(board):
 
 def test_authority_report_after_the_occupation_lapses(board):
     """When the garrison leaves, the sovereign gets their own city back."""
-    _occupy_kitesta_with_beta(board)
-    board.characters["borin"].location_city_id = "riverton"
-    board.unit_stacks["beta_army"].location_city_id = "riverton"
+    _occupy_redport_with_beta(board)
+    board.characters["borin"].location_city_id = "ashford"
+    board.unit_stacks["beta_army"].location_city_id = "ashford"
     territory.reconcile_occupations(board)
 
-    held = territory.authority_ids(board, "kitesta")
+    held = territory.authority_ids(board, "redport")
     assert held == {"sovereign": "alpha", "occupier": None,
                     "administrator": "alpha"}
 
@@ -656,18 +656,18 @@ def test_authority_report_after_the_occupation_lapses(board):
 
 
 def test_a_player_is_not_told_who_holds_a_city_they_cannot_see(board):
-    """Riverton is Beta's and Alpha has nobody there: no leak either way."""
-    assert territory.authority_names(board, "riverton", "alpha") is None
+    """Ashford is Beta's and Alpha has nobody there: no leak either way."""
+    assert territory.authority_names(board, "ashford", "alpha") is None
     report = reporting.generate_player_reports(
         board, engine.TurnLog(), {})["alpha"]
-    assert "Riverton" not in report.split("THE LIE OF THE LAND")[0]
+    assert "Ashford" not in report.split("THE LIE OF THE LAND")[0]
 
 
 def test_standing_in_a_city_earns_the_right_to_read_its_authority(board):
     """Beta marches in and may now see that Alpha is sovereign there."""
-    assert territory.authority_names(board, "kitesta", "beta") is None
-    board.characters["borin"].location_city_id = "kitesta"
-    held = territory.authority_names(board, "kitesta", "beta")
+    assert territory.authority_names(board, "redport", "beta") is None
+    board.characters["borin"].location_city_id = "redport"
+    held = territory.authority_names(board, "redport", "beta")
     assert held == {"sovereign": "Alpha", "occupier": "none",
                     "administrator": "Alpha"}
 
@@ -677,16 +677,16 @@ def test_standing_in_a_city_earns_the_right_to_read_its_authority(board):
 # ============================================================================
 
 def test_tax_failure_explains_a_foreign_occupation(board):
-    _occupy_kitesta_with_beta(board)
-    board.characters["aurelia"].location_city_id = "kitesta"
-    board.tax_pools["kitesta"] = 400
+    _occupy_redport_with_beta(board)
+    board.characters["aurelia"].location_city_id = "redport"
+    board.tax_pools["redport"] = 400
     gs, log = run(board, {"alpha": "Have Aurelia tax."})
     failures = descriptions(log, "alpha", "tax_failed")
     assert failures and "suspends your sovereign rights" in failures[0]
 
 
 def test_recruit_failure_names_the_administrator(board):
-    gs, log = run(board, {"beta": "Have Borin go to Kitesta and recruit 5 soldiers."})
+    gs, log = run(board, {"beta": "Have Borin go to Redport and recruit 5 soldiers."})
     failures = descriptions(log, "beta", "recruit_failed")
     assert failures and "Alpha is its sovereign and administers it" in failures[0]
 
@@ -706,20 +706,20 @@ def test_secure_failure_names_a_missing_garrison(board):
 
 
 def test_fortify_failure_names_the_administrator(board):
-    gs, log = run(board, {"beta": "Have Borin go to Kitesta and fortify."})
+    gs, log = run(board, {"beta": "Have Borin go to Redport and fortify."})
     failures = descriptions(log, "beta", "fortify_failed")
     assert failures and "Alpha is its sovereign" in failures[0]
 
 
 def test_attack_failure_does_not_leak_where_a_missing_target_went(board):
-    """Not-here is all the attacker learns -- rules.md grants that much."""
-    board.characters["aurelia"].location_city_id = "riverton"
-    board.unit_stacks["alpha_garrison"].location_city_id = "riverton"
-    board.characters["borin"].location_city_id = "kitesta"
+    """Not-here is all the attacker learns -- the design grants that much."""
+    board.characters["aurelia"].location_city_id = "ashford"
+    board.unit_stacks["alpha_garrison"].location_city_id = "ashford"
+    board.characters["borin"].location_city_id = "redport"
     gs, log = run(board, {"beta": "Have Borin definitely attack Aurelia."})
     failures = descriptions(log, "beta", "attack_failed")
-    assert failures and "Aurelia is not present in Kitesta" in failures[0]
-    assert "Riverton" not in failures[0]
+    assert failures and "Aurelia is not present in Redport" in failures[0]
+    assert "Ashford" not in failures[0]
 
 
 # ============================================================================
@@ -730,7 +730,7 @@ def test_support_result_explains_that_it_does_not_merge_groups(board):
     """
     CORRECT BUT CONFUSING -- the wording changed, the mechanics did not.
 
-    rules.md: the HAVE form makes the named character a group leader, and a
+    Design: the HAVE form makes the named character a group leader, and a
     supporter fights "if and when he attacks someone else" as a separate group.
     Both surprised the playtester, so the result now says so.
     """
@@ -743,7 +743,7 @@ def test_support_result_explains_that_it_does_not_merge_groups(board):
 
 
 def test_support_leaving_the_group_is_reported_as_it_happens(board):
-    """The detach is rules.md's HAVE rule, and the player is told about it."""
+    """The detach is the design's HAVE rule, and the player is told about it."""
     gs, log = run(board, {"beta": "Have Vesna support Borin."})
     assert not gs.characters["vesna"].group_leader_id
     assert any("left Borin's group" in d
@@ -756,7 +756,7 @@ def test_support_leaving_the_group_is_reported_as_it_happens(board):
 
 def test_the_campaign_turn_that_failed_now_works_end_to_end(board):
     """
-    Beta marches on Kitesta and attacks, secures, then taxes -- in one turn.
+    Beta marches on Redport and attacks, secures, then taxes -- in one turn.
 
     This is the disposable campaign's critical interaction, which the parser
     used to break at the first step and then hide behind the rest. It proves
@@ -764,13 +764,13 @@ def test_the_campaign_turn_that_failed_now_works_end_to_end(board):
     that SECURE saw the state combat left behind, and that TAX collected in
     the town the order says.
     """
-    board.tax_pools["kitesta"] = 500
+    board.tax_pools["redport"] = 500
     gs, log = run(board, {
         "beta": (
-            "Have Borin go to Kitesta. "
+            "Have Borin go to Redport. "
             "Have Borin definitely attack Regent Aurelia. "
             "Have Borin secure. "
-            "Have Borin tax Kitesta."
+            "Have Borin tax Redport."
         ),
     })
 
@@ -779,19 +779,19 @@ def test_the_campaign_turn_that_failed_now_works_end_to_end(board):
     assert not beta_orders[0].warnings
     assert beta_orders[0].target_character_id == "aurelia"
 
-    assert gs.characters["borin"].location_city_id == "kitesta"
+    assert gs.characters["borin"].location_city_id == "redport"
 
     battles = [e for e in log.events
                if e.phase == "combat" and e.event_type in ("victory", "defeat")]
     assert battles, descriptions(log, "beta")
-    assert battles[0].location_city_id == "kitesta"
+    assert battles[0].location_city_id == "redport"
 
-    assert "kitesta" in gs.factions["beta"].secured_city_ids
-    assert territory.authority_ids(gs, "kitesta") == {
+    assert "redport" in gs.factions["beta"].secured_city_ids
+    assert territory.authority_ids(gs, "redport") == {
         "sovereign": "alpha", "occupier": "beta", "administrator": "beta"}
 
     collected = descriptions(log, "beta", "tax_success")
-    assert collected and "Kitesta" in collected[0], descriptions(log, "beta")
+    assert collected and "Redport" in collected[0], descriptions(log, "beta")
 
     # Alpha, still sovereign and still standing there, can read what happened.
     report = reporting.generate_player_reports(gs, log, {})["alpha"]

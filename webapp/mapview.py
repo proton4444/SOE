@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from spoils_engine.config import get_hop_cost
-from spoils_engine.models import Road, RoadQuality
+from soe.config import get_hop_cost
+from soe.models import Road, RoadQuality
 
 # Fallback canvas when no geography field is available (sample / toy maps).
 WIDTH = 1400
@@ -554,7 +554,7 @@ def compute_landmasses(
     """
     Fallback landmasses from road connectivity (sea lanes do **not** join land).
 
-    Used when no geography file is paired with the map (e.g. sample_map.json).
+    Used when no geography file is paired with the map (e.g. starter_map.json).
     Each entry: name, kind (continent|island), city_ids, city_names, points, hull.
     """
     by_id = {c["id"]: c for c in cities if c.get("id")}
@@ -842,7 +842,7 @@ def _short_city_name(name: str, max_len: int = 12) -> str:
     if len(name) <= max_len:
         return name
     # Prefer first token if it's still informative (e.g. "Al Katib" → "Al Katib"
-    # already short; "Madegi Doy" stays; "Something Very Long" → first word).
+    # already short; "Highfell" stays; "Something Very Long" → first word).
     parts = name.replace("-", " ").split()
     if len(parts) >= 2:
         first_two = f"{parts[0]} {parts[1]}"

@@ -1,1 +1,1 @@
-"""Tests for Spoils of Empire PBEM engine."""
+"""Tests for SOE PBEM engine."""

@@ -1,7 +1,7 @@
 """
 Tests for the v1.0 magical item slice.
 
-`rules.md` describes five kinds of item made by a long-dead enchantress:
+the design describes five kinds of item made by a long-dead enchantress:
 amulets lend a skill, crystals store power that is spent before the caster's
 own, orbs power a SCAN, rings divide an attacker's odds, and wands supply both
 the skill and the power for one named spell.
@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from spoils_engine import config, engine, items, models, parser, storage
-from spoils_engine.models import ItemType, LocationPosition, PopulationBand
+from soe import config, engine, items, models, parser, storage
+from soe.models import ItemType, LocationPosition, PopulationBand
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def world():
         id="city2", name="Carthage", population_band=PopulationBand.SMALL, is_port=True
     )
     gs.world_map.cities["ruin1"] = models.City(
-        id="ruin1", name="Hakkaba", population_band=PopulationBand.TINY, is_ruin=True
+        id="ruin1", name="Oldbarrow", population_band=PopulationBand.TINY, is_ruin=True
     )
     gs.world_map.roads["road1"] = models.Road(
         id="road1", from_city_id="city1", to_city_id="city2",
@@ -48,7 +48,7 @@ def world():
         trading_skill=10,
     )
     gs.characters["c2"] = models.Character(
-        id="c2", name="Joe Flint", faction_id="p1", location_city_id="city1",
+        id="c2", name="Alan Reed", faction_id="p1", location_city_id="city1",
         combat_skill=20, gold=100, magic_skill=0, magic_power_current=0,
     )
     gs.characters["e1"] = models.Character(
@@ -62,7 +62,7 @@ def escort(gs, count=45, leader="c1"):
     """
     Assign soldiers to a character so their flight has a real weight.
 
-    rules.md prices FLY at one fifth of the group's encumbrance. A lone wizard
+    the design prices FLY at one fifth of the group's encumbrance. A lone wizard
     weighs 1 and would fly for a single point, which is too cheap to show
     whether a crystal or a wand paid. Forty-five soldiers put the cost at 10.
     """
@@ -101,10 +101,10 @@ def messages(log, player="p1"):
 
 def test_item_names_resolve_with_or_without_asterisks(world):
     item = give(world, ItemType.CRYSTAL, power_current=10, power_max=40)
-    item.name = "*Wameka*"
-    assert items.find_item_by_name("*Wameka*", world) is item
-    assert items.find_item_by_name("wameka", world) is item
-    assert items.find_item_by_name("Nashi", world) is None
+    item.name = "*Sarema*"
+    assert items.find_item_by_name("*Sarema*", world) is item
+    assert items.find_item_by_name("sarema", world) is item
+    assert items.find_item_by_name("Velika", world) is None
 
 
 def test_generated_names_are_unique_and_starred(world):
@@ -199,7 +199,7 @@ def test_conjuring_an_amulet_of_magic_is_refused(world):
 # ---------------------------------------------------------------------------
 
 def test_ring_divides_the_hit_chance_dropping_fractions():
-    # rules.md's worked example: 74% against a prot-3 ring becomes 24%.
+    # the design's worked example: 74% against a prot-3 ring becomes 24%.
     assert items.apply_ring_protection(0.74, 3) == pytest.approx(0.24)
     assert items.apply_ring_protection(0.74, 0) == pytest.approx(0.74)
 
@@ -217,7 +217,7 @@ def test_a_blessing_alone_grants_no_protection(world):
 
 
 def test_a_ring_reduces_combat_damage(world):
-    from spoils_engine import combat
+    from soe import combat
 
     give(world, ItemType.RING, holder="c2", protection=4)
     before_ringed = world.characters["c2"].health
@@ -238,7 +238,7 @@ def test_a_wand_is_only_used_when_the_order_names_it(world):
     world.characters["c1"].magic_power_current = 0
     wand = give(world, ItemType.WAND, spell="fly", power_current=50,
                 power_max=60, skill_level=70)
-    wand.name = "*Opistama*"
+    wand.name = "*Doramba*"
 
     # No name in the order: the wand sits idle and the flight fails.
     world, log = run(world, "fly to carthage")
@@ -252,9 +252,9 @@ def test_a_named_wand_supplies_the_power(world):
     escort(world)
     wand = give(world, ItemType.WAND, spell="fly", power_current=50,
                 power_max=60, skill_level=70)
-    wand.name = "*Opistama*"
+    wand.name = "*Doramba*"
 
-    world, log = run(world, "fly to carthage using *Opistama*")
+    world, log = run(world, "fly to carthage using *Doramba*")
     assert world.characters["c1"].location_city_id == "city2"
     # Fly costs 10, and the wand regains a point a day afterwards.
     assert world.magical_items[wand.id].power_current == 50 - 10 + config.DAYS_PER_TURN
@@ -276,9 +276,9 @@ def test_a_wand_never_taps_a_crystal(world):
     crystal = give(world, ItemType.CRYSTAL, power_current=40, power_max=40)
     wand = give(world, ItemType.WAND, spell="fly", power_current=3,
                 power_max=60, skill_level=70)
-    wand.name = "*Opistama*"
+    wand.name = "*Doramba*"
 
-    world, log = run(world, "fly to carthage using *Opistama*")
+    world, log = run(world, "fly to carthage using *Doramba*")
     assert world.characters["c1"].location_city_id == "city1"
     # The crystal is untouched: a wand short of power simply fails.
     assert world.magical_items[crystal.id].power_current == 40
@@ -405,9 +405,9 @@ def test_charge_names_several_items_with_their_own_quantities(world):
 
 def test_charging_a_ring_is_refused(world):
     ring = give(world, ItemType.RING, protection=3)
-    ring.name = "*Fidula*"
+    ring.name = "*Doramba*"
 
-    world, log = run(world, "charge *Fidula* by 10 points")
+    world, log = run(world, "charge *Doramba* by 10 points")
     assert any("holds no power" in m for m in messages(log))
 
 
@@ -461,7 +461,7 @@ def test_a_character_with_no_magic_skill_cannot_charge(world):
                    power_current=0, power_max=50)
     crystal.name = "*Gilopeshta*"
 
-    world, log = run(world, "have joe flint charge *Gilopeshta*")
+    world, log = run(world, "have alan reed charge *Gilopeshta*")
     assert world.magical_items[crystal.id].power_current == 0
     assert any("no magic skill" in m for m in messages(log))
 
@@ -472,9 +472,9 @@ def test_a_character_with_no_magic_skill_cannot_charge(world):
 
 def test_scan_reports_a_distant_city_and_spends_orb_power(world):
     orb = give(world, ItemType.ORB, power_current=60)
-    orb.name = "*Anomba*"
+    orb.name = "*Sarema*"
 
-    world, log = run(world, "scan carthage using *Anomba*")
+    world, log = run(world, "scan carthage using *Sarema*")
     scans = [m for m in messages(log) if "scans Carthage" in m]
     assert scans, messages(log)
     assert "Tengri" in scans[0]
@@ -492,35 +492,35 @@ def test_scan_without_naming_an_orb_fails(world):
 
 def test_scan_needs_the_orb_in_hand(world):
     orb = give(world, ItemType.ORB, holder="e1", power_current=60)
-    orb.name = "*Anomba*"
+    orb.name = "*Sarema*"
 
-    world, log = run(world, "scan carthage using *Anomba*")
+    world, log = run(world, "scan carthage using *Sarema*")
     assert any("does not possess" in m for m in messages(log))
 
 
 def test_scan_fails_when_the_orb_lacks_power(world):
     orb = give(world, ItemType.ORB, power_current=1)
-    orb.name = "*Anomba*"
+    orb.name = "*Sarema*"
 
-    world, log = run(world, "scan carthage using *Anomba*")
+    world, log = run(world, "scan carthage using *Sarema*")
     assert any("not the" in m and "needed to reach" in m for m in messages(log))
 
 
 def test_an_orb_cannot_see_people_merely_near_a_city(world):
     orb = give(world, ItemType.ORB, power_current=60)
-    orb.name = "*Anomba*"
+    orb.name = "*Sarema*"
     world.characters["e1"].location_position = LocationPosition.NEAR
 
-    world, log = run(world, "scan carthage using *Anomba*")
+    world, log = run(world, "scan carthage using *Sarema*")
     assert any("sees nobody" in m for m in messages(log))
 
 
 def test_an_orb_sees_through_lurking(world):
     orb = give(world, ItemType.ORB, power_current=60)
-    orb.name = "*Anomba*"
+    orb.name = "*Sarema*"
     world.characters["e1"].is_lurking = True
 
-    world, log = run(world, "scan carthage using *Anomba*")
+    world, log = run(world, "scan carthage using *Sarema*")
     assert any("Tengri" in m and "scans Carthage" in m for m in messages(log))
 
 
@@ -602,25 +602,25 @@ def test_an_unheld_crystal_does_not_charge(world):
 
 def test_an_item_is_given_by_name(world):
     item = give(world, ItemType.AMULET, skill="trading", skill_level=72)
-    item.name = "*Wameka*"
+    item.name = "*Sarema*"
 
-    world, log = run(world, "give *Wameka* to joe flint")
+    world, log = run(world, "give *Sarema* to alan reed")
     assert world.magical_items[item.id].holder_character_id == "c2"
 
 
 def test_giving_an_item_the_donor_lacks_is_refused(world):
     item = give(world, ItemType.AMULET, holder="c2", skill="trading", skill_level=72)
-    item.name = "*Wameka*"
+    item.name = "*Sarema*"
 
-    world, log = run(world, "give *Wameka* to joe flint")
+    world, log = run(world, "give *Sarema* to alan reed")
     assert any("not carrying" in m for m in messages(log))
 
 
 def test_a_given_crystal_keeps_its_power(world):
     crystal = give(world, ItemType.CRYSTAL, power_current=33, power_max=60)
-    crystal.name = "*Nashi*"
+    crystal.name = "*Velika*"
 
-    world, log = run(world, "give *Nashi* to joe flint")
+    world, log = run(world, "give *Velika* to alan reed")
     moved = world.magical_items[crystal.id]
     assert moved.holder_character_id == "c2"
     assert moved.power_current == 33
@@ -632,29 +632,29 @@ def test_a_given_crystal_keeps_its_power(world):
 
 def test_describe_matches_the_rules_report_format(world):
     amulet = give(world, ItemType.AMULET, skill="trading", skill_level=72)
-    amulet.name = "*Wameka*"
+    amulet.name = "*Sarema*"
     crystal = give(world, ItemType.CRYSTAL, power_current=51, power_max=60)
-    crystal.name = "*Nashi*"
+    crystal.name = "*Velika*"
     ring = give(world, ItemType.RING, protection=3)
-    ring.name = "*Fidula*"
+    ring.name = "*Doramba*"
 
-    assert items.describe(amulet, world) == "*Wameka* [amulet, trading 72]"
-    assert items.describe(crystal, world) == "*Nashi* [crystal, power 51/60]"
-    assert items.describe(ring, world) == "*Fidula* [ring, prot 3]"
+    assert items.describe(amulet, world) == "*Sarema* [amulet, trading 72]"
+    assert items.describe(crystal, world) == "*Velika* [crystal, power 51/60]"
+    assert items.describe(ring, world) == "*Doramba* [ring, prot 3]"
 
 
 def test_a_temporary_item_shows_the_days_remaining(world):
     ring = give(world, ItemType.RING, protection=3)
-    ring.name = "*Fidula*"
+    ring.name = "*Doramba*"
     ring.expires_turn = world.turn_number + 3
     assert items.describe(ring, world).endswith(f"{3 * config.DAYS_PER_TURN}d]")
 
 
 def test_items_appear_on_the_status_report(world):
-    from spoils_engine import reporting
+    from soe import reporting
 
     item = give(world, ItemType.CRYSTAL, power_current=51, power_max=60)
-    item.name = "*Nashi*"
+    item.name = "*Velika*"
     world, log = run(world, "")
     reports = reporting.generate_player_reports(world, log, {"p1": []})
     assert "Magical items:" in reports["p1"]
@@ -664,14 +664,14 @@ def test_items_appear_on_the_status_report(world):
 def test_items_survive_a_save_and_load(world, tmp_path: Path):
     wand = give(world, ItemType.WAND, spell="teleport", power_current=62,
                 power_max=75, skill_level=80)
-    wand.name = "*Opistama*"
+    wand.name = "*Doramba*"
     wand.expires_turn = 9
 
     storage.save_game_state(world, tmp_path)
     reloaded = storage.load_game_state(tmp_path)
 
     restored = reloaded.magical_items[wand.id]
-    assert restored.name == "*Opistama*"
+    assert restored.name == "*Doramba*"
     assert restored.item_type == ItemType.WAND
     assert restored.spell == "teleport"
     assert restored.power_current == 62
@@ -700,11 +700,11 @@ def _clone(gs):
 
 
 def test_scan_with_two_orbs_is_rejected_rather_than_misread(world):
-    give(world, ItemType.ORB, power_current=60).name = "*Jamibo*"
-    give(world, ItemType.ORB, power_current=60).name = "*Akitemba*"
+    give(world, ItemType.ORB, power_current=60).name = "*Sarema*"
+    give(world, ItemType.ORB, power_current=60).name = "*Doramba*"
 
     orders = parser.parse_orders(
-        "scan rome using *Jamibo* and carthage using *Akitemba*", world, "p1")
+        "scan rome using *Sarema* and carthage using *Doramba*", world, "p1")
     assert orders and orders[0].warnings
     assert "more than one orb" in orders[0].warnings[0]
 

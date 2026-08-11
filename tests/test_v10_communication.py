@@ -12,19 +12,19 @@ from pathlib import Path
 
 import pytest
 
-from spoils_engine import config, engine, models, parser, reporting, storage
-from spoils_engine.models import LocationPosition, PopulationBand, UnitType
+from soe import config, engine, models, parser, reporting, storage
+from soe.models import LocationPosition, PopulationBand, UnitType
 
 
 @pytest.fixture
 def world():
-    """Two players sharing Madegi Doy, which the Empire has secured."""
+    """Two players sharing Highfell, which the Empire has secured."""
     gs = models.GameState()
     gs.turn_number = 1
     gs.world_map.cities["c1"] = models.City(
-        id="c1", name="Madegi Doy", population_band=PopulationBand.MEDIUM)
+        id="c1", name="Highfell", population_band=PopulationBand.MEDIUM)
     gs.world_map.cities["c2"] = models.City(
-        id="c2", name="Kitesta", population_band=PopulationBand.SMALL)
+        id="c2", name="Redport", population_band=PopulationBand.SMALL)
     gs.world_map.roads["r"] = models.Road(
         id="r", from_city_id="c1", to_city_id="c2",
         quality=models.RoadQuality.GOOD)
@@ -38,13 +38,13 @@ def world():
         id="l", name="Billy Jones", faction_id="p1", location_city_id="c1",
         is_leader=True, gold=300, combat_skill=20, magic_skill=25)
     gs.characters["j"] = models.Character(
-        id="j", name="Joe Flint", faction_id="p1", location_city_id="c1",
+        id="j", name="Alan Reed", faction_id="p1", location_city_id="c1",
         gold=50)
     gs.characters["b"] = models.Character(
         id="b", name="Bill Johnson", faction_id="p1", location_city_id="c2",
         gold=20)
     gs.characters["e"] = models.Character(
-        id="e", name="John May", faction_id="p2", location_city_id="c1",
+        id="e", name="Bram Kell", faction_id="p2", location_city_id="c1",
         is_leader=True, gold=90)
     gs.unit_stacks["garrison"] = models.UnitStack(
         id="garrison", faction_id="p1", location_city_id="c1",
@@ -74,25 +74,25 @@ def only(gs, text, player="p1", seed=42):
 # ---------------------------------------------------------------------------
 
 def test_a_message_keeps_its_case(world):
-    order = only(world, 'Tell John May "Fear And Obey Him!"')
+    order = only(world, 'Tell Bram Kell "Fear And Obey Him!"')
     assert order.message == "Fear And Obey Him!"
 
 
 def test_a_message_keeps_its_periods_and_commas(world):
     order = only(
         world,
-        'Have Joe Flint post "Welcome to Madegi Doy. Recruiting is '
+        'Have Alan Reed post "Welcome to Highfell. Recruiting is '
         'forbidden, by order of Major Calensa."')
     assert order.message == (
-        "Welcome to Madegi Doy. Recruiting is forbidden, "
+        "Welcome to Highfell. Recruiting is forbidden, "
         "by order of Major Calensa.")
 
 
 def test_a_period_in_a_message_does_not_split_the_order(world):
     # Note the period *after* the closing quote: that is what ends the
-    # sentence, exactly as rules.md writes its own POST example.
+    # sentence, exactly as the design writes its own POST example.
     orders = parser.parse_orders(
-        'Have Joe Flint post "One. Two. Three.". Report.', world, "p1")
+        'Have Alan Reed post "One. Two. Three.". Report.', world, "p1")
     kinds = sorted(o.order_type() for o in orders)
     assert kinds == ["POST", "REPORT"]
     post = next(o for o in orders if o.order_type() == "POST")
@@ -101,14 +101,14 @@ def test_a_period_in_a_message_does_not_split_the_order(world):
 
 def test_pronouns_inside_a_message_are_left_alone(world):
     """`me` in a message is the sender's word, not a reference to resolve."""
-    order = only(world, 'Have Joe Flint say "Give me the gold." to John May.')
+    order = only(world, 'Have Alan Reed say "Give me the gold." to Bram Kell.')
     assert order.message == "Give me the gold."
 
 
 def test_text_outside_the_quotes_still_resolves_pronouns(world):
-    order = only(world, 'Tell John May "Here it is." Then give him 10 gold.'
+    order = only(world, 'Tell Bram Kell "Here it is." Then give him 10 gold.'
                  .replace(" Then give him 10 gold.", ""))
-    assert order.recipient_names == ["John May"]
+    assert order.recipient_names == ["Bram Kell"]
 
 
 # ---------------------------------------------------------------------------
@@ -116,24 +116,24 @@ def test_text_outside_the_quotes_still_resolves_pronouns(world):
 # ---------------------------------------------------------------------------
 
 def test_say_puts_the_recipient_after_the_message(world):
-    order = only(world, 'Have Joe Flint say "Not on your life!" to John May.')
+    order = only(world, 'Have Alan Reed say "Not on your life!" to Bram Kell.')
     assert order.actor_id == "j"
     assert order.message == "Not on your life!"
-    assert order.recipient_names == ["John May"]
+    assert order.recipient_names == ["Bram Kell"]
 
 
 def test_tell_puts_the_recipient_first(world):
-    order = only(world, 'Tell John May "Not on your life!"')
-    assert order.recipient_names == ["John May"]
+    order = only(world, 'Tell Bram Kell "Not on your life!"')
+    assert order.recipient_names == ["Bram Kell"]
     assert order.message == "Not on your life!"
 
 
 def test_a_message_reaches_the_other_player(world):
     world, log = run(world, {
-        "p1": 'Have Joe Flint say "Here is the gold." to John May.'})
-    assert any('Joe Flint says to John May: "Here is the gold."' in m
+        "p1": 'Have Alan Reed say "Here is the gold." to Bram Kell.'})
+    assert any('Alan Reed says to Bram Kell: "Here is the gold."' in m
                for m in messages(log, "p2"))
-    assert any("sent a message to John May" in m for m in messages(log, "p1"))
+    assert any("sent a message to Bram Kell" in m for m in messages(log, "p1"))
 
 
 def test_everyone_reaches_every_player(world):
@@ -149,12 +149,12 @@ def test_a_broadcast_is_not_read_back_to_its_sender(world):
 
 
 def test_a_town_name_broadcasts_to_everyone_in_it(world):
-    world, log = run(world, {"p1": 'Tell Madegi Doy "All are welcome."'})
+    world, log = run(world, {"p1": 'Tell Highfell "All are welcome."'})
     assert any('"All are welcome."' in m for m in messages(log, "p2"))
 
 
 def test_a_message_needs_quotes(world):
-    order = only(world, "Tell John May hello")
+    order = only(world, "Tell Bram Kell hello")
     assert order.warnings and "double quotes" in order.warnings[0]
 
 
@@ -165,17 +165,17 @@ def test_a_message_needs_a_recipient(world):
 
 def test_an_over_long_message_is_truncated(world):
     long_text = "x" * (config.MESSAGE_MAX_LENGTH + 50)
-    world, log = run(world, {"p1": f'Tell John May "{long_text}"'})
+    world, log = run(world, {"p1": f'Tell Bram Kell "{long_text}"'})
     assert any("truncated" in m for m in messages(log, "p1"))
     delivered = [m for m in messages(log, "p2") if "says to" in m]
     assert delivered and len(delivered[0]) < len(long_text)
 
 
 def test_a_message_may_cross_faction_lines_to_a_prisoner(world):
-    """rules.md: the prisoner's own player receives it, not the captor."""
+    """Design: the prisoner's own player receives it, not the captor."""
     world.characters["e"].is_prisoner = True
     world.characters["e"].captor_id = "j"
-    world, log = run(world, {"p1": 'Tell John May "Surrender."'})
+    world, log = run(world, {"p1": 'Tell Bram Kell "Surrender."'})
     assert any('"Surrender."' in m for m in messages(log, "p2"))
 
 
@@ -185,38 +185,38 @@ def test_a_message_may_cross_faction_lines_to_a_prisoner(world):
 
 def test_posting_needs_a_secured_town(world):
     world.factions["p1"].secured_city_ids.clear()
-    world, log = run(world, {"p1": 'Have Joe Flint post "No recruiting."'})
+    world, log = run(world, {"p1": 'Have Alan Reed post "No recruiting."'})
     assert not world.posted_messages
     assert any("has not secured it" in m for m in messages(log, "p1"))
 
 
 def test_a_notice_goes_up_at_a_secured_town(world):
-    world, log = run(world, {"p1": 'Have Joe Flint post "No recruiting."'})
+    world, log = run(world, {"p1": 'Have Alan Reed post "No recruiting."'})
     assert world.posted_messages["c1"] == "No recruiting."
 
 
 def test_everyone_at_the_gates_sees_a_new_notice(world):
-    world, log = run(world, {"p1": 'Have Joe Flint post "No recruiting."'})
-    assert any("A notice at the gates of Madegi Doy reads" in m
+    world, log = run(world, {"p1": 'Have Alan Reed post "No recruiting."'})
+    assert any("A notice at the gates of Highfell reads" in m
                for m in messages(log, "p2"))
 
 
 def test_someone_lurking_near_the_town_does_not_see_the_notice(world):
     world.characters["e"].location_position = LocationPosition.NEAR
-    world, log = run(world, {"p1": 'Have Joe Flint post "No recruiting."'})
+    world, log = run(world, {"p1": 'Have Alan Reed post "No recruiting."'})
     assert not any("A notice at the gates" in m for m in messages(log, "p2"))
 
 
 def test_an_empty_message_takes_the_notice_down(world):
     world.posted_messages["c1"] = "No recruiting."
-    world, log = run(world, {"p1": 'Have Joe Flint post "".'})
+    world, log = run(world, {"p1": 'Have Alan Reed post "".'})
     assert "c1" not in world.posted_messages
     assert any("took down the notice" in m for m in messages(log, "p1"))
 
 
 def test_an_over_long_notice_is_rejected(world):
     long_text = "y" * (config.POST_MAX_LENGTH + 1)
-    world, log = run(world, {"p1": f'Have Joe Flint post "{long_text}"'})
+    world, log = run(world, {"p1": f'Have Alan Reed post "{long_text}"'})
     assert "c1" not in world.posted_messages
     assert any("rejected" in m for m in messages(log, "p1"))
 
@@ -240,8 +240,8 @@ def test_a_bare_report_describes_the_actor(world):
 
 
 def test_query_names_its_subjects_and_is_immediate(world):
-    order = only(world, "Query Bill Johnson and Joe Flint.")
-    assert order.subject_names == ["Bill Johnson", "Joe Flint"]
+    order = only(world, "Query Bill Johnson and Alan Reed.")
+    assert order.subject_names == ["Bill Johnson", "Alan Reed"]
     assert order.immediate
 
 
@@ -263,7 +263,7 @@ def test_a_report_states_skills_group_and_location(world):
     assert "combat 20" in line and "magic 25" in line
     assert "Bill Johnson" in line          # named group member
     assert "39 soldiers" in line
-    assert "Madegi Doy" in line
+    assert "Highfell" in line
 
 
 def test_a_brief_report_drops_the_skills(world):
@@ -283,14 +283,14 @@ def test_a_report_can_name_other_people_at_the_location(world):
     for seed in range(40):
         gs = _clone(world)
         gs, log = run(gs, {"p1": "Report."}, seed=seed)
-        if any("Other notable people" in m and "John May" in m
+        if any("Other notable people" in m and "Bram Kell" in m
                for m in messages(log, "p1")):
             return
     pytest.fail("no seed reported the rival at the same city")
 
 
 def test_reporting_on_another_players_character_is_refused(world):
-    order = only(world, "Query John May.")
+    order = only(world, "Query Bram Kell.")
     assert order.warnings
 
 
@@ -339,7 +339,7 @@ def test_an_over_long_password_is_truncated(world):
 
 def test_messages_reach_the_player_report(world):
     parsed = {"p1": parser.parse_orders(
-        'Have Joe Flint say "Here is the gold." to John May.', world, "p1")}
+        'Have Alan Reed say "Here is the gold." to Bram Kell.', world, "p1")}
     world, log = engine.run_turn(world, parsed, seed=3)
     reports = reporting.generate_player_reports(world, log, parsed)
     assert '"Here is the gold."' in reports["p2"]
@@ -381,6 +381,6 @@ def _clone(gs):
 
 def test_text_after_a_tell_message_is_reported_not_swallowed(world):
     """A missing period would otherwise merge the next order into this one."""
-    order = only(world, 'Tell John May "Hello" Briefly report.')
+    order = only(world, 'Tell Bram Kell "Hello" Briefly report.')
     assert order.warnings
     assert "period after the closing quote" in order.warnings[0]

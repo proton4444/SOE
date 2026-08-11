@@ -1,6 +1,6 @@
 """Full order surface for beta testing.
 
-Maps rules.md verbs to engine order types, and builds opportunistic
+Maps the design verbs to engine order types, and builds opportunistic
 orders so a beta player (human or AI) can exercise every live command.
 """
 
@@ -9,13 +9,13 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from spoils_engine import config
-from spoils_engine.models import UnitType
-from spoils_engine.phases.pathing import find_route
-from spoils_engine.models import RoadQuality
+from soe import config
+from soe.models import UnitType
+from soe.phases.pathing import find_route
+from soe.models import RoadQuality
 
 if TYPE_CHECKING:
-    from spoils_engine import models
+    from soe import models
 
 # Every primary order_type() the engine exposes.
 ENGINE_ORDER_TYPES = (
@@ -90,7 +90,7 @@ ENGINE_ORDER_TYPES = (
     "WORK",
 )
 
-# rules.md Table of Contents command verbs → engine order_type (aliases fold).
+# the design Table of Contents command verbs → engine order_type (aliases fold).
 RULES_VERB_TO_ENGINE = {
     "ABSORB": "ABSORB",
     "ADDRESS": "ADDRESS",
@@ -327,7 +327,7 @@ def exercise_orders(
         )
         lines.append(f"Have {leader.name} work.")
         if magic_ok:
-            lines.append(f"Have {leader.name} scry Kitesta.")
+            lines.append(f"Have {leader.name} scry Redport.")
             lines.append(f"Have {leader.name} conjure a wand of teleport.")
         if rel_ok:
             lines.append(f"Have {leader.name} pray.")
@@ -339,9 +339,9 @@ def exercise_orders(
             lines.append(f"Neutral {rival_name}.")
         if is_port and turn == 3 and gold >= 30:
             dest = (
-                "Albatross City"
-                if leader.location_city_id != "albatross_city"
-                else "Madegi Doy"
+                "Gullhaven"
+                if leader.location_city_id != "gullhaven"
+                else "Highfell"
             )
             lines.append(f"Have {leader.name} definitely buy passage to {dest}.")
         if turn == 4:
@@ -411,16 +411,16 @@ def exercise_orders(
         lines.append(f"Buy 1 galley in {city_name}.")
     if is_port and ships and not moved and rng.random() < 0.35:
         dest = (
-            "Albatross City"
-            if leader.location_city_id != "albatross_city"
-            else "Madegi Doy"
+            "Gullhaven"
+            if leader.location_city_id != "gullhaven"
+            else "Highfell"
         )
         lines.append(f"Have {leader.name} sail to {dest}.")
     if is_port and not moved and gold >= 20 and bucket == 5 and rng.random() < 0.3:
         dest = (
-            "Albatross City"
-            if leader.location_city_id != "albatross_city"
-            else "Madegi Doy"
+            "Gullhaven"
+            if leader.location_city_id != "gullhaven"
+            else "Highfell"
         )
         lines.append(f"Have {leader.name} definitely buy passage to {dest}.")
 
@@ -431,11 +431,11 @@ def exercise_orders(
                 dest, _ = rng.choice(dests)
                 lines.append(f"Have {leader.name} teleport himself to {dest.name}.")
             else:
-                lines.append(f"Have {leader.name} fly to Kitesta.")
+                lines.append(f"Have {leader.name} fly to Redport.")
         if leader.magic_skill >= 10 and rng.random() < 0.2:
             lines.append(f"Have {leader.name} summon 1 demon.")
         if bucket == 6 and rng.random() < 0.35:
-            lines.append(f"Have {leader.name} scry Kitesta.")
+            lines.append(f"Have {leader.name} scry Redport.")
         if bucket == 6 and rng.random() < 0.25:
             lines.append(f"Have {leader.name} conjure a wand of teleport.")
         for item in _own_items(gs, faction_id)[:1]:
@@ -466,7 +466,7 @@ def exercise_orders(
         lines.append(f"Have {leader.name} search.")
         lines.append(f"Have {leader.name} explore.")
     if bucket == 8 and rng.random() < 0.35:
-        lines.append(f"Have {leader.name} scan Kitesta.")
+        lines.append(f"Have {leader.name} scan Redport.")
     if not enemies and rng.random() < 0.12:
         lines.append(f"Have {leader.name} lurk.")
     if sub and rng.random() < 0.1:

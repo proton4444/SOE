@@ -26,7 +26,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from spoils_engine import (  # noqa: E402
+from soe import (  # noqa: E402
     config,
     engine,
     map_loader,
@@ -35,8 +35,8 @@ from spoils_engine import (  # noqa: E402
     reporting,
     storage,
 )
-from spoils_engine.models import RoadQuality, UnitType  # noqa: E402
-from spoils_engine.phases.pathing import find_route  # noqa: E402
+from soe.models import RoadQuality, UnitType  # noqa: E402
+from soe.phases.pathing import find_route  # noqa: E402
 
 # Full order surface for beta (all rules verbs executable by test players)
 import importlib.util as _ilu  # noqa: E402
@@ -52,13 +52,13 @@ exercise_orders = _surf.exercise_orders
 GAME_ID = "beta_100"
 TURNS = 100
 BASE_SEED = 20260807
-MAP_FILE = _ROOT / "maps" / "sample_map.json"
+MAP_FILE = _ROOT / "maps" / "starter_map.json"
 PLAYERS = [
     {
         "id": "player_1",
         "name": "The Golden Empire",
         "leader_name": "Emperor Marcus",
-        "start_city": "madegi_doy",
+        "start_city": "highfell",
         "style": "religious",  # preach / pray / bless / heal / study religion
         "religion_skill": 25,
         "magic_skill": 15,
@@ -69,7 +69,7 @@ PLAYERS = [
         "id": "player_2",
         "name": "The Silver Horde",
         "leader_name": "Khan Tengri",
-        "start_city": "kitesta",
+        "start_city": "redport",
         "style": "military",  # prioritise troops & combat
         "religion_skill": 8,
         "magic_skill": 20,
@@ -525,8 +525,8 @@ def init_game(game_dir: Path) -> models.GameState:
     gs.factions["independent"] = npc_fac
     for j, npc in enumerate(
         [
-            {"name": "Wizard Ojibenmi", "loc": "kitesta", "magic": 60},
-            {"name": "Bishop Nancy Lopenda", "loc": "madegi_doy", "religion": 45},
+            {"name": "Wizard Ojibenmi", "loc": "redport", "magic": 60},
+            {"name": "Bishop Nancy Lopenda", "loc": "highfell", "religion": 45},
         ]
     ):
         loc = (
@@ -551,7 +551,7 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
     path = game_dir / "BETA_REPORT.md"
     elapsed = time.time() - stats.started
     lines = [
-        "# Spoils of Empire — Beta 100-turn system test",
+        "# SOE — Beta 100-turn system test",
         "",
         f"- **Game ID:** `{GAME_ID}`",
         f"- **Map:** `{MAP_FILE.name}`",
@@ -644,7 +644,7 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
         "## Order-type coverage (beta players)",
         "",
         f"- **Engine types issued:** {len(issued)} / {len(ENGINE_ORDER_TYPES)}",
-        f"- **rules.md verbs mapped to an issued type:** "
+        f"- **the design verbs mapped to an issued type:** "
         f"{len(rules_covered)} / {len(RULES_VERB_TO_ENGINE)}",
         "",
         "### Issued (counts)",
@@ -657,17 +657,17 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
         for x in missing_engine:
             lines.append(f"- `{x}`")
     if rules_missed:
-        lines += ["", "### rules.md verbs whose engine type was never issued", ""]
+        lines += ["", "### the design verbs whose engine type was never issued", ""]
         for v in rules_missed:
             lines.append(f"- {v} → `{RULES_VERB_TO_ENGINE[v]}`")
     lines += [
         "",
         "### Implementation note",
         "",
-        "All `rules.md` Table-of-Contents command verbs are recognised by "
+        "All the design Table-of-Contents command verbs are recognised by "
         "`parser.ORDER_KEYWORDS` and have an engine phase. Extra engine-only "
         "types: `SCRY`, `RESURRECT`, `TRADE` (resource buy/sell), `REPEAT` "
-        "(rules REPEATEDLY). See `docs/rules_gap.md` and "
+        "(rules REPEATEDLY). See `MECHANICS.md` and "
         "`examples/beta_order_catalog.txt`.",
         "",
     ]
@@ -688,12 +688,12 @@ def write_report_md(game_dir: Path, gs: models.GameState, stats: RunStats) -> Pa
         "",
         "- **Engine stability:** full 100-turn run with deterministic seeds; no exceptions.",
         "- **Parse quality:** zero parse warnings on bot-generated English orders.",
-        "- **Movement:** multi-hop paths respect MP budgets (e.g. Madegi→Peshandi is "
-        "13.8 MP > 10; bots must stage via Kitesta).",
+        "- **Movement:** multi-hop paths respect MP budgets (e.g. Madegi→Sarnvale is "
+        "13.8 MP > 10; bots must stage via Redport).",
         "- **Secure vs control:** `SECURE` updates `secured_city_ids`; income still "
         "keys off `controlled_city_ids` (starting cities). Expansion therefore "
         "changes security more than the controlled-city income list.",
-        "- **Combat:** repeated co-location at Hakkaba produced victory/defeat and "
+        "- **Combat:** repeated co-location at Oldbarrow produced victory/defeat and "
         "capture events; P2 leader ended dead+prisoner.",
         "- **Tax/secure contention:** many `tax_failed` / `secure_failed` when the "
         "other faction already held security on the town.",

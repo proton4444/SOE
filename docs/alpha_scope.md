@@ -1,12 +1,12 @@
-# Spoils of Empire PBEM Engine - Alpha Scope
+# SOE PBEM Engine - Alpha Scope
 
 ## Overview
 
-This document defines the scope of the **alpha version** of the Spoils of Empire (SoE) PBEM engine. The alpha will implement a coherent, simplified-but-faithful subset of the full game mechanics described in `rules.md`, focusing on core gameplay loops while deferring complex features for future releases.
+This document defines the scope of the **alpha version** of the SOE  PBEM engine. The alpha will implement a coherent, simplified-but-faithful subset of the full game mechanics described in `rules.md`, focusing on core gameplay loops while deferring complex features for future releases.
 
 ## Reference: Core SoE Concepts from rules.md
 
-Based on the official rules, Spoils of Empire includes:
+Based on the official rules, SOE includes:
 
 ### World & Geography
 - **Cities/Locations**: Named locations with populations, can be secured, taxed, and serve as recruitment centers

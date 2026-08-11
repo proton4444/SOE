@@ -1,9 +1,0 @@
-Have Khan Tengri tax Albatross City.
-Have Khan Tengri pay.
-Name male sailor Arslan Tideborn.
-Assign 31 soldiers to Arslan Tideborn.
-Assign 49 sailors to Arslan Tideborn.
-Assign 1 galley to Arslan Tideborn.
-Assign Khan Tengri to Arslan Tideborn.
-Have Arslan Tideborn sail to outside Madegi Doy.
-Have Arslan Tideborn report.

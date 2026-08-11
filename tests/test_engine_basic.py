@@ -6,7 +6,7 @@ Tests basic turn phases: movement, recruitment, combat, etc.
 
 import pytest
 import copy
-from spoils_engine import models, engine, orders, config
+from soe import models, engine, orders, config
 
 
 @pytest.fixture

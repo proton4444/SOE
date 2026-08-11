@@ -3,7 +3,7 @@ Tests for upkeep and salary system.
 """
 
 import pytest
-from spoils_engine import models, engine, config
+from soe import models, engine, config
 
 
 @pytest.fixture

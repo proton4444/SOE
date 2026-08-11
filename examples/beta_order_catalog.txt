@@ -1,4 +1,4 @@
-# Spoils of Empire — beta order catalog
+# SOE — beta order catalog
 # Paste-ready English orders for human / agent beta testers.
 # Replace character and city names with those in your report.
 # Comments start with #. End sentences with a period.

@@ -16,11 +16,11 @@ import random
 import tempfile
 import threading
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from spoils_engine import (
+from soe import (
     config,
     engine,
     map_loader,
@@ -40,24 +40,24 @@ _ROOT = Path(__file__).resolve().parent.parent
 _MAPS_DIR = _ROOT / "maps"
 
 # Prefer the full gazetteer map when present; sample stays as a fallback.
-_PREFERRED_DEFAULT_MAP = "soe_world.json"
-_FALLBACK_DEFAULT_MAP = "sample_map.json"
+_PREFERRED_DEFAULT_MAP = "world.json"
+_FALLBACK_DEFAULT_MAP = "starter_map.json"
 
 # Independent characters every game gets, so OFFER has someone to hire.
 # ``locations`` is tried in order so the same list works on sample_map
-# (albatross_city) and soe_world (kitesta / madegi_doy).
+# (gullhaven) and soe_world (redport / highfell).
 _DEFAULT_INDEPENDENTS = [
     {
         "name": "Wizard Ojibenmi",
         "gender": "male",
-        "locations": ["albatross_city", "kitesta"],
+        "locations": ["gullhaven", "redport"],
         "skills": {"magic": 60},
     },
     {
         "name": "Bishop Nancy Lopenda",
         "gender": "female",
         "title": "bishop",
-        "locations": ["madegi_doy"],
+        "locations": ["highfell"],
         "skills": {"religion": 45},
     },
 ]
@@ -352,6 +352,14 @@ def resolve_turn(room: Room, force: bool = False) -> dict:
             backup.state_version,
         )
 
+        # Captured so a failed publication can put the room back exactly as it
+        # was. Everything from here to store_reports is one turn or none.
+        pre_turn = _PreTurnRoom(
+            reports={t: dict(v) for t, v in room.reports.items()},
+            submissions={t: dict(v) for t, v in room.submissions.items()},
+            last_resolved_turn=room.last_resolved_turn,
+        )
+
         try:
             orders_by_player = {}
             for faction_id in state.factions.keys():
@@ -400,6 +408,7 @@ def resolve_turn(room: Room, force: bool = False) -> dict:
                 backup.relative_path,
                 type(exc).__name__,
             )
+            _rollback_turn(room, turn, backup, pre_turn)
             raise
 
         _record_resolution_event(
@@ -419,6 +428,76 @@ def resolve_turn(room: Room, force: bool = False) -> dict:
             seed,
         )
         return {"turn": turn, "seed": seed, "reports": reports}
+
+
+@dataclass(frozen=True)
+class _PreTurnRoom:
+    """The room bookkeeping a failed turn has to hand back."""
+
+    reports: dict[int, dict]
+    submissions: dict[int, dict]
+    last_resolved_turn: int
+
+
+def _rollback_turn(
+    room: Room, turn: int, backup: backups.BackupRecord, pre_turn: _PreTurnRoom
+) -> None:
+    """Undo a turn whose publication failed after the state was saved.
+
+    Without this the game sits at turn N while the room registry sits at N-1,
+    and the retry resolves turn N onto an already-advanced state. The pre-turn
+    backup is verified when it is created, so the authoritative state file is
+    restored from it rather than recomputed. Derived per-turn artefacts are
+    removed so nothing can read half of a turn that never happened.
+
+    The room's own registry entry is restored in place; the backup's copy of
+    rooms.json is deliberately not used, because it holds every other room too.
+    """
+    try:
+        _atomic_write_text(
+            room.game_dir() / "state.json",
+            (backup.path / "game" / "state.json").read_text(encoding="utf-8"),
+        )
+        (room.game_dir() / f"state_turn{turn}.json").unlink(missing_ok=True)
+        reports_dir = room.game_dir() / "reports"
+        if reports_dir.is_dir():
+            for path in reports_dir.glob(f"*_turn{turn}.txt"):
+                path.unlink(missing_ok=True)
+
+        room.reports = pre_turn.reports
+        room.submissions = pre_turn.submissions
+        room.last_resolved_turn = pre_turn.last_resolved_turn
+        default_store().save()
+    except Exception:
+        _record_resolution_event(
+            room,
+            turn,
+            "rollback_failed",
+            backup=backup,
+            state_version=backup.state_version,
+        )
+        logger.exception(
+            "turn_rollback_failed room=%s turn=%s backup=%s",
+            room.code,
+            turn,
+            backup.relative_path,
+        )
+        return
+
+    _record_resolution_event(
+        room,
+        turn,
+        "rolled_back",
+        backup=backup,
+        state_version=backup.state_version,
+        post_state_sha=_state_sha(room),
+    )
+    logger.warning(
+        "turn_rolled_back room=%s turn=%s backup=%s",
+        room.code,
+        turn,
+        backup.relative_path,
+    )
 
 
 def deterministic_seed(room: Room, turn: int) -> int:

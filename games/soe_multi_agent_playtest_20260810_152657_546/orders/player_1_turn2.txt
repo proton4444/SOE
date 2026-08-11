@@ -1,7 +1,0 @@
-Have Emperor Marcus say "The Golden Empire seeks peaceful trade and mutual neutrality".
-Have Emperor Marcus go to Madegi Doy.
-Have Emperor Marcus tax Madegi Doy.
-Have Emperor Marcus recruit 20 soldiers.
-Have Emperor Marcus recruit 20 workers.
-Have Emperor Marcus offer to recruit Bishop Nancy Lopenda.
-Have Emperor Marcus report.

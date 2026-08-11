@@ -29,7 +29,8 @@ from scipy import ndimage
 from skimage import measure
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_RASTER = REPO_ROOT / "docs" / "soe_map_sample.png"
+# Third-party source material, kept out of the repo (docs/ip_cleanroom.md).
+DEFAULT_RASTER = REPO_ROOT / "reference" / "soe_map_sample.png"
 DEFAULT_OUT = REPO_ROOT / "maps" / "soe_geography.json"
 
 # Map field, registered from the grid tick marks in the raster's margins

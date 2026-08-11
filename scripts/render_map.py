@@ -1,12 +1,12 @@
 """
-Render the master map of the Spoils of Empire world as SVG.
+Render the master map of the SOE world as SVG.
 
 Everything drawn here comes from ``maps/soe_world.json`` (the gamemaster's
 gazetteer) and ``maps/soe_geography.json`` (coastlines traced from the
 original raster). Nothing is invented at draw time, so the map cannot
 disagree with the engine: same towns, same grid references, same mileages.
 
-The visual language follows Rick Morneau's original -- red for excellent
+The visual language is the classic PBEM cartographic legend -- red for excellent
 roads, dashed for fair, dotted for poor, gold sea lanes, four population
 tiers plus a marker for uninhabited ruins, and label colour carrying
 seaport and magic-free status -- but redrawn as vector art with real
@@ -482,13 +482,13 @@ def render_band(world, geo, scale, margin, fw, fh, band) -> str:
 
     out.append(
         f'<text x="0" y="34" font-size="{34 * scale / 1.6:.0f}" fill="{ink}" '
-        f'letter-spacing="2">Spoils of Empire</text>'
+        f'letter-spacing="2">SOE</text>'
     )
     out.append(
         f'<text x="0" y="60" font-size="{13 * scale / 1.6:.0f}" fill="{ink}" '
         f'opacity="0.7">The known world &#183; '
         f"{len(world['cities'])} towns &#183; {len(world['roads'])} routes &#183; "
-        f"after the map by Rick Morneau</text>"
+        f"SOE world map</text>"
     )
 
     # scale bar: 400 miles, matching the original

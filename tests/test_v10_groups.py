@@ -1,7 +1,7 @@
 """
 Tests for the v1.0 group model.
 
-`rules.md` builds the command language on groups: an order given to a character
+the design builds the command language on groups: an order given to a character
 applies to everyone assigned to them, and a character given a direct order
 becomes independent. Before this, characters were loose atoms -- ASSIGN moved
 counts between location-scoped pools and UNLOAD only wrote a log line.
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from spoils_engine import config, engine, groups, models, orders, parser, storage
+from soe import config, engine, groups, models, orders, parser, storage
 
 
 @pytest.fixture
@@ -95,7 +95,7 @@ def test_you_cannot_join_your_own_subordinate(warband):
 # ---------------------------------------------------------------------------
 
 def test_a_group_moves_with_its_leader(warband):
-    """rules.md: order the leader to go, and the whole group goes."""
+    """Design: order the leader to go, and the whole group goes."""
     gs = warband
     move = orders.MoveOrder(player_id="p1", actor_id="c1", destination_city_id="city2")
 
@@ -156,7 +156,7 @@ def test_moving_a_subordinate_does_not_drag_their_former_leader(warband):
 
 def test_a_direct_order_makes_a_character_a_group_leader(warband):
     """
-    rules.md: "Whenever you use the HAVE command, the character named in the
+    Design: "Whenever you use the HAVE command, the character named in the
     command will automatically become a group leader if he was not already one."
     """
     gs = warband
@@ -181,7 +181,7 @@ def test_an_order_that_names_nobody_leaves_the_group_alone(warband):
 
 def test_unload_makes_a_character_independent_without_ordering_them_about(warband):
     """
-    rules.md: UNLOAD is for when "you simply want a character to become a group
+    Design: UNLOAD is for when "you simply want a character to become a group
     leader and not do anything else". It used to only write a log line.
     """
     gs = warband
@@ -215,7 +215,7 @@ def test_join_puts_a_character_into_another_group(warband):
 
 
 def test_join_brings_your_own_subordinates_with_you(warband):
-    """rules.md: an assigned character keeps whoever was assigned to them."""
+    """Design: an assigned character keeps whoever was assigned to them."""
     gs = warband
     groups.detach(gs.characters["c2"])
     join = orders.JoinOrder(player_id="p1", actor_id="c2", target_id="c1",
@@ -299,7 +299,7 @@ def test_assigned_units_become_the_recipients_and_travel_with_them(warband):
 
 def test_lurking_covers_the_whole_group(warband):
     """
-    rules.md: "The LURK command should only be used on the leader of a group.
+    Design: "The LURK command should only be used on the leader of a group.
     Everyone in the group will automatically be included."
     """
     gs = warband
@@ -314,7 +314,7 @@ def test_lurking_covers_the_whole_group(warband):
 
 def test_someone_who_breaks_away_stops_lurking_with_the_group(warband):
     """
-    rules.md: members who "break off to start their own group ... will not
+    Design: members who "break off to start their own group ... will not
     continue to lurk unless their new leader is explicitly given a LURK order."
     """
     gs = warband
@@ -346,7 +346,7 @@ def test_group_soldier_count_includes_subordinates_units(warband):
 
 def test_a_supporter_fights_on_the_attackers_side(warband):
     """
-    rules.md: the supporter joins "as if they had given the same ATTACK order
+    Design: the supporter joins "as if they had given the same ATTACK order
     at exactly the same time".
     """
     gs = warband
@@ -411,7 +411,7 @@ def test_parse_join(warband):
 
 
 def test_parse_come_is_go(warband):
-    """rules.md: "COME -- see the GO command"."""
+    """Design: "COME -- see the GO command"."""
     parsed = parser.parse_orders("Have Julia come to Carthage.", warband, "p1")
 
     assert isinstance(parsed[0], orders.MoveOrder)

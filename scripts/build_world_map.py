@@ -2,7 +2,7 @@
 Convert the gamemaster's map index into an engine map file.
 
 The index (``docs/soe_map_index.txt``) is the authoritative source for the
-Spoils of Empire world: it lists every town with its population, terrain,
+SOE world: it lists every town with its population, terrain,
 magic-free status and grid reference, followed by every route out of that
 town with its quality and mileage. It is the same data the engine prices
 travel and SCAN from, so the map file and the engine cannot disagree.
@@ -26,7 +26,8 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INDEX = REPO_ROOT / "docs" / "soe_map_index.txt"
+# Third-party source material, kept out of the repo (docs/ip_cleanroom.md).
+DEFAULT_INDEX = REPO_ROOT / "reference" / "soe_map_index.txt"
 DEFAULT_OUT = REPO_ROOT / "maps" / "soe_world.json"
 
 # Terrain vocabulary used by the gamemaster's map legend.

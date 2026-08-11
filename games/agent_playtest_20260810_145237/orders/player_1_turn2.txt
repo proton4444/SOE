@@ -1,9 +1,0 @@
-Password "Amber Meridian Ledger 47".
-Tell Khan Tengri "The Golden Empire seeks peaceful development and open trade. We propose mutual non-aggression while our empires establish themselves."
-Recruit 20 soldiers.
-Secure Madegi Doy.
-Tax for 1 week.
-Wait for 1 week and then offer Bishop Nancy Lopenda 1013 gold and have her come to Madegi Doy.
-Go to Kitesta.
-Secure Kitesta.
-Report.

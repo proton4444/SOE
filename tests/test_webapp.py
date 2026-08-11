@@ -44,8 +44,11 @@ def _clean_store():
     yield
 
 
-def _create_room(slots=2):
-    resp = client.post("/api/rooms", json={"name": "Test War", "slots": slots})
+def _create_room(slots=2, map_file=None):
+    payload = {"name": "Test War", "slots": slots}
+    if map_file:
+        payload["map"] = map_file
+    resp = client.post("/api/rooms", json=payload)
     assert resp.status_code == 200, resp.text
     return resp.json()
 
@@ -66,17 +69,16 @@ def test_create_room_initialises_an_engine_game():
     assert '"turn_number": 0' in state
     assert "player_1" in state and "player_2" in state
     # Default map is the full world when present.
-    assert room["map_file"] == "soe_world.json" or room["map_file"].endswith(".json")
-    if (Path(__file__).resolve().parent.parent / "maps" / "soe_world.json").exists():
-        assert room["map_file"] == "soe_world.json"
-        assert "madegi_doy" in state
+    from webapp import service
+
+    assert room["map_file"] == service.default_map()
 
 
 def test_available_maps_excludes_geography_sidecar():
     from webapp import service
 
     maps = service.available_maps()
-    assert "sample_map.json" in maps or "soe_world.json" in maps
+    assert "starter_map.json" in maps or "world.json" in maps
     assert "soe_geography.json" not in maps
     assert service.default_map() in maps
 
@@ -174,12 +176,13 @@ def test_human_join_cannot_take_over_an_existing_display_name():
 
 
 def test_orders_parse_feedback_and_are_stored():
-    room = _create_room()
+    # Pinned to the starter map so the order text can name real towns.
+    room = _create_room(map_file="starter_map.json")
     p1 = _join(room["code"], room["pin"], "Alice")
     resp = client.post(
         f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
         json={
-            "orders": "Recruit 20 soldiers in Madegi Doy.\nHave Emperor Marcus go to Kitesta."
+            "orders": "Recruit 20 soldiers in Highfell.\nHave Emperor Marcus go to Redport."
         },
     )
     assert resp.status_code == 200, resp.text
@@ -216,7 +219,7 @@ def test_turn_resolves_when_all_submitted():
 
     client.post(
         f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
-        json={"orders": "Recruit 20 soldiers in Madegi Doy."},
+        json={"orders": "Recruit 20 soldiers in Highfell."},
     )
 
     # Not ready while someone is missing.
@@ -232,7 +235,7 @@ def test_turn_resolves_when_all_submitted():
     client.post(
         f"/api/rooms/{room['code']}/orders?key={p2['agent_key']}",
         json={
-            "orders": "Recruit 30 soldiers in Albatross City.\nHave Khan Tengri go to Madegi Doy."
+            "orders": "Recruit 30 soldiers in Gullhaven.\nHave Khan Tengri go to Highfell."
         },
     )
     resp = client.post(
@@ -331,7 +334,7 @@ def test_failed_pre_turn_backup_blocks_resolution(monkeypatch):
 def test_pre_turn_backup_can_restore_game_and_server_state(tmp_path):
     from webapp import backups
     from webapp.rooms import RoomStore
-    from spoils_engine import storage
+    from soe import storage
 
     room = _create_room()
     p1 = _join(room["code"], room["pin"], "Alice")
@@ -375,7 +378,7 @@ def test_corrupt_room_registry_fails_closed(tmp_path):
 
 
 def test_room_and_game_survive_store_reload_after_a_resolved_turn():
-    from spoils_engine import storage
+    from soe import storage
     from webapp.rooms import RoomStore, ROOMS_FILE, GAMES_ROOT
 
     room = _create_room()
@@ -427,7 +430,7 @@ def test_host_force_resolve_runs_with_empty_orders():
     p1 = _join(room["code"], room["pin"], "Alice")
     client.post(
         f"/api/rooms/{room['code']}/orders?key={p1['agent_key']}",
-        json={"orders": "Recruit 20 soldiers in Madegi Doy."},
+        json={"orders": "Recruit 20 soldiers in Highfell."},
     )
     resp = client.post(
         f"/api/rooms/{room['code']}/resolve",
@@ -476,7 +479,7 @@ def test_start_cities_are_seeded_random_but_reproducible():
     import random
     from pathlib import Path
 
-    from spoils_engine import map_loader
+    from soe import map_loader
     from webapp import service
     from webapp.mapview import load_raw_map
     from webapp.rooms import default_store
@@ -510,26 +513,29 @@ def test_map_is_the_first_impact_of_the_landing_page():
     assert page.status_code == 200
     # The hero SVG map renders with cities and road/sea links.
     assert "<svg" in page.text
-    assert "Madegi Doy" in page.text
-    # Default is the full world map when present.
-    assert "soe_world.json" in page.text or "sample_map.json" in page.text
-    assert "sea lane" in page.text or "≈" in page.text or "Soe World" in page.text
+    # A town from the default map is labelled on it, whichever map that is.
+    from webapp import service
+    from webapp.mapview import load_raw_map
+
+    towns = [c["name"] for c in load_raw_map(service.default_map())["cities"]]
+    assert any(name in page.text for name in towns)
+    assert service.default_map() in page.text
+    assert "sea lane" in page.text or "≈" in page.text
     # The map picker wires the chosen map into the create form.
     assert 'name="map_file"' in page.text
     assert (
-        'value="soe_world.json"' in page.text or 'value="sample_map.json"' in page.text
+        f'value="{service.default_map()}"' in page.text
     )
-    # Full world uses traced geography (15 landmasses), not road-hull merge.
-    if "soe_world.json" in page.text and 'value="soe_world.json"' in page.text:
-        assert "15 landmasses" in page.text or "Slamoniya" in page.text
-        assert "soe-map-geo" in page.text
+    # Landmasses are reported however the geography was obtained: a traced
+    # sidecar when one exists, otherwise the road-hull merge.
+    assert "landmass" in page.text.lower()
 
 
 def test_map_preview_endpoint_serves_svg():
-    resp = client.get("/map/sample_map.json")
+    resp = client.get("/map/starter_map.json")
     assert resp.status_code == 200
     assert "<svg" in resp.text
-    assert "Peshandi" in resp.text
+    assert "Sarnvale" in resp.text
     # Landmass index: sample map has continent + island.
     assert "landmass" in resp.text.lower() or "Landmasses" in resp.text
     assert "Northern Island" in resp.text or "island" in resp.text.lower()
@@ -637,7 +643,7 @@ def test_player_state_does_not_leak_rival_garrisons():
     The map itself is public (it is drawn on the landing page), but who is
     holding which city is not: a faction only learns that where it has eyes.
     """
-    from spoils_engine import storage
+    from soe import storage
     from webapp import service
     from webapp.rooms import default_store
 
@@ -673,7 +679,7 @@ def test_player_state_does_not_leak_rival_garrisons():
 
 
 def test_player_state_reveals_a_garrison_once_a_scout_stands_there():
-    from spoils_engine import storage
+    from soe import storage
     from webapp import service
     from webapp.rooms import default_store
 
@@ -750,7 +756,7 @@ def test_master_dashboard_is_host_only_and_explains_a_resolved_turn():
 
 
 def test_master_can_inspect_one_players_resources_and_commands_without_credentials():
-    from spoils_engine import storage
+    from soe import storage
     from webapp import service
     from webapp.rooms import default_store
 
@@ -799,7 +805,7 @@ def test_player_state_separates_sovereign_occupier_and_administrator():
     which of them a faction holds is what decides whether TAX, RECRUIT and
     FORTIFY work. They are reported only where the seat already has eyes.
     """
-    from spoils_engine import models, storage
+    from soe import models, storage
     from webapp import service
     from webapp.rooms import default_store
 
@@ -845,7 +851,7 @@ def test_player_state_separates_sovereign_occupier_and_administrator():
 
 
 def test_player_state_filters_notices_by_city_observation():
-    from spoils_engine import storage
+    from soe import storage
     from webapp import service
     from webapp.rooms import default_store
 
@@ -909,7 +915,7 @@ def test_landing_page_map_carries_no_game_state():
 
 
 def test_map_overlay_hides_what_a_seat_cannot_see():
-    from spoils_engine import storage
+    from soe import storage
     from webapp import service
     from webapp.rooms import default_store
 

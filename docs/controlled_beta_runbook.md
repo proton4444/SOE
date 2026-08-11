@@ -27,7 +27,7 @@ Test-NetConnection 127.0.0.1 -Port 8000
 Get-PSDrive -Name C | Select-Object Name,Free
 Get-ChildItem $env:SOE_BACKUP_DIR -ErrorAction SilentlyContinue
 git rev-parse HEAD
-python -c "import spoils_engine; print(spoils_engine.__version__)"
+python -c "import soe; print(soe.__version__)"
 ```
 
 Start and check the server. The launcher fails if the invite code is missing,
@@ -100,11 +100,25 @@ python -c "from pathlib import Path; from webapp.backups import validate_backup;
 .\scripts\stop_beta.ps1
 ```
 
-5. Restore the validated snapshot. The script preserves current files as
+5. Restore the validated snapshot. By default this restores the affected room's
+   game directory and only that room's entry in `rooms.json`; every other room
+   is left exactly as it is. The script preserves current files as
    `.pre-restore-*` instead of deleting them:
 
 ```powershell
 .\scripts\restore_beta.ps1 -BackupPath $env:SOE_RESTORE_BACKUP
+```
+
+   A snapshot contains the whole registry, but it is only authoritative for the
+   room it was taken for. Use `-WholeRegistry` only when `rooms.json` itself is
+   unreadable or every room is being rolled back together — the snapshot
+   predates any room created since it was taken, so that mode drops those rooms
+   from the registry entirely. Confirm the room list after any such restore:
+
+```powershell
+.\scripts\restore_beta.ps1 -BackupPath $env:SOE_RESTORE_BACKUP -WholeRegistry
+(Get-Content (Join-Path $env:SOE_DATA_DIR 'rooms.json') -Raw |
+  ConvertFrom-Json).rooms | ForEach-Object { $_.code }
 ```
 
 6. Restart and verify the authoritative turn from both the manifest and the
@@ -131,7 +145,7 @@ controlled beta without an operator decision and an independent copy.
 
 ```powershell
 python -m pytest tests/ -q
-bandit -r spoils_engine webapp cli.py
-mypy spoils_engine webapp cli.py --no-incremental
+bandit -r soe webapp cli.py
+mypy soe webapp cli.py --no-incremental
 .\scripts\check_mypy_baseline.ps1
 ```

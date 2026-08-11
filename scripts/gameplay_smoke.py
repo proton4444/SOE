@@ -16,36 +16,36 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from spoils_engine import config, engine, map_loader, models, parser, reporting, storage
+from soe import config, engine, map_loader, models, parser, reporting, storage
 
 
 DEFAULT_OUTPUT = ROOT / "games" / "gameplay_smoke"
-MAP_FILE = ROOT / "maps" / "sample_map.json"
+MAP_FILE = ROOT / "maps" / "starter_map.json"
 BASE_SEED = 1000
 
 ORDERS = {
     1: {
         "player_1": (
-            "Have Emperor Marcus recruit 80 soldiers in Madegi Doy. "
-            "Have Emperor Marcus secure Madegi Doy. "
+            "Have Emperor Marcus recruit 80 soldiers in Highfell. "
+            "Have Emperor Marcus secure Highfell. "
             "Have Emperor Marcus tax."
         ),
         "player_2": (
-            "Have Khan Tengri recruit 10 soldiers in Kitesta. "
-            "Have Khan Tengri secure Kitesta. "
+            "Have Khan Tengri recruit 10 soldiers in Redport. "
+            "Have Khan Tengri secure Redport. "
             "Have Khan Tengri tax."
         ),
     },
     2: {
         "player_1": (
-            "Have Emperor Marcus go to Kitesta. Have Emperor Marcus attack Khan Tengri."
+            "Have Emperor Marcus go to Redport. Have Emperor Marcus attack Khan Tengri."
         ),
         "player_2": "Have Khan Tengri wait for 1 week.",
     },
     3: {
         "player_1": (
             "Have Emperor Marcus attack Khan Tengri. "
-            "Have Emperor Marcus secure Kitesta. "
+            "Have Emperor Marcus secure Redport. "
             "Have Emperor Marcus tax."
         ),
         "player_2": "Have Khan Tengri wait for 1 week.",
@@ -57,8 +57,8 @@ def _initial_state() -> models.GameState:
     world = map_loader.load_map_from_json(MAP_FILE)
     state = models.GameState(turn_number=0, world_map=world)
     players = [
-        ("player_1", "The Golden Empire", "Emperor Marcus", "madegi_doy"),
-        ("player_2", "The Silver Horde", "Khan Tengri", "kitesta"),
+        ("player_1", "The Golden Empire", "Emperor Marcus", "highfell"),
+        ("player_2", "The Silver Horde", "Khan Tengri", "redport"),
     ]
     for faction_id, faction_name, leader_name, city_id in players:
         state.factions[faction_id] = models.Faction(
@@ -131,7 +131,7 @@ def _write_jsonl(path: Path, records: list[dict]) -> None:
 
 def _report(summary: dict, state: models.GameState, turn_records: list[dict]) -> str:
     lines = [
-        "# Spoils of Empire - Gameplay Smoke Test",
+        "# SOE - Gameplay Smoke Test",
         "",
         "## Verdict",
         "",
@@ -146,8 +146,8 @@ def _report(summary: dict, state: models.GameState, turn_records: list[dict]) ->
         "## Scenario",
         "",
         "- Turn 1: both factions recruit, secure their home city, and collect taxes.",
-        "- Turn 2: Emperor Marcus marches from Madegi Doy to Kitesta and attacks Khan Tengri.",
-        "- Turn 3: Marcus attacks again, secures Kitesta, and collects taxes; Tengri waits.",
+        "- Turn 2: Emperor Marcus marches from Highfell to Redport and attacks Khan Tengri.",
+        "- Turn 3: Marcus attacks again, secures Redport, and collects taxes; Tengri waits.",
         "",
         "## Turn-by-turn",
         "",
@@ -278,12 +278,12 @@ def run_smoke(output_dir: Path = DEFAULT_OUTPUT) -> dict:
         {
             "name": "movement and combat happened",
             "passed": any(event["event_type"] == "victory" for event in all_events),
-            "detail": "Emperor Marcus won the Kitesta engagement",
+            "detail": "Emperor Marcus won the Redport engagement",
         },
         {
             "name": "occupation changed the board",
-            "passed": "kitesta" in p1.secured_city_ids and not p2.secured_city_ids,
-            "detail": "Kitesta is secured by The Golden Empire",
+            "passed": "redport" in p1.secured_city_ids and not p2.secured_city_ids,
+            "detail": "Redport is secured by The Golden Empire",
         },
         {
             "name": "reports and state were written",

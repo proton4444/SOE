@@ -310,14 +310,14 @@ def test_filter_clean_orders_drops_unparseable_lines():
     text = (
         "Monitor the movements of the Shadow Syndicate.\n"
         "Tax.\n"
-        "Have Emperor Marcus go to Kitesta.\n"
+        "Have Emperor Marcus go to Redport.\n"
         "Prepare for potential negotiations.\n"
     )
     filtered = _filter_clean_orders(room_obj, player, text)
     assert "Monitor" not in filtered
     assert "Prepare" not in filtered
     assert "Tax." in filtered
-    assert "go to Kitesta" in filtered
+    assert "go to Redport" in filtered
 
 
 def test_filter_clean_orders_keeps_raw_when_nothing_parses():

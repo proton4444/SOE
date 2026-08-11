@@ -26,8 +26,8 @@ from __future__ import annotations
 
 import pytest
 
-from spoils_engine import engine, models, orders, parser, territory
-from spoils_engine.models import LocationPosition, PopulationBand, UnitType
+from soe import engine, models, orders, parser, territory
+from soe.models import LocationPosition, PopulationBand, UnitType
 
 
 # ============================================================================
@@ -37,7 +37,7 @@ from spoils_engine.models import LocationPosition, PopulationBand, UnitType
 @pytest.fixture
 def board() -> models.GameState:
     """
-    Alpha is sovereign in Kitesta and garrisons it; Beta waits in Riverton.
+    Alpha is sovereign in Redport and garrisons it; Beta waits in Ashford.
 
     Beta's Borin leads an army large enough that an attack is never declined
     for poor odds, so what these tests measure is the establishment rule and
@@ -45,59 +45,59 @@ def board() -> models.GameState:
     """
     gs = models.GameState()
     gs.turn_number = 1
-    gs.world_map.cities["riverton"] = models.City(
-        id="riverton", name="Riverton", population_band=PopulationBand.MEDIUM)
-    gs.world_map.cities["kitesta"] = models.City(
-        id="kitesta", name="Kitesta", population_band=PopulationBand.MEDIUM)
+    gs.world_map.cities["ashford"] = models.City(
+        id="ashford", name="Ashford", population_band=PopulationBand.MEDIUM)
+    gs.world_map.cities["redport"] = models.City(
+        id="redport", name="Redport", population_band=PopulationBand.MEDIUM)
     gs.world_map.roads["road"] = models.Road(
-        id="road", from_city_id="riverton", to_city_id="kitesta",
+        id="road", from_city_id="ashford", to_city_id="redport",
         quality=models.RoadQuality.EXCELLENT)
 
     gs.factions["alpha"] = models.Faction(
-        id="alpha", name="Alpha", controlled_city_ids={"kitesta"},
+        id="alpha", name="Alpha", controlled_city_ids={"redport"},
         treasury=10_000)
     gs.factions["beta"] = models.Faction(
-        id="beta", name="Beta", controlled_city_ids={"riverton"},
+        id="beta", name="Beta", controlled_city_ids={"ashford"},
         treasury=10_000)
 
     gs.characters["aurelia"] = models.Character(
         id="aurelia", name="Aurelia", title="Regent", faction_id="alpha",
-        location_city_id="kitesta", is_leader=True, combat_skill=10, gold=500)
+        location_city_id="redport", is_leader=True, combat_skill=10, gold=500)
     gs.characters["borin"] = models.Character(
         id="borin", name="Borin", faction_id="beta",
-        location_city_id="riverton", is_leader=True, movement_points=100,
+        location_city_id="ashford", is_leader=True, movement_points=100,
         combat_skill=30, gold=5_000)
 
     gs.unit_stacks["alpha_garrison"] = models.UnitStack(
-        id="alpha_garrison", faction_id="alpha", location_city_id="kitesta",
+        id="alpha_garrison", faction_id="alpha", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=175, owner_character_id="aurelia")
     gs.unit_stacks["beta_army"] = models.UnitStack(
-        id="beta_army", faction_id="beta", location_city_id="riverton",
+        id="beta_army", faction_id="beta", location_city_id="ashford",
         unit_type=UnitType.SOLDIER, count=600, owner_character_id="borin")
     return gs
 
 
 def _beta_walks_in(gs: models.GameState, soldiers: int) -> None:
-    """Borin and his soldiers stand inside Kitesta, beside whoever is there."""
-    gs.characters["borin"].location_city_id = "kitesta"
+    """Borin and his soldiers stand inside Redport, beside whoever is there."""
+    gs.characters["borin"].location_city_id = "redport"
     gs.characters["borin"].location_position = LocationPosition.INSIDE
-    gs.unit_stacks["beta_army"].location_city_id = "kitesta"
+    gs.unit_stacks["beta_army"].location_city_id = "redport"
     gs.unit_stacks["beta_army"].count = soldiers
 
 
 def _add_second_alpha_group(gs: models.GameState, soldiers: int = 30) -> None:
-    """A second Alpha character with a garrison of his own, inside Kitesta."""
+    """A second Alpha character with a garrison of his own, inside Redport."""
     gs.characters["doran"] = models.Character(
         id="doran", name="Doran", faction_id="alpha",
-        location_city_id="kitesta", combat_skill=10)
+        location_city_id="redport", combat_skill=10)
     gs.unit_stacks["doran_guard"] = models.UnitStack(
-        id="doran_guard", faction_id="alpha", location_city_id="kitesta",
+        id="doran_guard", faction_id="alpha", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=soldiers, owner_character_id="doran")
 
 
 def _secure(player_id: str = "beta", actor_id: str = "borin"):
     return orders.SecureOrder(
-        player_id=player_id, actor_id=actor_id, city_id="kitesta")
+        player_id=player_id, actor_id=actor_id, city_id="redport")
 
 
 def _run(gs: models.GameState, submissions: dict[str, list], seed: int = 7):
@@ -126,13 +126,13 @@ def test_no_number_of_beta_soldiers_secures_past_an_armed_alpha(
     """
     The reported defect, at every size the replay tried.
 
-    One soldier could not take Kitesta from 175 because one soldier is few; it
+    One soldier could not take Redport from 175 because one soldier is few; it
     could not take it because Alpha is still standing inside it under arms.
     """
     _beta_walks_in(board, beta_soldiers)
     gs, log = _run(board, {"beta": [_secure()]})
     assert gs.factions["beta"].secured_city_ids == set()
-    assert territory.occupying_faction_id(gs, "kitesta") is None
+    assert territory.occupying_faction_id(gs, "redport") is None
     assert _secure_failures(log, "beta")
 
 
@@ -162,7 +162,7 @@ def test_failure_names_the_physical_obstacle_without_counting_the_enemy(board):
     failures = _secure_failures(log, "beta")
     assert failures, "Beta should be told why SECURE failed"
     message = failures[0]
-    assert "Borin" in message and "Kitesta" in message
+    assert "Borin" in message and "Redport" in message
     assert "another faction still maintains an armed garrison inside" in message
     assert "175" not in message
     assert "Aurelia" not in message
@@ -177,7 +177,7 @@ def test_alpha_soldiers_without_a_qualifying_character_do_not_block(board):
     _beta_walks_in(board, 1)
     board.characters["aurelia"].location_position = LocationPosition.OUTSIDE
     gs, _ = _run(board, {"beta": [_secure()]})
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
 
 
 def test_alpha_character_without_ordinary_soldiers_does_not_block(board):
@@ -191,9 +191,9 @@ def test_alpha_character_without_ordinary_soldiers_does_not_block(board):
     del board.unit_stacks["alpha_garrison"]
     board.elite_units["guard"] = models.EliteUnit(
         id="guard", name="Household Guard", faction_id="alpha",
-        leader_character_id="aurelia", location_city_id="kitesta", size=200)
+        leader_character_id="aurelia", location_city_id="redport", size=200)
     gs, _ = _run(board, {"beta": [_secure()]})
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
 
 
 def test_blocking_is_measured_per_faction_not_per_character(board):
@@ -211,7 +211,7 @@ def test_blocking_is_measured_per_faction_not_per_character(board):
 
     gs.characters["doran"].is_dead = True
     gs, _ = _run(gs, {"beta": [_secure()]})
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
 
 
 def test_a_qualifying_allied_garrison_blocks_as_firmly_as_an_enemy_one(board):
@@ -230,9 +230,9 @@ def test_a_qualifying_allied_garrison_blocks_as_firmly_as_an_enemy_one(board):
     board.factions["beta"].allies.add("gamma")
     board.characters["kell"] = models.Character(
         id="kell", name="Kell", faction_id="gamma",
-        location_city_id="kitesta")
+        location_city_id="redport")
     board.unit_stacks["gamma_column"] = models.UnitStack(
-        id="gamma_column", faction_id="gamma", location_city_id="kitesta",
+        id="gamma_column", faction_id="gamma", location_city_id="redport",
         unit_type=UnitType.SOLDIER, count=20, owner_character_id="kell")
 
     gs, log = _run(board, {"beta": [_secure()]})
@@ -252,7 +252,7 @@ def test_sovereignty_needs_no_special_case_to_defend_itself(board):
     assert board.factions["alpha"].secured_city_ids == set()
     gs, _ = _run(board, {"beta": [_secure()]})
     assert gs.factions["beta"].secured_city_ids == set()
-    assert territory.administrative_faction_id(gs, "kitesta") == "alpha"
+    assert territory.administrative_faction_id(gs, "redport") == "alpha"
 
 
 # ============================================================================
@@ -278,7 +278,7 @@ def test_mutual_secure_leaves_the_city_to_nobody_in_either_order(board, first):
     gs, log = _run(board, submissions)
     assert gs.factions["alpha"].secured_city_ids == set()
     assert gs.factions["beta"].secured_city_ids == set()
-    assert territory.occupying_faction_id(gs, "kitesta") is None
+    assert territory.occupying_faction_id(gs, "redport") is None
     assert _secure_failures(log, "alpha") and _secure_failures(log, "beta")
 
 
@@ -295,7 +295,7 @@ def test_repeating_a_barred_secure_costs_nothing_and_changes_nothing(board):
 
     gs.characters["aurelia"].location_position = LocationPosition.OUTSIDE
     gs, _ = _run(gs, {"beta": [_secure()]})
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
 
 
 # ============================================================================
@@ -313,7 +313,7 @@ def test_capturing_the_last_alpha_character_opens_the_way_in_one_batch(board):
     ]
     gs, _ = _run(board, {"beta": program})
     assert gs.characters["aurelia"].is_prisoner
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
 
 
 # ============================================================================
@@ -328,18 +328,18 @@ def test_invasion_that_clears_the_city_may_then_secure_and_tax(board):
     city by itself -- but a player may commit to it in advance and gamble that
     the fighting clears the way. That gamble is meant to be available.
     """
-    board.tax_pools["kitesta"] = 400
+    board.tax_pools["redport"] = 400
     gs, log = _run_text(board, {
         "beta": (
-            "Have Borin go to Kitesta. "
+            "Have Borin go to Redport. "
             "Have Borin definitely attack Regent Aurelia. "
             "Have Borin secure. "
-            "Have Borin tax Kitesta."
+            "Have Borin tax Redport."
         ),
     })
-    assert not territory.has_competing_qualifying_garrison(gs, "kitesta", "beta")
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
-    assert territory.authority_ids(gs, "kitesta") == {
+    assert not territory.has_competing_qualifying_garrison(gs, "redport", "beta")
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
+    assert territory.authority_ids(gs, "redport") == {
         "sovereign": "alpha", "occupier": "beta", "administrator": "beta"}
     assert any(event.event_type == "tax_success"
                for event in log.get_player_events("beta"))
@@ -355,16 +355,16 @@ def test_invasion_that_leaves_a_second_defender_standing_cannot_secure(board):
     _add_second_alpha_group(board)
     gs, log = _run_text(board, {
         "beta": (
-            "Have Borin go to Kitesta. "
+            "Have Borin go to Redport. "
             "Have Borin definitely attack Regent Aurelia. "
             "Have Borin secure."
         ),
     })
     # Beta is otherwise entitled: the one thing stopping it is Doran.
-    assert territory.has_qualifying_garrison(gs, gs.characters["borin"], "kitesta")
-    assert territory.has_competing_qualifying_garrison(gs, "kitesta", "beta")
+    assert territory.has_qualifying_garrison(gs, gs.characters["borin"], "redport")
+    assert territory.has_competing_qualifying_garrison(gs, "redport", "beta")
     assert gs.factions["beta"].secured_city_ids == set()
-    assert territory.administrative_faction_id(gs, "kitesta") == "alpha"
+    assert territory.administrative_faction_id(gs, "redport") == "alpha"
     assert "armed garrison inside" in " ".join(_secure_failures(log, "beta"))
 
 
@@ -378,12 +378,12 @@ def test_walking_in_beside_the_garrison_and_writing_secure_does_nothing(board):
     """
     board.unit_stacks["beta_army"].count = 1
     gs, log = _run_text(board, {
-        "beta": "Have Borin go to Kitesta. Have Borin secure.",
+        "beta": "Have Borin go to Redport. Have Borin secure.",
     })
-    assert gs.characters["borin"].location_city_id == "kitesta"
-    assert territory.has_qualifying_garrison(gs, gs.characters["borin"], "kitesta")
+    assert gs.characters["borin"].location_city_id == "redport"
+    assert territory.has_qualifying_garrison(gs, gs.characters["borin"], "redport")
     assert gs.factions["beta"].secured_city_ids == set()
-    assert territory.administrative_faction_id(gs, "kitesta") == "alpha"
+    assert territory.administrative_faction_id(gs, "redport") == "alpha"
     assert _secure_failures(log, "beta")
 
 
@@ -395,23 +395,23 @@ def test_an_existing_occupation_survives_a_rival_marching_in(board):
     """
     Establishment tightened; maintenance did not move.
 
-    Beta holds Kitesta. Alpha arrives in force and stands inside it. That is
+    Beta holds Redport. Alpha arrives in force and stands inside it. That is
     not enough to end Beta's occupation -- Alpha must break Beta's garrison --
     and Beta re-writing SECURE must not talk the engine out of an occupation
     it already validly holds.
     """
     _beta_walks_in(board, 600)
-    board.factions["beta"].secured_city_ids.add("kitesta")
-    assert territory.is_valid_occupation(board, "beta", "kitesta")
+    board.factions["beta"].secured_city_ids.add("redport")
+    assert territory.is_valid_occupation(board, "beta", "redport")
 
     gs, _ = _run(board, {"beta": [_secure()]})
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
-    assert territory.occupying_faction_id(gs, "kitesta") == "beta"
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
+    assert territory.occupying_faction_id(gs, "redport") == "beta"
 
     # And Alpha, present and armed, still may not take it administratively.
     gs, _ = _run(gs, {"alpha": [_secure(player_id="alpha", actor_id="aurelia")]})
     assert gs.factions["alpha"].secured_city_ids == set()
-    assert gs.factions["beta"].secured_city_ids == {"kitesta"}
+    assert gs.factions["beta"].secured_city_ids == {"redport"}
 
 
 def test_an_existing_occupation_still_lapses_when_its_own_garrison_goes(board):
@@ -423,13 +423,13 @@ def test_an_existing_occupation_still_lapses_when_its_own_garrison_goes(board):
     and authority falls back to Alpha's sovereignty.
     """
     _beta_walks_in(board, 600)
-    board.factions["beta"].secured_city_ids.add("kitesta")
+    board.factions["beta"].secured_city_ids.add("redport")
     board.characters["borin"].location_position = LocationPosition.OUTSIDE
 
     removed = territory.reconcile_occupations(board)
-    assert ("beta", "kitesta") in removed
+    assert ("beta", "redport") in removed
     assert board.factions["beta"].secured_city_ids == set()
-    assert territory.administrative_faction_id(board, "kitesta") == "alpha"
+    assert territory.administrative_faction_id(board, "redport") == "alpha"
 
 
 def test_a_persisted_occupation_loads_beside_a_rival_without_being_erased(
@@ -437,14 +437,14 @@ def test_a_persisted_occupation_loads_beside_a_rival_without_being_erased(
     """
     Old saves keep working: no field was added, and nothing is re-derived.
 
-    A save where Beta occupies Kitesta while Alpha also has a garrison inside
+    A save where Beta occupies Redport while Alpha also has a garrison inside
     is a state the new rule would not let a player *create*, but it is a legal
     state to be in, and loading it must not quietly dispossess Beta.
     """
     _beta_walks_in(board, 600)
-    board.factions["beta"].secured_city_ids.add("kitesta")
-    assert territory.has_competing_qualifying_garrison(board, "kitesta", "beta")
+    board.factions["beta"].secured_city_ids.add("redport")
+    assert territory.has_competing_qualifying_garrison(board, "redport", "beta")
 
     territory.reconcile_occupations(board)
-    assert board.factions["beta"].secured_city_ids == {"kitesta"}
-    assert territory.occupying_faction_id(board, "kitesta") == "beta"
+    assert board.factions["beta"].secured_city_ids == {"redport"}
+    assert territory.occupying_faction_id(board, "redport") == "beta"

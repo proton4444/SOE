@@ -9,8 +9,8 @@ import random
 
 import pytest
 
-from spoils_engine import engine, fog, models, parser
-from spoils_engine.models import LocationPosition, PopulationBand
+from soe import engine, fog, models, parser
+from soe.models import LocationPosition, PopulationBand
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def face_off():
         id="city2", name="Carthage", population_band=PopulationBand.SMALL, is_port=True
     )
     gs.world_map.cities["ruin1"] = models.City(
-        id="ruin1", name="Hakkaba", population_band=PopulationBand.TINY, is_ruin=True
+        id="ruin1", name="Oldbarrow", population_band=PopulationBand.TINY, is_ruin=True
     )
     gs.world_map.roads["road1"] = models.Road(
         id="road1", from_city_id="city1", to_city_id="city2",
@@ -72,9 +72,9 @@ def test_near_sees_near_and_outside_not_inside():
 
 
 def test_parse_position_prefix():
-    pos, name = fog.parse_position_prefix("outside Madegi Doy")
+    pos, name = fog.parse_position_prefix("outside Highfell")
     assert pos == LocationPosition.OUTSIDE
-    assert name.lower() == "madegi doy"
+    assert name.lower() == "highfell"
     pos, name = fog.parse_position_prefix("near Agriponga")
     assert pos == LocationPosition.NEAR
     assert name.lower() == "agriponga"
@@ -280,7 +280,7 @@ def test_search_inside_ruins_can_find_gold(face_off):
 
     events = [e for e in log.get_player_events("p1") if e.phase == "intel" and "search" in e.event_type]
     assert events
-    assert "Hakkaba" in events[0].description
+    assert "Oldbarrow" in events[0].description
     # Gold only rises on a find.
     assert gs.characters["c1"].gold >= before
 

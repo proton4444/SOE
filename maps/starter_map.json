@@ -1,0 +1,157 @@
+{
+  "cities": [
+    {
+      "id": "highfell",
+      "name": "Highfell",
+      "population_band": "100k+",
+      "population": 1200000,
+      "terrain": [
+        "coastal",
+        "plains"
+      ],
+      "region": "Main Continent",
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "B8",
+      "x": 0.12,
+      "y": 0.78
+    },
+    {
+      "id": "redport",
+      "name": "Redport",
+      "population_band": "100k+",
+      "population": 420000,
+      "terrain": [
+        "river",
+        "plains"
+      ],
+      "region": "Main Continent",
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F5",
+      "x": 0.48,
+      "y": 0.48
+    },
+    {
+      "id": "ashford",
+      "name": "Ashford",
+      "population_band": "10k-99k",
+      "population": 45000,
+      "terrain": [
+        "forest",
+        "river"
+      ],
+      "region": "Main Continent",
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H3",
+      "resource_richness": {
+        "wood": 1.0
+      },
+      "x": 0.7,
+      "y": 0.28
+    },
+    {
+      "id": "gullhaven",
+      "name": "Gullhaven",
+      "population_band": "100k+",
+      "population": 280000,
+      "terrain": [
+        "coastal",
+        "mountains"
+      ],
+      "region": "Northern Island",
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "K2",
+      "x": 0.88,
+      "y": 0.12
+    },
+    {
+      "id": "sarnvale",
+      "name": "Sarnvale",
+      "population_band": "1k-9k",
+      "population": 6800,
+      "terrain": [
+        "desert"
+      ],
+      "region": "Main Continent",
+      "is_port": false,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "D2",
+      "x": 0.28,
+      "y": 0.16
+    },
+    {
+      "id": "oldbarrow",
+      "name": "Oldbarrow",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "mountains"
+      ],
+      "region": "Main Continent",
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "G6",
+      "x": 0.55,
+      "y": 0.55
+    }
+  ],
+  "roads": [
+    {
+      "id": "road_1",
+      "from": "highfell",
+      "to": "redport",
+      "quality": "excellent",
+      "distance_miles": 94,
+      "bidirectional": true
+    },
+    {
+      "id": "road_2",
+      "from": "redport",
+      "to": "ashford",
+      "quality": "fair",
+      "distance_miles": 59,
+      "bidirectional": true
+    },
+    {
+      "id": "road_3",
+      "from": "ashford",
+      "to": "sarnvale",
+      "quality": "poor",
+      "distance_miles": 102,
+      "bidirectional": true
+    },
+    {
+      "id": "road_4",
+      "from": "sarnvale",
+      "to": "highfell",
+      "quality": "fair",
+      "distance_miles": 92,
+      "bidirectional": true
+    },
+    {
+      "id": "road_5",
+      "from": "redport",
+      "to": "oldbarrow",
+      "quality": "poor",
+      "distance_miles": 20,
+      "bidirectional": true
+    },
+    {
+      "id": "sea_1",
+      "from": "highfell",
+      "to": "gullhaven",
+      "quality": "sea",
+      "distance_miles": 201,
+      "bidirectional": true
+    }
+  ]
+}

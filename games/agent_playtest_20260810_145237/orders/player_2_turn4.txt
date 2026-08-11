@@ -1,6 +1,0 @@
-Have Khan Tengri work for 4 weeks.
-If Khan Tengri has at least 1 gold, then have him recruit 1 soldier; otherwise have him work for 4 more weeks.
-If Khan Tengri has at least 1 soldier, then have him tax Albatross City.
-Have Khan Tengri pay.
-If Khan Tengri has at least 400 gold, then have him recruit 20 soldiers and 10 sailors.
-Have Khan Tengri tell Emperor Marcus "The Silver Horde accepts a provisional non-aggression pact. We request 100 gold on credit against future Albatross taxes".

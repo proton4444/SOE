@@ -1,4 +1,4 @@
-# Spoils of Empire - Gameplay Smoke Test
+# SOE - Gameplay Smoke Test
 
 ## Verdict
 

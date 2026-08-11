@@ -21,7 +21,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from spoils_engine import engine, parser, storage
+from soe import engine, parser, storage
 
 from webapp import service
 from webapp.rooms import default_store

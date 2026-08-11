@@ -44,6 +44,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Environments
 .env
@@ -79,3 +81,25 @@ nul
 _tmp_map.svg
 .playwright-mcp/
 
+# Third-party source material: development inputs only, never distributed.
+# See docs/ip_cleanroom.md.
+reference/
+
+# Maps derived from that source material, and everything rendered from them.
+# They stay on disk so games already in progress keep resolving their town
+# ids; they are simply not distributed. New games use maps/world.json and
+# maps/starter_map.json, both produced by scripts/generate_world.py.
+maps/sample_map.json
+maps/soe_world.json
+maps/soe_geography.json
+maps/soe_world_map.png
+maps/soe_world_map.svg
+maps/soe_world_map_print.svg
+maps/webapp_landing_map.png
+maps/webapp_map_only.png
+maps/compare_web_vs_poster.png
+maps/_web_preview.svg
+
+
+# Live room game data: runtime state, not source. Stays on disk.
+games/room_*/

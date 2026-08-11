@@ -2,7 +2,12 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$BackupPath,
     [string]$DataDir = '',
-    [string]$GamesDir = ''
+    [string]$GamesDir = '',
+    # Restore the snapshot's entire room registry instead of just the backed-up
+    # room. Only correct when the live registry is unreadable or every room is
+    # being rolled back together: the snapshot predates any room created since,
+    # so this drops those rooms from the registry.
+    [switch]$WholeRegistry
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,19 +29,39 @@ $data = [IO.Path]::GetFullPath($DataDir)
 $games = [IO.Path]::GetFullPath($GamesDir)
 New-Item -ItemType Directory -Force -Path $data, $games | Out-Null
 $roomDir = Join-Path $games ("room_" + $manifest.room_code)
-$stamp = Get-Date -Format 'yyyyMMddTHHmmssfffZ'
 $roomsFile = Join-Path $data 'rooms.json'
 
-if (Test-Path -LiteralPath $roomsFile) {
-    Move-Item -LiteralPath $roomsFile -Destination (Join-Path $data ("rooms.pre-restore-$stamp.json"))
-}
-Copy-Item -LiteralPath (Join-Path $backup 'rooms.json') -Destination ($roomsFile + '.restore.tmp')
-Move-Item -LiteralPath ($roomsFile + '.restore.tmp') -Destination $roomsFile
+# The restore itself is done by webapp.backups.restore_backup rather than
+# reimplemented here, so the operator drill and the application cannot drift
+# apart. Paths go through the environment to avoid quoting them into Python.
+$env:PYTHONPATH = $root
+$env:SOE_RESTORE_BACKUP_PATH = $backup
+$env:SOE_RESTORE_ROOMS_FILE = $roomsFile
+$env:SOE_RESTORE_GAMES_ROOT = $games
+$env:SOE_RESTORE_WHOLE = if ($WholeRegistry) { '1' } else { '0' }
 
-if (Test-Path -LiteralPath $roomDir) {
-    Move-Item -LiteralPath $roomDir -Destination ($roomDir + ".pre-restore-$stamp")
+$restoreScript = @'
+import os
+from pathlib import Path
+
+from webapp.backups import restore_backup
+
+restore_backup(
+    Path(os.environ["SOE_RESTORE_BACKUP_PATH"]),
+    rooms_file=Path(os.environ["SOE_RESTORE_ROOMS_FILE"]),
+    games_root=Path(os.environ["SOE_RESTORE_GAMES_ROOT"]),
+    whole_registry=os.environ["SOE_RESTORE_WHOLE"] == "1",
+)
+'@
+
+$restoreScript | python -
+if ($LASTEXITCODE -ne 0) { throw 'Restore failed; the pre-restore copies are unchanged.' }
+
+if ($WholeRegistry) {
+    Write-Host 'Restored the snapshot''s entire room registry. Rooms created after this snapshot are no longer registered.'
+} else {
+    Write-Host "Restored only room $($manifest.room_code) in the registry. Other rooms were left as they were."
 }
-Copy-Item -LiteralPath (Join-Path $backup 'game') -Destination $roomDir -Recurse
 
 $state = Get-Content -LiteralPath (Join-Path $roomDir 'state.json') -Raw | ConvertFrom-Json
 Write-Host "Restored room $($manifest.room_code). Authoritative game turn: $($state.turn_number)."

@@ -19,11 +19,11 @@ from webapp.ai.orchestrator import extract_orders
 
 PROBE_TASK = (
     "You command a small faction in a fantasy strategy game. Your leader is "
-    "Emperor Marcus and he is in Madegi Doy with 30 soldiers. Write 3 orders "
+    "Emperor Marcus and he is in Highfell with 30 soldiers. Write 3 orders "
     "for the next turn.\n\n"
     "Order syntax examples:\n"
-    "Have Emperor Marcus go to Kitesta.\n"
-    "Recruit 20 soldiers in Madegi Doy.\n"
+    "Have Emperor Marcus go to Redport.\n"
+    "Recruit 20 soldiers in Highfell.\n"
     "Tax.\n"
     "Have Emperor Marcus attack Khan Tengri.\n"
     "Work for 1 week.\n\n"

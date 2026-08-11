@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from spoils_engine import storage
+from soe import storage
 
 from webapp.rooms import Room, ROOMS_FILE, SERVER_DATA
 
@@ -142,17 +142,70 @@ def validate_backup(path: Path) -> dict:
     return manifest
 
 
+def _registry_with_room_restored(
+    rooms_file: Path, snapshot_registry: dict, room_code: str
+) -> dict:
+    """Put one room's snapshot entry back into the live registry, in place.
+
+    Every other room keeps whatever the live registry currently says about it,
+    which is the whole point: a snapshot is only authoritative for the room it
+    was taken for.
+    """
+    restored = next(
+        (
+            entry
+            for entry in snapshot_registry.get("rooms", [])
+            if str(entry.get("code")) == room_code
+        ),
+        None,
+    )
+    if restored is None:
+        raise BackupError(f"Backup registry has no entry for room {room_code}")
+
+    if not rooms_file.exists():
+        return {"rooms": [restored]}
+
+    try:
+        live = json.loads(rooms_file.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise BackupError(
+            "The live room registry is unreadable, so a single room cannot be "
+            "spliced into it. Re-run with whole_registry=True to restore the "
+            "snapshot's entire registry instead."
+        ) from exc
+
+    rooms = []
+    replaced = False
+    for entry in live.get("rooms", []):
+        if str(entry.get("code")) == room_code:
+            rooms.append(restored)
+            replaced = True
+        else:
+            rooms.append(entry)
+    if not replaced:
+        rooms.append(restored)
+    return {"rooms": rooms}
+
+
 def restore_backup(
     path: Path,
     *,
     rooms_file: Path = ROOMS_FILE,
     games_root: Path | None = None,
+    whole_registry: bool = False,
 ) -> dict:
     """Restore a validated snapshot, preserving current targets beside them.
 
-    This helper is intended for a stopped application.  Existing files are
-    renamed rather than deleted so an operator can inspect or roll back the
-    restore attempt.
+    This helper is intended for a stopped application.  The previous registry
+    and game directory are kept beside the restored ones so an operator can
+    inspect or undo the restore attempt.
+
+    A snapshot carries the entire room registry, but it is only authoritative
+    for the one room it was taken for.  By default just that room's entry is
+    spliced back in, so recovering one game cannot rewind every other game on
+    the server.  ``whole_registry=True`` restores the snapshot's full registry,
+    which is correct only when the live registry is unusable or every room is
+    being rolled back together.
     """
     path = Path(path)
     manifest = validate_backup(path)
@@ -165,10 +218,19 @@ def restore_backup(
 
     rooms_file.parent.mkdir(parents=True, exist_ok=True)
     games_root.mkdir(parents=True, exist_ok=True)
+
+    snapshot_registry = json.loads((path / "rooms.json").read_text(encoding="utf-8"))
+    if whole_registry:
+        payload = snapshot_registry
+    else:
+        payload = _registry_with_room_restored(rooms_file, snapshot_registry, room_code)
+
     if rooms_file.exists():
-        rooms_file.replace(rooms_file.with_name(f"rooms.pre-restore-{stamp}.json"))
+        shutil.copy2(
+            rooms_file, rooms_file.with_name(f"rooms.pre-restore-{stamp}.json")
+        )
     rooms_file_tmp = rooms_file.with_suffix(".restore.tmp")
-    shutil.copy2(path / "rooms.json", rooms_file_tmp)
+    rooms_file_tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     rooms_file_tmp.replace(rooms_file)
 
     if target_game.exists():

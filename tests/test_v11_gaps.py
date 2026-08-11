@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from spoils_engine import models, engine, orders, parser, storage, config
-from spoils_engine.combat import calculate_faction_power, apply_casualties
+from soe import models, engine, orders, parser, storage, config
+from soe.combat import calculate_faction_power, apply_casualties
 
 
 @pytest.fixture

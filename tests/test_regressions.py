@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from spoils_engine import models, engine, orders, parser, storage, config
+from soe import models, engine, orders, parser, storage, config
 
 
 # ============================================================================
@@ -604,7 +604,7 @@ def test_report_shows_events_from_every_phase(two_faction_state):
     The report rendered a hardcoded list of six phases, so results from tax,
     trade, construction, religion and most other phases never reached players.
     """
-    from spoils_engine import reporting
+    from soe import reporting
 
     gs = two_faction_state
     gs.tax_pools["city1"] = 500

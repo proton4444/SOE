@@ -11,8 +11,8 @@ import sys
 
 import pytest
 
-from spoils_engine import config, engine, models
-from spoils_engine.map_loader import (
+from soe import config, engine, models
+from soe.map_loader import (
     MapValidationError,
     create_sample_map,
     isolated_cities,
@@ -40,12 +40,12 @@ def miles_state():
         id="town", name="Agnok", population_band=models.PopulationBand.SMALL,
         population=59_000, terrain={"plains"}, grid_ref="A6", is_magic_free=True)
     gs.world_map.cities["city"] = models.City(
-        id="city", name="Kitesta", population_band=models.PopulationBand.MEDIUM,
+        id="city", name="Redport", population_band=models.PopulationBand.MEDIUM,
         population=420_000, terrain={"plains", "river"}, grid_ref="F5")
     gs.world_map.cities["ruin"] = models.City(
         id="ruin", name="Ruin", population_band=models.PopulationBand.TINY)
     gs.world_map.cities["isle"] = models.City(
-        id="isle", name="Albatross City", population_band=models.PopulationBand.MEDIUM, is_port=True)
+        id="isle", name="Gullhaven", population_band=models.PopulationBand.MEDIUM, is_port=True)
     gs.world_map.roads["r1"] = models.Road(
         id="r1", from_city_id="town", to_city_id="city",
         quality=models.RoadQuality.GOOD, distance_miles=103)
@@ -153,7 +153,7 @@ def test_loader_reads_ruin_and_resources(tmp_path: Path):
     map_file = tmp_path / "map.json"
     map_file.write_text(json.dumps({
         "cities": [
-            {"id": "ruin", "name": "Hakkaba", "population": 0,
+            {"id": "ruin", "name": "Oldbarrow", "population": 0,
              "population_band": "< 10k", "is_ruin": True,
              "resource_richness": {"gems": 1.5}, "fortification_level": 5,
              "x": 0.1, "y": 0.2},
@@ -229,19 +229,19 @@ def test_sample_map_validates():
     wm = create_sample_map()
     assert validate_map(wm) == []
     assert validate_map_warnings(wm) == []
-    assert wm.cities["hakkaba"].is_ruin is True
+    assert wm.cities["oldbarrow"].is_ruin is True
     assert wm.roads["road_1"].quality == models.RoadQuality.EXCELLENT
 
 
 def test_sample_map_json_on_disk_validates():
-    path = Path(__file__).resolve().parent.parent / "maps" / "sample_map.json"
+    path = Path(__file__).resolve().parent.parent / "maps" / "starter_map.json"
     if not path.exists():
-        pytest.skip("sample_map.json not present")
+        pytest.skip("starter_map.json not present")
     wm = load_map_from_json(path)
     assert len(wm.cities) >= 6
-    assert wm.cities["riverton"].resource_richness.get("wood") == 1.0
-    assert wm.cities["hakkaba"].is_ruin is True
-    assert wm.cities["peshandi"].is_magic_free is True
+    assert wm.cities["ashford"].resource_richness.get("wood") == 1.0
+    assert wm.cities["oldbarrow"].is_ruin is True
+    assert wm.cities["sarnvale"].is_magic_free is True
     # Neighbours should be walkable in one turn (10 MP).
     assert config.get_hop_cost(wm.roads["road_1"]) <= 10
     assert config.get_hop_cost(wm.roads["road_2"]) <= 10
@@ -295,11 +295,11 @@ def test_sample_map_miles_scale_with_layout():
     """Longer routes should draw longer (roughly proportional miles/px)."""
     from webapp import mapview
 
-    path = Path(__file__).resolve().parent.parent / "maps" / "sample_map.json"
+    path = Path(__file__).resolve().parent.parent / "maps" / "starter_map.json"
     if not path.exists():
-        pytest.skip("sample_map.json not present")
-    data = mapview.load_raw_map("sample_map.json")
-    pos = mapview.positions("sample_map.json")
+        pytest.skip("starter_map.json not present")
+    data = mapview.load_raw_map("starter_map.json")
+    pos = mapview.positions("starter_map.json")
     ratios = []
     for r in data["roads"]:
         miles = r.get("distance_miles")
@@ -315,13 +315,13 @@ def test_sample_map_miles_scale_with_layout():
 def test_mapview_tooltips_include_hop_and_resources():
     from webapp import mapview
 
-    path = Path(__file__).resolve().parent.parent / "maps" / "sample_map.json"
+    path = Path(__file__).resolve().parent.parent / "maps" / "starter_map.json"
     if not path.exists():
-        pytest.skip("sample_map.json not present")
-    svg = mapview.render_svg("sample_map.json")
+        pytest.skip("starter_map.json not present")
+    svg = mapview.render_svg("starter_map.json")
     assert "mv" in svg
     assert "wood" in svg or "resources: wood" in svg
-    assert "Hakkaba" in svg
+    assert "Oldbarrow" in svg
     assert "excellent" in svg
     # No blur filters (they soft-focus the whole map when scaled).
     assert "feGaussianBlur" not in svg
@@ -359,7 +359,7 @@ def test_soe_world_map_names_every_city():
     # Road mile/mv text is tooltip-only on dense maps (not painted as <text>).
     mile_texts = re.findall(r"<text[^>]*>[^<]*\bmi\b[^<]*</text>", svg)
     assert len(mile_texts) < 20
-    assert "Madegi Doy" in svg or "Madegi" in svg
+    assert "Highfell" in svg or "Madegi" in svg
     assert "Every town is named" in svg
 
 
@@ -398,24 +398,24 @@ def test_sample_map_landmasses_split_by_sea():
     """Sea lanes do not join land; Albatross is its own island confine."""
     from webapp import mapview
 
-    path = Path(__file__).resolve().parent.parent / "maps" / "sample_map.json"
+    path = Path(__file__).resolve().parent.parent / "maps" / "starter_map.json"
     if not path.exists():
-        pytest.skip("sample_map.json not present")
-    stats = mapview.map_stats("sample_map.json")
+        pytest.skip("starter_map.json not present")
+    stats = mapview.map_stats("starter_map.json")
     assert stats["landmasses"] == 2
     assert stats["islands"] >= 1
     masses = {m["name"]: m for m in stats["masses"]}
     assert "Northern Island" in masses or any(
         "albatross" in " ".join(m["city_ids"]).lower() for m in stats["masses"]
     )
-    island = next(m for m in stats["masses"] if "albatross_city" in m["city_ids"])
+    island = next(m for m in stats["masses"] if "gullhaven" in m["city_ids"])
     assert island["kind"] == "island"
     assert len(island["city_ids"]) == 1
-    continent = next(m for m in stats["masses"] if "madegi_doy" in m["city_ids"])
-    assert "kitesta" in continent["city_ids"]
-    assert "albatross_city" not in continent["city_ids"]
+    continent = next(m for m in stats["masses"] if "highfell" in m["city_ids"])
+    assert "redport" in continent["city_ids"]
+    assert "gullhaven" not in continent["city_ids"]
     assert len(continent["hull"]) >= 3
-    html = mapview.islands_html("sample_map.json")
+    html = mapview.islands_html("starter_map.json")
     assert "Main Continent" in html or "continent" in html
     assert "Albatross" in html or "Northern Island" in html
 
@@ -424,14 +424,14 @@ def test_independents_fall_back_on_custom_map_cities():
     from webapp.service import _resolve_city_id
 
     cities = ["alpha", "beta"]
-    assert _resolve_city_id("albatross_city", cities) == "alpha"
+    assert _resolve_city_id("gullhaven", cities) == "alpha"
     assert _resolve_city_id("beta", cities) == "beta"
     assert _resolve_city_id(None, cities) == "alpha"
     # Prefer first match from a list (sample island → full-map fallback).
-    assert _resolve_city_id(["albatross_city", "kitesta"], cities) == "alpha"
+    assert _resolve_city_id(["gullhaven", "redport"], cities) == "alpha"
     assert _resolve_city_id(
-        ["albatross_city", "kitesta"], ["kitesta", "madegi_doy"]
-    ) == "kitesta"
+        ["gullhaven", "redport"], ["redport", "highfell"]
+    ) == "redport"
 
 
 # ============================================================================
@@ -461,7 +461,7 @@ def test_routing_uses_miles(miles_state):
 
 
 def test_orb_scan_cost_uses_miles(miles_state):
-    """rules.md: one power per ten miles."""
+    """Design: one power per ten miles."""
     assert engine.orb_scan_cost("town", "city", miles_state) == 10
     assert engine.orb_scan_cost("town", "ruin", miles_state) == 20
     assert engine.orb_scan_cost("town", "town", miles_state) == 0
@@ -478,13 +478,13 @@ def test_orb_scan_cost_falls_back_without_miles():
 
 def test_teleport_costs_encumbrance_and_ignores_distance(miles_state):
     """
-    rules.md: the power is "equal to the total encumbrance of the group", and
+    Design: the power is "equal to the total encumbrance of the group", and
     "TELEPORT ... has no limit on distance ... anywhere on the planet."
 
     So the island reachable only by sea costs exactly what the near ruin costs:
     one point for a lone character with nothing on him.
     """
-    from spoils_engine.orders import TeleportOrder
+    from soe.orders import TeleportOrder
 
     gs = miles_state
     wizard = models.Character(id="w", name="Merlin", faction_id="p",
@@ -506,7 +506,7 @@ def test_teleport_costs_encumbrance_and_ignores_distance(miles_state):
 
 def test_teleport_power_grows_with_the_group_not_the_journey(miles_state):
     """A heavy group is what costs power: 20 soldiers and their leader weigh 21."""
-    from spoils_engine.orders import TeleportOrder
+    from soe.orders import TeleportOrder
 
     gs = miles_state
     wizard = models.Character(id="w", name="Merlin", faction_id="p",
@@ -542,7 +542,7 @@ def test_chained_recruit_fails_when_move_failed(miles_state):
                              location_city_id="town")
     gs.characters["a"] = actor
 
-    from spoils_engine.orders import MoveOrder, RecruitOrder
+    from soe.orders import MoveOrder, RecruitOrder
     move = MoveOrder(player_id="p", actor_id="a", destination_city_id="city")
     recruit = RecruitOrder(player_id="p", actor_id="a", city_id="city",
                            unit_type="soldier", count=10)
@@ -569,8 +569,8 @@ def test_land_components_separate_the_island_from_the_continent():
     masses = land_components(wm)
 
     assert [len(m) for m in masses] == [5, 1]  # largest first
-    assert masses[1] == {"albatross_city"}  # sea lane does not join land
-    assert "madegi_doy" in masses[0]
+    assert masses[1] == {"gullhaven"}  # sea lane does not join land
+    assert "highfell" in masses[0]
 
     # The sea lane still puts every city in mutual reach, so all six are
     # eligible starts and map order is preserved.
@@ -684,9 +684,9 @@ def test_route_miles_will_not_bill_a_one_way_road_backwards(tmp_path: Path):
 
 def test_landmass_name_prefers_the_author_label_when_it_holds_up():
     wm = create_sample_map()
-    assert landmass_name(wm, "madegi_doy") == "Main Continent"
-    assert landmass_name(wm, "albatross_city") == "Northern Island"
-    assert landmass_index(wm)["albatross_city"] != landmass_index(wm)["madegi_doy"]
+    assert landmass_name(wm, "highfell") == "Main Continent"
+    assert landmass_name(wm, "gullhaven") == "Northern Island"
+    assert landmass_index(wm)["gullhaven"] != landmass_index(wm)["highfell"]
 
 
 def test_region_label_that_the_roads_contradict_is_warned_and_not_trusted(tmp_path: Path):
@@ -716,8 +716,8 @@ def test_turn_report_tells_a_player_the_roads_out_of_their_cities(miles_state):
     A postal player cannot poke the map to learn it. The report names every
     route leaving the ground they stand on, with condition, miles and cost.
     """
-    from spoils_engine import reporting
-    from spoils_engine.turn_log import TurnLog
+    from soe import reporting
+    from soe.turn_log import TurnLog
 
     gs = miles_state
     gs.factions["p"] = models.Faction(id="p", name="Reachers",
@@ -729,15 +729,15 @@ def test_turn_report_tells_a_player_the_roads_out_of_their_cities(miles_state):
 
     assert "THE LIE OF THE LAND" in report
     assert "Agnok" in report
-    assert "-> Kitesta: good road, 103 miles," in report
-    assert "-> Albatross City: sea lane, 342 miles," in report
+    assert "-> Redport: good road, 103 miles," in report
+    assert "-> Gullhaven: sea lane, 342 miles," in report
     # Only where they stand: nothing about the far side of the map.
     assert "-> Ruin:" not in report
 
 
 def test_turn_report_says_so_when_a_faction_holds_no_ground(miles_state):
-    from spoils_engine import reporting
-    from spoils_engine.turn_log import TurnLog
+    from soe import reporting
+    from soe.turn_log import TurnLog
 
     gs = miles_state
     gs.factions["p"] = models.Faction(id="p", name="Landless")
@@ -747,7 +747,7 @@ def test_turn_report_says_so_when_a_faction_holds_no_ground(miles_state):
 
 
 # ============================================================================
-# ENCUMBRANCE (rules.md Appendix B)
+# ENCUMBRANCE (the design Appendix B)
 # ============================================================================
 
 def test_appendix_b_substance_weights():
@@ -755,7 +755,7 @@ def test_appendix_b_substance_weights():
     A unit of every substance is worth one gold, so the cheap ones are heavy:
     "3 copper would have the same weight or encumbrance as 300 gold."
     """
-    from spoils_engine.encumbrance import resource_encumbrance
+    from soe.encumbrance import resource_encumbrance
 
     assert resource_encumbrance({"copper": 3}) == pytest.approx(
         resource_encumbrance({}, gold=300))
@@ -770,7 +770,7 @@ def test_appendix_b_substance_weights():
 
 
 def test_group_encumbrance_counts_people_and_cargo(miles_state):
-    from spoils_engine import encumbrance
+    from soe import encumbrance
 
     gs = miles_state
     leader = models.Character(id="l", name="Leader", faction_id="p",
@@ -791,8 +791,8 @@ def test_group_encumbrance_counts_people_and_cargo(miles_state):
 
 
 def test_summoned_creatures_are_weightless(miles_state):
-    """rules.md: summoned creatures "have zero encumbrance ... to teleport them"."""
-    from spoils_engine import encumbrance
+    """Design: summoned creatures "have zero encumbrance ... to teleport them"."""
+    from soe import encumbrance
 
     gs = miles_state
     wizard = models.Character(id="w", name="Merlin", faction_id="p",
@@ -815,7 +815,7 @@ def test_an_orb_can_scan_across_water(miles_state):
     An orb is a crystal ball, not a courier: it does not follow roads. The
     island is 342 sea miles off, so the scan costs 34 power.
     """
-    from spoils_engine.phases.intel import orb_scan_cost
+    from soe.phases.intel import orb_scan_cost
 
     assert orb_scan_cost("town", "isle", miles_state) == 34
     # And an overland target is still priced off the road mileage.
@@ -827,7 +827,7 @@ def test_an_orb_scan_takes_the_shorter_way_round(miles_state):
     town -> city -> ruin is 200 road miles. Open a 60-mile sea lane between the
     ends and the orb should price the shorter route, not the overland one.
     """
-    from spoils_engine.phases.intel import orb_scan_cost
+    from soe.phases.intel import orb_scan_cost
 
     gs = miles_state
     gs.world_map.cities["ruin"].is_port = True
@@ -841,7 +841,7 @@ def test_an_orb_scan_takes_the_shorter_way_round(miles_state):
 
 
 def test_an_unreachable_location_cannot_be_scanned(miles_state):
-    from spoils_engine.phases.intel import orb_scan_cost
+    from soe.phases.intel import orb_scan_cost
 
     gs = miles_state
     gs.world_map.cities["void"] = models.City(
@@ -851,7 +851,7 @@ def test_an_unreachable_location_cannot_be_scanned(miles_state):
 
 def test_find_route_sums_miles_from_the_roads_it_used(miles_state):
     """The route carries its own legs, so mileage is never re-guessed."""
-    from spoils_engine.phases.pathing import find_route
+    from soe.phases.pathing import find_route
 
     route = find_route("town", "ruin", miles_state)
     assert route.city_ids == ["town", "city", "ruin"]

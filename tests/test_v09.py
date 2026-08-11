@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from spoils_engine import config, engine, models, order_queue, orders, parser, storage
+from soe import config, engine, models, order_queue, orders, parser, storage
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def event_types(log, player_id="p1"):
 
 def test_orders_with_nothing_in_front_still_run_immediately(two_faction_state):
     """
-    rules.md: when the Gamemaster runs on a fixed schedule the computer executes
+    Design: when the Gamemaster runs on a fixed schedule the computer executes
     orders rather than queueing them. Adding the queue must not turn every order
     into a turn of latency.
     """
@@ -131,7 +131,7 @@ def test_a_wait_shorter_than_a_turn_still_costs_a_turn(two_faction_state):
 
 
 def test_waiting_for_a_person_ends_when_they_arrive(two_faction_state):
-    """rules.md: you may have someone wait for someone else to reach them."""
+    """Design: you may have someone wait for someone else to reach them."""
     gs = two_faction_state
     gs.characters["c1b"].location_city_id = "city2"
 
@@ -194,7 +194,7 @@ def test_repeat_runs_its_body_once_per_turn(two_faction_state):
 
 
 def test_a_loop_with_no_count_runs_until_halted(two_faction_state):
-    """rules.md: a repeat loop with no count may be cancelled only by HALT/STOP."""
+    """Design: a repeat loop with no count may be cancelled only by HALT/STOP."""
     gs = two_faction_state
     make_woodcutters(gs)
     repeat = orders.RepeatOrder(player_id="p1", actor_id="c1", times=0)
@@ -215,7 +215,7 @@ def test_a_loop_with_no_count_runs_until_halted(two_faction_state):
 
 def test_orders_queued_after_a_running_loop_stay_out_of_reach(two_faction_state):
     """
-    rules.md is explicit that a character in an unbounded loop never gets to the
+    the design is explicit that a character in an unbounded loop never gets to the
     orders written after it, so a later submission must not jump the loop.
     """
     gs = two_faction_state
@@ -233,7 +233,7 @@ def test_orders_queued_after_a_running_loop_stay_out_of_reach(two_faction_state)
 
 
 def test_a_nested_repeat_is_folded_into_the_outer_loop(two_faction_state):
-    """rules.md: nested orders run in sequence as part of the outermost loop."""
+    """Design: nested orders run in sequence as part of the outermost loop."""
     gs = two_faction_state
     outer = orders.RepeatOrder(player_id="p1", actor_id="c1", times=2)
     inner = orders.RepeatOrder(player_id="p1", actor_id="c1", times=2)
@@ -276,7 +276,7 @@ def test_halt_clears_the_backlog(two_faction_state):
 
 def test_a_plain_halt_leaves_a_wait_already_under_way_standing(two_faction_state):
     """
-    rules.md: without "immediately", the order already in progress finishes and
+    Design: without "immediately", the order already in progress finishes and
     only the queue behind it is cancelled.
     """
     gs = two_faction_state
@@ -496,7 +496,7 @@ def test_parse_wait_until_a_turn(two_faction_state):
 
 
 def test_parse_time_units_do_not_mix(two_faction_state):
-    """rules.md fixes a month at 30 days and forbids combining units."""
+    """the design fixes a month at 30 days and forbids combining units."""
     assert parser.parse_duration_days("wait 1 month") == 30
     assert parser.parse_duration_days("wait 90 minutes") == 1
     assert parser.parse_duration_days("wait 27 hours") == 2

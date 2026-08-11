@@ -7,14 +7,26 @@ same file and cannot drift apart.
 
 ## Sources
 
+> **This pipeline is being retired.** Both of its inputs are third-party
+> material and are no longer tracked in the repo — they now live in the
+> untracked `reference/` directory. Its replacement is
+> `scripts/generate_world.py`, which synthesises an equivalent world from a
+> seed:
+>
+> ```
+> python scripts/generate_world.py --seed 1 --out maps/world.json
+> python scripts/generate_world.py --seed 1 --stats
+> ```
+>
+> See [`ip_cleanroom.md`](ip_cleanroom.md). What follows documents the legacy
+> pipeline for anyone rebuilding the traced map locally.
+
 | File | What it is |
 |---|---|
-| `docs/soe_map_index.txt` | The gamemaster's gazetteer: 154 towns with population, terrain, magic-free status and grid reference, plus all 460 route legs with quality and mileage. Recovered from the Internet Archive capture of `srv.net/~ram/soe_map_index.txt` cited by `docs/Map.pdf`. |
-| `docs/soe_map_sample.png` | Rick Morneau's original 586x452 map. A flat 19-colour palette, so terrain is recoverable exactly by colour-keying. |
+| `reference/soe_map_index.txt` | The gamemaster's gazetteer: 154 towns with population, terrain, magic-free status and grid reference, plus all 460 route legs with quality and mileage. Recovered from the Internet Archive capture of `srv.net/~ram/soe_map_index.txt` cited by the original map print. |
+| `reference/soe_map_sample.png` | The author's original 586x452 map. A flat 19-colour palette, so terrain is recoverable exactly by colour-keying. |
 
-Both are authoritative inputs and should not be hand-edited. `docs/Map.pdf`
-is a truncated print of the gazetteer (it stops at "Amniteh") kept only for
-provenance.
+Both are authoritative inputs and should not be hand-edited.
 
 ## Pipeline
 

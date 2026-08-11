@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Command-line interface for the Spoils of Empire PBEM engine.
+Command-line interface for the SOE PBEM engine.
 
 Uses Typer for a clean, user-friendly CLI experience.
 """
@@ -17,12 +17,12 @@ except ImportError:
     print("Error: typer not installed. Please run: pip install typer")
     sys.exit(1)
 
-from spoils_engine import models, config, storage, map_loader, parser, engine, reporting
+from soe import models, config, storage, map_loader, parser, engine, reporting
 
 
 app = typer.Typer(
     name="soe",
-    help="Spoils of Empire PBEM Engine",
+    help="SOE PBEM Engine",
     add_completion=False
 )
 
@@ -338,7 +338,7 @@ def example_setup():
     maps_dir.mkdir(exist_ok=True)
 
     # Create sample map
-    map_file = maps_dir / "sample_map.json"
+    map_file = maps_dir / "starter_map.json"
     if not map_file.exists():
         world_map = map_loader.create_sample_map()
         map_loader.save_map_to_json(world_map, map_file)
@@ -357,13 +357,13 @@ def example_setup():
                     'id': 'player_1',
                     'name': 'The Golden Empire',
                     'leader_name': 'Emperor Marcus',
-                    'start_city': 'madegi_doy'
+                    'start_city': 'highfell'
                 },
                 {
                     'id': 'player_2',
                     'name': 'The Silver Horde',
                     'leader_name': 'Khan Tengri',
-                    'start_city': 'albatross_city'
+                    'start_city': 'gullhaven'
                 }
             ],
             # Independent characters the players can recruit with OFFER.
@@ -373,14 +373,14 @@ def example_setup():
                 {
                     'name': 'Wizard Ojibenmi',
                     'gender': 'male',
-                    'location': 'albatross_city',
+                    'location': 'gullhaven',
                     'skills': {'magic': 60}
                 },
                 {
                     'name': 'Bishop Nancy Lopenda',
                     'gender': 'female',
                     'title': 'bishop',
-                    'location': 'madegi_doy',
+                    'location': 'highfell',
                     'skills': {'religion': 45}
                 }
             ]
@@ -396,13 +396,13 @@ def example_setup():
             f.write("""# Example orders for Player 1, Turn 1
 
 # Recruit some soldiers in our starting city
-Recruit 20 soldiers in Madegi Doy.
+Recruit 20 soldiers in Highfell.
 
 # Move our leader to explore
-Have Emperor Marcus go to Kitesta.
+Have Emperor Marcus go to Redport.
 
 # Try to recruit more units
-Have Emperor Marcus recruit 10 soldiers in Kitesta.
+Have Emperor Marcus recruit 10 soldiers in Redport.
 """)
         typer.echo(f"  Created example orders: {order1_file}")
 
@@ -412,19 +412,19 @@ Have Emperor Marcus recruit 10 soldiers in Kitesta.
             f.write("""# Example orders for Player 2, Turn 1
 
 # Build up our forces
-Recruit 30 soldiers in Albatross City.
+Recruit 30 soldiers in Gullhaven.
 
 # Buy a ship since we're at a port
-Buy 1 galley in Albatross City.
+Buy 1 galley in Gullhaven.
 
 # Scout with our leader
-Have Khan Tengri go to Madegi Doy.
+Have Khan Tengri go to Highfell.
 """)
         typer.echo(f"  Created example orders: {order2_file}")
 
     typer.echo("\nExample setup complete!")
     typer.echo("\nTo create and run the example game:")
-    typer.echo("  1. soe init-game example --map maps/sample_map.json --players examples/players.yaml")
+    typer.echo("  1. soe init-game example --map maps/starter_map.json --players examples/players.yaml")
     typer.echo("  2. mkdir -p games/example/orders")
     typer.echo("  3. cp examples/orders_player1_turn1.txt games/example/orders/")
     typer.echo("  4. cp examples/orders_player2_turn1.txt games/example/orders/")

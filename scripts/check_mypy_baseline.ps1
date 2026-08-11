@@ -2,7 +2,7 @@ param(
     [int]$Baseline = 589
 )
 
-$output = @(mypy spoils_engine webapp cli.py --no-incremental 2>&1)
+$output = @(mypy soe webapp cli.py --no-incremental 2>&1)
 $summary = $output | Select-String -Pattern 'Found ([0-9]+) errors?'
 if (-not $summary) {
     $summary = $output | Select-String -Pattern 'Success: no issues found'

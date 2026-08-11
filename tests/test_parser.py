@@ -5,7 +5,7 @@ Tests parsing of English-like commands into structured Order objects.
 """
 
 import pytest
-from spoils_engine import models, parser, orders
+from soe import models, parser, orders
 
 
 @pytest.fixture

@@ -26,11 +26,11 @@ python scripts/probe_model.py openai/gpt-4o-mini qwen/qwen3-32b
 
 ## Deploying to the remote PC
 
-Copy the repo (or at least `webapp/`, `workflows/`, `scripts/`, `spoils_engine/`,
+Copy the repo (or at least `webapp/`, `workflows/`, `scripts/`, `soe/`,
 `maps/`, `server_data/`, and `games/`) to the server machine, e.g.:
 
 ```powershell
-robocopy C:\Antigravity\SOE \\REMOTE-PC\SOE\ /E /XD .git __pycache__ .pytest_cache .mypy_cache build spoils_engine.egg-info
+robocopy C:\Antigravity\SOE \\REMOTE-PC\SOE\ /E /XD .git __pycache__ .pytest_cache .mypy_cache build soe.egg-info
 ```
 
 Then on the remote PC:

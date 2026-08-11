@@ -1,8 +1,0 @@
-Have Khan Tengri sell 1 galley.
-Have Khan Tengri recruit 1 soldier.
-Have Khan Tengri tax Albatross City.
-Have Khan Tengri pay.
-Have Khan Tengri recruit 30 soldiers and 10 sailors.
-Have Khan Tengri tell Emperor Marcus "The Silver Horde is rebuilding at sea. Declare whether Madegi Doy will oppose our landing or accept a truce."
-Have Khan Tengri buy passage to Madegi Doy.
-Have Khan Tengri cautiously attack Emperor Marcus.

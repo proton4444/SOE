@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from spoils_engine import combat, engine, models, orders, territory
-from spoils_engine.combat import CombatResult
-from spoils_engine.phases import combat_phase
+from soe import combat, engine, models, orders, territory
+from soe.combat import CombatResult
+from soe.phases import combat_phase
 
 
 @pytest.fixture

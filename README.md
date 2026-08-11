@@ -1,6 +1,8 @@
-# Spoils of Empire PBEM Engine (Alpha)
+# SOE (Alpha)
 
-A deterministic play-by-email (PBEM) game engine for the fantasy strategy game **"Spoils of Empire"** by Rick Morneau.
+A deterministic play-by-email (PBEM) engine for a fantasy strategy game of
+factions, characters and magic. Its rules reference is
+[`MECHANICS.md`](MECHANICS.md).
 
 ## Overview
 
@@ -11,12 +13,12 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - **Modular**: Clean separation of parsing, game logic, and reporting
 - **Extensible**: Easy to add deferred features from the full rules
 
-> **v1.1.0 — all 89 command verbs.** The remaining eight `rules.md` commands
+> **v1.1.0 — all 89 command verbs.** The remaining eight commands
 > ship (`WORK`, `TRAIN`, `UNNAME`, `CREATE` elite troops, `INVEST`, `BUY
 > PASSAGE`, `PREACH`, `OFFER` with independent characters), plus `IF`
 > statements with `else`, `THEN` sequencing, and the sailing skill. Every
-> command verb in `rules.md` is now recognised. See
-> [`docs/rules_gap.md`](docs/rules_gap.md).
+> command verb is now recognised. See
+> [`MECHANICS.md`](MECHANICS.md).
 
 ## Features (Alpha v1.1.0)
 
@@ -251,7 +253,7 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - `QUIETLY`/`SILENTLY` parse, but report-line suppression is not implemented
 - `CREATE`'s elite troops cannot yet be assigned between leaders or disbanded
 
-Every command verb in `rules.md` is now recognised. [`docs/rules_gap.md`](docs/rules_gap.md)
+Every command verb is now recognised. [`MECHANICS.md`](MECHANICS.md)
 has the command-by-command breakdown and [`docs/alpha_scope.md`](docs/alpha_scope.md)
 records what the alpha deliberately left out.
 
@@ -723,7 +725,7 @@ soe example-setup
 
 ```
 SOE/
-├── spoils_engine/         # Core engine package
+├── soe/         # Core engine package
 │   ├── __init__.py
 │   ├── models.py          # Domain models (City, Character, etc.)
 │   ├── config.py          # Game balance parameters
@@ -767,9 +769,8 @@ SOE/
 │           └── player_*_turn*.txt
 ├── docs/
 │   ├── alpha_scope.md     # Detailed alpha scope document
-│   ├── rules_gap.md       # Coverage of rules.md mechanics
 │   └── audit_2025-11.md   # Consolidation, defect audit, design debt
-├── rules.md               # Official game rules (authoritative)
+├── MECHANICS.md           # Rules reference, derived from the engine
 ├── pyproject.toml         # Package configuration
 ├── requirements.txt       # Dependencies
 └── README.md              # This file
@@ -850,20 +851,20 @@ pytest tests/ -v
 ### Test Coverage
 
 ```bash
-pytest tests/ --cov=spoils_engine --cov-report=html
+pytest tests/ --cov=soe --cov-report=html
 ```
 
 ### Adding New Order Types
 
-1. Define order class in `spoils_engine/orders.py`
-2. Add parser in `spoils_engine/parser.py`
-3. Add processing logic in `spoils_engine/engine.py` (appropriate phase)
-4. Update `spoils_engine/reporting.py` for event logging
+1. Define order class in `soe/orders.py`
+2. Add parser in `soe/parser.py`
+3. Add processing logic in `soe/engine.py` (appropriate phase)
+4. Update `soe/reporting.py` for event logging
 5. Write tests in `tests/`
 
 ## Mapping to Original Rules
 
-This alpha implements a **simplified subset** of the official `rules.md`:
+This alpha implements a **simplified subset** of the full design:
 
 | Feature | Rules Section | Alpha Status | Notes |
 |---------|---------------|--------------|-------|
@@ -887,12 +888,12 @@ This alpha implements a **simplified subset** of the official `rules.md`:
 | Sequencing | THEN | ✅ Implemented | Chains clauses in order |
 | Hiring | OFFER | ✅ Implemented | Deterministic acceptance; NPCs from players.yaml |
 
-[`docs/rules_gap.md`](docs/rules_gap.md) is the authoritative and current
+[`MECHANICS.md`](MECHANICS.md) is the authoritative and current
 breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
 
 ## Design Philosophy
 
-1. **Rules-first**: `rules.md` is the authoritative source
+1. **Engine-first**: the implementation is the authoritative source
 2. **Simplify, don't break**: Alpha simplifies but maintains core mechanics
 3. **Clean architecture**: Easy to extend toward full implementation
 4. **Test-driven**: Core functionality has test coverage
@@ -901,13 +902,13 @@ breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
 
 ## Where we are
 
-**All 89 command verbs** from `rules.md` are now recognised, and 8 of its 9
-order-language features. See [`docs/rules_gap.md`](docs/rules_gap.md) for the
+**All 89 command verbs** are now recognised, and 8 of the 9
+order-language features. See [`MECHANICS.md`](MECHANICS.md) for the
 full breakdown, including what each new command still simplifies.
 
 The rules describe an **asynchronous** game where orders queue and execute as
 game time passes. v0.9 closed most of that gap: orders live on a persistent
-per-character queue (`spoils_engine/order_queue.py`) that survives save/load and
+per-character queue (`soe/order_queue.py`) that survives save/load and
 carries work between turns. What remains is granularity — the queue advances one
 pass per turn, so it measures time in weeks where the rules measure it in hours.
 
@@ -999,12 +1000,17 @@ This is an alpha implementation. Contributions welcome:
 
 ## License
 
-Based on "Spoils of Empire" rules by Rick Morneau.
 Engine implementation: [Specify license]
+
+The mechanics this engine implements were inspired by an earlier
+play-by-email design. Game systems are not covered by copyright, but that
+project's rules text, map and title are, so the engine's own rules reference
+([`MECHANICS.md`](MECHANICS.md)) is written from the implementation rather
+than from any source document, and the world map is being replaced by a
+seeded generator. See [`docs/ip_cleanroom.md`](docs/ip_cleanroom.md).
 
 ## Acknowledgments
 
-- **Rick Morneau**: Original Spoils of Empire game design and rules
 - **Far Horizons**: Architectural inspiration for PBEM engine design
 
 ---
