@@ -1,0 +1,48 @@
+<section class="card">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Server-wide</p>
+      <h2>LLM settings</h2>
+    </div>
+    <span class="muted">env vars win; this file fills the gap</span>
+  </div>
+  <table class="players">
+    <tr>
+      <th>Base URL</th><th>Model</th><th>Key</th><th>T°</th>
+      <th>Timeout s</th><th>Retries</th><th>Max tokens</th><th></th>
+    </tr>
+    <tr>
+      <td class="muted">{{ llm.base_url or "openrouter default" }}</td>
+      <td class="muted">{{ llm.model or "SOE_LLM_MODEL default" }}</td>
+      <td class="muted">
+        {% if llm.key_set %}<code>{{ llm.key_masked }}</code>
+        {% else %}<span class="wait">not set</span>{% endif %}
+        {% if llm_env.key %}<span class="ok">(env)</span>{% endif %}
+      </td>
+      <td class="muted">{{ llm.temperature }}</td>
+      <td class="muted">{{ llm.timeout_seconds }}</td>
+      <td class="muted">{{ llm.max_retries }}</td>
+      <td class="muted">{{ llm.max_tokens }}</td>
+      <td class="muted">{{ llm.updated_at[:19]|replace("T", " ") if llm.updated_at else "never" }}</td>
+    </tr>
+  </table>
+  <form method="post" action="{{ llm_action }}" class="row setup-form">
+    <input name="base_url" placeholder="base URL (blank = keep / openrouter)">
+    <input name="model" placeholder="model, e.g. poolside/laguna-s-2.1:free">
+    <input name="key" type="password" placeholder="API key (blank = keep)">
+    <input name="temperature" type="number" min="0" max="2" step="0.1" placeholder="temp">
+    <input name="timeout_seconds" type="number" min="1" placeholder="timeout s">
+    <input name="max_retries" type="number" min="0" placeholder="retries">
+    <input name="max_tokens" type="number" min="16" placeholder="max tokens">
+    <label class="check">
+      <input type="checkbox" name="clear_key"> clear key
+    </label>
+    <button type="submit" name="action" value="save">Save</button>
+    <button type="submit" name="action" value="probe" class="ghost">Save + probe</button>
+  </form>
+  <p class="muted">The key never leaves the server and is never shown back.
+  <strong>Probe</strong> makes one tiny model call and reports whether the
+  configured model writes parseable orders. Env variables
+  (<code>SOE_LLM_KEY</code>, <code>SOE_LLM_MODEL</code>, …) always take
+  precedence over this file.</p>
+</section>

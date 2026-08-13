@@ -1,0 +1,537 @@
+{
+  "generated_at": "2026-08-11T11:24:03.574495+00:00",
+  "policies": [
+    "llm:openai/gpt-4o-mini:expansionist-v1",
+    "random"
+  ],
+  "map": "starter_map.json",
+  "turns_per_game": 30,
+  "games": 8,
+  "draws": 0,
+  "wins": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 8
+  },
+  "win_rate": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 1.0,
+    "random": 0.0
+  },
+  "pairs": [
+    {
+      "seed": 0,
+      "code": "AR000",
+      "winners": [
+        "llm:openai/gpt-4o-mini:expansionist-v1",
+        "llm:openai/gpt-4o-mini:expansionist-v1"
+      ],
+      "verdict": "swept",
+      "swept_by": "llm:openai/gpt-4o-mini:expansionist-v1"
+    },
+    {
+      "seed": 1,
+      "code": "AR001",
+      "winners": [
+        "llm:openai/gpt-4o-mini:expansionist-v1",
+        "llm:openai/gpt-4o-mini:expansionist-v1"
+      ],
+      "verdict": "swept",
+      "swept_by": "llm:openai/gpt-4o-mini:expansionist-v1"
+    },
+    {
+      "seed": 2,
+      "code": "AR002",
+      "winners": [
+        "llm:openai/gpt-4o-mini:expansionist-v1",
+        "llm:openai/gpt-4o-mini:expansionist-v1"
+      ],
+      "verdict": "swept",
+      "swept_by": "llm:openai/gpt-4o-mini:expansionist-v1"
+    },
+    {
+      "seed": 3,
+      "code": "AR003",
+      "winners": [
+        "llm:openai/gpt-4o-mini:expansionist-v1",
+        "llm:openai/gpt-4o-mini:expansionist-v1"
+      ],
+      "verdict": "swept",
+      "swept_by": "llm:openai/gpt-4o-mini:expansionist-v1"
+    }
+  ],
+  "pair_sweeps": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 4,
+    "random": 0
+  },
+  "pair_splits": 0,
+  "decided_by": {
+    "soldiers": 5,
+    "secured": 3
+  },
+  "warnings_total": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 352,
+    "random": 0
+  },
+  "parsed_orders_total": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 3306,
+    "random": 1629
+  },
+  "errors": [],
+  "results": [
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "llm:openai/gpt-4o-mini:expansionist-v1",
+        "player_2": "random"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 2750.0,
+          "soldiers": 228,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 440.9,
+          "soldiers": 7,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 125.37,
+      "contact_turn": {
+        "player_1": 7,
+        "player_2": 7
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "b7757c7f47082057fb0b9f42e273129f06a977f8f666abcbcc2c74316ce8fa2a"
+    },
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "random",
+        "player_2": "llm:openai/gpt-4o-mini:expansionist-v1"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 979.7,
+          "soldiers": 8,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 2070.0,
+          "soldiers": 150,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 118.63,
+      "contact_turn": {
+        "player_1": 7,
+        "player_2": 7
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "e35f6060fc9c70f497624e4b74d079210a4ea8c7b732d1a93183bfe7b5e259a1"
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "llm:openai/gpt-4o-mini:expansionist-v1",
+        "player_2": "random"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1830.9,
+          "soldiers": 320,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1571.5,
+          "soldiers": 47,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 106.72,
+      "contact_turn": {
+        "player_1": 1,
+        "player_2": 1
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "7899b9adc44b05a098e76537b08b3010bbe6fc0af5820e9ea77d33bc7c9c882f"
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "random",
+        "player_2": "llm:openai/gpt-4o-mini:expansionist-v1"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 4104.7,
+          "soldiers": 2,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 943.2,
+          "soldiers": 94,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 103.74,
+      "contact_turn": {
+        "player_1": 1,
+        "player_2": 1
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "b4a97101b30a828df96883d242a07d939204bf4d6e7423314397b88fbc8f04aa"
+    },
+    {
+      "code": "AR002",
+      "seats": {
+        "player_1": "llm:openai/gpt-4o-mini:expansionist-v1",
+        "player_2": "random"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1860.0,
+          "soldiers": 150,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 3484.3,
+          "soldiers": 2,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 108.92,
+      "contact_turn": {
+        "player_1": 4,
+        "player_2": 4
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "341a26b4309656def1a846f4336195268a7c25d37ae0fd48e6d6da7987a183f6"
+    },
+    {
+      "code": "AR002",
+      "seats": {
+        "player_1": "random",
+        "player_2": "llm:openai/gpt-4o-mini:expansionist-v1"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 675.1,
+          "soldiers": 23,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 100,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 121.21,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "e15db4763087907106d92035accd0ff2b37569ca75cd29ed22b16b5a0874871d"
+    },
+    {
+      "code": "AR003",
+      "seats": {
+        "player_1": "llm:openai/gpt-4o-mini:expansionist-v1",
+        "player_2": "random"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 700,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 1170.2,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 108.77,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "167e1fa4ef3338ce878ed783a2af6acdfa17cc92fee374d9dc9acc7f191498ed"
+    },
+    {
+      "code": "AR003",
+      "seats": {
+        "player_1": "random",
+        "player_2": "llm:openai/gpt-4o-mini:expansionist-v1"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 865.5,
+          "soldiers": 218,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 489.0,
+          "soldiers": 350,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 110.32,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "b6aa048f91418aed84bfd5229ef1c15af1710d96a7e2ddbc95fd3e57abec1508"
+    }
+  ],
+  "reliability": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": {
+      "calls_attempted": 240,
+      "calls_completed": 240,
+      "call_failures": {},
+      "parseable_call_rate": 1.0,
+      "no_op_turns": 0,
+      "retried_calls": 0,
+      "latency_ms": {
+        "min": 1082.0,
+        "median": 3916.9,
+        "mean": 3749.7,
+        "max": 10067.4,
+        "n": 240
+      },
+      "tokens": {
+        "prompt_tokens": 616832,
+        "completion_tokens": 50564,
+        "total_tokens": 667396
+      },
+      "cost": 0.121635
+    },
+    "random": {
+      "calls_attempted": 240,
+      "calls_completed": 240,
+      "call_failures": {},
+      "parseable_call_rate": 1.0,
+      "no_op_turns": 0,
+      "retried_calls": 0,
+      "latency_ms": null,
+      "tokens": {},
+      "cost": null
+    }
+  },
+  "strategy": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": {
+      "order_families": {
+        "MOVE": 352,
+        "RECRUIT": 644,
+        "INVEST": 518,
+        "TAX": 548,
+        "SECURE": 352,
+        "AWAIT": 473,
+        "ATTACK": 373,
+        "MINE": 2,
+        "SAIL": 22,
+        "FLY": 5,
+        "WORK": 2,
+        "STUDY": 7,
+        "SUMMON": 5,
+        "ALLY": 1,
+        "ENEMY": 1,
+        "NEUTRAL": 1
+      },
+      "first_contact_turn": {
+        "min": 1.0,
+        "median": 4.0,
+        "mean": 4.0,
+        "max": 7.0,
+        "n": 5
+      },
+      "eliminations": 0,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 222.4
+    },
+    "random": {
+      "order_families": {
+        "MOVE": 159,
+        "WORK": 144,
+        "ATTACK": 39,
+        "TAX": 183,
+        "AWAIT": 181,
+        "INVEST": 159,
+        "COLLECT": 164,
+        "RECRUIT": 294,
+        "SECURE": 144,
+        "STUDY": 162
+      },
+      "first_contact_turn": {
+        "min": 1.0,
+        "median": 4.0,
+        "mean": 4.0,
+        "max": 7.0,
+        "n": 5
+      },
+      "eliminations": 0,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 38.3
+    }
+  },
+  "blueprint_diff": {
+    "a": {
+      "policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "games": 8,
+      "wins": 8,
+      "survival_rate": 1.0,
+      "contact_rate": 0.625,
+      "orders": {
+        "recruit": 644,
+        "attack": 373,
+        "movement": 352,
+        "secure": 352,
+        "tax": 548
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 18.0,
+        "mean": 17.3,
+        "max": 30.0,
+        "n": 644
+      },
+      "first_attack_turn": {
+        "min": 1.0,
+        "median": 16.0,
+        "mean": 16.1,
+        "max": 30.0,
+        "n": 373
+      }
+    },
+    "b": {
+      "policy": "random",
+      "games": 8,
+      "wins": 0,
+      "survival_rate": 1.0,
+      "contact_rate": 0.625,
+      "orders": {
+        "recruit": 294,
+        "attack": 39,
+        "movement": 159,
+        "secure": 144,
+        "tax": 183
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 15.0,
+        "mean": 15.6,
+        "max": 30.0,
+        "n": 294
+      },
+      "first_attack_turn": {
+        "min": 1.0,
+        "median": 10.0,
+        "mean": 12.7,
+        "max": 28.0,
+        "n": 39
+      }
+    }
+  },
+  "config": {
+    "mode": "smoke",
+    "map": "starter_map.json",
+    "turns": 30,
+    "seed_pairs": 4,
+    "temperature": 0.0,
+    "max_tokens": 1500,
+    "max_spend_usd": 2.0,
+    "entrants": [
+      {
+        "type": "llm",
+        "model": "openai/gpt-4o-mini",
+        "blueprint": "expansionist-v1"
+      },
+      {
+        "type": "random"
+      }
+    ]
+  }
+}

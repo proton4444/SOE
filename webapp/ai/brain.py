@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import os
 import time
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 import httpx
 
@@ -33,6 +35,58 @@ MAX_OUTPUT_TOKENS = int(os.environ.get("SOE_LLM_MAX_TOKENS", "1500"))
 # Cap how long a single retry may back off (Retry-After may suggest more).
 MAX_BACKOFF_SECONDS = 30.0
 
+# Env-only defaults (above) stay frozen for the arena manifest; the runtime
+# resolution below prefers the environment and falls back to the
+# dashboard-persisted settings (webapp.llm_settings), then to these defaults.
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name, "").strip()
+    try:
+        return float(raw) if raw else default
+    except ValueError:
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    try:
+        return int(raw) if raw else default
+    except ValueError:
+        return default
+
+
+def _api_base() -> str:
+    from webapp import llm_settings
+
+    value = llm_settings.effective("base_url", "SOE_LLM_BASE", "")
+    return (value or "https://openrouter.ai/api/v1").rstrip("/")
+
+
+def _api_key() -> str:
+    from webapp import llm_settings
+
+    value = llm_settings.effective("key", "SOE_LLM_KEY", "")
+    return (value or "").strip()
+
+
+def _timeout_seconds() -> float:
+    from webapp import llm_settings
+
+    return float(llm_settings.effective("timeout_seconds", "SOE_LLM_TIMEOUT", 120))
+
+
+def _max_retries() -> int:
+    from webapp import llm_settings
+
+    return int(llm_settings.effective("max_retries", "SOE_LLM_RETRIES", 2))
+
+
+def _max_output_tokens() -> int:
+    from webapp import llm_settings
+
+    return int(llm_settings.effective("max_tokens", "SOE_LLM_MAX_TOKENS", 1500))
+
 
 class LLMError(RuntimeError):
     """The model could not be reached or refused the request."""
@@ -48,13 +102,45 @@ class _RetryableError(Exception):
         self.retry_after = retry_after
 
 
+@dataclass(frozen=True)
+class ChatResult:
+    """Structured outcome of one chat completion (Phase 0, WP2).
+
+    ``usage`` is the provider's own token accounting kept as a structure,
+    not a log string; keys are provider-defined. ``cost`` is recorded only
+    when the provider declares it directly (``usage["cost"]`` on
+    OpenRouter); otherwise it stays absent -- the official record never
+    carries an estimated cost.
+
+    Never contains credentials, headers, or signed URLs.
+    """
+
+    text: str
+    model: str
+    attempts: int
+    latency_ms: float
+    usage: dict[str, int | float] = field(default_factory=dict)
+    provider_request_id: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 def is_configured() -> bool:
-    return bool(LLM_API_KEY)
+    return bool(_api_key())
 
 
 def model_name(preferred: str) -> str:
     """The model to use for a profile: its own, else the configured default."""
-    return preferred.strip() or LLM_MODEL
+    preferred = preferred.strip()
+    if preferred:
+        return preferred
+    env_model = os.environ.get("SOE_LLM_MODEL", "").strip()
+    if env_model:
+        return env_model
+    from webapp import llm_settings
+
+    return (llm_settings.load_settings().get("model") or LLM_MODEL).strip()
 
 
 def chat(
@@ -62,7 +148,7 @@ def chat(
     model: str,
     messages: list[dict],
     temperature: float = 0.0,
-    max_tokens: int = MAX_OUTPUT_TOKENS,
+    max_tokens: int | None = None,
     images: tuple[str, ...] = (),
 ) -> str:
     """One chat completion. Returns the assistant's text content.
@@ -71,17 +157,44 @@ def chat(
     the final user message for vision-capable models. Nothing about the
     conversation is logged — only model, sizes, latency, and token usage.
     """
+    return chat_result(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        images=images,
+    ).text
+
+
+def chat_result(
+    *,
+    model: str,
+    messages: list[dict],
+    temperature: float = 0.0,
+    max_tokens: int | None = None,
+    images: tuple[str, ...] = (),
+) -> ChatResult:
+    """One chat completion with structured accounting.
+
+    Same contract as ``chat``; callers that need usage, retries, latency or
+    the provider request id use this and get a ``ChatResult``. Raises
+    ``LLMError`` after exhausting retries, like ``chat``.
+    """
     if not is_configured():
         raise LLMError("LLM not configured: set SOE_LLM_KEY.")
     if images:
         messages = _with_images(messages, images)
     prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
+    max_tokens = max_tokens or _max_output_tokens()
+    retries = _max_retries()
 
     last_error: Exception | None = None
-    for attempt in range(1, MAX_RETRIES + 2):
+    for attempt in range(1, retries + 2):
         started = time.perf_counter()
         try:
-            text, usage = _post_once(model, messages, temperature, max_tokens)
+            text, usage, request_id = _post_once(
+                model, messages, temperature, max_tokens
+            )
             latency_ms = (time.perf_counter() - started) * 1000
             logger.info(
                 "llm_ok model=%s attempts=%d latency_ms=%.1f prompt_chars=%d "
@@ -93,7 +206,14 @@ def chat(
                 len(text),
                 usage,
             )
-            return text
+            return ChatResult(
+                text=text,
+                model=model,
+                attempts=attempt,
+                latency_ms=round(latency_ms, 1),
+                usage=dict(usage),
+                provider_request_id=request_id,
+            )
         except _RetryableError as exc:
             last_error = exc
             logger.warning(
@@ -115,7 +235,7 @@ def chat(
             )
             time.sleep(attempt)
     raise LLMError(
-        f"LLM request failed after {MAX_RETRIES + 1} attempts: "
+        f"LLM request failed after {retries + 1} attempts: "
         f"{type(last_error).__name__}: {last_error}"
     ) from last_error
 
@@ -136,7 +256,7 @@ def _with_images(messages: list[dict], images: tuple[str, ...]) -> list[dict]:
 
 def _post_once(
     model: str, messages: list[dict], temperature: float, max_tokens: int
-) -> tuple[str, str]:
+) -> tuple[str, dict, str]:
     payload = {
         "model": model,
         "messages": messages,
@@ -144,16 +264,16 @@ def _post_once(
         "max_tokens": max_tokens,
     }
     headers = {
-        "Authorization": f"Bearer {LLM_API_KEY}",
+        "Authorization": f"Bearer {_api_key()}",
         "Content-Type": "application/json",
         # OpenRouter attribution headers; a neutral title is fine.
         "HTTP-Referer": "https://github.com/anomalyco/opencode",
         "X-Title": "SOE",
     }
     try:
-        with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
+        with httpx.Client(timeout=_timeout_seconds()) as client:
             response = client.post(
-                f"{LLM_BASE_URL}/chat/completions",
+                f"{_api_base()}/chat/completions",
                 headers=headers,
                 json=payload,
             )
@@ -176,8 +296,10 @@ def _post_once(
     except (KeyError, IndexError, TypeError) as exc:
         raise LLMError("LLM returned an unexpected payload.") from exc
     usage = data.get("usage", {})
-    usage_summary = ",".join(f"{k}={v}" for k, v in usage.items())
-    return text or "", usage_summary
+    if not isinstance(usage, dict):
+        usage = {}
+    request_id = str(data.get("id", "") or "")
+    return text or "", usage, request_id
 
 
 def _provider_error(response) -> str:

@@ -1,0 +1,3505 @@
+{
+  "generated_at": "2026-08-13T10:34:35.117753+00:00",
+  "policies": [
+    "scripted:balanced",
+    "random"
+  ],
+  "map": "world.json",
+  "turns_per_game": 60,
+  "games": 80,
+  "draws": 0,
+  "wins": {
+    "scripted:balanced": 36,
+    "random": 44
+  },
+  "win_rate": {
+    "scripted:balanced": 0.45,
+    "random": 0.55
+  },
+  "pairs": [
+    {
+      "seed": 0,
+      "code": "AR000",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 1,
+      "code": "AR001",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 2,
+      "code": "AR002",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 3,
+      "code": "AR003",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 4,
+      "code": "AR004",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 5,
+      "code": "AR005",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 6,
+      "code": "AR006",
+      "winners": [
+        "scripted:balanced",
+        "random"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 7,
+      "code": "AR007",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 8,
+      "code": "AR008",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 9,
+      "code": "AR009",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 10,
+      "code": "AR010",
+      "winners": [
+        "scripted:balanced",
+        "random"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 11,
+      "code": "AR011",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 12,
+      "code": "AR012",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 13,
+      "code": "AR013",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 14,
+      "code": "AR014",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 15,
+      "code": "AR015",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 16,
+      "code": "AR016",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 17,
+      "code": "AR017",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 18,
+      "code": "AR018",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 19,
+      "code": "AR019",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 20,
+      "code": "AR020",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 21,
+      "code": "AR021",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 22,
+      "code": "AR022",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 23,
+      "code": "AR023",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 24,
+      "code": "AR024",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 25,
+      "code": "AR025",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 26,
+      "code": "AR026",
+      "winners": [
+        "scripted:balanced",
+        "random"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 27,
+      "code": "AR027",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 28,
+      "code": "AR028",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 29,
+      "code": "AR029",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 30,
+      "code": "AR030",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 31,
+      "code": "AR031",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 32,
+      "code": "AR032",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 33,
+      "code": "AR033",
+      "winners": [
+        "scripted:balanced",
+        "random"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 34,
+      "code": "AR034",
+      "winners": [
+        "scripted:balanced",
+        "random"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 35,
+      "code": "AR035",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 36,
+      "code": "AR036",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 37,
+      "code": "AR037",
+      "winners": [
+        "scripted:balanced",
+        "scripted:balanced"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:balanced"
+    },
+    {
+      "seed": 38,
+      "code": "AR038",
+      "winners": [
+        "random",
+        "random"
+      ],
+      "verdict": "swept",
+      "swept_by": "random"
+    },
+    {
+      "seed": 39,
+      "code": "AR039",
+      "winners": [
+        "random",
+        "scripted:balanced"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    }
+  ],
+  "pair_sweeps": {
+    "scripted:balanced": 8,
+    "random": 12
+  },
+  "pair_splits": 20,
+  "decided_by": {
+    "secured": 28,
+    "soldiers": 49,
+    "gold": 3
+  },
+  "warnings_total": {
+    "scripted:balanced": 462,
+    "random": 0
+  },
+  "parsed_orders_total": {
+    "scripted:balanced": 35163,
+    "random": 33585
+  },
+  "errors": [],
+  "results": [
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 18,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 577.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.37,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 156.9,
+          "soldiers": 8,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 726.3,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.13,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 538.1,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 505.5,
+          "soldiers": 106,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.0,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 616.8,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 30,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.1,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR002",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 120.2,
+          "soldiers": 17,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.09,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR002",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 19,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 505.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR003",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 587.3,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1359.6,
+          "soldiers": 23,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.02,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR003",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 59.1,
+          "soldiers": 4,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 616.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 11.85,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR004",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 2911.1,
+          "soldiers": 94,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.17,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR004",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 30,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 537.7,
+          "soldiers": 95,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 12.68,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR005",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 18440.2,
+          "soldiers": 62,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.67,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR005",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 2072.7,
+          "soldiers": 50,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.78,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR006",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 657.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 450.1,
+          "soldiers": 2,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.99,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR006",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 21.0,
+          "soldiers": 12,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.93,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR007",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 621.7,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 13.5,
+          "soldiers": 7,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.41,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR007",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 1252.1,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR008",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 616.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 91.4,
+          "soldiers": 16,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.09,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR008",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 71.3,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 573.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.62,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR009",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 9,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.57,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR009",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 780.7,
+          "soldiers": 41,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 566.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.2,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR010",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 618.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 55.6,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.88,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR010",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 530.9,
+          "soldiers": 6,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 50,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.33,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR011",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 86.1,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 37,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.78,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR011",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 2649.6,
+          "soldiers": 20,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 597.5,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.85,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR012",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1265.9,
+          "soldiers": 123,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.64,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR012",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 66,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.76,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR013",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 41,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.09,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR013",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 945.0,
+          "soldiers": 34,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.5,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.75,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR014",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 586.1,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 5745.6,
+          "soldiers": 91,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.66,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR014",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 164.4,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.69,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR015",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 7237.8,
+          "soldiers": 42,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.97,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR015",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 12.9,
+          "soldiers": 67,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 230,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.48,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR016",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 11,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 5328.5,
+          "soldiers": 52,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.88,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR016",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 135,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.42,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR017",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 4.3,
+          "soldiers": 4,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.79,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR017",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 249.7,
+          "soldiers": 51,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 6.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.44,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR018",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 5.8,
+          "soldiers": 34,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.53,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR018",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 110.3,
+          "soldiers": 70,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 50.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.73,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR019",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 111.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.14,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR019",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 1019.4,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 487.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.04,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR020",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 436.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 7881.7,
+          "soldiers": 285,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.66,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR020",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 14.0,
+          "soldiers": 20,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 590,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.37,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR021",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 592.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 297.9,
+          "soldiers": 31,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.96,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR021",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 131.5,
+          "soldiers": 8,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 591.7,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.03,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR022",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 678.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 353.5,
+          "soldiers": 29,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.89,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR022",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 3,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 6.4,
+          "soldiers": 25,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.95,
+      "contact_turn": {
+        "player_1": 17,
+        "player_2": 17
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR023",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1022.0,
+          "soldiers": 59,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.1,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR023",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 53,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.67,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR024",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 319.6,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 8.97,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR024",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 3670.4,
+          "soldiers": 95,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 670.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.01,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR025",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 536.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 29,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.54,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR025",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 40,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.32,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR026",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 50.0,
+          "soldiers": 420,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 48.1,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.49,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR026",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9908.3,
+          "soldiers": 201,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 723.3,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.06,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR027",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 555.8,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1335.9,
+          "soldiers": 20,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.18,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR027",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1601.1,
+          "soldiers": 47,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 668.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.93,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR028",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 7387.4,
+          "soldiers": 221,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.52,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR028",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 314.6,
+          "soldiers": 54,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 430,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.39,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR029",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1154.6,
+          "soldiers": 41,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.29,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR029",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 50.2,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.85,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR030",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 732.9,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.64,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR030",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 2.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.86,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR031",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 8383.7,
+          "soldiers": 95,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.36,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR031",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 834.2,
+          "soldiers": 14,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.68,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR032",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 7775.3,
+          "soldiers": 27,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 12.37,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR032",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 22,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.72,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR033",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 8,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.55,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR033",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 4831.8,
+          "soldiers": 210,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 525.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.66,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR034",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 660.9,
+          "soldiers": 640,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 978.7,
+          "soldiers": 20,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 13.09,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR034",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 15086.2,
+          "soldiers": 168,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 12.87,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR035",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 540.9,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 2626.8,
+          "soldiers": 30,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.63,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR035",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 2001.8,
+          "soldiers": 95,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 582.5,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.22,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR036",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 486.9,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.6,
+          "soldiers": 12,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.66,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR036",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 664.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.47,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR037",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 541.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 37.8,
+          "soldiers": 12,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 12.23,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR037",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 97.5,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 45,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.17,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR038",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 3234.9,
+          "soldiers": 70,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.24,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR038",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_1",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 6757.8,
+          "soldiers": 87,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.79,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR039",
+      "seats": {
+        "player_1": "scripted:balanced",
+        "player_2": "random"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "random",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 10,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 121.4,
+          "soldiers": 45,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 9.39,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR039",
+      "seats": {
+        "player_1": "random",
+        "player_2": "scripted:balanced"
+      },
+      "turns_played": 60,
+      "winner": "player_2",
+      "winner_policy": "scripted:balanced",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 41.1,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 125,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 10.3,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    }
+  ],
+  "reliability": {
+    "scripted:balanced": {
+      "calls_attempted": 4800,
+      "calls_completed": 4800,
+      "call_failures": {},
+      "parseable_call_rate": 1.0,
+      "no_op_turns": 0,
+      "retried_calls": 0,
+      "latency_ms": null,
+      "tokens": {},
+      "cost": null
+    },
+    "random": {
+      "calls_attempted": 4800,
+      "calls_completed": 4800,
+      "call_failures": {},
+      "parseable_call_rate": 1.0,
+      "no_op_turns": 0,
+      "retried_calls": 0,
+      "latency_ms": null,
+      "tokens": {},
+      "cost": null
+    }
+  },
+  "strategy": {
+    "scripted:balanced": {
+      "order_families": {
+        "TAX": 4800,
+        "SECURE": 4517,
+        "RECRUIT": 7672,
+        "FLY": 136,
+        "INVEST": 407,
+        "IF": 686,
+        "WORK": 774,
+        "SCRY": 619,
+        "CONJURE": 583,
+        "TRADE": 441,
+        "REPORT": 681,
+        "PAY": 388,
+        "ENEMY": 297,
+        "NAME": 640,
+        "TRAIN": 298,
+        "LURK": 570,
+        "ADDRESS": 80,
+        "MOVE": 4070,
+        "SAY": 1055,
+        "STUDY": 1788,
+        "PASSWORD": 80,
+        "ALLY": 163,
+        "NEUTRAL": 180,
+        "PROMOTE": 249,
+        "CREATE": 181,
+        "SCAN": 125,
+        "REPAY": 420,
+        "POST": 853,
+        "SUMMON": 800,
+        "COLLECT": 512,
+        "BUILD": 130,
+        "MINE": 126,
+        "BORROW": 117,
+        "ABSORB": 60,
+        "CHARGE": 77,
+        "SEARCH": 320,
+        "FORTIFY": 120,
+        "PASSAGE": 28,
+        "TELEPORT": 61,
+        "BUY_SHIP": 13,
+        "UNFORTIFY": 4,
+        "ATTACK": 17,
+        "PROBE": 3,
+        "SAIL": 22
+      },
+      "first_contact_turn": {
+        "min": 17.0,
+        "median": 17.0,
+        "mean": 17.0,
+        "max": 17.0,
+        "n": 1
+      },
+      "eliminations": 0,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 47.1
+    },
+    "random": {
+      "order_families": {
+        "MOVE": 3343,
+        "TAX": 3318,
+        "AWAIT": 3396,
+        "INVEST": 3395,
+        "COLLECT": 3335,
+        "RECRUIT": 6679,
+        "WORK": 3375,
+        "SECURE": 3328,
+        "STUDY": 3366,
+        "ATTACK": 50
+      },
+      "first_contact_turn": {
+        "min": 17.0,
+        "median": 17.0,
+        "mean": 17.0,
+        "max": 17.0,
+        "n": 1
+      },
+      "eliminations": 0,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 37.5
+    }
+  },
+  "blueprint_diff": {
+    "a": {
+      "policy": "scripted:balanced",
+      "games": 80,
+      "wins": 36,
+      "survival_rate": 1.0,
+      "contact_rate": 0.013,
+      "orders": {
+        "recruit": 7672,
+        "attack": 17,
+        "movement": 4070,
+        "secure": 4517,
+        "tax": 4800
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 25.0,
+        "mean": 26.4,
+        "max": 60.0,
+        "n": 7672
+      },
+      "first_attack_turn": {
+        "min": 18.0,
+        "median": 46.0,
+        "mean": 45.5,
+        "max": 59.0,
+        "n": 17
+      }
+    },
+    "b": {
+      "policy": "random",
+      "games": 80,
+      "wins": 44,
+      "survival_rate": 1.0,
+      "contact_rate": 0.013,
+      "orders": {
+        "recruit": 6679,
+        "attack": 50,
+        "movement": 3343,
+        "secure": 3328,
+        "tax": 3318
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 31.0,
+        "mean": 30.8,
+        "max": 60.0,
+        "n": 6679
+      },
+      "first_attack_turn": {
+        "min": 1.0,
+        "median": 41.0,
+        "mean": 32.1,
+        "max": 58.0,
+        "n": 50
+      }
+    }
+  },
+  "config": {
+    "mode": "legacy",
+    "map": "world.json",
+    "turns": 60,
+    "seed_pairs": 40,
+    "entrants": [
+      {
+        "type": "scripted",
+        "style": "balanced"
+      },
+      {
+        "type": "random"
+      }
+    ]
+  }
+}

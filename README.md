@@ -254,7 +254,8 @@ This is an alpha implementation of a turn-based engine that processes English-li
 - `CREATE`'s elite troops cannot yet be assigned between leaders or disbanded
 
 Every command verb is now recognised. [`MECHANICS.md`](MECHANICS.md)
-has the command-by-command breakdown and [`docs/alpha_scope.md`](docs/alpha_scope.md)
+has the command-by-command breakdown and the archived
+[`alpha_scope.md`](docs/archive/pre-agent-competition-2026-08-11/alpha_scope.md)
 records what the alpha deliberately left out.
 
 ## Installation
@@ -567,7 +568,8 @@ set SOE_COOKIE_SECURE=1
 python -m uvicorn webapp.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
-For the controlled beta, prefer [`docs/controlled_beta_runbook.md`](docs/controlled_beta_runbook.md)
+For the controlled beta, prefer the archived
+[`controlled_beta_runbook.md`](docs/archive/pre-agent-competition-2026-08-11/controlled_beta_runbook.md)
 and `scripts/start_beta.ps1`; put HTTPS termination in front of the loopback
 server. Open the HTTPS host to create or join a game. The host resolves each turn
 after every joined player has submitted orders, or may explicitly force an early
@@ -670,10 +672,13 @@ The strategist reply convention is: reasoning first, then a `--- ORDERS ---`
 marker line, then one order per line. Orders are submitted verbatim from the
 marker onward. Set `SOE_BOT_VISION=1` and use a vision-capable model (e.g.
 `openai/gpt-4o-mini`) to let the strategist also see a rendered PNG of its
-fog-of-war map each turn. See `docs/ai_dashboard_plan.md` for the roadmap.
+fog-of-war map each turn. See the current product direction in
+[`docs/AGENT_COMPETITION.md`](docs/AGENT_COMPETITION.md); the implementation
+roadmap is archived under `docs/archive/pre-agent-competition-2026-08-11/`.
 
 For beta readiness, known constraints, and the tester protocol, see
-[`docs/beta_readiness_2026-08.md`](docs/beta_readiness_2026-08.md).
+the archived
+[`beta_readiness_2026-08.md`](docs/archive/pre-agent-competition-2026-08-11/beta_readiness_2026-08.md).
 
 ## CLI Commands
 
@@ -889,7 +894,8 @@ This alpha implements a **simplified subset** of the full design:
 | Hiring | OFFER | ✅ Implemented | Deterministic acceptance; NPCs from players.yaml |
 
 [`MECHANICS.md`](MECHANICS.md) is the authoritative and current
-breakdown; `docs/alpha_scope.md` records the original alpha simplifications.
+breakdown; the archived `docs/archive/pre-agent-competition-2026-08-11/alpha_scope.md`
+records the original alpha simplifications.
 
 ## Design Philosophy
 
@@ -996,7 +1002,7 @@ This is an alpha implementation. Contributions welcome:
 1. Bug fixes
 2. Test coverage improvements
 3. Documentation enhancements
-4. Feature implementations from `docs/alpha_scope.md`
+4. Feature implementations from the archived alpha scope
 
 ## License
 
@@ -1007,7 +1013,8 @@ play-by-email design. Game systems are not covered by copyright, but that
 project's rules text, map and title are, so the engine's own rules reference
 ([`MECHANICS.md`](MECHANICS.md)) is written from the implementation rather
 than from any source document, and the world map is being replaced by a
-seeded generator. See [`docs/ip_cleanroom.md`](docs/ip_cleanroom.md).
+seeded generator. See the archived
+[`ip_cleanroom.md`](docs/archive/pre-agent-competition-2026-08-11/ip_cleanroom.md).
 
 ## Acknowledgments
 
@@ -1017,4 +1024,6 @@ seeded generator. See [`docs/ip_cleanroom.md`](docs/ip_cleanroom.md).
 
 **Built with Python 3.11+ | Typer | pytest**
 
-For questions and issues, see `docs/alpha_scope.md` for detailed implementation notes.
+For the current product direction, see
+[`docs/AGENT_COMPETITION.md`](docs/AGENT_COMPETITION.md). Historical implementation
+notes are under `docs/archive/pre-agent-competition-2026-08-11/`.

@@ -13,15 +13,17 @@ it still resolves in the turn it was given -- which is exactly what the design
 says happens when the Gamemaster processes on a fixed schedule -- while AWAIT and
 REPEAT genuinely carry work into later turns instead of being silently dropped.
 
-Only four things ever hold work back:
+Five things can hold work back:
 
 * AWAIT -- a timed wait, or a wait for another character to arrive.
 * REPEAT -- the loop body runs once per turn; the marker re-arms for the next.
 * STOP   -- consumed in sequence, and discards everything behind it.
 * HALT   -- applied before intake, discarding the backlog at once.
+* TIME   -- an actor has used all seven days available in the current turn.
 """
 
 import copy
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from soe import config
@@ -42,13 +44,23 @@ from soe.orders import (
 _MAX_DRAIN_PER_ACTOR = 200
 
 
+@dataclass
+class TurnTimeBudget:
+    """Per-actor time consumed across every queue wake in one turn."""
+
+    days_used: Dict[str, int] = field(default_factory=dict)
+    reserved_waits: set[int] = field(default_factory=set)
+
+
 # ============================================================================
 # ENTRY POINT
 # ============================================================================
 
 def process_order_queue(orders_by_player: Dict[str, List[Order]],
                         game_state: GameState,
-                        turn_log) -> Dict[str, List[Order]]:
+                        turn_log,
+                        time_budget: Optional[TurnTimeBudget] = None,
+                        ) -> Dict[str, List[Order]]:
     """
     Run this turn's queue pass and return the orders the phases should execute.
 
@@ -62,14 +74,16 @@ def process_order_queue(orders_by_player: Dict[str, List[Order]],
     """
     _apply_halts(orders_by_player, game_state, turn_log)
     released = _enqueue(orders_by_player, game_state, turn_log)
-    _drain(game_state, turn_log, released)
+    _drain(game_state, turn_log, released, time_budget or TurnTimeBudget())
     return released
 
 
-def resume_order_queue(game_state: GameState, turn_log) -> Dict[str, List[Order]]:
+def resume_order_queue(game_state: GameState, turn_log,
+                       time_budget: Optional[TurnTimeBudget] = None,
+                       ) -> Dict[str, List[Order]]:
     """Wake queues after the game clock advances inside the current turn."""
     released: Dict[str, List[Order]] = {}
-    _drain(game_state, turn_log, released)
+    _drain(game_state, turn_log, released, time_budget or TurnTimeBudget())
     return released
 
 
@@ -280,7 +294,8 @@ def _enqueue_for_actor(actor_id: str, actor_orders: List[Order],
 # ============================================================================
 
 def _drain(game_state: GameState, turn_log,
-           released: Dict[str, List[Order]]) -> None:
+           released: Dict[str, List[Order]],
+           time_budget: TurnTimeBudget) -> None:
     """Release one pass of every character's queue into this turn."""
     for actor_id in list(game_state.order_queues):
         queue = game_state.order_queues[actor_id]
@@ -301,7 +316,8 @@ def _drain(game_state: GameState, turn_log,
         # A prisoner's queue is drained rather than held: he cannot act, so
         # `validate_orders` rejects each order as it surfaces and the player is
         # told, which beats silently banking orders he was never able to give.
-        _drain_actor(actor, queue, game_state, turn_log, released)
+        _drain_actor(actor, queue, game_state, turn_log, released,
+                     time_budget)
 
         if not queue:
             del game_state.order_queues[actor_id]
@@ -309,7 +325,8 @@ def _drain(game_state: GameState, turn_log,
 
 def _drain_actor(actor: Character, queue: List[QueueEntry],
                  game_state: GameState, turn_log,
-                 released: Dict[str, List[Order]]) -> None:
+                 released: Dict[str, List[Order]],
+                 time_budget: TurnTimeBudget) -> None:
     """Pop entries for one character until the queue blocks or empties."""
     for _ in range(_MAX_DRAIN_PER_ACTOR):
         if not queue:
@@ -324,7 +341,37 @@ def _drain_actor(actor: Character, queue: List[QueueEntry],
             continue
 
         if isinstance(order, AwaitOrder):
+            if entry.release_hour < 0 and entry.release_turn < 0:
+                target = (game_state.characters.get(order.target_id)
+                          if order.target_id else None)
+                target_already_resolves = (
+                    order.target_id
+                    and (target is None or (
+                        target.location_city_id == actor.location_city_id
+                        and not target.is_dead
+                    ))
+                )
+                wait_days = min(max(1, order.duration_days),
+                                config.DAYS_PER_TURN)
+                used = time_budget.days_used.get(actor.id, 0)
+                if (not target_already_resolves
+                        and used + wait_days > config.DAYS_PER_TURN):
+                    turn_log.add(
+                        "queue", player_id, "time_budget_deferred",
+                        f"{actor.name}'s wait is queued for next turn "
+                        f"({used}/{config.DAYS_PER_TURN} days already used)",
+                        character_id=actor.id,
+                    )
+                    return
+
             if not _resolve_wait(actor, entry, order, game_state, turn_log):
+                wait_key = id(entry)
+                if wait_key not in time_budget.reserved_waits:
+                    wait_days = min(max(1, order.duration_days),
+                                    config.DAYS_PER_TURN)
+                    used = time_budget.days_used.get(actor.id, 0)
+                    time_budget.days_used[actor.id] = used + wait_days
+                    time_budget.reserved_waits.add(wait_key)
                 return
             queue.pop(0)
             continue
@@ -358,6 +405,36 @@ def _drain_actor(actor: Character, queue: List[QueueEntry],
                          f"{actor.name} will repeat next turn ({left})",
                          character_id=actor.id)
             return  # the next pass belongs to the next turn
+
+        duration_days = max(0, int(getattr(order, "duration_days", 0)))
+        if duration_days:
+            used = time_budget.days_used.get(actor.id, 0)
+            remaining = config.DAYS_PER_TURN - used
+            if remaining <= 0:
+                turn_log.add(
+                    "queue", player_id, "time_budget_deferred",
+                    f"{actor.name}'s {order.order_type()} order is queued for "
+                    f"next turn ({config.DAYS_PER_TURN}/{config.DAYS_PER_TURN} "
+                    "days used)",
+                    character_id=actor.id,
+                )
+                return
+
+            if duration_days > remaining:
+                partial = copy.deepcopy(order)
+                partial.duration_days = remaining
+                order.duration_days = duration_days - remaining
+                time_budget.days_used[actor.id] = config.DAYS_PER_TURN
+                _release(released, partial)
+                turn_log.add(
+                    "queue", player_id, "time_budget_split",
+                    f"{actor.name}'s {order.order_type()} order used {remaining} "
+                    f"day(s); {order.duration_days} day(s) remain queued",
+                    character_id=actor.id,
+                )
+                return
+
+            time_budget.days_used[actor.id] = used + duration_days
 
         queue.pop(0)
         _release(released, order)

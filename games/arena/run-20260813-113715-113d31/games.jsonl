@@ -1,0 +1,1 @@
+{"game_id": "AR000_ab", "code": "AR000", "seed": 0, "map": "calib_12.json", "seats": {"player_1": "llm:openai/gpt-4o-mini:expansionist-v1", "player_2": "scripted:military"}, "turns": 30, "started_at": "2026-08-13T11:37:15.841296+00:00"}

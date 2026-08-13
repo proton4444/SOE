@@ -1,0 +1,1454 @@
+{
+  "cities": [
+    {
+      "id": "rhaeryn",
+      "name": "Rhaeryn",
+      "population_band": "< 1k",
+      "population": 690,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H7",
+      "x": 0.4665,
+      "y": 0.7424,
+      "x_miles": 606.4,
+      "y_miles": 742.4,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "keloyn",
+      "name": "Keloyn",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "desert"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "H9",
+      "x": 0.6501,
+      "y": 0.7956,
+      "x_miles": 845.1,
+      "y_miles": 795.6,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "braeunstead",
+      "name": "Braeunstead",
+      "population_band": "< 1k",
+      "population": 751,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H3",
+      "x": 0.2292,
+      "y": 0.7301,
+      "x_miles": 298.0,
+      "y_miles": 730.1,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "quenothridge",
+      "name": "Quenothridge",
+      "population_band": "< 1k",
+      "population": 586,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F3",
+      "x": 0.2007,
+      "y": 0.5053,
+      "x_miles": 260.9,
+      "y_miles": 505.3,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "corunis",
+      "name": "Corunis",
+      "population_band": "< 1k",
+      "population": 534,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D6",
+      "x": 0.3976,
+      "y": 0.3847,
+      "x_miles": 516.9,
+      "y_miles": 384.7,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "lunehaven",
+      "name": "Lunehaven",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "G8",
+      "x": 0.566,
+      "y": 0.613,
+      "x_miles": 735.8,
+      "y_miles": 613.0,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "rhauyn",
+      "name": "Rhauyn",
+      "population_band": "< 1k",
+      "population": 535,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G9",
+      "x": 0.6677,
+      "y": 0.684,
+      "x_miles": 868.0,
+      "y_miles": 684.0,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "ossothon",
+      "name": "Ossothon",
+      "population_band": "< 1k",
+      "population": 429,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": true,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "G11",
+      "x": 0.7922,
+      "y": 0.6012,
+      "x_miles": 1029.8,
+      "y_miles": 601.2,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "coreur",
+      "name": "Coreur",
+      "population_band": "< 1k",
+      "population": 178,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E6",
+      "x": 0.4373,
+      "y": 0.4405,
+      "x_miles": 568.5,
+      "y_miles": 440.5,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "calothon",
+      "name": "Calothon",
+      "population_band": "< 1k",
+      "population": 630,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F10",
+      "x": 0.7388,
+      "y": 0.5165,
+      "x_miles": 960.4,
+      "y_miles": 516.5,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "narawick",
+      "name": "Narawick",
+      "population_band": "< 1k",
+      "population": 880,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E11",
+      "x": 0.804,
+      "y": 0.4356,
+      "x_miles": 1045.2,
+      "y_miles": 435.6,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "ulmaen",
+      "name": "Ulmaen",
+      "population_band": "< 1k",
+      "population": 675,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C10",
+      "x": 0.7347,
+      "y": 0.291,
+      "x_miles": 955.1,
+      "y_miles": 291.0,
+      "region": "Barureach reach"
+    },
+    {
+      "id": "ulmunhold",
+      "name": "Ulmunhold",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "B9",
+      "x": 0.6802,
+      "y": 0.1927,
+      "x_miles": 884.2,
+      "y_miles": 192.7,
+      "region": "Barureach reach"
+    },
+    {
+      "id": "faluford",
+      "name": "Faluford",
+      "population_band": "< 1k",
+      "population": 251,
+      "terrain": [
+        "mountains"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C9",
+      "x": 0.616,
+      "y": 0.2548,
+      "x_miles": 800.8,
+      "y_miles": 254.8,
+      "region": "Faleburn march"
+    },
+    {
+      "id": "yrorwick",
+      "name": "Yrorwick",
+      "population_band": "< 1k",
+      "population": 717,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E10",
+      "x": 0.6945,
+      "y": 0.4955,
+      "x_miles": 902.9,
+      "y_miles": 495.5,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "haluis",
+      "name": "Haluis",
+      "population_band": "< 1k",
+      "population": 869,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E6",
+      "x": 0.4599,
+      "y": 0.4376,
+      "x_miles": 597.9,
+      "y_miles": 437.6,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "ulmoen",
+      "name": "Ulmoen",
+      "population_band": "< 1k",
+      "population": 452,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C10",
+      "x": 0.7239,
+      "y": 0.2165,
+      "x_miles": 941.1,
+      "y_miles": 216.5,
+      "region": "Barureach reach"
+    },
+    {
+      "id": "kelothhaven",
+      "name": "Kelothhaven",
+      "population_band": "< 1k",
+      "population": 690,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "I10",
+      "x": 0.7439,
+      "y": 0.805,
+      "x_miles": 967.1,
+      "y_miles": 805.0,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "jorathdale",
+      "name": "Jorathdale",
+      "population_band": "< 1k",
+      "population": 400,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H10",
+      "x": 0.7228,
+      "y": 0.7151,
+      "x_miles": 939.7,
+      "y_miles": 715.1,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "morothis",
+      "name": "Morothis",
+      "population_band": "< 1k",
+      "population": 918,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D5",
+      "x": 0.3251,
+      "y": 0.3822,
+      "x_miles": 422.6,
+      "y_miles": 382.2,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "eshanstead",
+      "name": "Eshanstead",
+      "population_band": "< 1k",
+      "population": 346,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H5",
+      "x": 0.3323,
+      "y": 0.7256,
+      "x_miles": 432.0,
+      "y_miles": 725.6,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "selathford",
+      "name": "Selathford",
+      "population_band": "< 1k",
+      "population": 654,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D9",
+      "x": 0.6466,
+      "y": 0.3329,
+      "x_miles": 840.6,
+      "y_miles": 332.9,
+      "region": "Faleburn march"
+    },
+    {
+      "id": "ossungate",
+      "name": "Ossungate",
+      "population_band": "< 1k",
+      "population": 661,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G10",
+      "x": 0.7054,
+      "y": 0.6,
+      "x_miles": 917.0,
+      "y_miles": 600.0,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "garunur",
+      "name": "Garunur",
+      "population_band": "< 1k",
+      "population": 641,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C7",
+      "x": 0.4913,
+      "y": 0.2893,
+      "x_miles": 638.7,
+      "y_miles": 289.3,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "zelilur",
+      "name": "Zelilur",
+      "population_band": "< 1k",
+      "population": 325,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "D6",
+      "x": 0.4394,
+      "y": 0.307,
+      "x_miles": 571.2,
+      "y_miles": 307.0,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "falford",
+      "name": "Falford",
+      "population_band": "< 1k",
+      "population": 804,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C9",
+      "x": 0.6528,
+      "y": 0.2452,
+      "x_miles": 848.7,
+      "y_miles": 245.2,
+      "region": "Faleburn march"
+    },
+    {
+      "id": "quenestead",
+      "name": "Quenestead",
+      "population_band": "< 1k",
+      "population": 542,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F6",
+      "x": 0.4333,
+      "y": 0.5222,
+      "x_miles": 563.3,
+      "y_miles": 522.2,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "yroron",
+      "name": "Yroron",
+      "population_band": "< 1k",
+      "population": 772,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F9",
+      "x": 0.6468,
+      "y": 0.5957,
+      "x_miles": 840.9,
+      "y_miles": 595.7,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "garanur",
+      "name": "Garanur",
+      "population_band": "< 1k",
+      "population": 668,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E5",
+      "x": 0.3702,
+      "y": 0.4153,
+      "x_miles": 481.2,
+      "y_miles": 415.3,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "braeethstead",
+      "name": "Braeethstead",
+      "population_band": "< 1k",
+      "population": 526,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F5",
+      "x": 0.3495,
+      "y": 0.5178,
+      "x_miles": 454.4,
+      "y_miles": 517.8,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "coriis",
+      "name": "Coriis",
+      "population_band": "< 1k",
+      "population": 918,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C5",
+      "x": 0.3545,
+      "y": 0.2119,
+      "x_miles": 460.8,
+      "y_miles": 211.9,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "quenanridge",
+      "name": "Quenanridge",
+      "population_band": "< 1k",
+      "population": 741,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F6",
+      "x": 0.4224,
+      "y": 0.5998,
+      "x_miles": 549.1,
+      "y_miles": 599.8,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "lunoyn",
+      "name": "Lunoyn",
+      "population_band": "< 1k",
+      "population": 201,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H9",
+      "x": 0.6156,
+      "y": 0.7338,
+      "x_miles": 800.3,
+      "y_miles": 733.8,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "jordale",
+      "name": "Jordale",
+      "population_band": "< 1k",
+      "population": 569,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H10",
+      "x": 0.7348,
+      "y": 0.7595,
+      "x_miles": 955.2,
+      "y_miles": 759.5,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "zelis",
+      "name": "Zelis",
+      "population_band": "< 1k",
+      "population": 381,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "C7",
+      "x": 0.4845,
+      "y": 0.2349,
+      "x_miles": 629.9,
+      "y_miles": 234.9,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "quenmoor",
+      "name": "Quenmoor",
+      "population_band": "< 1k",
+      "population": 427,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E3",
+      "x": 0.2032,
+      "y": 0.4724,
+      "x_miles": 264.2,
+      "y_miles": 472.4,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "halethur",
+      "name": "Halethur",
+      "population_band": "< 1k",
+      "population": 844,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C4",
+      "x": 0.2978,
+      "y": 0.2172,
+      "x_miles": 387.1,
+      "y_miles": 217.2,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "jorothhaven",
+      "name": "Jorothhaven",
+      "population_band": "< 1k",
+      "population": 767,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "I7",
+      "x": 0.5048,
+      "y": 0.8082,
+      "x_miles": 656.3,
+      "y_miles": 808.2,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "joriyn",
+      "name": "Joriyn",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "G8",
+      "x": 0.5489,
+      "y": 0.6523,
+      "x_miles": 713.6,
+      "y_miles": 652.3,
+      "region": "Jororyn coast"
+    },
+    {
+      "id": "zeliis",
+      "name": "Zeliis",
+      "population_band": "< 1k",
+      "population": 735,
+      "terrain": [
+        "mountains"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D5",
+      "x": 0.3775,
+      "y": 0.3303,
+      "x_miles": 490.7,
+      "y_miles": 330.3,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "xanilon",
+      "name": "Xanilon",
+      "population_band": "< 1k",
+      "population": 175,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F9",
+      "x": 0.6802,
+      "y": 0.5365,
+      "x_miles": 884.2,
+      "y_miles": 536.5,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "ossathgate",
+      "name": "Ossathgate",
+      "population_band": "< 1k",
+      "population": 946,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E8",
+      "x": 0.559,
+      "y": 0.4464,
+      "x_miles": 726.7,
+      "y_miles": 446.4,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "halovale",
+      "name": "Halovale",
+      "population_band": "< 1k",
+      "population": 682,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E6",
+      "x": 0.4087,
+      "y": 0.4611,
+      "x_miles": 531.3,
+      "y_miles": 461.1,
+      "region": "Haleris vale"
+    },
+    {
+      "id": "xanethon",
+      "name": "Xanethon",
+      "population_band": "< 1k",
+      "population": 707,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E9",
+      "x": 0.6274,
+      "y": 0.4345,
+      "x_miles": 815.6,
+      "y_miles": 434.5,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "ossowick",
+      "name": "Ossowick",
+      "population_band": "< 1k",
+      "population": 458,
+      "terrain": [
+        "mountains"
+      ],
+      "is_port": false,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "F9",
+      "x": 0.6415,
+      "y": 0.5098,
+      "x_miles": 833.9,
+      "y_miles": 509.8,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "dunermoor",
+      "name": "Dunermoor",
+      "population_band": "< 1k",
+      "population": 361,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G5",
+      "x": 0.3215,
+      "y": 0.6344,
+      "x_miles": 418.0,
+      "y_miles": 634.4,
+      "region": "Quenoridge expanse"
+    },
+    {
+      "id": "xanungate",
+      "name": "Xanungate",
+      "population_band": "< 1k",
+      "population": 662,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G9",
+      "x": 0.6848,
+      "y": 0.6171,
+      "x_miles": 890.3,
+      "y_miles": 617.1,
+      "region": "Narugate hollow"
+    },
+    {
+      "id": "esherstead",
+      "name": "Esherstead",
+      "population_band": "< 1k",
+      "population": 619,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F5",
+      "x": 0.308,
+      "y": 0.573,
+      "x_miles": 400.4,
+      "y_miles": 573.0,
+      "region": "Quenoridge expanse"
+    }
+  ],
+  "roads": [
+    {
+      "id": "rhaeryn__jorothhaven__poor",
+      "from": "rhaeryn",
+      "to": "jorothhaven",
+      "quality": "poor",
+      "distance_miles": 95,
+      "bidirectional": true
+    },
+    {
+      "id": "keloyn__rhauyn__good",
+      "from": "keloyn",
+      "to": "rhauyn",
+      "quality": "good",
+      "distance_miles": 131,
+      "bidirectional": true
+    },
+    {
+      "id": "keloyn__jordale__poor",
+      "from": "keloyn",
+      "to": "jordale",
+      "quality": "poor",
+      "distance_miles": 133,
+      "bidirectional": true
+    },
+    {
+      "id": "braeunstead__eshanstead__poor",
+      "from": "braeunstead",
+      "to": "eshanstead",
+      "quality": "poor",
+      "distance_miles": 154,
+      "bidirectional": true
+    },
+    {
+      "id": "braeunstead__quenanridge__sea",
+      "from": "braeunstead",
+      "to": "quenanridge",
+      "quality": "sea",
+      "distance_miles": 283,
+      "bidirectional": true
+    },
+    {
+      "id": "braeunstead__dunermoor__sea",
+      "from": "braeunstead",
+      "to": "dunermoor",
+      "quality": "sea",
+      "distance_miles": 153,
+      "bidirectional": true
+    },
+    {
+      "id": "quenothridge__quenmoor__fair",
+      "from": "quenothridge",
+      "to": "quenmoor",
+      "quality": "fair",
+      "distance_miles": 38,
+      "bidirectional": true
+    },
+    {
+      "id": "quenothridge__esherstead__fair",
+      "from": "quenothridge",
+      "to": "esherstead",
+      "quality": "fair",
+      "distance_miles": 178,
+      "bidirectional": true
+    },
+    {
+      "id": "lunehaven__yroron__fair",
+      "from": "lunehaven",
+      "to": "yroron",
+      "quality": "fair",
+      "distance_miles": 122,
+      "bidirectional": true
+    },
+    {
+      "id": "lunehaven__lunoyn__fair",
+      "from": "lunehaven",
+      "to": "lunoyn",
+      "quality": "fair",
+      "distance_miles": 157,
+      "bidirectional": true
+    },
+    {
+      "id": "rhauyn__xanungate__good",
+      "from": "rhauyn",
+      "to": "xanungate",
+      "quality": "good",
+      "distance_miles": 81,
+      "bidirectional": true
+    },
+    {
+      "id": "ossothon__calothon__good",
+      "from": "ossothon",
+      "to": "calothon",
+      "quality": "good",
+      "distance_miles": 126,
+      "bidirectional": true
+    },
+    {
+      "id": "ossothon__kelothhaven__sea",
+      "from": "ossothon",
+      "to": "kelothhaven",
+      "quality": "sea",
+      "distance_miles": 213,
+      "bidirectional": true
+    },
+    {
+      "id": "ossothon__ossungate__sea",
+      "from": "ossothon",
+      "to": "ossungate",
+      "quality": "sea",
+      "distance_miles": 113,
+      "bidirectional": true
+    },
+    {
+      "id": "ossothon__xanungate__sea",
+      "from": "ossothon",
+      "to": "xanungate",
+      "quality": "sea",
+      "distance_miles": 140,
+      "bidirectional": true
+    },
+    {
+      "id": "coreur__haluis__fair",
+      "from": "coreur",
+      "to": "haluis",
+      "quality": "fair",
+      "distance_miles": 34,
+      "bidirectional": true
+    },
+    {
+      "id": "narawick__calothon__good",
+      "from": "narawick",
+      "to": "calothon",
+      "quality": "good",
+      "distance_miles": 135,
+      "bidirectional": true
+    },
+    {
+      "id": "ulmunhold__ulmoen__sea",
+      "from": "ulmunhold",
+      "to": "ulmoen",
+      "quality": "sea",
+      "distance_miles": 62,
+      "bidirectional": true
+    },
+    {
+      "id": "faluford__falford__poor",
+      "from": "faluford",
+      "to": "falford",
+      "quality": "poor",
+      "distance_miles": 56,
+      "bidirectional": true
+    },
+    {
+      "id": "yrorwick__calothon__fair",
+      "from": "yrorwick",
+      "to": "calothon",
+      "quality": "fair",
+      "distance_miles": 70,
+      "bidirectional": true
+    },
+    {
+      "id": "haluis__quenestead__good",
+      "from": "haluis",
+      "to": "quenestead",
+      "quality": "good",
+      "distance_miles": 105,
+      "bidirectional": true
+    },
+    {
+      "id": "haluis__ossathgate__fair",
+      "from": "haluis",
+      "to": "ossathgate",
+      "quality": "fair",
+      "distance_miles": 148,
+      "bidirectional": true
+    },
+    {
+      "id": "haluis__halovale__poor",
+      "from": "haluis",
+      "to": "halovale",
+      "quality": "poor",
+      "distance_miles": 81,
+      "bidirectional": true
+    },
+    {
+      "id": "ulmoen__ulmaen__fair",
+      "from": "ulmoen",
+      "to": "ulmaen",
+      "quality": "fair",
+      "distance_miles": 87,
+      "bidirectional": true
+    },
+    {
+      "id": "kelothhaven__keloyn__good",
+      "from": "kelothhaven",
+      "to": "keloyn",
+      "quality": "good",
+      "distance_miles": 141,
+      "bidirectional": true
+    },
+    {
+      "id": "kelothhaven__jorothhaven__sea",
+      "from": "kelothhaven",
+      "to": "jorothhaven",
+      "quality": "sea",
+      "distance_miles": 311,
+      "bidirectional": true
+    },
+    {
+      "id": "jorathdale__rhauyn__poor",
+      "from": "jorathdale",
+      "to": "rhauyn",
+      "quality": "poor",
+      "distance_miles": 90,
+      "bidirectional": true
+    },
+    {
+      "id": "jorathdale__kelothhaven__good",
+      "from": "jorathdale",
+      "to": "kelothhaven",
+      "quality": "good",
+      "distance_miles": 108,
+      "bidirectional": true
+    },
+    {
+      "id": "jorathdale__jordale__excellent",
+      "from": "jorathdale",
+      "to": "jordale",
+      "quality": "excellent",
+      "distance_miles": 54,
+      "bidirectional": true
+    },
+    {
+      "id": "morothis__garanur__good",
+      "from": "morothis",
+      "to": "garanur",
+      "quality": "good",
+      "distance_miles": 77,
+      "bidirectional": true
+    },
+    {
+      "id": "morothis__zeliis__good",
+      "from": "morothis",
+      "to": "zeliis",
+      "quality": "good",
+      "distance_miles": 98,
+      "bidirectional": true
+    },
+    {
+      "id": "eshanstead__garanur__sea",
+      "from": "eshanstead",
+      "to": "garanur",
+      "quality": "sea",
+      "distance_miles": 314,
+      "bidirectional": true
+    },
+    {
+      "id": "eshanstead__braeethstead__sea",
+      "from": "eshanstead",
+      "to": "braeethstead",
+      "quality": "sea",
+      "distance_miles": 209,
+      "bidirectional": true
+    },
+    {
+      "id": "eshanstead__zeliis__sea",
+      "from": "eshanstead",
+      "to": "zeliis",
+      "quality": "sea",
+      "distance_miles": 400,
+      "bidirectional": true
+    },
+    {
+      "id": "eshanstead__dunermoor__good",
+      "from": "eshanstead",
+      "to": "dunermoor",
+      "quality": "good",
+      "distance_miles": 106,
+      "bidirectional": true
+    },
+    {
+      "id": "selathford__garunur__sea",
+      "from": "selathford",
+      "to": "garunur",
+      "quality": "sea",
+      "distance_miles": 207,
+      "bidirectional": true
+    },
+    {
+      "id": "selathford__zelilur__sea",
+      "from": "selathford",
+      "to": "zelilur",
+      "quality": "sea",
+      "distance_miles": 271,
+      "bidirectional": true
+    },
+    {
+      "id": "selathford__falford__good",
+      "from": "selathford",
+      "to": "falford",
+      "quality": "good",
+      "distance_miles": 101,
+      "bidirectional": true
+    },
+    {
+      "id": "selathford__zeliis__sea",
+      "from": "selathford",
+      "to": "zeliis",
+      "quality": "sea",
+      "distance_miles": 350,
+      "bidirectional": true
+    },
+    {
+      "id": "selathford__xanethon__poor",
+      "from": "selathford",
+      "to": "xanethon",
+      "quality": "poor",
+      "distance_miles": 120,
+      "bidirectional": true
+    },
+    {
+      "id": "garunur__zelilur__sea",
+      "from": "garunur",
+      "to": "zelilur",
+      "quality": "sea",
+      "distance_miles": 70,
+      "bidirectional": true
+    },
+    {
+      "id": "falford__ulmunhold__sea",
+      "from": "falford",
+      "to": "ulmunhold",
+      "quality": "sea",
+      "distance_miles": 63,
+      "bidirectional": true
+    },
+    {
+      "id": "quenestead__coreur__poor",
+      "from": "quenestead",
+      "to": "coreur",
+      "quality": "poor",
+      "distance_miles": 94,
+      "bidirectional": true
+    },
+    {
+      "id": "quenestead__halovale__poor",
+      "from": "quenestead",
+      "to": "halovale",
+      "quality": "poor",
+      "distance_miles": 79,
+      "bidirectional": true
+    },
+    {
+      "id": "yroron__xanilon__good",
+      "from": "yroron",
+      "to": "xanilon",
+      "quality": "good",
+      "distance_miles": 84,
+      "bidirectional": true
+    },
+    {
+      "id": "yroron__xanungate__good",
+      "from": "yroron",
+      "to": "xanungate",
+      "quality": "good",
+      "distance_miles": 62,
+      "bidirectional": true
+    },
+    {
+      "id": "garanur__corunis__fair",
+      "from": "garanur",
+      "to": "corunis",
+      "quality": "fair",
+      "distance_miles": 54,
+      "bidirectional": true
+    },
+    {
+      "id": "garanur__quenanridge__sea",
+      "from": "garanur",
+      "to": "quenanridge",
+      "quality": "sea",
+      "distance_miles": 197,
+      "bidirectional": true
+    },
+    {
+      "id": "coriis__zeliis__good",
+      "from": "coriis",
+      "to": "zeliis",
+      "quality": "good",
+      "distance_miles": 140,
+      "bidirectional": true
+    },
+    {
+      "id": "quenanridge__quenestead__poor",
+      "from": "quenanridge",
+      "to": "quenestead",
+      "quality": "poor",
+      "distance_miles": 91,
+      "bidirectional": true
+    },
+    {
+      "id": "quenanridge__braeethstead__sea",
+      "from": "quenanridge",
+      "to": "braeethstead",
+      "quality": "sea",
+      "distance_miles": 125,
+      "bidirectional": true
+    },
+    {
+      "id": "quenanridge__dunermoor__sea",
+      "from": "quenanridge",
+      "to": "dunermoor",
+      "quality": "sea",
+      "distance_miles": 136,
+      "bidirectional": true
+    },
+    {
+      "id": "lunoyn__rhauyn__good",
+      "from": "lunoyn",
+      "to": "rhauyn",
+      "quality": "good",
+      "distance_miles": 97,
+      "bidirectional": true
+    },
+    {
+      "id": "jordale__kelothhaven__excellent",
+      "from": "jordale",
+      "to": "kelothhaven",
+      "quality": "excellent",
+      "distance_miles": 54,
+      "bidirectional": true
+    },
+    {
+      "id": "zelis__garunur__good",
+      "from": "zelis",
+      "to": "garunur",
+      "quality": "good",
+      "distance_miles": 63,
+      "bidirectional": true
+    },
+    {
+      "id": "halethur__zeliis__poor",
+      "from": "halethur",
+      "to": "zeliis",
+      "quality": "poor",
+      "distance_miles": 176,
+      "bidirectional": true
+    },
+    {
+      "id": "jorothhaven__lunoyn__good",
+      "from": "jorothhaven",
+      "to": "lunoyn",
+      "quality": "good",
+      "distance_miles": 186,
+      "bidirectional": true
+    },
+    {
+      "id": "jorothhaven__joriyn__excellent",
+      "from": "jorothhaven",
+      "to": "joriyn",
+      "quality": "excellent",
+      "distance_miles": 191,
+      "bidirectional": true
+    },
+    {
+      "id": "joriyn__lunehaven__poor",
+      "from": "joriyn",
+      "to": "lunehaven",
+      "quality": "poor",
+      "distance_miles": 52,
+      "bidirectional": true
+    },
+    {
+      "id": "joriyn__lunoyn__good",
+      "from": "joriyn",
+      "to": "lunoyn",
+      "quality": "good",
+      "distance_miles": 137,
+      "bidirectional": true
+    },
+    {
+      "id": "zeliis__corunis__good",
+      "from": "zeliis",
+      "to": "corunis",
+      "quality": "good",
+      "distance_miles": 69,
+      "bidirectional": true
+    },
+    {
+      "id": "zeliis__zelilur__fair",
+      "from": "zeliis",
+      "to": "zelilur",
+      "quality": "fair",
+      "distance_miles": 96,
+      "bidirectional": true
+    },
+    {
+      "id": "xanilon__yrorwick__fair",
+      "from": "xanilon",
+      "to": "yrorwick",
+      "quality": "fair",
+      "distance_miles": 52,
+      "bidirectional": true
+    },
+    {
+      "id": "ossathgate__xanethon__poor",
+      "from": "ossathgate",
+      "to": "xanethon",
+      "quality": "poor",
+      "distance_miles": 103,
+      "bidirectional": true
+    },
+    {
+      "id": "ossathgate__ossowick__fair",
+      "from": "ossathgate",
+      "to": "ossowick",
+      "quality": "fair",
+      "distance_miles": 143,
+      "bidirectional": true
+    },
+    {
+      "id": "halovale__coreur__excellent",
+      "from": "halovale",
+      "to": "coreur",
+      "quality": "excellent",
+      "distance_miles": 49,
+      "bidirectional": true
+    },
+    {
+      "id": "halovale__garanur__good",
+      "from": "halovale",
+      "to": "garanur",
+      "quality": "good",
+      "distance_miles": 78,
+      "bidirectional": true
+    },
+    {
+      "id": "xanethon__ossowick__good",
+      "from": "xanethon",
+      "to": "ossowick",
+      "quality": "good",
+      "distance_miles": 89,
+      "bidirectional": true
+    },
+    {
+      "id": "ossowick__yrorwick__good",
+      "from": "ossowick",
+      "to": "yrorwick",
+      "quality": "good",
+      "distance_miles": 81,
+      "bidirectional": true
+    },
+    {
+      "id": "ossowick__xanilon__excellent",
+      "from": "ossowick",
+      "to": "xanilon",
+      "quality": "excellent",
+      "distance_miles": 65,
+      "bidirectional": true
+    },
+    {
+      "id": "xanungate__ossungate__excellent",
+      "from": "xanungate",
+      "to": "ossungate",
+      "quality": "excellent",
+      "distance_miles": 36,
+      "bidirectional": true
+    },
+    {
+      "id": "esherstead__braeethstead__fair",
+      "from": "esherstead",
+      "to": "braeethstead",
+      "quality": "fair",
+      "distance_miles": 89,
+      "bidirectional": true
+    },
+    {
+      "id": "esherstead__dunermoor__fair",
+      "from": "esherstead",
+      "to": "dunermoor",
+      "quality": "fair",
+      "distance_miles": 73,
+      "bidirectional": true
+    }
+  ]
+}

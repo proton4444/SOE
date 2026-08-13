@@ -17,6 +17,9 @@
 
 {% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
 
+{% set llm_action = "/room/" ~ room.code ~ "/setup/llm" %}
+{% include "partials/llm_settings.html" %}
+
 <section class="card">
   <h2>Faction seats</h2>
   <table class="players">

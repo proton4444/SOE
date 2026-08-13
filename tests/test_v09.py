@@ -93,6 +93,66 @@ def test_several_orders_for_one_character_all_run_in_one_turn(two_faction_state)
     assert gs.characters["c1"].location_city_id == "city2"
 
 
+def test_timed_orders_share_one_weekly_budget(two_faction_state):
+    """Only seven declared days of work may leave an actor's queue per turn."""
+    gs = two_faction_state
+    make_woodcutters(gs)
+    first = orders.CollectOrder(
+        player_id="p1", actor_id="c1", resource_type="wood", duration_days=4,
+    )
+    second = orders.CollectOrder(
+        player_id="p1", actor_id="c1", resource_type="wood", duration_days=7,
+    )
+
+    _, log = engine.run_turn(gs, {"p1": [first, second]}, seed=1)
+
+    work_events = [e for e in log.events if e.event_type == "collect_success"]
+    assert "4 days" in work_events[0].description
+    assert "3 days" in work_events[1].description
+    assert gs.order_queues["c1"][0].order.duration_days == 4
+    assert "time_budget_split" in event_types(log)
+
+    _, log = engine.run_turn(gs, {}, seed=1)
+    work_events = [e for e in log.events if e.event_type == "collect_success"]
+    assert len(work_events) == 1
+    assert "4 days" in work_events[0].description
+    assert not gs.order_queues
+
+
+def test_long_timed_order_is_prorated_across_turns(two_faction_state):
+    gs = two_faction_state
+    make_woodcutters(gs)
+    collect = orders.CollectOrder(
+        player_id="p1", actor_id="c1", resource_type="wood", duration_days=14,
+    )
+
+    _, first_log = engine.run_turn(gs, {"p1": [collect]}, seed=1)
+    _, second_log = engine.run_turn(gs, {}, seed=1)
+
+    for log in (first_log, second_log):
+        event = next(e for e in log.events if e.event_type == "collect_success")
+        assert "7 days" in event.description
+    assert not gs.order_queues
+
+
+def test_wait_and_timed_work_share_the_weekly_budget(two_faction_state):
+    gs = two_faction_state
+    make_woodcutters(gs)
+    wait = orders.AwaitOrder(
+        player_id="p1", actor_id="c1", duration_days=1,
+        duration_hours=config.HOURS_PER_DAY,
+    )
+    collect = orders.CollectOrder(
+        player_id="p1", actor_id="c1", resource_type="wood", duration_days=7,
+    )
+
+    _, log = engine.run_turn(gs, {"p1": [wait, collect]}, seed=1)
+
+    event = next(e for e in log.events if e.event_type == "collect_success")
+    assert "6 days" in event.description
+    assert gs.order_queues["c1"][0].order.duration_days == 1
+
+
 # ---------------------------------------------------------------------------
 # AWAIT
 # ---------------------------------------------------------------------------

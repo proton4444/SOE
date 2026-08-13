@@ -190,6 +190,8 @@ def _master_context(
 
 
 def _setup_context(room: Room, notice: str = "") -> dict:
+    from webapp import llm_settings
+
     registry = default_registry()
     slots = []
     for player in room.players:
@@ -206,12 +208,50 @@ def _setup_context(room: Room, notice: str = "") -> dict:
                 "has_profile": profile is not None,
             }
         )
-    return {"room": room, "slots": slots, "notice": notice}
+    return {
+        "room": room,
+        "slots": slots,
+        "notice": notice,
+        "llm": llm_settings.public_settings(),
+        "llm_env": {
+            "base_url": bool(os.environ.get("SOE_LLM_BASE", "").strip()),
+            "key": bool(os.environ.get("SOE_LLM_KEY", "").strip()),
+            "model": os.environ.get("SOE_LLM_MODEL", "").strip(),
+        },
+    }
 
 
 def _require_master(request: Request, room: Room) -> None:
     if request.cookies.get(_host_cookie_name(room.code)) != room.host_key:
         raise HTTPException(403, "The master dashboard requires the host session.")
+
+
+def _my_games(request: Request, current_code: str) -> list[dict]:
+    """Other games this browser already holds a valid host cookie for.
+
+    Deliberately not every room on the server: anyone can create a room and
+    become its host, so a switcher that listed every game would hand that
+    host every other room's session out through a shared page. Reading only
+    cookies already on this request keeps each room's host session private
+    to whoever is actually holding it.
+    """
+    out = []
+    for r in default_store().all():
+        if r.code == current_code:
+            continue
+        if request.cookies.get(_host_cookie_name(r.code)) != r.host_key:
+            continue
+        out.append(
+            {
+                "code": r.code,
+                "name": r.name,
+                "turn": r.last_resolved_turn,
+                "joined": len(r.joined_players()),
+                "slots": r.slots,
+            }
+        )
+    out.sort(key=lambda d: d["code"])
+    return out
 
 
 def _overlay_for(room: Room, player) -> Optional[dict]:
@@ -242,8 +282,25 @@ def index(request: Request):
             "legend": mapview.legend_html(),
             "error": request.query_params.get("error", ""),
             "beta_invite_required": bool(BETA_ACCESS_CODE),
+            "is_any_host": _any_host_session(request),
+            "llm_summary": _llm_summary(),
+            "llm_env_key": bool(os.environ.get("SOE_LLM_KEY", "").strip()),
         },
     )
+
+
+def _any_host_session(request: Request) -> bool:
+    """True when the request carries a valid host cookie for any room."""
+    return any(
+        request.cookies.get(_host_cookie_name(r.code)) == r.host_key
+        for r in default_store().all()
+    )
+
+
+def _llm_summary() -> dict:
+    from webapp import llm_settings
+
+    return llm_settings.public_settings()
 
 
 @app.get("/healthz")
@@ -366,6 +423,7 @@ def master_page(request: Request, code: str):
         room.map_file, service.map_overlay(room, None, all_visible=True)
     )
     context["map_islands"] = _map_islands(room.map_file)
+    context["my_games"] = _my_games(request, room.code)
     return templates.TemplateResponse(request, "master.html", context)
 
 
@@ -475,6 +533,172 @@ def setup_agent(
         msg += " Empty seat claimed for the bot."
     return RedirectResponse(
         url=f"/room/{room.code}/setup?msg={quote(msg)}", status_code=303
+    )
+
+
+@app.get("/llm-settings", response_class=HTMLResponse)
+def llm_settings_page(request: Request):
+    """Server-wide LLM settings, reachable from the home page. Readable by
+    anyone; writable only with a valid host session for any room."""
+    from webapp import llm_settings
+
+    is_host = _any_host_session(request)
+    return templates.TemplateResponse(
+        request,
+        "llm_settings.html",
+        {
+            "llm": llm_settings.public_settings(),
+            "llm_env": {
+                "base_url": bool(os.environ.get("SOE_LLM_BASE", "").strip()),
+                "key": bool(os.environ.get("SOE_LLM_KEY", "").strip()),
+                "model": os.environ.get("SOE_LLM_MODEL", "").strip(),
+            },
+            "is_host": is_host,
+            "notice": request.query_params.get("msg", ""),
+            "room": None,
+        },
+    )
+
+
+@app.post("/llm-settings")
+def llm_settings_save(
+    request: Request,
+    base_url: str = Form(""),
+    key: str = Form(""),
+    model: str = Form(""),
+    temperature: str = Form(""),
+    timeout_seconds: str = Form(""),
+    max_retries: str = Form(""),
+    max_tokens: str = Form(""),
+    clear_key: str = Form(""),
+    action: str = Form("save"),
+):
+    if not _any_host_session(request):
+        raise HTTPException(403, "A host session is required to change LLM settings.")
+    msg = _apply_llm_settings(
+        base_url, key, model, temperature, timeout_seconds, max_retries,
+        max_tokens, clear_key, action,
+    )
+    return RedirectResponse(
+        url=f"/llm-settings?msg={quote(msg)}", status_code=303
+    )
+
+
+def _apply_llm_settings(
+    base_url: str,
+    key: str,
+    model: str,
+    temperature: str,
+    timeout_seconds: str,
+    max_retries: str,
+    max_tokens: str,
+    clear_key: str,
+    action: str,
+) -> str:
+    """Shared save/clear/probe logic for both the room setup page and the
+    standalone /llm-settings page. Returns the notice message."""
+    from webapp import llm_settings
+
+    patch: dict = {}
+    if base_url.strip():
+        patch["base_url"] = base_url.strip().rstrip("/")
+    if model.strip():
+        patch["model"] = model.strip()
+    if temperature.strip():
+        try:
+            patch["temperature"] = max(0.0, min(2.0, float(temperature)))
+        except ValueError:
+            pass
+    if timeout_seconds.strip():
+        try:
+            patch["timeout_seconds"] = max(1, int(float(timeout_seconds)))
+        except ValueError:
+            pass
+    if max_retries.strip():
+        try:
+            patch["max_retries"] = max(0, int(max_retries))
+        except ValueError:
+            pass
+    if max_tokens.strip():
+        try:
+            patch["max_tokens"] = max(16, int(max_tokens))
+        except ValueError:
+            pass
+    if clear_key == "on":
+        patch["key"] = ""
+    elif key.strip():
+        patch["key"] = key.strip()
+
+    if action == "probe":
+        llm_settings.save_settings(patch)
+        return _probe_llm()
+    if action == "clear":
+        llm_settings.clear_key()
+        return "LLM settings kept; API key cleared."
+    llm_settings.save_settings(patch)
+    msg = "LLM settings saved."
+    if not llm_settings.load_settings().get("key") and not os.environ.get(
+        "SOE_LLM_KEY", ""
+    ).strip():
+        msg += " No API key set: bots will refuse to run until one is added."
+    return msg
+
+
+@app.post("/room/{code}/setup/llm")
+def setup_llm(
+    request: Request,
+    code: str,
+    base_url: str = Form(""),
+    key: str = Form(""),
+    model: str = Form(""),
+    temperature: str = Form(""),
+    timeout_seconds: str = Form(""),
+    max_retries: str = Form(""),
+    max_tokens: str = Form(""),
+    clear_key: str = Form(""),
+    action: str = Form("save"),
+):
+    """Host-only: configure the server-wide LLM settings from the room setup
+    page. Env vars keep priority at runtime; the file fills the gaps. The key
+    is stored for the server, never echoed back (only a masked tail is shown).
+    """
+    room = _resolve_room(code)
+    _require_master(request, room)
+    msg = _apply_llm_settings(
+        base_url, key, model, temperature, timeout_seconds, max_retries,
+        max_tokens, clear_key, action,
+    )
+    return RedirectResponse(
+        url=f"/room/{room.code}/setup?msg={quote(msg)}", status_code=303
+    )
+
+
+def _probe_llm() -> str:
+    """One tiny model call to verify the configured brain (dashboard probe)."""
+    from scripts.probe_model import PROBE_TASK
+
+    from webapp.ai.orchestrator import extract_orders
+
+    model = brain.model_name("")
+    try:
+        result = brain.chat_result(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are a strategic game AI."},
+                {"role": "user", "content": PROBE_TASK},
+            ],
+            temperature=0.0,
+        )
+    except brain.LLMError as exc:
+        return f"Probe failed ({model}): {str(exc)[:200]}"
+    orders = extract_orders(result.text)
+    usage = result.usage
+    cost = usage.get("cost") if isinstance(usage, dict) else None
+    cost_s = f" cost=${cost:.4f}" if isinstance(cost, (int, float)) else ""
+    return (
+        f"Probe OK ({model}): orders={'yes' if orders.strip() else 'NO'} "
+        f"latency={result.latency_ms:.0f}ms attempts={result.attempts} "
+        f"tokens={usage.get('total_tokens', '?')}{cost_s}"
     )
 
 

@@ -1,7 +1,7 @@
 # Phase 0 Implementation Specification
 
 Status: **implementato; gate non superato** (vedi `ROADMAP.md`, Phase 0 - Stato)  
-Data: 2026-08-11  
+Data: 2026-08-13
 Dipende da: [`ROADMAP.md`](ROADMAP.md)
 
 ## Obiettivo
@@ -13,7 +13,8 @@ del runtime di produzione.
 La Phase 0 non costruisce account, editor Blueprint, tornei o nuove pagine. Il
 suo output e evidenza riproducibile che:
 
-1. un modello sa giocare il duel meglio del random;
+1. un modello sa giocare il duel meglio della policy scripted piu forte dello
+   scenario qualificato;
 2. due dottrine diverse modificano davvero il comportamento dell'agente;
 3. costo, affidabilita e durata sono compatibili con una Coach League.
 
@@ -25,12 +26,13 @@ Default raccomandati:
 - modello: configurabile nel run manifest, mai hardcoded nel benchmark;
 - temperatura: `0.0`;
 - agent stack: un solo strategist, vision e subagent disabilitati;
-- scenario: `starter_map.json`, due fazioni, 30 turni;
+- scenario congelato: `calib_12.json`, due fazioni, 30 turni;
 - smoke: 4 seed pairs, 8 partite;
-- official candidate: 20 seed pairs, 40 partite;
+- official candidate: 40 seed pairs, 80 partite;
 - blueprint A: espansione territoriale aggressiva;
 - blueprint B: consolidamento economico prudente;
-- baseline: random e scripted gia esistenti;
+- avversario ufficiale: `scripted:military` (`random` resta solo un controllo
+  di qualificazione dello scenario);
 - fallimento provider: turno senza ordini, registrato come reliability failure;
 - retry: policy unica dichiarata e congelata nel manifest.
 
@@ -233,7 +235,11 @@ run interno deve conservarle per il debug. Non va mai salvata la chiave API.
 - calls attempted e completed;
 - call failures per classe;
 - parseable call rate;
-- ordini accettati e warning;
+- righe di ordine emesse, righe con almeno un warning e messaggi di warning;
+- warning rate misurato prima del filtro di sicurezza, con una riga contata una
+  sola volta anche se produce piu messaggi;
+- warning rate delle righe inviate misurato di nuovo dopo validazione ed
+  esecuzione; il gate usa il peggiore dei due tassi;
 - retry e no-op turns;
 - wall time e latency distribution;
 - input, output e total tokens;
@@ -271,12 +277,12 @@ Usare un file di run versionabile, per esempio:
 ```json
 {
   "mode": "smoke",
-  "map": "starter_map.json",
+  "map": "calib_12.json",
   "turns": 30,
   "seed_pairs": 4,
   "entrants": [
-    {"type": "llm", "model": "provider/model", "blueprint": "expansionist-v1.json"},
-    {"type": "random"}
+    {"type": "llm", "model": "provider/model", "blueprint": "expansionist-v1"},
+    {"type": "scripted", "style": "military"}
   ]
 }
 ```
@@ -286,6 +292,8 @@ Comandi previsti:
 ```powershell
 python scripts/probe_model.py provider/model
 python scripts/arena.py --config configs/phase0_smoke.json
+python scripts/arena.py --config configs/phase0_competence.json
+python scripts/arena.py --config configs/phase0_blueprints.json
 python scripts/arena.py --resume <run_id>
 ```
 
@@ -304,11 +312,14 @@ un run reale. I test usano sempre un fake brain e non effettuano rete.
 8. Probe del modello scelto.
 9. Smoke da 4 seed pairs.
 10. Revisione di costi, errori e differenze tra blueprint.
-11. Official candidate soltanto se lo smoke supera i gate.
+11. Candidate ufficiali soltanto da worktree pulito e secondo il contratto
+    congelato in `configs/phase0_gate.json`.
 
 ## Prerequisiti operativi
 
 - `SOE_LLM_KEY` configurata soltanto nell'ambiente di esecuzione;
+- probe riuscito per lo stesso modello nelle 24 ore precedenti; il receipt
+  locale non contiene credenziali;
 - modello disponibile e quota provider sufficiente;
 - limite massimo di spesa concordato;
 - rate limits e retry policy noti;
@@ -324,9 +335,17 @@ La Phase 0 e completa quando:
 - tutti i test passano;
 - il probe del modello passa;
 - smoke e official candidate sono riprendibili;
-- almeno il 95% delle chiamate e parseable;
-- il modello supera random nel confronto accoppiato;
-- due blueprint producono differenze strategiche osservabili;
+- almeno il 95% delle chiamate produce un ordine accettato dopo la risoluzione
+  del motore;
+- almeno il 99% delle chiamate del seat LLM e completato senza failure;
+- al massimo il 5% delle righe di ordine emesse produce warning;
+- ogni confronto usa almeno 40 coppie e supera il test dei sweep a una coda con
+  `p < 0.01`;
+- il modello supera `scripted:military` su `calib_12.json`;
+- `expansionist-v1` e `consolidation-v1` producono differenze strategiche
+  osservabili, inclusa una differenza di almeno 5 punti percentuali nella quota
+  di una famiglia d'ordini rilevante;
+- un resume interrotto riproduce gli stessi `state_sha` intermedi e finali;
 - ogni claim del report e ricostruibile dai record del bundle;
 - costo e durata di un match sono noti;
 - nessuna credenziale compare negli output.

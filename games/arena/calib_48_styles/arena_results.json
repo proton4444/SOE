@@ -1,0 +1,3542 @@
+{
+  "generated_at": "2026-08-13T10:30:27.141477+00:00",
+  "policies": [
+    "scripted:military",
+    "scripted:religious"
+  ],
+  "map": "calib_48.json",
+  "turns_per_game": 30,
+  "games": 80,
+  "draws": 0,
+  "wins": {
+    "scripted:military": 43,
+    "scripted:religious": 37
+  },
+  "win_rate": {
+    "scripted:military": 0.537,
+    "scripted:religious": 0.463
+  },
+  "pairs": [
+    {
+      "seed": 0,
+      "code": "AR000",
+      "winners": [
+        "scripted:military",
+        "scripted:military"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:military"
+    },
+    {
+      "seed": 1,
+      "code": "AR001",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 2,
+      "code": "AR002",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 3,
+      "code": "AR003",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 4,
+      "code": "AR004",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 5,
+      "code": "AR005",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 6,
+      "code": "AR006",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 7,
+      "code": "AR007",
+      "winners": [
+        "scripted:religious",
+        "scripted:religious"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:religious"
+    },
+    {
+      "seed": 8,
+      "code": "AR008",
+      "winners": [
+        "scripted:military",
+        "scripted:military"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:military"
+    },
+    {
+      "seed": 9,
+      "code": "AR009",
+      "winners": [
+        "scripted:military",
+        "scripted:military"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:military"
+    },
+    {
+      "seed": 10,
+      "code": "AR010",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 11,
+      "code": "AR011",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 12,
+      "code": "AR012",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 13,
+      "code": "AR013",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 14,
+      "code": "AR014",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 15,
+      "code": "AR015",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 16,
+      "code": "AR016",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 17,
+      "code": "AR017",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 18,
+      "code": "AR018",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 19,
+      "code": "AR019",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 20,
+      "code": "AR020",
+      "winners": [
+        "scripted:religious",
+        "scripted:religious"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:religious"
+    },
+    {
+      "seed": 21,
+      "code": "AR021",
+      "winners": [
+        "scripted:religious",
+        "scripted:religious"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:religious"
+    },
+    {
+      "seed": 22,
+      "code": "AR022",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 23,
+      "code": "AR023",
+      "winners": [
+        "scripted:military",
+        "scripted:military"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:military"
+    },
+    {
+      "seed": 24,
+      "code": "AR024",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 25,
+      "code": "AR025",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 26,
+      "code": "AR026",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 27,
+      "code": "AR027",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 28,
+      "code": "AR028",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 29,
+      "code": "AR029",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 30,
+      "code": "AR030",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 31,
+      "code": "AR031",
+      "winners": [
+        "scripted:religious",
+        "scripted:religious"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:religious"
+    },
+    {
+      "seed": 32,
+      "code": "AR032",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 33,
+      "code": "AR033",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 34,
+      "code": "AR034",
+      "winners": [
+        "scripted:military",
+        "scripted:military"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:military"
+    },
+    {
+      "seed": 35,
+      "code": "AR035",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 36,
+      "code": "AR036",
+      "winners": [
+        "scripted:military",
+        "scripted:religious"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 37,
+      "code": "AR037",
+      "winners": [
+        "scripted:religious",
+        "scripted:military"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    },
+    {
+      "seed": 38,
+      "code": "AR038",
+      "winners": [
+        "scripted:military",
+        "scripted:military"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:military"
+    },
+    {
+      "seed": 39,
+      "code": "AR039",
+      "winners": [
+        "scripted:military",
+        "scripted:military"
+      ],
+      "verdict": "swept",
+      "swept_by": "scripted:military"
+    }
+  ],
+  "pair_sweeps": {
+    "scripted:military": 7,
+    "scripted:religious": 4
+  },
+  "pair_splits": 29,
+  "decided_by": {
+    "soldiers": 74,
+    "elimination": 1,
+    "secured": 5
+  },
+  "warnings_total": {
+    "scripted:military": 576,
+    "scripted:religious": 612
+  },
+  "parsed_orders_total": {
+    "scripted:military": 20424,
+    "scripted:religious": 24105
+  },
+  "errors": [],
+  "results": [
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 201,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 100,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 20.0,
+          "soldiers": 150,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 175,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.3,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 110,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 724.1,
+          "soldiers": 45,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.33,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 99.5,
+          "soldiers": 160,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 496.7,
+          "soldiers": 28,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR002",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 681.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 376.6,
+          "soldiers": 135,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR002",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 755.8,
+          "soldiers": 1,
+          "characters_alive": 0
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 210.3,
+          "soldiers": 160,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.32,
+      "contact_turn": {
+        "player_1": 3,
+        "player_2": 3
+      },
+      "eliminated_at": {
+        "player_1": 18,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR003",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 632.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 252.9,
+          "soldiers": 130,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR003",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 90.9,
+          "soldiers": 130,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 165,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.45,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR004",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 504.4,
+          "soldiers": 45,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 16.0,
+          "soldiers": 125,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.17,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR004",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 687.4,
+          "soldiers": 45,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 8.4,
+          "soldiers": 175,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.16,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR005",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 120,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 502.3,
+          "soldiers": 66,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.26,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR005",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 160.1,
+          "soldiers": 160,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.0,
+          "soldiers": 158,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.3,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR006",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 243.1,
+          "soldiers": 28,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 750.7,
+          "soldiers": 175,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.29,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR006",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 490.7,
+          "soldiers": 110,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 167.4,
+          "soldiers": 200,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.27,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR007",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 602.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 477.9,
+          "soldiers": 90,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.39,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR007",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 678.5,
+          "soldiers": 25,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 679.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR008",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 158.6,
+          "soldiers": 219,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 117.5,
+          "soldiers": 120,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR008",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 198.0,
+          "soldiers": 140,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 254.0,
+          "soldiers": 150,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR009",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 3.3,
+          "soldiers": 200,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.0,
+          "soldiers": 190,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.16,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR009",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 192.3,
+          "soldiers": 110,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 8.0,
+          "soldiers": 190,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.16,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR010",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 667.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 692.7,
+          "soldiers": 130,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.25,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR010",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 533.9,
+          "soldiers": 75,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 688.7,
+          "soldiers": 130,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR011",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 200,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 625.1,
+          "soldiers": 25,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.42,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR011",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 200,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 634.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.41,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR012",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 601.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 169,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.41,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR012",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 634.7,
+          "soldiers": 25,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 50.0,
+          "soldiers": 215,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.43,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR013",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 107.4,
+          "soldiers": 183,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 377.7,
+          "soldiers": 390,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.33,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR013",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 388.3,
+          "soldiers": 18,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 625.9,
+          "soldiers": 14,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR014",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 195,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 652.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.45,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR014",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 100.7,
+          "soldiers": 150,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 629.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.41,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR015",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 2.0,
+          "soldiers": 530,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 169.4,
+          "soldiers": 120,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.41,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR015",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 156.0,
+          "soldiers": 390,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 649.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR016",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 546.8,
+          "soldiers": 95,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 97.1,
+          "soldiers": 150,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.45,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR016",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 474.6,
+          "soldiers": 90,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 214,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.43,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR017",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 55.4,
+          "soldiers": 5,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 20.0,
+          "soldiers": 170,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.29,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR017",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 431.4,
+          "soldiers": 60,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 41.1,
+          "soldiers": 270,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.3,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR018",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.0,
+          "soldiers": 143,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 709.5,
+          "soldiers": 25,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.42,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR018",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1.0,
+          "soldiers": 145,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 712.8,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.45,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR019",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 633.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 19.0,
+          "soldiers": 115,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.44,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR019",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 663.9,
+          "soldiers": 25,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 145,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR020",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 692.9,
+          "soldiers": 40,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 679.3,
+          "soldiers": 25,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 24,
+        "player_2": 24
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR020",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 949.4,
+          "soldiers": 95,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 665.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.42,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR021",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 573.3,
+          "soldiers": 0,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 918.4,
+          "soldiers": 125,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR021",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 48.5,
+          "soldiers": 170,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 844.0,
+          "soldiers": 60,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR022",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 719.8,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 20.0,
+          "soldiers": 165,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.41,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR022",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 648.8,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 685.0,
+          "soldiers": 45,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR023",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 645.5,
+          "soldiers": 55,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 655.8,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.4,
+      "contact_turn": {
+        "player_1": 9,
+        "player_2": 9
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR023",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 618.6,
+          "soldiers": 40,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 277.2,
+          "soldiers": 230,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.43,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR024",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 212,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1041.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.29,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR024",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 19.0,
+          "soldiers": 195,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 776.0,
+          "soldiers": 45,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR025",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 227,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 604.5,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.44,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR025",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1.0,
+          "soldiers": 190,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 648.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.45,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR026",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 689.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 20.0,
+          "soldiers": 140,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.42,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR026",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 641.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 240,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.44,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR027",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.0,
+          "soldiers": 108,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 570.1,
+          "soldiers": 25,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.3,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR027",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 312.1,
+          "soldiers": 168,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 683.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR028",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 88.3,
+          "soldiers": 220,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 656.0,
+          "soldiers": 30,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.3,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR028",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 142.5,
+          "soldiers": 105,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 619.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.29,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR029",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 185.6,
+          "soldiers": 230,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 394.7,
+          "soldiers": 25,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.26,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR029",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 20.0,
+          "soldiers": 180,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 315.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR030",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 677.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 150,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR030",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 623.1,
+          "soldiers": 25,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 353.5,
+          "soldiers": 180,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.29,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR031",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 80,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 653.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.25,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR031",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 19.0,
+          "soldiers": 155,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 717.2,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.31,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR032",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 130,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 640.9,
+          "soldiers": 30,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.28,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR032",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 1.0,
+          "soldiers": 130,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 679.0,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.27,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR033",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 176.4,
+          "soldiers": 400,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 509.1,
+          "soldiers": 85,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.43,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR033",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 537.8,
+          "soldiers": 260,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 689.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.71,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR034",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 215,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 396.3,
+          "soldiers": 150,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.57,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR034",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 190,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 0.0,
+          "soldiers": 226,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.52,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR035",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.0,
+          "soldiers": 140,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 597.6,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.49,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR035",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 20.0,
+          "soldiers": 160,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 531.1,
+          "soldiers": 46,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.65,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR036",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.0,
+          "soldiers": 175,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 431.2,
+          "soldiers": 105,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.6,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR036",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.2,
+          "soldiers": 110,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 668.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.48,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR037",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:religious",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 635.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 272.2,
+          "soldiers": 175,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.44,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR037",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 685.4,
+          "soldiers": 15,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 8.0,
+          "soldiers": 165,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.46,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR038",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 877.2,
+          "soldiers": 150,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 27.7,
+          "soldiers": 135,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.33,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR038",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 864.5,
+          "soldiers": 108,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 190,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.44,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR039",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "scripted:religious"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 901.8,
+          "soldiers": 125,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 40.0,
+          "soldiers": 115,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.24,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    },
+    {
+      "code": "AR039",
+      "seats": {
+        "player_1": "scripted:religious",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 907.8,
+          "soldiers": 125,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 220,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.23,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": ""
+    }
+  ],
+  "reliability": {
+    "scripted:military": {
+      "calls_attempted": 2400,
+      "calls_completed": 2400,
+      "call_failures": {},
+      "parseable_call_rate": 1.0,
+      "no_op_turns": 0,
+      "retried_calls": 0,
+      "latency_ms": null,
+      "tokens": {},
+      "cost": null
+    },
+    "scripted:religious": {
+      "calls_attempted": 2400,
+      "calls_completed": 2400,
+      "call_failures": {},
+      "parseable_call_rate": 0.995,
+      "no_op_turns": 0,
+      "retried_calls": 0,
+      "latency_ms": null,
+      "tokens": {},
+      "cost": null
+    }
+  },
+  "strategy": {
+    "scripted:military": {
+      "order_families": {
+        "TAX": 2400,
+        "SECURE": 2323,
+        "RECRUIT": 3982,
+        "FLY": 420,
+        "INVEST": 724,
+        "IF": 563,
+        "WORK": 571,
+        "SCRY": 558,
+        "CONJURE": 536,
+        "TRADE": 266,
+        "REPORT": 350,
+        "PAY": 250,
+        "ENEMY": 240,
+        "NAME": 897,
+        "TRAIN": 408,
+        "LURK": 262,
+        "ADDRESS": 80,
+        "SAY": 554,
+        "PASSWORD": 80,
+        "STUDY": 1294,
+        "ALLY": 80,
+        "NEUTRAL": 80,
+        "PROMOTE": 325,
+        "CREATE": 141,
+        "SCAN": 39,
+        "REPAY": 207,
+        "POST": 438,
+        "COLLECT": 318,
+        "BUILD": 61,
+        "SUMMON": 343,
+        "BORROW": 50,
+        "PASSAGE": 51,
+        "FORTIFY": 217,
+        "MINE": 82,
+        "CHARGE": 47,
+        "TELEPORT": 15,
+        "MOVE": 951,
+        "ATTACK": 24,
+        "PROBE": 4,
+        "CAPTURE": 7,
+        "SEARCH": 160,
+        "ABSORB": 22,
+        "UNFORTIFY": 4
+      },
+      "first_contact_turn": {
+        "min": 3.0,
+        "median": 9.0,
+        "mean": 12.0,
+        "max": 24.0,
+        "n": 3
+      },
+      "eliminations": 0,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 92.1
+    },
+    "scripted:religious": {
+      "order_families": {
+        "TAX": 2388,
+        "SECURE": 2364,
+        "RECRUIT": 3781,
+        "STUDY": 1521,
+        "PRAY": 443,
+        "INVEST": 1116,
+        "IF": 564,
+        "WORK": 522,
+        "SCRY": 553,
+        "CONJURE": 542,
+        "TRADE": 260,
+        "ENEMY": 158,
+        "NAME": 956,
+        "LURK": 288,
+        "REPORT": 349,
+        "PASSAGE": 54,
+        "ADDRESS": 80,
+        "SAY": 572,
+        "PASSWORD": 80,
+        "REPAY": 195,
+        "ALLY": 122,
+        "PROMOTE": 371,
+        "TRAIN": 445,
+        "PREACH": 1602,
+        "BLESS": 1268,
+        "NEUTRAL": 119,
+        "FORTIFY": 346,
+        "CREATE": 174,
+        "COLLECT": 314,
+        "POST": 429,
+        "MINE": 58,
+        "FLY": 336,
+        "BUILD": 59,
+        "PAY": 214,
+        "SCAN": 44,
+        "SUMMON": 208,
+        "BORROW": 22,
+        "MOVE": 884,
+        "SEARCH": 188,
+        "CHARGE": 21,
+        "ABSORB": 25,
+        "ATTACK": 15,
+        "PROBE": 7,
+        "UNFORTIFY": 10,
+        "TELEPORT": 9,
+        "OFFER": 27,
+        "CURSE": 2
+      },
+      "first_contact_turn": {
+        "min": 3.0,
+        "median": 9.0,
+        "mean": 12.0,
+        "max": 24.0,
+        "n": 3
+      },
+      "eliminations": 1,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 85.2
+    }
+  },
+  "blueprint_diff": {
+    "a": {
+      "policy": "scripted:military",
+      "games": 80,
+      "wins": 43,
+      "survival_rate": 1.0,
+      "contact_rate": 0.037,
+      "orders": {
+        "recruit": 3982,
+        "attack": 24,
+        "movement": 951,
+        "secure": 2323,
+        "tax": 2400
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 13.0,
+        "mean": 14.0,
+        "max": 30.0,
+        "n": 3982
+      },
+      "first_attack_turn": {
+        "min": 4.0,
+        "median": 13.5,
+        "mean": 15.2,
+        "max": 29.0,
+        "n": 24
+      }
+    },
+    "b": {
+      "policy": "scripted:religious",
+      "games": 80,
+      "wins": 37,
+      "survival_rate": 0.988,
+      "contact_rate": 0.037,
+      "orders": {
+        "recruit": 3781,
+        "attack": 15,
+        "movement": 884,
+        "secure": 2364,
+        "tax": 2388
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 13.0,
+        "mean": 13.4,
+        "max": 30.0,
+        "n": 3781
+      },
+      "first_attack_turn": {
+        "min": 4.0,
+        "median": 11.0,
+        "mean": 15.9,
+        "max": 29.0,
+        "n": 15
+      }
+    }
+  },
+  "config": {
+    "mode": "legacy",
+    "map": "calib_48.json",
+    "turns": 30,
+    "seed_pairs": 40,
+    "entrants": [
+      {
+        "type": "scripted",
+        "style": "military"
+      },
+      {
+        "type": "scripted",
+        "style": "religious"
+      }
+    ]
+  }
+}

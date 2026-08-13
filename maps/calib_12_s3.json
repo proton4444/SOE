@@ -1,0 +1,334 @@
+{
+  "cities": [
+    {
+      "id": "joramere",
+      "name": "Joramere",
+      "population_band": "< 1k",
+      "population": 403,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E7",
+      "x": 0.5039,
+      "y": 0.4508,
+      "x_miles": 655.1,
+      "y_miles": 450.8,
+      "region": "Braeethmere march"
+    },
+    {
+      "id": "pelaur",
+      "name": "Pelaur",
+      "population_band": "< 1k",
+      "population": 732,
+      "terrain": [
+        "mountains"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "I7",
+      "x": 0.5125,
+      "y": 0.8055,
+      "x_miles": 666.2,
+      "y_miles": 805.5,
+      "region": "Pelawick vale"
+    },
+    {
+      "id": "yranur",
+      "name": "Yranur",
+      "population_band": "< 1k",
+      "population": 497,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G9",
+      "x": 0.6246,
+      "y": 0.6959,
+      "x_miles": 812.0,
+      "y_miles": 695.9,
+      "region": "Pelawick vale"
+    },
+    {
+      "id": "fenorreach",
+      "name": "Fenorreach",
+      "population_band": "< 1k",
+      "population": 500,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E5",
+      "x": 0.3136,
+      "y": 0.4221,
+      "x_miles": 407.7,
+      "y_miles": 422.1,
+      "region": "Vasuon reach"
+    },
+    {
+      "id": "fenemoor",
+      "name": "Fenemoor",
+      "population_band": "< 1k",
+      "population": 200,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C6",
+      "x": 0.4238,
+      "y": 0.2574,
+      "x_miles": 551.0,
+      "y_miles": 257.4,
+      "region": "Vasuon reach"
+    },
+    {
+      "id": "yrwold",
+      "name": "Yrwold",
+      "population_band": "< 1k",
+      "population": 842,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H10",
+      "x": 0.7609,
+      "y": 0.7896,
+      "x_miles": 989.2,
+      "y_miles": 789.6,
+      "region": "Pelawick vale"
+    },
+    {
+      "id": "quenoon",
+      "name": "Quenoon",
+      "population_band": "< 1k",
+      "population": 888,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G5",
+      "x": 0.3645,
+      "y": 0.6313,
+      "x_miles": 473.8,
+      "y_miles": 631.3,
+      "region": "Vasuon reach"
+    },
+    {
+      "id": "dunoron",
+      "name": "Dunoron",
+      "population_band": "< 1k",
+      "population": 578,
+      "terrain": [
+        "mountains"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D3",
+      "x": 0.2017,
+      "y": 0.3807,
+      "x_miles": 262.2,
+      "y_miles": 380.7,
+      "region": "Vasuon reach"
+    },
+    {
+      "id": "rhaathfell",
+      "name": "Rhaathfell",
+      "population_band": "< 1k",
+      "population": 806,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G7",
+      "x": 0.5336,
+      "y": 0.6934,
+      "x_miles": 693.7,
+      "y_miles": 693.4,
+      "region": "Braeethmere march"
+    },
+    {
+      "id": "falgate",
+      "name": "Falgate",
+      "population_band": "< 1k",
+      "population": 166,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D8",
+      "x": 0.5476,
+      "y": 0.3207,
+      "x_miles": 711.9,
+      "y_miles": 320.7,
+      "region": "Braeethmere march"
+    },
+    {
+      "id": "garanyn",
+      "name": "Garanyn",
+      "population_band": "< 1k",
+      "population": 687,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G8",
+      "x": 0.5788,
+      "y": 0.615,
+      "x_miles": 752.5,
+      "y_miles": 615.0,
+      "region": "Braeethmere march"
+    },
+    {
+      "id": "ulmunwick",
+      "name": "Ulmunwick",
+      "population_band": "< 1k",
+      "population": 163,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E11",
+      "x": 0.7729,
+      "y": 0.4733,
+      "x_miles": 1004.8,
+      "y_miles": 473.3,
+      "region": "Pelawick vale"
+    }
+  ],
+  "roads": [
+    {
+      "id": "joramere__falgate__good",
+      "from": "joramere",
+      "to": "falgate",
+      "quality": "good",
+      "distance_miles": 163,
+      "bidirectional": true
+    },
+    {
+      "id": "joramere__garanyn__good",
+      "from": "joramere",
+      "to": "garanyn",
+      "quality": "good",
+      "distance_miles": 220,
+      "bidirectional": true
+    },
+    {
+      "id": "pelaur__rhaathfell__fair",
+      "from": "pelaur",
+      "to": "rhaathfell",
+      "quality": "fair",
+      "distance_miles": 133,
+      "bidirectional": true
+    },
+    {
+      "id": "yranur__garanyn__fair",
+      "from": "yranur",
+      "to": "garanyn",
+      "quality": "fair",
+      "distance_miles": 115,
+      "bidirectional": true
+    },
+    {
+      "id": "fenorreach__fenemoor__fair",
+      "from": "fenorreach",
+      "to": "fenemoor",
+      "quality": "fair",
+      "distance_miles": 251,
+      "bidirectional": true
+    },
+    {
+      "id": "fenorreach__quenoon__fair",
+      "from": "fenorreach",
+      "to": "quenoon",
+      "quality": "fair",
+      "distance_miles": 252,
+      "bidirectional": true
+    },
+    {
+      "id": "fenemoor__falgate__fair",
+      "from": "fenemoor",
+      "to": "falgate",
+      "quality": "fair",
+      "distance_miles": 199,
+      "bidirectional": true
+    },
+    {
+      "id": "yrwold__yranur__good",
+      "from": "yrwold",
+      "to": "yranur",
+      "quality": "good",
+      "distance_miles": 231,
+      "bidirectional": true
+    },
+    {
+      "id": "yrwold__rhaathfell__poor",
+      "from": "yrwold",
+      "to": "rhaathfell",
+      "quality": "poor",
+      "distance_miles": 357,
+      "bidirectional": true
+    },
+    {
+      "id": "yrwold__garanyn__poor",
+      "from": "yrwold",
+      "to": "garanyn",
+      "quality": "poor",
+      "distance_miles": 338,
+      "bidirectional": true
+    },
+    {
+      "id": "dunoron__fenorreach__fair",
+      "from": "dunoron",
+      "to": "fenorreach",
+      "quality": "fair",
+      "distance_miles": 174,
+      "bidirectional": true
+    },
+    {
+      "id": "dunoron__fenemoor__poor",
+      "from": "dunoron",
+      "to": "fenemoor",
+      "quality": "poor",
+      "distance_miles": 361,
+      "bidirectional": true
+    },
+    {
+      "id": "rhaathfell__yranur__poor",
+      "from": "rhaathfell",
+      "to": "yranur",
+      "quality": "poor",
+      "distance_miles": 136,
+      "bidirectional": true
+    },
+    {
+      "id": "ulmunwick__garanyn__good",
+      "from": "ulmunwick",
+      "to": "garanyn",
+      "quality": "good",
+      "distance_miles": 333,
+      "bidirectional": true
+    }
+  ]
+}

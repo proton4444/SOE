@@ -1,0 +1,446 @@
+{
+  "generated_at": "2026-08-13T12:07:55.484064+00:00",
+  "policies": [
+    "llm:openai/gpt-4o-mini:expansionist-v1",
+    "scripted:military"
+  ],
+  "map": "calib_12.json",
+  "turns_per_game": 30,
+  "games": 4,
+  "draws": 0,
+  "wins": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 3,
+    "scripted:military": 1
+  },
+  "win_rate": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 0.75,
+    "scripted:military": 0.25
+  },
+  "pairs": [
+    {
+      "seed": 0,
+      "code": "AR000",
+      "winners": [
+        "llm:openai/gpt-4o-mini:expansionist-v1",
+        "llm:openai/gpt-4o-mini:expansionist-v1"
+      ],
+      "verdict": "swept",
+      "swept_by": "llm:openai/gpt-4o-mini:expansionist-v1"
+    },
+    {
+      "seed": 1,
+      "code": "AR001",
+      "winners": [
+        "scripted:military",
+        "llm:openai/gpt-4o-mini:expansionist-v1"
+      ],
+      "verdict": "split",
+      "swept_by": null
+    }
+  ],
+  "pair_sweeps": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 1,
+    "scripted:military": 0
+  },
+  "pair_splits": 1,
+  "decided_by": {
+    "soldiers": 3,
+    "secured": 1
+  },
+  "warnings_total": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 64,
+    "scripted:military": 81
+  },
+  "warning_order_lines_total": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 41,
+    "scripted:military": 76
+  },
+  "order_lines_total": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 488,
+    "scripted:military": 1053
+  },
+  "parsed_orders_total": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 488,
+    "scripted:military": 1053
+  },
+  "errors": [],
+  "results": [
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "llm:openai/gpt-4o-mini:expansionist-v1",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_1",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 703.0,
+          "soldiers": 240,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 10.0,
+          "soldiers": 175,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.21,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "c25d0bf66a489f779a8323aef8faa3e6237cc52a5a42866bfc87b16a1769fd1c"
+    },
+    {
+      "code": "AR000",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "llm:openai/gpt-4o-mini:expansionist-v1"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 363.9,
+          "soldiers": 118,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 678.0,
+          "soldiers": 240,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.27,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "155466c77dc401707a5e6ef7101a4195f5043311b744599fa21b2269a6f1295d"
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "llm:openai/gpt-4o-mini:expansionist-v1",
+        "player_2": "scripted:military"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "scripted:military",
+      "metrics": {
+        "player_1": {
+          "secured": 0,
+          "controlled": 1,
+          "gold": 844.0,
+          "soldiers": 160,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 9.0,
+          "soldiers": 165,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.24,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "9a35b5a31dc88e35a1652791d7386c66e463633387292bff8025ee7c667adb5a"
+    },
+    {
+      "code": "AR001",
+      "seats": {
+        "player_1": "scripted:military",
+        "player_2": "llm:openai/gpt-4o-mini:expansionist-v1"
+      },
+      "turns_played": 30,
+      "winner": "player_2",
+      "winner_policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "metrics": {
+        "player_1": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 249.0,
+          "soldiers": 40,
+          "characters_alive": 1
+        },
+        "player_2": {
+          "secured": 1,
+          "controlled": 1,
+          "gold": 671.0,
+          "soldiers": 250,
+          "characters_alive": 1
+        }
+      },
+      "wall_seconds": 0.61,
+      "contact_turn": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "eliminated_at": {
+        "player_1": 0,
+        "player_2": 0
+      },
+      "final_state_sha": "b24bb8f4369938f8bd03eb367651eceafc3995207405a59639049351b9b223a1"
+    }
+  ],
+  "reliability": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": {
+      "calls_attempted": 120,
+      "calls_completed": 120,
+      "call_failures": {},
+      "parseable_call_rate": 1.0,
+      "no_op_turns": 0,
+      "retried_calls": 0,
+      "latency_ms": {
+        "min": 1116.3,
+        "median": 1959.0,
+        "mean": 2116.8,
+        "max": 6702.2,
+        "n": 120
+      },
+      "tokens": {
+        "prompt_tokens": 384563,
+        "completion_tokens": 7080,
+        "total_tokens": 391643
+      },
+      "cost": 0.061313
+    },
+    "scripted:military": {
+      "calls_attempted": 0,
+      "n_a": true
+    }
+  },
+  "emitted_order_quality": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": {
+      "order_lines": 482,
+      "warning_order_lines": 18,
+      "warning_messages": 29,
+      "warning_order_rate": 0.037344
+    },
+    "scripted:military": {
+      "n_a": true
+    }
+  },
+  "resolved_warning_categories": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": {
+      "No actor specified": 23,
+      "Emperor Marcus is not in Dreliwick": 4,
+      "Insufficient movement points (need 12.6, have 10)": 3,
+      "Could not parse order: 'to expand our territorial control and strengthen our army emperor marcus will prioritize recruiting soldiers and securing our current city'": 2,
+      "Faction 'targets emperor marcus will focus on these strategic actions' not found": 2,
+      "Could not parse order: 'khan tengri will recruit more soldiers to strengthen our army'": 2,
+      "Insufficient movement points (need 122.5, have 10)": 2,
+      "Insufficient movement points (need 41.400000000000006, have 10)": 2,
+      "Insufficient movement points (need 103.9, have 10)": 1,
+      "Insufficient movement points (need 52.5, have 10)": 1,
+      "Could not parse order: 'to maximize our strategy of expanding territorial control emperor marcus will focus on recruiting more soldiers and preparing to move towards an unsecured city'": 1,
+      "Character 'already' not found": 1,
+      "Insufficient movement points (need 171.25, have 10)": 1,
+      "Insufficient movement points (need 26.2, have 10)": 1,
+      "Could not parse order: 'after that we will move towards drelerford to secure gold in the future'": 1,
+      "Could not parse order: 'to expand our territorial control khan tengri will prioritize recruiting more soldiers and then move towards an unsecured city'": 1,
+      "Could not parse order: 'here are the orders for the next turn recruit 10 soldiers in rhaethdale'": 1,
+      "Could not parse order: 'to expand our territorial control we will focus on securing our current city recruiting more soldiers and preparing to move towards an unsecured city'": 1,
+      "Could not parse order: 'to expand our territorial control emperor marcus will prioritize recruiting more soldiers and moving towards an unsecured city'": 1,
+      "Could not parse order: 'here are the orders for the next turn recruit 10 soldiers in dreliwick'": 1,
+      "Could not parse order: 'to expand territorial control and recruit soldiers effectively emperor marcus will prioritize securing the city of narunon and recruiting soldiers'": 1,
+      "Could not parse order: 'to secure our position and expand our territory emperor marcus will focus on recruiting soldiers and moving towards an unsecured city'": 1,
+      "Could not parse order: 'here are the orders for the next turn recruit 10 soldiers in narunon'": 1,
+      "Could not parse order: 'to maximize our strategy of expanding territorial control emperor marcus will focus on recruiting soldiers in dreliwick and then move towards zelahold which is an unsecured city'": 1,
+      "Could not parse order: 'to maximize our strategy of expanding territorial control emperor marcus will focus on securing dreliwick recruiting soldiers and moving towards zelahold'": 1,
+      "Could not parse order: 'to expand territorial control emperor marcus will focus on securing dreliwick recruiting soldiers and moving towards an unsecured city'": 1,
+      "Could not parse order: 'to expand our territorial control we will focus on securing dreliwick recruiting soldiers and moving towards an unsecured city'": 1,
+      "Could not parse order: 'to expand our territorial control emperor marcus will prioritize securing dreliwick recruiting soldiers and moving towards narunon which is an unsecured city'": 1,
+      "Insufficient movement points (need 33.1, have 10)": 1,
+      "Could not parse order: 'orders recruit 10 soldiers in ephunyn'": 1,
+      "Could not parse order: 'to expand our territorial control khan tengri will focus on recruiting more soldiers and securing our current city'": 1,
+      "Could not parse order: 'after that he will move towards dunaen which is a port city that we can secure'": 1
+    },
+    "scripted:military": {
+      "Character player_2 not found": 25,
+      "Character player_1 not found": 24,
+      "City 'redport' not found": 10,
+      "No actor specified": 5,
+      "Character 'aide 2 007' not found": 2,
+      "Character 'aide 1 006' not found": 2,
+      "Character 'aide 1 008' not found": 2,
+      "Character 'aide 2 005' not found": 1,
+      "Character 'aide 2 008' not found": 1,
+      "Character 'aide 2 017' not found": 1,
+      "Character 'aide 1 007' not found": 1,
+      "Character 'aide 1 014' not found": 1,
+      "Character 'aide 1 020' not found": 1,
+      "Character 'aide 1 021' not found": 1,
+      "Character 'aide 2 003' not found": 1,
+      "Character 'aide 2 021' not found": 1,
+      "Character 'aide 2 022' not found": 1,
+      "Character 'aide 1 026' not found": 1
+    }
+  },
+  "strategy": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": {
+      "order_families": {
+        "SECURE": 35,
+        "RECRUIT": 117,
+        "TAX": 124,
+        "MOVE": 139,
+        "AWAIT": 65,
+        "ENEMY": 2,
+        "COLLECT": 5,
+        "WORK": 1
+      },
+      "first_contact_turn": null,
+      "eliminations": 0,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 174.5
+    },
+    "scripted:military": {
+      "order_families": {
+        "TAX": 120,
+        "SECURE": 118,
+        "RECRUIT": 178,
+        "STUDY": 67,
+        "INVEST": 42,
+        "IF": 29,
+        "WORK": 30,
+        "SCRY": 28,
+        "CONJURE": 29,
+        "SAY": 33,
+        "ENEMY": 12,
+        "NAME": 49,
+        "TRADE": 13,
+        "LURK": 19,
+        "REPORT": 16,
+        "ADDRESS": 4,
+        "PASSWORD": 4,
+        "REPAY": 10,
+        "ALLY": 4,
+        "PROMOTE": 17,
+        "TRAIN": 23,
+        "FLY": 27,
+        "NEUTRAL": 4,
+        "SCAN": 5,
+        "FORTIFY": 10,
+        "POST": 26,
+        "CREATE": 13,
+        "COLLECT": 18,
+        "BUILD": 5,
+        "SUMMON": 17,
+        "BORROW": 2,
+        "MINE": 4,
+        "PAY": 5,
+        "SEARCH": 40,
+        "CHARGE": 8,
+        "ABSORB": 5,
+        "MOVE": 18,
+        "TELEPORT": 1
+      },
+      "first_contact_turn": null,
+      "eliminations": 0,
+      "territory_won_total": 0,
+      "territory_lost_total": 0,
+      "avg_midgame_soldiers": 102.8
+    }
+  },
+  "blueprint_diff": {
+    "a": {
+      "policy": "llm:openai/gpt-4o-mini:expansionist-v1",
+      "games": 4,
+      "wins": 3,
+      "survival_rate": 1.0,
+      "contact_rate": 0.0,
+      "orders": {
+        "recruit": 117,
+        "attack": 0,
+        "movement": 139,
+        "secure": 35,
+        "tax": 124
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 16.0,
+        "mean": 15.8,
+        "max": 30.0,
+        "n": 117
+      },
+      "first_attack_turn": null
+    },
+    "b": {
+      "policy": "scripted:military",
+      "games": 4,
+      "wins": 1,
+      "survival_rate": 1.0,
+      "contact_rate": 0.0,
+      "orders": {
+        "recruit": 178,
+        "attack": 0,
+        "movement": 18,
+        "secure": 118,
+        "tax": 120
+      },
+      "first_recruit_turn": {
+        "min": 1.0,
+        "median": 12.0,
+        "mean": 12.8,
+        "max": 30.0,
+        "n": 178
+      },
+      "first_attack_turn": null
+    }
+  },
+  "warning_order_rate": {
+    "llm:openai/gpt-4o-mini:expansionist-v1": 0.084016,
+    "scripted:military": 0.072175
+  },
+  "config": {
+    "mode": "smoke",
+    "map": "calib_12.json",
+    "turns": 30,
+    "seed_pairs": 2,
+    "temperature": 0.0,
+    "max_tokens": 1500,
+    "max_spend_usd": 0.1,
+    "entrants": [
+      {
+        "type": "llm",
+        "model": "openai/gpt-4o-mini",
+        "blueprint": "expansionist-v1"
+      },
+      {
+        "type": "scripted",
+        "style": "military"
+      }
+    ]
+  },
+  "phase0_run_gate": {
+    "status": "not_applicable"
+  }
+}

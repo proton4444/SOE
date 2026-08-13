@@ -46,7 +46,7 @@ from extract_geography import (  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_WORLD = REPO_ROOT / "maps" / "soe_world.json"
-# Third-party source material, kept out of the repo (docs/ip_cleanroom.md).
+# Third-party source material, kept out of the repo (archived clean-room plan).
 DEFAULT_RASTER = REPO_ROOT / "reference" / "soe_map_sample.png"
 
 ROW_LETTERS = "ABCDEFGHIJ"

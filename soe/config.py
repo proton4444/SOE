@@ -160,14 +160,14 @@ BORROW_MAX_AMOUNT = 500  # Cap when amount is omitted
 # populated ones -- the TINY rate is zero, so those characters volunteer.
 WORK_WAGE_DAILY_PER_BAND = {
     PopulationBand.TINY: 0.0,
-    PopulationBand.SMALL: 1.0,
-    PopulationBand.MEDIUM: 2.0,
-    PopulationBand.LARGE: 3.0,
+    PopulationBand.SMALL: 0.5,
+    PopulationBand.MEDIUM: 1.0,
+    PopulationBand.LARGE: 1.5,
 }
 
 # High-level characters try to sell their own skills rather than labour for
 # common wages; the bonus is per day per point of their best skill.
-WORK_SKILL_BONUS_PER_LEVEL_PER_DAY = 0.02
+WORK_SKILL_BONUS_PER_LEVEL_PER_DAY = 0.01
 
 
 # ============================================================================

@@ -81,6 +81,26 @@
       <button type="submit">Join game</button>
     </form>
   </section>
+
+  <section class="card">
+    <h2>Model setup</h2>
+    <p class="muted">Configure the model brain once: bots in every game and
+    headless arena runs that do not pin their own environment read these
+    settings.</p>
+    {% if llm_summary.key_set or llm_env_key %}
+    <p class="notice ok">Key configured
+      {% if llm_env_key %}(environment){% else %}
+      <code>{{ llm_summary.key_masked }}</code>{% endif %}
+      · model <code>{{ llm_summary.model or "default" }}</code></p>
+    {% else %}
+    <p class="notice">No API key set yet — bots will not run until one is added.</p>
+    {% endif %}
+    <a class="button" href="/llm-settings">Open LLM settings</a>
+    {% if not is_any_host %}
+    <p class="muted">Changes require a host session: create a game or open one
+    you already host first.</p>
+    {% endif %}
+  </section>
 </div>
 
 <section class="card">

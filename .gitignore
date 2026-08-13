@@ -81,6 +81,20 @@ nul
 _tmp_map.svg
 .playwright-mcp/
 
+# Trailer and storyboard artwork: large generated binaries kept on disk only.
+# Roughly 34 MB of PNGs that would otherwise sit in history forever and be
+# re-downloaded on every clone. They are production working files, not source.
+trailer/
+assets/trailer/
+
+# Per-call arena traces: one file per model call, thousands per official run.
+# The pre-commit scanner spawns two processes per staged file, so tracking
+# these makes every later commit slower without bound. The evidence that the
+# gate actually cites -- manifest.json, arena_results.json, ARENA_REPORT.md,
+# games.jsonl and turns.jsonl -- stays tracked; the raw traces stay on disk.
+games/arena/*/decisions/
+games/arena/*/orders/
+
 # Third-party source material: development inputs only, never distributed.
 # See docs/ip_cleanroom.md.
 reference/

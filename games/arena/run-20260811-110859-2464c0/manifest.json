@@ -1,0 +1,47 @@
+{
+  "schema_version": "1",
+  "run_id": "run-20260811-110859-2464c0",
+  "status": "complete",
+  "engine_version": "1.1.0a0",
+  "started_at": "2026-08-11T11:08:59.824838+00:00",
+  "completed_at": "2026-08-11T11:24:03.574495+00:00",
+  "mode": "smoke",
+  "map": "starter_map.json",
+  "map_hash": "cd2ba36b27aaa6eb46158e2f51080b5359741cd50aa1a68a0b0835b7815508ba",
+  "prompt_hashes": {
+    "expansionist-v1": "ac5f404a7832d60e05a65ec9ed7227651fc1689831554cb4b01b3f5de2e7619c"
+  },
+  "blueprints": [
+    {
+      "id": "expansionist-v1",
+      "hash": "0ee15c5fca735a23df694802393a2df93069dc11b888a968840229d318db7878",
+      "file": "expansionist-v1.json"
+    }
+  ],
+  "model": "openai/gpt-4o-mini",
+  "temperature": 0.0,
+  "max_tokens": 1500,
+  "retry_policy": {
+    "max_retries": 2,
+    "timeout_seconds": 120.0
+  },
+  "seed_pairs": 4,
+  "turns": 30,
+  "entrants": [
+    {
+      "type": "llm",
+      "model": "openai/gpt-4o-mini",
+      "blueprint": "expansionist-v1"
+    },
+    {
+      "type": "random"
+    }
+  ],
+  "max_spend_usd": 2.0,
+  "seats": [
+    "llm",
+    "random"
+  ],
+  "git_commit": "d8077484f32e440b0fe78a25c364bcf42699ba92",
+  "git_dirty": true
+}

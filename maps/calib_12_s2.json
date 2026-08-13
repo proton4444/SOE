@@ -1,0 +1,358 @@
+{
+  "cities": [
+    {
+      "id": "pelothon",
+      "name": "Pelothon",
+      "population_band": "< 1k",
+      "population": 628,
+      "terrain": [
+        "mountains"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G8",
+      "x": 0.5703,
+      "y": 0.6058,
+      "x_miles": 741.4,
+      "y_miles": 605.8,
+      "region": "Dreliport march"
+    },
+    {
+      "id": "wenethwick",
+      "name": "Wenethwick",
+      "population_band": "< 1k",
+      "population": 655,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E4",
+      "x": 0.2752,
+      "y": 0.4749,
+      "x_miles": 357.8,
+      "y_miles": 474.9,
+      "region": "Garanridge reach"
+    },
+    {
+      "id": "coroyn",
+      "name": "Coroyn",
+      "population_band": "< 1k",
+      "population": 376,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C6",
+      "x": 0.4267,
+      "y": 0.283,
+      "x_miles": 554.7,
+      "y_miles": 283.0,
+      "region": "Caloyn vale"
+    },
+    {
+      "id": "lununon",
+      "name": "Lununon",
+      "population_band": "< 1k",
+      "population": 463,
+      "terrain": [
+        "desert"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H7",
+      "x": 0.5027,
+      "y": 0.7946,
+      "x_miles": 653.5,
+      "y_miles": 794.6,
+      "region": "Dreliport march"
+    },
+    {
+      "id": "ossufell",
+      "name": "Ossufell",
+      "population_band": "< 1k",
+      "population": 349,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G5",
+      "x": 0.3418,
+      "y": 0.6397,
+      "x_miles": 444.4,
+      "y_miles": 639.7,
+      "region": "Garanridge reach"
+    },
+    {
+      "id": "dreliath",
+      "name": "Dreliath",
+      "population_band": "< 1k",
+      "population": 593,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "H10",
+      "x": 0.6955,
+      "y": 0.7689,
+      "x_miles": 904.2,
+      "y_miles": 768.9,
+      "region": "Dreliport march"
+    },
+    {
+      "id": "vasavale",
+      "name": "Vasavale",
+      "population_band": "< 1k",
+      "population": 237,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E10",
+      "x": 0.7105,
+      "y": 0.4272,
+      "x_miles": 923.7,
+      "y_miles": 427.2,
+      "region": "Dreliport march"
+    },
+    {
+      "id": "wenermere",
+      "name": "Wenermere",
+      "population_band": "< 1k",
+      "population": 502,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F4",
+      "x": 0.2751,
+      "y": 0.553,
+      "x_miles": 357.6,
+      "y_miles": 553.0,
+      "region": "Garanridge reach"
+    },
+    {
+      "id": "rhaorfell",
+      "name": "Rhaorfell",
+      "population_band": "< 1k",
+      "population": 819,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F4",
+      "x": 0.2828,
+      "y": 0.5195,
+      "x_miles": 367.6,
+      "y_miles": 519.5,
+      "region": "Garanridge reach"
+    },
+    {
+      "id": "halaur",
+      "name": "Halaur",
+      "population_band": "< 1k",
+      "population": 556,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G4",
+      "x": 0.2598,
+      "y": 0.6506,
+      "x_miles": 337.7,
+      "y_miles": 650.6,
+      "region": "Garanridge reach"
+    },
+    {
+      "id": "drelilon",
+      "name": "Drelilon",
+      "population_band": "< 1k",
+      "population": 935,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E8",
+      "x": 0.5665,
+      "y": 0.4397,
+      "x_miles": 736.4,
+      "y_miles": 439.7,
+      "region": "Dreliport march"
+    },
+    {
+      "id": "quenothport",
+      "name": "Quenothport",
+      "population_band": "< 1k",
+      "population": 835,
+      "terrain": [
+        "desert"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E8",
+      "x": 0.5586,
+      "y": 0.4737,
+      "x_miles": 726.2,
+      "y_miles": 473.7,
+      "region": "Dreliport march"
+    }
+  ],
+  "roads": [
+    {
+      "id": "pelothon__quenothport__good",
+      "from": "pelothon",
+      "to": "quenothport",
+      "quality": "good",
+      "distance_miles": 153,
+      "bidirectional": true
+    },
+    {
+      "id": "wenethwick__rhaorfell__fair",
+      "from": "wenethwick",
+      "to": "rhaorfell",
+      "quality": "fair",
+      "distance_miles": 53,
+      "bidirectional": true
+    },
+    {
+      "id": "wenethwick__halaur__good",
+      "from": "wenethwick",
+      "to": "halaur",
+      "quality": "good",
+      "distance_miles": 203,
+      "bidirectional": true
+    },
+    {
+      "id": "coroyn__drelilon__fair",
+      "from": "coroyn",
+      "to": "drelilon",
+      "quality": "fair",
+      "distance_miles": 276,
+      "bidirectional": true
+    },
+    {
+      "id": "lununon__pelothon__fair",
+      "from": "lununon",
+      "to": "pelothon",
+      "quality": "fair",
+      "distance_miles": 239,
+      "bidirectional": true
+    },
+    {
+      "id": "lununon__ossufell__fair",
+      "from": "lununon",
+      "to": "ossufell",
+      "quality": "fair",
+      "distance_miles": 299,
+      "bidirectional": true
+    },
+    {
+      "id": "ossufell__wenermere__poor",
+      "from": "ossufell",
+      "to": "wenermere",
+      "quality": "poor",
+      "distance_miles": 141,
+      "bidirectional": true
+    },
+    {
+      "id": "ossufell__rhaorfell__good",
+      "from": "ossufell",
+      "to": "rhaorfell",
+      "quality": "good",
+      "distance_miles": 164,
+      "bidirectional": true
+    },
+    {
+      "id": "ossufell__halaur__fair",
+      "from": "ossufell",
+      "to": "halaur",
+      "quality": "fair",
+      "distance_miles": 123,
+      "bidirectional": true
+    },
+    {
+      "id": "dreliath__pelothon__good",
+      "from": "dreliath",
+      "to": "pelothon",
+      "quality": "good",
+      "distance_miles": 265,
+      "bidirectional": true
+    },
+    {
+      "id": "wenermere__wenethwick__fair",
+      "from": "wenermere",
+      "to": "wenethwick",
+      "quality": "fair",
+      "distance_miles": 90,
+      "bidirectional": true
+    },
+    {
+      "id": "wenermere__rhaorfell__good",
+      "from": "wenermere",
+      "to": "rhaorfell",
+      "quality": "good",
+      "distance_miles": 40,
+      "bidirectional": true
+    },
+    {
+      "id": "rhaorfell__halaur__fair",
+      "from": "rhaorfell",
+      "to": "halaur",
+      "quality": "fair",
+      "distance_miles": 155,
+      "bidirectional": true
+    },
+    {
+      "id": "halaur__wenermere__excellent",
+      "from": "halaur",
+      "to": "wenermere",
+      "quality": "excellent",
+      "distance_miles": 115,
+      "bidirectional": true
+    },
+    {
+      "id": "drelilon__pelothon__poor",
+      "from": "drelilon",
+      "to": "pelothon",
+      "quality": "poor",
+      "distance_miles": 191,
+      "bidirectional": true
+    },
+    {
+      "id": "drelilon__vasavale__good",
+      "from": "drelilon",
+      "to": "vasavale",
+      "quality": "good",
+      "distance_miles": 216,
+      "bidirectional": true
+    },
+    {
+      "id": "quenothport__drelilon__good",
+      "from": "quenothport",
+      "to": "drelilon",
+      "quality": "good",
+      "distance_miles": 41,
+      "bidirectional": true
+    }
+  ]
+}

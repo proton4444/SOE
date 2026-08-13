@@ -1,0 +1,334 @@
+{
+  "cities": [
+    {
+      "id": "zelothvale",
+      "name": "Zelothvale",
+      "population_band": "< 1k",
+      "population": 352,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H7",
+      "x": 0.4665,
+      "y": 0.7424,
+      "x_miles": 606.4,
+      "y_miles": 742.4,
+      "region": "Eshormere march"
+    },
+    {
+      "id": "garmere",
+      "name": "Garmere",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "desert"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "H9",
+      "x": 0.6501,
+      "y": 0.7956,
+      "x_miles": 845.1,
+      "y_miles": 795.6,
+      "region": "Eshormere march"
+    },
+    {
+      "id": "drelerford",
+      "name": "Drelerford",
+      "population_band": "< 1k",
+      "population": 782,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H3",
+      "x": 0.2292,
+      "y": 0.7301,
+      "x_miles": 298.0,
+      "y_miles": 730.1,
+      "region": "Lunistead reach"
+    },
+    {
+      "id": "rhaethdale",
+      "name": "Rhaethdale",
+      "population_band": "< 1k",
+      "population": 681,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F3",
+      "x": 0.2007,
+      "y": 0.5053,
+      "x_miles": 260.9,
+      "y_miles": 505.3,
+      "region": "Lunistead reach"
+    },
+    {
+      "id": "dreliwick",
+      "name": "Dreliwick",
+      "population_band": "< 1k",
+      "population": 559,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D6",
+      "x": 0.3976,
+      "y": 0.3847,
+      "x_miles": 516.9,
+      "y_miles": 384.7,
+      "region": "Lunistead reach"
+    },
+    {
+      "id": "zelahold",
+      "name": "Zelahold",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "G8",
+      "x": 0.566,
+      "y": 0.613,
+      "x_miles": 735.8,
+      "y_miles": 613.0,
+      "region": "Eshormere march"
+    },
+    {
+      "id": "garoath",
+      "name": "Garoath",
+      "population_band": "< 1k",
+      "population": 796,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "G9",
+      "x": 0.6677,
+      "y": 0.684,
+      "x_miles": 868.0,
+      "y_miles": 684.0,
+      "region": "Eshormere march"
+    },
+    {
+      "id": "dunaen",
+      "name": "Dunaen",
+      "population_band": "< 1k",
+      "population": 182,
+      "terrain": [
+        "hills"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G11",
+      "x": 0.7922,
+      "y": 0.6012,
+      "x_miles": 1029.8,
+      "y_miles": 601.2,
+      "region": "Barathfell vale"
+    },
+    {
+      "id": "narunon",
+      "name": "Narunon",
+      "population_band": "< 1k",
+      "population": 837,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E6",
+      "x": 0.4373,
+      "y": 0.4405,
+      "x_miles": 568.5,
+      "y_miles": 440.5,
+      "region": "Lunistead reach"
+    },
+    {
+      "id": "ephunyn",
+      "name": "Ephunyn",
+      "population_band": "< 1k",
+      "population": 397,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F10",
+      "x": 0.7388,
+      "y": 0.5165,
+      "x_miles": 960.4,
+      "y_miles": 516.5,
+      "region": "Barathfell vale"
+    },
+    {
+      "id": "joreththorpe",
+      "name": "Joreththorpe",
+      "population_band": "< 1k",
+      "population": 398,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "E11",
+      "x": 0.804,
+      "y": 0.4356,
+      "x_miles": 1045.2,
+      "y_miles": 435.6,
+      "region": "Barathfell vale"
+    },
+    {
+      "id": "barunburn",
+      "name": "Barunburn",
+      "population_band": "< 1k",
+      "population": 601,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": true,
+      "is_ruin": false,
+      "grid_ref": "C10",
+      "x": 0.7347,
+      "y": 0.291,
+      "x_miles": 955.1,
+      "y_miles": 291.0,
+      "region": "Barathfell vale"
+    }
+  ],
+  "roads": [
+    {
+      "id": "zelothvale__zelahold__fair",
+      "from": "zelothvale",
+      "to": "zelahold",
+      "quality": "fair",
+      "distance_miles": 210,
+      "bidirectional": true
+    },
+    {
+      "id": "garmere__garoath__poor",
+      "from": "garmere",
+      "to": "garoath",
+      "quality": "poor",
+      "distance_miles": 131,
+      "bidirectional": true
+    },
+    {
+      "id": "rhaethdale__drelerford__good",
+      "from": "rhaethdale",
+      "to": "drelerford",
+      "quality": "good",
+      "distance_miles": 262,
+      "bidirectional": true
+    },
+    {
+      "id": "dreliwick__rhaethdale__fair",
+      "from": "dreliwick",
+      "to": "rhaethdale",
+      "quality": "fair",
+      "distance_miles": 325,
+      "bidirectional": true
+    },
+    {
+      "id": "dreliwick__narunon__good",
+      "from": "dreliwick",
+      "to": "narunon",
+      "quality": "good",
+      "distance_miles": 87,
+      "bidirectional": true
+    },
+    {
+      "id": "zelahold__garoath__good",
+      "from": "zelahold",
+      "to": "garoath",
+      "quality": "good",
+      "distance_miles": 173,
+      "bidirectional": true
+    },
+    {
+      "id": "narunon__zelothvale__fair",
+      "from": "narunon",
+      "to": "zelothvale",
+      "quality": "fair",
+      "distance_miles": 350,
+      "bidirectional": true
+    },
+    {
+      "id": "narunon__zelahold__fair",
+      "from": "narunon",
+      "to": "zelahold",
+      "quality": "fair",
+      "distance_miles": 276,
+      "bidirectional": true
+    },
+    {
+      "id": "ephunyn__garoath__good",
+      "from": "ephunyn",
+      "to": "garoath",
+      "quality": "good",
+      "distance_miles": 220,
+      "bidirectional": true
+    },
+    {
+      "id": "ephunyn__dunaen__good",
+      "from": "ephunyn",
+      "to": "dunaen",
+      "quality": "good",
+      "distance_miles": 126,
+      "bidirectional": true
+    },
+    {
+      "id": "ephunyn__joreththorpe__good",
+      "from": "ephunyn",
+      "to": "joreththorpe",
+      "quality": "good",
+      "distance_miles": 135,
+      "bidirectional": true
+    },
+    {
+      "id": "barunburn__dunaen__good",
+      "from": "barunburn",
+      "to": "dunaen",
+      "quality": "good",
+      "distance_miles": 367,
+      "bidirectional": true
+    },
+    {
+      "id": "barunburn__ephunyn__fair",
+      "from": "barunburn",
+      "to": "ephunyn",
+      "quality": "fair",
+      "distance_miles": 259,
+      "bidirectional": true
+    },
+    {
+      "id": "barunburn__joreththorpe__good",
+      "from": "barunburn",
+      "to": "joreththorpe",
+      "quality": "good",
+      "distance_miles": 196,
+      "bidirectional": true
+    }
+  ]
+}

@@ -64,23 +64,92 @@ comportamenti strategici osservabilmente diversi.
 
 ### Exit criteria
 
+Revisione del 2026-08-13. I run dell'11 agosto sono stati valutati sulla
+formulazione precedente, che la tabella di stato riporta; le tre debolezze
+elencate piu sotto sono qui chiuse. Le soglie numeriche e lo scenario sono
+congelati in `configs/phase0_gate.json`.
+
+**Qualificazione dello scenario.** La mappa del gate deve separare su entrambi
+gli assi, verificato con policy scripted a costo zero:
+
+- una policy deliberata batte `random` al test dei sweep;
+- due stili scripted intenzionalmente diversi si separano fra loro allo stesso
+  test.
+
+Nessuna delle due mappe estreme qualifica: `starter_map.json` e cieca rispetto
+alla strategia, `world.json` e cieca rispetto alla differenza fra gioco
+deliberato e rumore. Il gate ufficiale usa `calib_12.json`, congelata con hash
+SHA-256 e contratto di run in `configs/phase0_gate.json`.
+
+**Test dei sweep.** Ogni confronto usa almeno **40 coppie di seed** (80 partite)
+con scambio dei posti. Si contano solo le coppie che producono uno sweep; sotto
+l'ipotesi nulla queste si distribuiscono come una binomiale con p=0.5, e il
+confronto e superato se il vantaggio e significativo a **p < 0.01** a una coda.
+Il win rate grezzo non e mai sufficiente, perche mescola abilita e fortuna della
+citta iniziale.
+
+**Competenza.**
+
 - Almeno il 95% delle chiamate produce un ordine accettato.
+- Al massimo il **5% delle righe di ordine emesse** produce uno o piu warning.
+  Una riga conta una sola volta anche se genera piu messaggi. L'arena misura le
+  righe emesse prima del filtro di sicurezza, quindi rimuovere un ordine invalido
+  prima dell'esecuzione non nasconde l'errore del modello, e misura separatamente
+  le righe inviate dopo la risoluzione del motore. Il gate applica la soglia al
+  peggiore dei due tassi. Il vecchio 10.6% (352 messaggi / 3306 ordini
+  analizzati) resta solo un segnale storico, non la misura esatta del nuovo
+  criterio.
+- Il modello supera al test dei sweep la **policy scripted piu forte disponibile
+  sulla mappa qualificata**, non `random`.
+- Almeno due blueprint intenzionalmente diversi si separano fra loro allo stesso
+  test, con differenze visibili in espansione, economia o aggressivita. Il
+  verdetto automatico richiede anche almeno 5 punti percentuali di differenza
+  nella quota di una famiglia d'ordini rilevante.
+
+**Integrita del run.**
+
 - Tutti i match del batch terminano senza errore del motore.
-- Il modello supera random nel confronto accoppiato.
-- Almeno due blueprint intenzionalmente diversi generano differenze misurabili
-  in espansione, economia o aggressivita.
+- Il seat del modello ha effettivamente giocato: `call_failures` vuoto e almeno
+  il 99% delle chiamate completate. Un run con seat non configurato o muto e
+  **nullo**, non una sconfitta, e non puo comparire in un confronto.
+- Un batch interrotto riprende e ricostruisce le partite gia concluse con lo
+  stesso `state_sha`.
 - Ogni risultato puo essere ricostruito da manifest e ordini salvati.
+- Nessun run ufficiale parte da un worktree dirty.
 - Costo e durata per match sono noti.
 
 ### Stato al 2026-08-13
 
-Il gate **non e superato**: 4 criteri su 6.
+Il gate **non e ancora superato**. Il contratto e ora eseguibile e rifiuta in
+preflight una mappa diversa, meno di 40 coppie, un avversario diverso,
+blueprint diversi da quelli congelati, chiave assente, probe del modello non
+riuscito nelle ultime 24 ore o worktree dirty. Mancano i due batch ufficiali
+provider-backed.
 
-Evidenza: tre run reali dell'11 agosto 2026, tutti `status: complete`. Il piu
-recente e `games/arena/run-20260811-110859-2464c0` (gpt-4o-mini,
-`expansionist-v1` contro `random`, 8 partite da 30 turni).
+Lo smoke corretto `games/arena/run-20260813-121307-993ca7` chiude il blocker
+di prompt e misurazione: 240/240 chiamate completate, 7 vittorie a 1 contro
+`scripted:military`, 3 sweep del modello, 0 sweep dell'avversario e 1 split.
+Le righe emesse con warning sono 1/924 (0,11%); dopo validazione ed esecuzione
+sono 34/923 (3,68%), quindi anche il peggiore dei due tassi resta sotto il 5%.
+Il run non e evidenza ufficiale perche usa 4, non 40, coppie e il manifest
+registra `git_dirty: true`. E costato 0,119935 USD ed e durato 483 secondi.
 
-| Criterio | Esito | Misura |
+Evidenza: **un solo run reale**, `games/arena/run-20260811-110859-2464c0`
+(gpt-4o-mini, `expansionist-v1` contro `random`, 8 partite da 30 turni).
+
+Gli altri due run dell'11 agosto non sono prove di competenza. In entrambi il
+seat LLM registra `call_failures: not_configured = 240` su 240 chiamate, zero
+ordini prodotti e 240 turni no-op: la chiave del provider non era configurata e
+`random` ha vinto 8 partite a 0 per forfait. L'arena li registra correttamente
+nella tabella di reliability, ma a livello di run restano `status: complete` con
+`errors` vuoto, indistinguibili da un run sano.
+
+Ne segue una lacuna del gate: il criterio "tutti i match terminano senza errore
+del motore" e soddisfatto anche quando il modello non ha giocato affatto. Il
+motore in effetti non ha sbagliato nulla, semplicemente non e mai stato
+interrogato.
+
+| Evidenza storica | Esito | Misura |
 |---|---|---|
 | 95% chiamate con ordine accettato | superato | 240/240 chiamate LLM con almeno un ordine accettato, 0 no-op, 0 retry |
 | Match senza errore del motore | superato | 8/8 completi, `errors` vuoto |
@@ -127,22 +196,86 @@ sostituito da un avversario forte e deliberato.
 Da notare infine che lo smoke LLM della Phase 0 e girato su `starter_map.json`,
 cioe sulla mappa in cui l'asse strategico risulta piatto, con n=4 coppie.
 
+### Calibrazione della mappa
+
+La causa e la dimensione. `starter_map.json` ha **6 citta**, `world.json` ne ha
+**154**: sono i due estremi, e ciascuno acceca un asse diverso. Con 6 citta non
+esiste spazio strategico e gli stili convergono; con 154 nessuno copre la mappa
+in 30 turni, il punteggio si riduce all'accumulo di soldati e anche il baseline
+casuale ci arriva.
+
+Da questo segue una previsione verificabile: deve esistere una dimensione
+intermedia in cui entrambi gli assi sono vivi. Tre mappe candidate generate con
+`scripts/generate_world.py --seed 1`, screenate a 40 coppie e 30 turni con il
+test dei sweep:
+
+| Mappa | Citta | `balanced` contro `random` | `military` contro `religious` |
+|---|---:|---|---|
+| `starter_map.json` | 6 | separa, 9-0, p=0.002 | piatta, 4-4, p=0.64 |
+| `calib_12.json` | 12 | **separa, 30-1, p=1.5e-08** | **separa, 15-4, p=0.0096** |
+| `calib_24.json` | 24 | separa, 21-1, p=5.5e-06 | piatta, 9-10, p=0.5 |
+| `calib_48.json` | 48 | piatta, 10-2, p=0.019 | piatta, 7-4, p=0.27 |
+| `world.json` | 154 | piatta, 8-8, p=0.6 | separa, 2-19, p=0.00011 |
+
+**`calib_12.json` e l'unica candidata che qualifica su entrambi gli assi**, ed e
+anche la piu decisiva: 30 sweep su 40 coppie contro random, con soli 9 split,
+mentre `starter_map.json` produce 31 split su 40.
+
+Le due riserve iniziali sono state verificate.
+
+**Campione doppio: confermato.** A 80 coppie di seed l'asse strategico regge con
+margine, 29 sweep a 10, p=0.0017, e la direzione e la stessa del campione da 40.
+
+**Seed del generatore: non confermato, ed e la scoperta piu utile.** Ripetendo
+la qualificazione su altre due mappe da 12 citta:
+
+| Mappa | Rotte | `balanced` contro `random` | `military` contro `religious` | Qualifica |
+|---|---:|---|---|---|
+| `calib_12.json` (seed 1) | 14 | separa, p=1.5e-08 | separa, p=0.0017 | si |
+| `calib_12_s2.json` (seed 2) | 17 | piatta, p=0.032 | piatta, p=0.5 | **no** |
+| `calib_12_s3.json` (seed 3) | 14 | separa, p=1.5e-11 | separa, p=0.00046 | si |
+
+Due mappe su tre qualificano. Il numero di citta e quindi una condizione
+**necessaria ma non sufficiente**: a parita di dimensione la topologia decide, e
+la mappa con piu rotte e proprio quella che fallisce entrambi gli assi, anche se
+tre mappe non bastano per affermare che sia la densita la causa.
+
+La conseguenza operativa e che il gate non puo adottare una regola sulla
+dimensione della mappa. Ogni mappa candidata va qualificata individualmente con
+i due confronti scripted, che costano zero, prima di essere usata per un match
+ufficiale. E la procedura gia scritta negli exit criteria, e questi dati la
+giustificano.
+
+Nota su quale stile risulti forte: su `calib_12` vince `military`, su
+`world.json` vince `religious`. Anche l'avversario di riferimento e quindi una
+proprieta della mappa, non una costante del gioco.
+
 Due avvertenze di lettura sui confronti:
 
 - il seat scripted legge lo stato completo, il seat LLM vede solo la propria fog
   of war; scripted-contro-random e un confronto equo, scripted-contro-modello no;
-- il 70% delle chiamate LLM (168 su 240) produce almeno un warning, e nessun
-  criterio del gate le osserva: la soglia richiede un solo ordine accettato per
-  chiamata.
+- lo smoke storico produceva warning nel 70% delle chiamate LLM (168 su 240),
+  ma quella misura mescolava messaggi e turni; il runner corretto conta righe
+  distinte sia prima del filtro sia dopo l'esecuzione e usa il tasso peggiore.
+  Sullo smoke corretto i due tassi sono rispettivamente 0,11% e 3,68%.
 
-### Debolezze del gate da correggere
+### Debolezze del gate, chiuse il 2026-08-13
 
-- gli exit criteria non fissano una dimensione campionaria, e questo permette a
-  uno smoke da 8 partite di risultare superato;
-- la soglia "ordine accettato" non distingue un turno pulito da un turno con
-  ordini scartati;
-- la ripresa dei batch e nello Scope ma non compare negli exit criteria, mentre
-  la Definition of Done dello spec la richiede.
+Le tre debolezze trovate nella formulazione originale, con la correzione
+adottata negli exit criteria:
+
+- non era fissata una dimensione campionaria, e questo permetteva a uno smoke da
+  8 partite di risultare superato; ora servono 40 coppie di seed e un test di
+  significativita sui sweep;
+- la soglia "ordine accettato" non distingueva un turno pulito da un turno con
+  ordini scartati; ora esiste un limite separato sulla percentuale di righe di
+  ordine che producono un warning;
+- la ripresa dei batch era nello Scope ma non negli exit criteria, mentre la
+  Definition of Done dello spec la richiedeva; ora e un criterio verificabile
+  tramite `state_sha`. Il test interrompe un batch, lo riprende e confronta gli
+  hash intermedi e finali con un run fresco.
+
+La calibrazione e chiusa: `calib_12.json` e lo scenario ufficiale congelato.
 
 ### Decisione
 
@@ -349,22 +482,51 @@ un batch LLM riproducibile, non una nuova pagina della dashboard.
 
 Ordine di lavoro, dal piu economico al piu costoso:
 
-1. **Scegliere e calibrare la mappa del gate.** E la variabile che oggi pesa di
-   piu ed e gratis da studiare: i run scripted non chiamano il provider. La
-   mappa scelta deve mostrare separazione sia tra stili strategici sia tra gioco
-   deliberato e rumore. Nessuna delle due mappe attuali soddisfa entrambe le
-   condizioni a 30 turni.
-2. **Sostituire `random` come avversario di riferimento** con la policy scripted
-   piu forte disponibile sulla mappa scelta, e riscrivere di conseguenza il
-   terzo exit criterion.
-3. **Fissare la dimensione campionaria negli exit criteria**, insieme a una
-   soglia esplicita per i warning e a un criterio di ripresa.
-4. **Eseguire il confronto blueprint-vs-blueprint** con `expansionist-v1` e
-   `consolidation-v1`, da un worktree pulito, come official candidate.
+1. ~~Scegliere e calibrare la mappa del gate.~~ **Fatto il 2026-08-13.**
+   `calib_12.json` qualifica su entrambi gli assi ed e congelata come scenario
+   ufficiale; `calib_12_s3.json` resta una seconda mappa qualificata ma non fa
+   parte del gate.
+2. ~~Fissare la dimensione campionaria negli exit criteria.~~ **Fatto**, insieme
+   alla soglia sui warning, al criterio di ripresa e alla clausola che annulla
+   un run con seat del modello non configurato. Il runner produce ora un
+   verdetto machine-readable per ogni candidate ufficiale.
+3. ~~Sostituire `random` come avversario di riferimento.~~ **Fatto.** L'arena
+   supportava gia `scripted:military`; `configs/phase0_competence.json` lo
+   seleziona senza altra modifica al motore.
+4. ~~Correggere prompt e metrica warning.~~ **Fatto e validato con lo smoke.**
+   `run-20260813-121307-993ca7` completa 240/240 chiamate, vince 7-1 contro
+   `scripted:military` e resta sotto soglia sia prima del filtro (0,11%) sia
+   dopo l'esecuzione (3,68%).
+5. **Eseguire il candidate di competenza**, da un worktree pulito e
+   con la chiave del provider verificata prima della partenza, a 40 coppie di
+   seed: `configs/phase0_competence.json`.
+6. **Eseguire il candidate blueprint-vs-blueprint** con `expansionist-v1` e
+   `consolidation-v1`: `configs/phase0_blueprints.json`.
 
-Da verificare come ipotesi successiva, sempre a costo zero: se 30 turni siano
-troppo pochi perche una differenza strategica si traduca in vittoria, ripetendo
-i due confronti a 60 turni.
+Il candidate modello-contro-scripted costa circa 1.22 USD a 40 coppie, sulla
+base dei 0.015 USD per match misurati l'11 agosto. Il confronto fra due
+blueprint usa due seat LLM e costa quindi circa il doppio, **2.43 USD**. I
+ceiling configurati sono rispettivamente 1.50 e 3.00 USD.
+
+L'ipotesi che 30 turni fossero troppo pochi e stata verificata e scartata,
+completando il quadro a 60 turni su entrambe le mappe estreme:
+
+| Mappa | Turni | `balanced` contro `random` | `military` contro `religious` |
+|---|---:|---|---|
+| `starter_map.json` | 30 | separa, 9-0 | piatta, 4-4 |
+| `starter_map.json` | 60 | separa, 9-0 | piatta, 5-3 |
+| `world.json` | 30 | piatta, 8-8 | separa, 2-19 |
+| `world.json` | 60 | piatta, 8-12 | separa, **0-24**, p=6e-08 |
+
+Il comportamento di ogni mappa e stabile rispetto alla lunghezza. Raddoppiare i
+turni **rafforza** l'asse che gia funzionava, fino allo sweep totale di
+`religious` su 24 coppie decisive, ma non fa comparire quello assente: su
+`starter_map.json` gli stili restano indistinguibili e su `world.json` il
+baseline casuale prende addirittura piu sweep della policy deliberata.
+
+Ne segue la formulazione piu forte del risultato: **la lunghezza amplifica un
+gradiente che esiste gia, non puo crearne uno.** La leva e la mappa, non il
+tempo.
 
 Nota operativa sui costi di calcolo: una partita scripted-contro-random dura
 circa 0.1s, mentre due policy deliberate che si affrontano davvero costano circa

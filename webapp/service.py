@@ -32,6 +32,8 @@ from soe import (
 )
 
 from webapp import backups, mapview
+from webapp.ai import context as agent_context
+from webapp.ai.context import _observed_city_ids, _secured_by
 from webapp.ai.registry import default_registry
 from webapp.observability import logger
 from webapp.rooms import Room, RoomPlayer, default_store
@@ -628,137 +630,16 @@ class BackupUnavailableError(Exception):
 
 
 def player_state(room: Room, faction_id: str) -> dict:
-    """A fogged JSON view of the world from one faction's seat."""
+    """A fogged JSON view of the world from one faction's seat.
+
+    Thin adapter: the pure extraction lives in
+    ``webapp.ai.context.player_state_from_state`` so the headless arena feeds
+    the model the exact same payload.
+    """
     state = load_state(room)
-    faction = state.factions[faction_id]
-
-    characters = []
-    for char in sorted(
-        (c for c in state.characters.values() if c.faction_id == faction_id),
-        key=lambda c: c.id,
-    ):
-        characters.append(_character_view(state, char))
-
-    # The map's geography (names, ports, ruins, terrain, regions) is the
-    # published board -- it is drawn for everyone on the landing page, so it is
-    # not secret. Who holds a city is: that only shows where this faction has
-    # eyes on the ground.
-    observed = _observed_city_ids(state, faction_id)
-    cities = []
-    for city in sorted(state.world_map.cities.values(), key=lambda c: c.name):
-        known = city.id in observed
-        cities.append(
-            {
-                "id": city.id,
-                "name": city.name,
-                "region": city.region,
-                "population_band": city.population_band.value,
-                "is_port": city.is_port,
-                "is_ruin": city.is_ruin,
-                "is_magic_free": city.is_magic_free,
-                "terrain": sorted(t for t in city.terrain),
-                "observed": known,
-                "secured_by": _secured_by(state, city.id) if known else None,
-                "controlled_by": faction_id
-                if city.id in faction.controlled_city_ids
-                else None,
-                # Sovereignty, occupation and the right to administer are three
-                # different claims, and an agent that cannot tell them apart writes
-                # orders that fail for reasons it never sees. Same visibility rule
-                # as everything else here: only where this faction has eyes.
-                **(
-                    territory.authority_ids(state, city.id)
-                    if known
-                    else {"sovereign": None, "occupier": None, "administrator": None}
-                ),
-            }
-        )
-
-    return {
-        "room": room.code,
-        "turn": state.turn_number,
-        "next_turn": state.turn_number + 1,
-        "faction_id": faction_id,
-        "faction_name": faction.name,
-        "allies": sorted(faction.allies),
-        "enemies": sorted(faction.enemies),
-        "wage_debt": faction.wage_debt,
-        "loan_balance": faction.loan_balance,
-        "characters": characters,
-        "cities": cities,
-        "posted_messages": {
-            cid: msg for cid, msg in state.posted_messages.items() if cid in observed
-        },
-    }
-
-
-def _character_view(state: models.GameState, char: models.Character) -> dict:
-    units = {}
-    ships = []
-    for stack in state.unit_stacks.values():
-        if stack.faction_id == char.faction_id and stack.owner_character_id == char.id:
-            units[stack.unit_type.value] = (
-                units.get(stack.unit_type.value, 0) + stack.count
-            )
-    for ship in state.ships.values():
-        if (
-            ship.faction_id == char.faction_id
-            and ship.location_city_id == char.location_city_id
-        ):
-            ships.append(
-                {
-                    "id": ship.id,
-                    "type": ship.ship_type.value,
-                    "location": ship.location_city_id,
-                }
-            )
-
-    elite = [
-        {"name": u.name, "size": u.size, "combat_level": u.combat_level}
-        for u in state.elite_units.values()
-        if u.leader_character_id == char.id
-    ]
-    creatures = [
-        {"type": c.creature_type.value, "count": c.count}
-        for c in state.summoned_creatures.values()
-        if c.summoner_id == char.id
-    ]
-    prisoners = [
-        {"id": p.id, "name": p.name}
-        for p in state.characters.values()
-        if p.captor_id == char.id
-    ]
-
-    city = state.world_map.cities.get(char.location_city_id)
-
-    return {
-        "id": char.id,
-        "name": char.name,
-        "title": char.title,
-        "is_leader": char.is_leader,
-        "location_city_id": char.location_city_id,
-        "location_city_name": city.name if city else None,
-        "location_position": char.location_position.value,
-        "gold": char.gold,
-        "health": char.health,
-        "is_dead": char.is_dead,
-        "is_prisoner": char.is_prisoner,
-        "is_lurking": char.is_lurking,
-        "is_noncom": char.is_noncom,
-        "combat_skill": char.combat_skill,
-        "magic_skill": char.magic_skill,
-        "magic_power_current": char.magic_power_current,
-        "religion_skill": char.religion_skill,
-        "religious_power_current": char.religious_power_current,
-        "trading_skill": char.trading_skill,
-        "sailing_skill": char.sailing_skill,
-        "resources": dict(char.resources),
-        "units": units,
-        "ships": ships,
-        "elite_units": elite,
-        "summoned_creatures": creatures,
-        "prisoners": prisoners,
-    }
+    return agent_context.player_state_from_state(
+        state, faction_id, game_id=room.code
+    )
 
 
 def map_overlay(
@@ -990,37 +871,6 @@ def _ai_board_json(
         "cities": cities,
         "characters": characters,
     }
-
-
-def _observed_city_ids(state: models.GameState, faction_id: str) -> set[str]:
-    """
-    Cities this faction has eyes on: ones it holds, and ones where it has a
-    living character, a unit stack, or a ship standing right now.
-
-    Deliberately does not roll for sightings -- ``fog.collect_sightings`` is
-    diced, and a status read must not consume luck or change between two GETs
-    of the same turn. Detection belongs in the turn report.
-    """
-    faction = state.factions[faction_id]
-    observed = set(faction.controlled_city_ids)
-    for char in state.characters.values():
-        if char.faction_id == faction_id and not char.is_dead and not char.is_prisoner:
-            observed.add(char.location_city_id)
-    for stack in state.unit_stacks.values():
-        if stack.faction_id == faction_id:
-            observed.add(stack.location_city_id)
-    for ship in state.ships.values():
-        if ship.faction_id == faction_id:
-            observed.add(ship.location_city_id)
-    observed.discard(None)
-    return observed
-
-
-def _secured_by(state: models.GameState, city_id: str) -> str | None:
-    for faction in state.factions.values():
-        if city_id in faction.secured_city_ids:
-            return faction.id
-    return None
 
 
 # ============================================================================

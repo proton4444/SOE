@@ -4,6 +4,7 @@ INVEST, BUY PASSAGE, PREACH, OFFER, IF statements, THEN sequencing and
 sailing skill.
 """
 
+import copy
 import random
 import tempfile
 from pathlib import Path
@@ -98,8 +99,8 @@ def test_work_earns_wages_by_population(state):
         unit_type=models.UnitType.WORKER, count=10, owner_character_id="c1",
     )
     run(gs, {"p1": parse("Have Marcus work for 1 week.", gs)})
-    # 11 labourers * 2g/day * 7 days + skill bonus (15 * 0.02 * 7) - salary
-    assert marcus_gold(gs) > BASE + 150
+    # 11 labourers * 1g/day * 7 days + skill bonus (15 * 0.01 * 7).
+    assert marcus_gold(gs) == pytest.approx(BASE + 78.1)
 
 
 def test_work_defaults_to_one_week(state):
@@ -113,6 +114,29 @@ def test_work_tiny_town_pays_nothing(state):
     gs.characters["c1"].location_city_id = "city3"
     run(gs, {"p1": parse("Have Marcus work for 7 days.", gs)})
     assert marcus_gold(gs) == BASE  # voluntary community service
+
+
+def test_five_turn_work_income_is_comparable_to_tax(state):
+    """A weekly WORK order must not earn roughly twice territorial tax."""
+    baseline = state
+    baseline.unit_stacks["wk"] = models.UnitStack(
+        id="wk", faction_id="p1", location_city_id="city1",
+        unit_type=models.UnitType.WORKER, count=10, owner_character_id="c1",
+    )
+    baseline.unit_stacks["guard"] = models.UnitStack(
+        id="guard", faction_id="p1", location_city_id="city1",
+        unit_type=models.UnitType.SOLDIER, count=45, owner_character_id="c1",
+    )
+    work_state = copy.deepcopy(baseline)
+    tax_state = copy.deepcopy(baseline)
+
+    for seed in range(5):
+        run(work_state, {"p1": parse("Have Marcus work.", work_state)}, seed)
+        run(tax_state, {"p1": parse("Have Marcus tax.", tax_state)}, seed)
+
+    work_gain = marcus_gold(work_state) - baseline.characters["c1"].gold
+    tax_gain = marcus_gold(tax_state) - baseline.characters["c1"].gold
+    assert work_gain == pytest.approx(tax_gain, abs=5)
 
 
 # ---------------------------------------------------------------------------
@@ -398,7 +422,8 @@ def test_order_limit_excludes_repeat_markers_and_persisted_queue(state):
     assert not any(order.warnings for order in parsed)
 
     _, log = run(gs, {"p1": parsed})
-    assert sum(event.event_type == "work" for event in log.events) == 101
+    assert sum(event.event_type == "work" for event in log.events) == 1
+    assert gs.order_queues["c1"]  # excess work remains queued for later turns
 
 
 # ---------------------------------------------------------------------------

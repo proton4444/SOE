@@ -26,7 +26,7 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-# Third-party source material, kept out of the repo (docs/ip_cleanroom.md).
+# Third-party source material, kept out of the repo (archived clean-room plan).
 DEFAULT_INDEX = REPO_ROOT / "reference" / "soe_map_index.txt"
 DEFAULT_OUT = REPO_ROOT / "maps" / "soe_world.json"
 

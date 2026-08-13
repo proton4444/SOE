@@ -8,7 +8,19 @@
     <p class="muted">Full board state, turn readiness, and the latest resolved actions.</p>
   </div>
   <div class="row">
+    {% if my_games %}
+    <div class="game-switcher">
+      <label for="game-switch" class="muted">Switch game</label>
+      <select id="game-switch" onchange="if (this.value) location.href = this.value;">
+        <option value="">{{ room.name }} {{ room.code }} — current</option>
+        {% for g in my_games %}
+        <option value="/room/{{ g.code }}/master">{{ g.name }} {{ g.code }} — turn {{ g.turn }} ({{ g.joined }}/{{ g.slots }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
     <a class="button ghost" href="/room/{{ room.code }}/setup">Setup</a>
+    <a class="button ghost" href="/llm-settings">LLM settings</a>
     <a class="button ghost" href="/room/{{ room.code }}">Player room</a>
   </div>
 </div>

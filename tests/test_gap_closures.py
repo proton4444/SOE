@@ -1,7 +1,7 @@
 """
 Tests for the known gaps closed in v0.7.2.
 
-These were listed as accepted limitations in docs/audit_2025-11.md rather than
+These were listed as accepted limitations in the archived 2025-11 audit rather than
 defects: overlapping fortification stores, flat casualty rates, an implicit
 faction leader, inert diplomacy and silently-ignored queue orders. They are
 closed now, and these tests keep them closed.

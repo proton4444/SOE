@@ -257,10 +257,11 @@ def run_turn(
                      game_state.turn_number * config.HOURS_PER_TURN)
     end_hour = start_hour + config.HOURS_PER_TURN
     game_state.game_time_hours = start_hour
+    time_budget = order_queue.TurnTimeBudget()
 
     # Intake happens once; later passes only wake queues already in progress.
     ready = order_queue.process_order_queue(
-        orders_by_player, game_state, turn_log
+        orders_by_player, game_state, turn_log, time_budget
     )
     _run_order_batch(game_state, ready, rng, turn_log, weekly=True)
     while True:
@@ -268,7 +269,9 @@ def run_turn(
         if wake_hour is None:
             break
         game_state.game_time_hours = wake_hour
-        ready = order_queue.resume_order_queue(game_state, turn_log)
+        ready = order_queue.resume_order_queue(
+            game_state, turn_log, time_budget
+        )
         if ready:
             _run_order_batch(game_state, ready, rng, turn_log)
 

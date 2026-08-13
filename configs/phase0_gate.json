@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "status": "frozen",
+  "frozen_at": "2026-08-13",
+  "map": "calib_12.json",
+  "map_sha256": "ddabceecdba0395f8f4a0b38fb9a5d3245a3888abf46b3ce9b0df7080fbc557b",
+  "turns": 30,
+  "minimum_seed_pairs": 40,
+  "maximum_one_sided_p": 0.01,
+  "minimum_accepted_call_rate": 0.95,
+  "minimum_completed_call_rate": 0.99,
+  "maximum_warning_order_rate": 0.05,
+  "minimum_blueprint_order_share_gap": 0.05,
+  "blueprint_sha256": {
+    "expansionist-v1": "143f053911663e82596931b793137ff2e97f32c5c95b43065a3efe02be3076bf",
+    "consolidation-v1": "92929261033b33b96cd69116cc98d610c438189c7f173d59241957f8863ad120"
+  },
+  "qualification": {
+    "balanced_vs_random": {
+      "result": "30-1",
+      "one_sided_p": 1.49011611938e-08,
+      "evidence": "games/arena/calib_12_control/arena_results.json"
+    },
+    "military_vs_religious": {
+      "result": "15-4",
+      "one_sided_p": 0.00960540771484,
+      "replicated_result": "29-10",
+      "replicated_one_sided_p": 0.00168892395595,
+      "evidence": "games/arena/calib_12_styles/arena_results.json",
+      "replication": "games/arena/calib_12_styles_n80/arena_results.json"
+    }
+  },
+  "official_runs": {
+    "competence": {
+      "opponent": "scripted:military"
+    },
+    "blueprint_differentiation": {
+      "blueprints": [
+        "expansionist-v1",
+        "consolidation-v1"
+      ]
+    }
+  }
+}

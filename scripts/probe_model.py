@@ -5,17 +5,27 @@ Usage:
     python scripts/probe_model.py [model ...]
 
 Runs one tiny "write 3 orders" task per model through webapp.ai.brain and
-reports whether the reply carried the ORDERS marker and how many orders parsed.
-Default: the recommended set. Exit code 0 if every probed model parsed at
-least one order.
+reports whether the reply carried the ORDERS marker, how many orders parsed,
+and the structured result (attempts, latency, usage, cost) from
+``brain.chat_result``. Default: the recommended set. Exit code 0 if every
+probed model parsed at least one order.
 """
 
 from __future__ import annotations
 
+import json
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
-from webapp.ai import brain
-from webapp.ai.orchestrator import extract_orders
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from webapp.ai import brain  # noqa: E402
+from webapp.ai.orchestrator import extract_orders  # noqa: E402
+
+PROBE_RECEIPT = _REPO_ROOT / "server_data" / "phase0_probe.json"
 
 PROBE_TASK = (
     "You command a small faction in a fantasy strategy game. Your leader is "
@@ -42,8 +52,8 @@ DEFAULT_MODELS = [
 ]
 
 
-def probe(model: str) -> tuple[bool, bool, str]:
-    reply = brain.chat(
+def probe(model: str) -> tuple[bool, bool, str, dict]:
+    result = brain.chat_result(
         model=model,
         messages=[
             {"role": "system", "content": "You are a strategic game AI."},
@@ -51,8 +61,14 @@ def probe(model: str) -> tuple[bool, bool, str]:
         ],
         temperature=0.0,
     )
-    orders = extract_orders(reply)
-    return orders != "", bool(orders), reply
+    orders = extract_orders(result.text)
+    summary = {
+        "attempts": result.attempts,
+        "latency_ms": result.latency_ms,
+        "usage": result.usage,
+        "provider_request_id": result.provider_request_id,
+    }
+    return orders != "", bool(orders), result.text, summary
 
 
 def _order_lines(reply: str) -> int:
@@ -65,19 +81,42 @@ def main() -> int:
         print("Set SOE_LLM_KEY first.")
         return 2
     failures = 0
+    probes = {}
     for model in models:
         try:
-            has_marker, parsed_ok, reply = probe(model)
+            has_marker, parsed_ok, reply, result = probe(model)
         except brain.LLMError as exc:
             print(f"{model:<42} ERROR  {exc}")
             failures += 1
+            probes[model] = {
+                "success": False,
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "failure": str(exc)[:300],
+            }
             continue
         status = "OK " if has_marker and parsed_ok else "FAIL"
         if not has_marker or not parsed_ok:
             failures += 1
+        usage = result.get("usage") or {}
+        cost = usage.get("cost")
         print(
-            f"{model:<42} {status}  orders_extracted={has_marker} lines={_order_lines(reply)}"
+            f"{model:<42} {status}  orders_extracted={has_marker} "
+            f"lines={_order_lines(reply)} "
+            f"attempts={result['attempts']} latency_ms={result['latency_ms']:.0f} "
+            f"tokens={usage.get('total_tokens', '?')} "
+            f"cost={cost if cost is not None else 'unknown'}"
         )
+        probes[model] = {
+            "success": bool(has_marker and parsed_ok),
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "provider_request_id": result.get("provider_request_id"),
+            "usage": usage,
+        }
+    PROBE_RECEIPT.parent.mkdir(parents=True, exist_ok=True)
+    PROBE_RECEIPT.write_text(
+        json.dumps({"schema_version": 1, "probes": probes}, indent=2),
+        encoding="utf-8",
+    )
     return 1 if failures else 0
 
 

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}LLM settings - SOE{% endblock %}
+{% block content %}
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Server-wide</p>
+    <h1>LLM settings</h1>
+    <p class="muted">Configure the model brain once: bots in every game and
+    headless arena runs that do not pin their own environment read this.</p>
+  </div>
+  <div class="row">
+    <a class="button ghost" href="/">Home</a>
+    {% if room %}
+    <a class="button ghost" href="/room/{{ room.code }}/setup">Room setup</a>
+    <a class="button ghost" href="/room/{{ room.code }}/master">Master dashboard</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+{% if not is_host %}
+<p class="notice error">You need a host session to change LLM settings:
+<a href="/">create a game or open one you already host</a>, then come back
+here.</p>
+{% endif %}
+
+{% set llm_action = "/llm-settings" %}
+{% include "partials/llm_settings.html" %}
+{% endblock %}

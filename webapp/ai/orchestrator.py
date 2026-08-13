@@ -5,20 +5,22 @@ The pipeline for a bot seat is: gather fog-of-war context (structured state,
 latest report) -> strategist call -> extract the orders block -> submit through
 the normal order pipeline. Everything is deterministic on the engine side; the
 only non-determinism is the model's ``temperature`` from the profile.
+
+Message construction and reply filtering are pure and shared with the headless
+arena (``webapp.ai.context``), so both seats feed the model the same
+information through the same prompt.
 """
 
 from __future__ import annotations
 
 import base64
-import json
 import os
-import re
 from datetime import datetime, timezone
-
-from soe import parser
 
 from webapp import service
 from webapp.ai import brain, subagents
+from webapp.ai import context
+from webapp.ai.context import ORDERS_MARKER, extract_orders
 from webapp.ai.registry import (
     STATE_ERROR,
     STATE_SUBMITTED,
@@ -27,13 +29,6 @@ from webapp.ai.registry import (
     default_registry,
 )
 from webapp.rooms import Room, RoomPlayer
-
-# The strategist's reply must end with this marker and one order per line after
-# it; anything before the marker is treated as reasoning and ignored.
-ORDERS_MARKER = "--- ORDERS ---"
-MAX_STATE_CHARS = 15000
-MAX_REPORT_CHARS = 8000
-MAX_ORDERS = 15
 
 # When enabled, the strategist also receives a PNG of its fog-of-war map
 # (M5). Requires a vision-capable model; off by default because text-only
@@ -130,20 +125,29 @@ def _ask_strategist(
     intel: str | None,
     field: str | None,
 ) -> str:
-    context = _user_context(room, player)
-    if intel:
-        context += "\n\n=== INTEL BRIEFING ===\n" + intel
-    if field:
-        context += "\n\n=== FIELD DRAFTS ===\n" + field
-    messages = [
-        {"role": "system", "content": _system_prompt(room, player, profile)},
-        {"role": "user", "content": context},
-    ]
+    ctx = _decision_context(room, player, profile)
+    messages = context.build_messages(ctx, intel=intel, field=field)
     return brain.chat(
         model=brain.model_name(profile.model),
         messages=messages,
         temperature=profile.temperature,
         images=_vision_images(room, player),
+    )
+
+
+def _decision_context(
+    room: Room, player: RoomPlayer, profile: AgentProfile
+) -> context.DecisionContext:
+    """Adapter: a Room + AgentProfile -> the shared pure DecisionContext."""
+    return context.DecisionContext(
+        game_state=service.load_state(room),
+        faction_id=player.faction_id,
+        turn=room.next_turn(),
+        game_name=room.name,
+        map_file=room.map_file,
+        previous_report=_latest_report(room, player.faction_id),
+        game_id=room.code,
+        persona=profile.persona,
     )
 
 
@@ -160,116 +164,14 @@ def _vision_images(room: Room, player: RoomPlayer) -> tuple[str, ...]:
     return ("data:image/png;base64," + base64.b64encode(png).decode("ascii"),)
 
 
-def _system_prompt(room: Room, player: RoomPlayer, profile: AgentProfile) -> str:
-    persona = profile.persona.strip()
-    persona_lines = f"\nPersona: {persona}" if persona else ""
-    return (
-        "You are the strategist for a faction in SOE, a "
-        "deterministic PBEM fantasy strategy game.\n"
-        f"Game: {room.name} (map {room.map_file}). "
-        f"You play {player.faction_name}. Next turn: {room.next_turn()}."
-        f"{persona_lines}\n\n"
-        "Write orders for the next turn in the game's English-like order "
-        "syntax (see the examples in the user message). Rules:\n"
-        "- Use only character names that appear in the turn report or state.\n"
-        "- One order per line, each ending with a period.\n"
-        f"- At most {MAX_ORDERS} orders.\n"
-        "- End your reply with the marker line "
-        f"`{ORDERS_MARKER}` followed by the orders.\n"
-        "- Anything before the marker is your reasoning and will be ignored.\n"
-        "- Attack orders target enemy CHARACTERS (names from the report), "
-        "never cities.\n"
-        "- Invest needs an amount and a city: `Invest 50 gold in <city>`.\n"
-        "- Do not tour the map: at most 2 movement orders, and only toward "
-        "cities that matter to your strategy. The rest of your orders should "
-        "be economy, recruiting, or diplomacy.\n"
-        "- ONLY these order forms are allowed. If an action cannot be "
-        "expressed in one of these forms, do not write it:\n"
-        "  Have <Character> go to <City>.\n"
-        "  Have <Character> sail to <City>.\n"
-        "  Have <Character> fly to <City>.\n"
-        "  Recruit <n> soldiers|sailors|workers in <City>.\n"
-        "  Buy <n> galleys in <City>.\n"
-        "  Tax.\n"
-        "  Work for <n> weeks.\n"
-        "  Collect <resource> for <n> days.\n"
-        "  Mine <resource> for <n> days.\n"
-        "  Invest <amount> gold in <City>.\n"
-        "  Have <Character> attack <Character>.\n"
-        "  Have <Character> secure <City>.\n"
-        "  Have <Character> study <skill>.\n"
-        "  Have <Character> summon <n> <creature>.\n"
-        "  Ally <Faction>. | Enemy <Faction>. | Neutral <Faction>.\n"
-        "  Wait for <n> days.\n"
-        "- Never write narrative sentences, statements, or observations as "
-        "orders."
-    )
-
-
-def _user_context(room: Room, player: RoomPlayer) -> str:
-    try:
-        state = json.dumps(
-            service.player_state(room, player.faction_id),
-            indent=2,
-            default=str,
-        )
-    except Exception:  # noqa: BLE001 - a broken save must not wedge the bot
-        state = "(game state unavailable)"
-    if len(state) > MAX_STATE_CHARS:
-        state = state[:MAX_STATE_CHARS] + "\n... (truncated)"
-
-    report = _latest_report(room, player.faction_id)
-    if len(report) > MAX_REPORT_CHARS:
-        report = report[:MAX_REPORT_CHARS] + "\n... (truncated)"
-
-    return (
-        "Here is your faction's view of the world and your latest turn "
-        "report.\n\n"
-        "=== STRUCTURED STATE ===\n"
-        f"{state}\n\n"
-        "=== YOUR LAST TURN REPORT ===\n"
-        f"{report}\n\n"
-        "=== ORDER SYNTAX EXAMPLES ===\n"
-        "Have Emperor Marcus go to Redport.\n"
-        "Recruit 20 soldiers in Highfell.\n"
-        "Tax.\n"
-        "Have Emperor Marcus attack Khan Tengri.\n"
-        "Work for 1 week.\n"
-        "Wait for 1 day.\n"
-    )
-
-
 def _latest_report(room: Room, faction_id: str) -> str:
     reports = room.reports.get(room.last_resolved_turn, {})
     return reports.get(faction_id, "(no report yet)")
 
 
 def extract_orders(reply: str) -> str:
-    """Pull the orders block out of a strategist reply.
-
-    Some models write a markdown ``---`` separator (or a trailing empty
-    marker) next to the real one, so the text after the first marker
-    occurrence is not always the orders. Pick the marker segment that
-    actually contains order-like lines.
-    """
-    segments = reply.split(ORDERS_MARKER)
-    if len(segments) < 2:
-        return reply.strip()
-    best = max(segments[1:], key=_order_line_count, default="")
-    if _order_line_count(best):
-        return best.strip()
-    return reply.strip()
-
-
-def _order_line_count(text: str) -> int:
-    return sum(1 for line in text.splitlines() if line.strip().endswith("."))
-
-
-_UNPARSEABLE_RE = re.compile(r"Could not parse order: '(.*)'")
-# Markdown separators some models leave around the marker block. The engine
-# parser merges such a line into the next sentence, which defeats warning
-# matching, so strip them before parsing.
-_DECORATIVE_LINE_RE = re.compile(r"^[\s\-*_=|]+$")
+    """Pull the orders block out of a strategist reply (shared, pure)."""
+    return context.extract_orders(reply)
 
 
 def _filter_clean_orders(room: Room, player: RoomPlayer, text: str) -> str:
@@ -280,35 +182,10 @@ def _filter_clean_orders(room: Room, player: RoomPlayer, text: str) -> str:
     is the authority: any line it flags as unparseable is removed, and only
     the remaining block is submitted. If nothing survives (or the game state
     is unreadable), the raw block is submitted unchanged so the host still
-    sees what the bot wrote.
+    sees what the bot wrote. Pure logic lives in ``webapp.ai.context``.
     """
-    if not text.strip():
-        return text
-    raw_lines = text.splitlines()
-    stripped = [
-        line for line in raw_lines if not _DECORATIVE_LINE_RE.match(line.strip())
-    ]
-    if len(stripped) != len(raw_lines):
-        text = "\n".join(stripped).strip() or text
     try:
         state = service.load_state(room)
-        orders = parser.parse_orders(text, state, player.faction_id)
-    except Exception:  # noqa: BLE001 - never wedge on a parser quirk
+    except Exception:  # noqa: BLE001 - never wedge on a broken save
         return text
-    bad = set()
-    for order in orders:
-        for warning in order.warnings:
-            match = _UNPARSEABLE_RE.search(warning)
-            if match:
-                bad.add(_normalise(match.group(1)))
-    if not bad:
-        return text
-    kept = [line for line in text.splitlines() if _normalise(line) not in bad]
-    filtered = "\n".join(kept).strip()
-    if not filtered:
-        return text
-    return filtered
-
-
-def _normalise(text: str) -> str:
-    return re.sub(r"[^a-z0-9 ]", "", text.lower())
+    return context.filter_orders(state, player.faction_id, text)

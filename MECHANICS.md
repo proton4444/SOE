@@ -8,7 +8,9 @@ authoritative where the two disagree.
 Derived from `soe/config.py` (constants), `soe/engine.py`
 (resolution order), `soe/phases/` (behaviour) and
 `soe/parser/` (command surface). See
-[`docs/ip_cleanroom.md`](docs/ip_cleanroom.md) for why this document exists.
+the archived
+[`ip_cleanroom.md`](docs/archive/pre-agent-competition-2026-08-11/ip_cleanroom.md)
+for why this document exists.
 
 ---
 

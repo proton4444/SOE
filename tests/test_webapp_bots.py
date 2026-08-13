@@ -468,7 +468,7 @@ def test_brain_retries_on_429_then_succeeds(monkeypatch):
         calls["n"] += 1
         if calls["n"] == 1:
             raise brain._RetryableError(429, "rate limited", 0.01)
-        return "ok", ""
+        return "ok", {}, "req-1"
 
     monkeypatch.setattr(brain, "MAX_RETRIES", 1)
     monkeypatch.setattr(brain, "_post_once", fake_post)
