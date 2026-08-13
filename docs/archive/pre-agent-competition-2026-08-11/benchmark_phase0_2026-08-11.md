@@ -1,6 +1,6 @@
 # Benchmark Phase 0 — is there a skill gradient?
 
-Status: **complete, and the answer is no — not yet.** Date: 2026-08-11.
+Status: **complete; remediation establishes a skill gradient.** Date: 2026-08-11.
 Harness: `scripts/arena.py`. Cost: zero (no model calls).
 
 ## Why this ran first
@@ -17,16 +17,18 @@ premature.
 
 ## Method
 
-`scripts/arena.py` runs headless games against `webapp.service` directly (no
-server, no HTTP). Two policies:
+`scripts/arena.py` creates headless games through `webapp.service`, then runs
+the production parser and engine in memory (no server, HTTP, or per-turn
+persistence). Two policies:
 
 - **`scripted`** — `plan_orders` from `scripts/beta_100_turns.py`: taxes,
   budgets recruitment, secures its home city, seeks targets.
 - **`random`** — draws 4–10 orders per turn from the same whitelist the
   strategist prompt gives an LLM. Every line parses; none of them cohere.
 
-Score is head-to-head win rate: most secured cities, then gold, soldiers,
-surviving characters as tiebreaks.
+Score is head-to-head win rate: secured cities, controlled cities, soldiers,
+surviving characters, then gold. An eliminated faction cannot win. The
+original baseline below predates this scoring fix and used gold second.
 
 **The unit of analysis is a pair, not a game.** Start cities derive from the
 room code, so each seed is played twice on the *same* map with the seats
@@ -51,6 +53,48 @@ explained by start-city luck; a **split** is the map talking.
 
 On the full map the result is chance. On the small map **it inverts: random
 beats the deliberate bot two to one.**
+
+## Remediation reruns
+
+Each change was rerun independently on the existing six-town contact map with
+40 seeds x 2 seat orders = 80 games, 30 turns each. Contact rules were not
+changed.
+
+| Checkpoint | Scripted wins | Random wins | Sweeps (scripted / random) | Splits | What decided games |
+|---|---:|---:|---:|---:|---|
+| 1. Seven-day actor budget | 32 | 48 | 4 / 12 | 24 | secured 23, gold 57 |
+| 2. Work wage rebalance | 32 | 48 | 4 / 12 | 24 | secured 23, gold 57 |
+| 3. Territory-first score + elimination | **49** | 31 | **9 / 0** | 31 | elimination 8, secured 15, soldiers 57 |
+
+The wage checkpoint also has a five-turn identical-state A/B regression:
+weekly WORK earns 390.5g gross while weekly TAX earns 390g gross. Work no
+longer dominates territorial income.
+
+The Phase 1 gate now passes on the contact map. Scripted play swept nine seed
+pairs while random swept none, and no game was decided by gold. Forced contact
+remains deferred; this result uses the small map that already produced contact
+and the original inversion.
+
+### Caveats on the gate
+
+- **The gradient is partly mechanical.** Random still finishes with large gold
+  piles (roughly 12,000-40,000g after the wage revalue) because WORK remains
+  linear in `(workers + 1)` with no worker-count ceiling. The time-axis exploit
+  is closed, but worker scaling is not. Scripted spends on armies, and the new
+  score intentionally prefers armies to hoarded gold. That is legitimate game
+  strategy, but Phase 1 must detect whether a model merely learns "recruit a
+  lot" rather than demonstrating broader planning.
+- **The signal is noisy.** Thirty-one of 40 seed pairs split by seat. The nine
+  scripted sweeps against zero random sweeps establish a gradient, but map and
+  starting-position variance still dominate most individual games.
+- **The gate is contact-map only.** The full map and its contact rules are
+  unchanged. Its 13/24 scripted result remains a chance baseline, not evidence
+  that the fixed benchmark separates play on the 154-town map.
+- **Model calls still have a compliance gate.** Each Phase 1 roster model must
+  pass `python scripts/probe_model.py <model>` before the first benchmark call.
+- **The worktree contains unrelated dashboard WIP.** The game-switcher changes
+  in `webapp/main.py` and its template/style files are not part of this
+  remediation or evidence for the gate.
 
 ## Finding 1 — on the full map, the factions never meet
 
@@ -102,35 +146,32 @@ Worse, several games were won by a faction with `characters_alive: 0` — its
 leader dead, its army gone, its gold pile intact. Any scoring rule that lets a
 faction win after being wiped out is not measuring strategy.
 
-## What this means for the benchmark
+## What the baseline meant for the benchmark
 
-**The thesis is not refuted — it is untestable in the current configuration.**
-Nothing here says models cannot be separated by this game. It says the game as
-currently set up cannot separate *anything*, because the factions never fight,
-the economy pays for spam, and the score rewards hoarding.
+Before remediation, **the thesis was not refuted; it was untestable in that
+configuration.** Nothing in the baseline said models could not be separated by
+this game. It showed that the original setup could not separate anything,
+because the factions never fought, the economy paid for spam, and the score
+rewarded hoarding.
 
-Spending on Phase 1/2 now would buy a number with no meaning. The three fixes
-are all cheap and all things the game wants regardless of whether a benchmark
-ever ships:
+The remediation sequence resolved two of the three issues and deliberately
+deferred the other:
 
-1. **Enforce a per-turn time budget.** Orders in one turn must fit in
-   `DAYS_PER_TURN`. This is a real rules concept (`DAYS_PER_MONTH` already
-   exists in config) that was never wired into resolution.
-2. **Force contact.** Small maps, or seeded starts within a few towns of each
-   other, or many more factions on the big map. Benchmark games must be
-   contests.
-3. **Fix the score.** Territory should dominate; elimination should be
-   decisive; gold should be a weak tiebreak at most.
+1. **Per-turn time budget: complete.** Timed orders release at most
+   `DAYS_PER_TURN` per actor; excess duration remains queued.
+2. **Force contact: deferred.** Phase 1 is restricted to the existing small
+   map. Full-map benchmarking remains out of scope until contact is designed.
+3. **Territory-first score and elimination: complete.** Gold is the final
+   tiebreak, and eliminated factions cannot win.
 
-Re-run Phase 0 after each. The gate to Phase 1 is `scripted` sweeping `random`
-convincingly — that is what a skill gradient looks like, and it costs nothing
-to check.
+Phase 1 is therefore defensible only on the contact map, subject to the noisy
+and partly mechanical gradient described above.
 
 ## Reproducing
 
 ```bash
-python scripts/arena.py --seeds 12 --turns 30                          # full map
-python scripts/arena.py --seeds 12 --turns 30 --map starter_map.json   # small map
+python scripts/arena.py --seeds 40 --turns 30                          # full map
+python scripts/arena.py --seeds 40 --turns 30 --map starter_map.json   # small map
 ```
 
 Reports land in `games/arena/`. Runs are deterministic: policies are seeded
@@ -138,7 +179,7 @@ per seat and turn, so a rerun of a matchup is byte-identical.
 
 ## Roster for later phases
 
-When Phase 1 becomes worth running, the models named for comparison are
+Before Phase 1 begins, the models named for comparison are
 `poolside/laguna-s-2.1:free` and `nvidia/nemotron-3-ultra-550b-a55b:free`.
 Both need `python scripts/probe_model.py <model>` for order-format compliance
 first, and free-tier rate limits will pace any large matrix.
