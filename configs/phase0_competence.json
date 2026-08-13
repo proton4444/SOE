@@ -1,4 +1,4 @@
-{
+﻿{
   "mode": "official_competence",
   "gate_role": "competence",
   "map": "calib_12.json",
@@ -10,7 +10,7 @@
   "entrants": [
     {
       "type": "llm",
-      "model": "poolside/laguna-s-2.1:free",
+      "model": "openai/gpt-4o-mini",
       "blueprint": "expansionist-v1"
     },
     {

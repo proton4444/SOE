@@ -1,4 +1,0 @@
-{"game_id": "AR000_ab", "code": "AR000", "seed": 0, "map": "calib_12.json", "seats": {"player_1": "llm:openai/gpt-4o-mini:expansionist-v1", "player_2": "scripted:military"}, "turns": 30, "started_at": "2026-08-13T12:09:56.581744+00:00"}
-{"game_id": "AR000_ab", "code": "AR000", "event": "result", "turns_played": 30, "winner": "player_1", "final_state_sha": "e2f0ea53826518903e7b9f945ea859ea90f12d2fde14cb1b44925f3ef4fa0681", "wall_seconds": 57.98}
-{"game_id": "AR000_ba", "code": "AR000", "seed": 0, "map": "calib_12.json", "seats": {"player_1": "scripted:military", "player_2": "llm:openai/gpt-4o-mini:expansionist-v1"}, "turns": 30, "started_at": "2026-08-13T12:10:54.560488+00:00"}
-{"game_id": "AR000_ba", "code": "AR000", "event": "result", "turns_played": 30, "winner": "player_2", "final_state_sha": "c52bfdc474e09f3caf92b650ecbd4432ec4fb8ac2130a07b38e35f389e66ad46", "wall_seconds": 73.46}

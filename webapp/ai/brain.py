@@ -88,6 +88,24 @@ def _max_output_tokens() -> int:
     return int(llm_settings.effective("max_tokens", "SOE_LLM_MAX_TOKENS", 1500))
 
 
+def _reasoning_effort() -> str:
+    """Reasoning budget for models that think before answering.
+
+    A reasoning model counts its private thinking against ``max_tokens``. Left
+    unbounded it can spend the whole budget reasoning and return an empty
+    message, which reads downstream as a mute turn rather than as the
+    configuration problem it is. Naming an effort level keeps the thinking
+    bounded so the visible answer still fits.
+
+    Empty means send nothing and let the provider decide, which is the
+    behaviour every existing caller already had.
+    """
+    from webapp import llm_settings
+
+    value = llm_settings.effective("reasoning_effort", "SOE_LLM_REASONING", "")
+    return str(value or "").strip().lower()
+
+
 class LLMError(RuntimeError):
     """The model could not be reached or refused the request."""
 
@@ -263,6 +281,12 @@ def _post_once(
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+    effort = _reasoning_effort()
+    if effort:
+        payload["reasoning"] = (
+            {"enabled": False} if effort in ("off", "none", "disabled")
+            else {"effort": effort}
+        )
     headers = {
         "Authorization": f"Bearer {_api_key()}",
         "Content-Type": "application/json",
