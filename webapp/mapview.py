@@ -125,9 +125,23 @@ def load_raw_map(map_file: str) -> dict:
 
 
 def _map_path(map_file: str) -> Path:
+    """A path inside ``maps/`` or nothing.
+
+    The name reaches here from a URL segment. ``{name}`` cannot contain a raw
+    slash, but percent-encoded separators survive routing and ``..%5C`` walks
+    out of the directory on Windows, so confine it twice: the name must be a
+    bare filename, and the resolved path must still sit under ``maps/``.
+    """
     from webapp.service import _MAPS_DIR
 
-    return _MAPS_DIR / map_file
+    name = str(map_file or "")
+    if not name or name != Path(name).name or name in (".", ".."):
+        raise FileNotFoundError(map_file)
+    maps_dir = _MAPS_DIR.resolve()
+    path = (maps_dir / name).resolve()
+    if not path.is_relative_to(maps_dir):
+        raise FileNotFoundError(map_file)
+    return path
 
 
 def _maps_dir() -> Path:

@@ -19,10 +19,12 @@
 
 {% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
 
-{% if not is_host %}
-<p class="notice error">You need a host session to change LLM settings:
-<a href="/">create a game or open one you already host</a>, then come back
-here.</p>
+{% if not is_operator %}
+<p class="notice error">These settings are operator-only: they hold the API key
+every bot on this server uses and decide which host that key is sent to.
+{% if operator_key_required %}Supply the operator key below.{% else %}Set
+<code>SOE_OPERATOR_KEY</code>, or open this page from the server's own
+console.{% endif %}</p>
 {% endif %}
 
 {% set llm_action = "/llm-settings" %}

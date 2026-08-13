@@ -1,6 +1,6 @@
 # Review Corrections — 2026-08-13
 
-Status: **open**  
+Status: **in progress** — Wave 1 (C1–C6) closed  
 Date: 2026-08-13  
 Source: project-wide code review (engine, parser, webapp, AI/arena; 112 Python files)  
 Rules authority: [`MECHANICS.md`](../MECHANICS.md)
@@ -31,9 +31,20 @@ enforce the guarantees they advertise.
 
 Close these before the next exposed beta or official arena run.
 
+**All six are closed.** Each named test was confirmed to fail against the
+pre-fix source before the fix was accepted.
+
 ### C1. Operator-only LLM settings
 
 - Severity: bug
+- Status: **closed** — `SOE_OPERATOR_KEY` (or loopback when unset) gates both
+  write routes; `llm_settings.base_url_error` allowlists the destination and
+  `effective()` ignores an off-allowlist persisted value; a base URL changed in
+  the same submission is saved but not probed.
+  Tests: `tests/test_llm_settings.py::test_host_session_cannot_change_llm_settings`,
+  `::test_operator_cannot_point_the_key_at_a_foreign_host`,
+  `::test_persisted_off_allowlist_base_url_is_ignored`,
+  `::test_probe_refuses_a_just_changed_base_url`.
 - File: `webapp/main.py:576` (`_apply_llm_settings`, also room `POST /setup/llm`)
 - Defect: Any valid host cookie can change the process-wide LLM config.
   Creating a room is enough. An arbitrary `base_url` is persisted, and
@@ -51,6 +62,9 @@ Close these before the next exposed beta or official arena run.
 ### C2. Confine `GET /map/{name}`
 
 - Severity: bug
+- Status: **closed** — `_map_path` requires a bare filename and a resolved path
+  under `maps/`; the route 404s unless the name is in `available_maps()`.
+  Test: `tests/test_webapp_map.py::test_map_preview_is_confined_to_the_maps_directory`.
 - File: `webapp/mapview.py:127`, `webapp/main.py:348`
 - Defect: `_map_path` is `_MAPS_DIR / map_file` with no confinement. The
   preview route is unauthenticated and does not check `available_maps()`.
@@ -65,6 +79,16 @@ Close these before the next exposed beta or official arena run.
 ### C3. Quote untrusted text in the strategist prompt
 
 - Severity: bug
+- Status: **closed** — `context.quoted_block` fences and line-quotes the report,
+  intel and field sections; `neutralize_untrusted` blanks instruction-shaped
+  lines there and in posted-message bodies; the system prompt names those
+  sections untrusted. Deterministic, so webapp/arena prompt parity holds.
+  Tests: `tests/test_phase0_context.py::test_report_cannot_forge_an_orders_block`,
+  `::test_posted_messages_are_neutralized_in_the_state_view`,
+  `::test_system_prompt_declares_untrusted_sections`,
+  `::test_neutralizer_leaves_ordinary_report_prose_alone`.
+- Note: this changes `prompt_signature`, so an arena bundle started before this
+  commit will refuse to resume. Finished runs and their evidence are unaffected.
 - File: `webapp/ai/context.py:326` (`user_prompt`, `player_state_from_state`)
 - Defect: The docstring says adversary report content and posted messages are
   “presented as quotes, never as instructions.” Both are concatenated raw.
@@ -81,6 +105,11 @@ Close these before the next exposed beta or official arena run.
 ### C4. Lock `rooms.json` writes
 
 - Severity: bug
+- Status: **closed** — `save()` holds `self._lock` across build and replace,
+  `RoomStore.transaction()` wraps `store_submission` / `store_reports`, and each
+  write uses a pid+token temp name.
+  Tests: `tests/test_room_registry.py::test_concurrent_submit_and_join_cannot_drop_a_write`,
+  `::test_save_does_not_share_one_temp_file`.
 - File: `webapp/rooms.py:142` (`save`, `store_submission`, `store_reports`)
 - Defect: `save()` is not under `self._lock`. Two `save()` calls share
   `rooms.json.tmp`; last `replace` wins. Join + submit + resolve can drop a
@@ -95,6 +124,12 @@ Close these before the next exposed beta or official arena run.
 ### C5. Stop 4-digit PIN brute force
 
 - Severity: bug
+- Status: **closed** — `MAX_PIN_ATTEMPTS` (5) consecutive misses lock joining for
+  `PIN_LOCKOUT_SECONDS` (15 min), per room; a success clears the streak and the
+  PIN is compared with `compare_digest`. A timed lock keeps a code-holder's
+  griefing a nuisance rather than a lobby takeover.
+  Tests: `tests/test_room_registry.py::test_join_locks_the_room_after_repeated_wrong_pins`,
+  `::test_a_valid_pin_still_joins_before_the_lock`, `::test_the_lockout_is_per_room`.
 - File: `webapp/rooms.py:202`
 - Defect: Join PIN is `secrets.randbelow(10000)` with no rate limit or
   lockout. Room codes are in the URL and the room page is visible without
@@ -107,6 +142,11 @@ Close these before the next exposed beta or official arena run.
 ### C6. Sanitize arena blueprint ids
 
 - Severity: bug
+- Status: **closed** — one `arena.blueprint_path()` helper (`^[a-z0-9][a-z0-9-]*$`
+  plus `is_relative_to`) serves all four read sites; `RunBundle.copy_blueprints`
+  confines the write side to its own `blueprints/`.
+  Tests: `tests/test_phase0_arena.py::test_blueprint_ids_cannot_escape_the_blueprint_directory`,
+  `::test_manifest_rejects_a_traversing_blueprint_id`.
 - File: `scripts/arena.py:428`, `scripts/arena.py:1907`,
   `scripts/arena_bundle.py:266`
 - Defect: `blueprint_id` is joined unsanitized onto `configs/blueprints/`.
@@ -565,10 +605,10 @@ the matching wave if you are already in the file.
 
 ## Counts
 
-| Severity | Open |
-|---|---|
-| bug | 37 |
-| suggestion | 11 |
-| nit | 4 |
+| Severity | Open | Closed |
+|---|---|---|
+| bug | 31 | 6 |
+| suggestion | 11 | 0 |
+| nit | 4 | 0 |
 
-Wave 1 is six bugs. Waves 2–4 are the remaining 31.
+Wave 1 (six bugs) is closed. Waves 2–4 are the remaining 31.

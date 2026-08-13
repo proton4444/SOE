@@ -27,6 +27,9 @@
     </tr>
   </table>
   <form method="post" action="{{ llm_action }}" class="row setup-form">
+    {% if operator_key_required and not is_operator %}
+    <input name="operator_key" type="password" placeholder="operator key" required>
+    {% endif %}
     <input name="base_url" placeholder="base URL (blank = keep / openrouter)">
     <input name="model" placeholder="model, e.g. poolside/laguna-s-2.1:free">
     <input name="key" type="password" placeholder="API key (blank = keep)">
@@ -42,7 +45,10 @@
   </form>
   <p class="muted">The key never leaves the server and is never shown back.
   <strong>Probe</strong> makes one tiny model call and reports whether the
-  configured model writes parseable orders. Env variables
-  (<code>SOE_LLM_KEY</code>, <code>SOE_LLM_MODEL</code>, …) always take
-  precedence over this file.</p>
+  configured model writes parseable orders; a base URL you changed in the same
+  submission is saved but not probed, because probing sends the key there. Env
+  variables (<code>SOE_LLM_KEY</code>, <code>SOE_LLM_MODEL</code>, …) always
+  take precedence over this file.</p>
+  <p class="muted">Base URL must be https on the allowlist
+  ({{ allowed_base_hosts|join(", ") }}), or a loopback address.</p>
 </section>

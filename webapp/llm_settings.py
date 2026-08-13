@@ -20,6 +20,7 @@ import os
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DATA = Path(os.environ.get("SOE_DATA_DIR", str(_REPO_ROOT / "server_data")))
@@ -40,11 +41,62 @@ DEFAULTS: dict = {
     "max_tokens": 1500,
 }
 
+#: Hosts the brain may be pointed at. The API key travels in an
+#: ``Authorization: Bearer`` header to whatever base URL is configured, so an
+#: arbitrary URL is a key-exfiltration channel, not merely a routing choice.
+DEFAULT_BASE_HOSTS: tuple[str, ...] = (
+    "openrouter.ai",
+    "api.openai.com",
+    "api.anthropic.com",
+    "api.deepseek.com",
+    "api.groq.com",
+    "api.mistral.ai",
+    "generativelanguage.googleapis.com",
+)
+
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
 _lock = threading.RLock()
 
 
 def settings_path() -> Path:
     return SETTINGS_FILE
+
+
+def allowed_base_hosts() -> tuple[str, ...]:
+    """The fixed allowlist plus hosts the operator pinned in the environment."""
+    extra = tuple(
+        host.strip().lower()
+        for host in os.environ.get("SOE_LLM_BASE_ALLOWLIST", "").split(",")
+        if host.strip()
+    )
+    return DEFAULT_BASE_HOSTS + extra
+
+
+def base_url_error(url: str) -> str:
+    """Why ``url`` may not receive the API key; empty string when it may.
+
+    A local proxy (ollama, llama.cpp) is reachable over plain http, but only
+    on loopback: everything else must be https on the allowlist.
+    """
+    url = (url or "").strip()
+    if not url:
+        return ""
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    if not host or parts.scheme not in ("http", "https"):
+        return "Base URL must be an absolute http(s) URL."
+    if parts.username or parts.password:
+        return "Base URL must not carry credentials."
+    loopback = host in _LOOPBACK_HOSTS
+    if parts.scheme != "https" and not loopback:
+        return "Base URL must use https (plain http only for loopback)."
+    if not loopback and host not in allowed_base_hosts():
+        return (
+            f"Base URL host '{host}' is not on the allowlist "
+            "(extend it with SOE_LLM_BASE_ALLOWLIST)."
+        )
+    return ""
 
 
 def load_settings() -> dict:
@@ -120,5 +172,10 @@ def effective(field: str, env_name: str, default):
     settings = load_settings()
     value = settings.get(field)
     if value not in (None, ""):
+        if field == "base_url" and base_url_error(str(value)):
+            # A persisted base URL that is not on the allowlist is treated as
+            # unset. The file is writable by anything that can write
+            # server_data; the key must never be sent where it points.
+            return default
         return value
     return default

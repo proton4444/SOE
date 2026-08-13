@@ -15,6 +15,8 @@ import json
 import os
 import secrets
 import threading
+import time
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,6 +40,14 @@ SERVER_DATA = Path(os.environ.get("SOE_DATA_DIR", str(_REPO_ROOT / "server_data"
 GAMES_ROOT = Path(os.environ.get("SOE_GAMES_DIR", str(_REPO_ROOT / "games")))
 ROOMS_FILE = SERVER_DATA / "rooms.json"
 MAX_PLAYERS = 6
+
+#: A 4-digit PIN is only 10,000 guesses and the room page is reachable without
+#: auth, so a script would walk the space in seconds. Lock joining after a
+#: handful of misses. The cost is that someone who knows a room code can
+#: briefly lock its lobby; a timed lock, not a permanent one, keeps that a
+#: nuisance rather than a takeover.
+MAX_PIN_ATTEMPTS = 5
+PIN_LOCKOUT_SECONDS = 15 * 60
 
 
 class RoomRegistryError(RuntimeError):
@@ -98,16 +108,20 @@ class Room:
     # ------------------------------------------------------------------
 
     def store_submission(self, faction_id: str, payload: dict) -> None:
-        turn = self.next_turn()
-        bucket = self.submissions.setdefault(turn, {})
-        bucket[faction_id] = payload
-        default_store().save()
+        store = default_store()
+        with store.transaction():
+            turn = self.next_turn()
+            bucket = self.submissions.setdefault(turn, {})
+            bucket[faction_id] = payload
+            store.save()
 
     def store_reports(self, turn: int, reports: dict[str, str]) -> None:
-        self.reports[turn] = reports
-        self.submissions.pop(turn, None)
-        self.last_resolved_turn = turn
-        default_store().save()
+        store = default_store()
+        with store.transaction():
+            self.reports[turn] = reports
+            self.submissions.pop(turn, None)
+            self.last_resolved_turn = turn
+            store.save()
 
 
 class RoomStore:
@@ -117,7 +131,21 @@ class RoomStore:
         self.path = path
         self._lock = threading.RLock()
         self._rooms: dict[str, Room] = {}
+        # code -> (consecutive wrong PINs, monotonic deadline of the lockout)
+        self._pin_failures: dict[str, tuple[int, float]] = {}
         self._load()
+
+    @contextmanager
+    def transaction(self):
+        """Serialise a read-modify-write of the registry with its own save.
+
+        Sync FastAPI routes run in a threadpool, so join, submit and resolve
+        can interleave even with ``--workers 1``. Without this the losing
+        thread's ``save()`` writes a payload built before the winner's
+        mutation and silently drops a seat or a turn of orders.
+        """
+        with self._lock:
+            yield self
 
     # ------------------------------------------------------------------
     # persistence
@@ -140,13 +168,21 @@ class RoomStore:
                 self._rooms[room.code] = room
 
     def save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
-            "rooms": [asdict(r) for r in self._rooms.values()],
-        }
-        tmp = self.path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        tmp.replace(self.path)
+        with self._lock:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "rooms": [asdict(r) for r in self._rooms.values()],
+            }
+            # A per-write temp name: two writers sharing one tmp file would
+            # have the loser replace the registry with a half-written copy.
+            tmp = self.path.with_name(
+                f"{self.path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp"
+            )
+            try:
+                tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+                tmp.replace(self.path)
+            finally:
+                tmp.unlink(missing_ok=True)
 
     # ------------------------------------------------------------------
     # queries
@@ -193,14 +229,39 @@ class RoomStore:
             self.save()
             return room
 
+    def pin_lock_remaining(self, code: str) -> float:
+        """Seconds left on this room's join lockout; 0 when joining is open."""
+        with self._lock:
+            _, deadline = self._pin_failures.get(code.upper(), (0, 0.0))
+            return max(0.0, deadline - time.monotonic())
+
+    def _record_pin_failure(self, code: str) -> None:
+        failures, _ = self._pin_failures.get(code, (0, 0.0))
+        failures += 1
+        deadline = (
+            time.monotonic() + PIN_LOCKOUT_SECONDS
+            if failures >= MAX_PIN_ATTEMPTS
+            else 0.0
+        )
+        self._pin_failures[code] = (failures, deadline)
+
     def join(self, code: str, pin: str, display_name: str) -> tuple[Room, RoomPlayer]:
         """Claim the first open slot. Returns (room, player)."""
         with self._lock:
-            room = self._rooms.get(code.upper())
+            code = code.upper()
+            room = self._rooms.get(code)
             if not room:
                 raise RoomError("No game found with that code.")
-            if room.pin != pin.strip():
+            locked_for = self.pin_lock_remaining(code)
+            if locked_for:
+                raise RoomError(
+                    "Too many wrong PINs for this game. Try again in "
+                    f"{int(locked_for // 60) + 1} minutes, or ask the host."
+                )
+            if not secrets.compare_digest(room.pin, pin.strip()):
+                self._record_pin_failure(code)
                 raise RoomError("Wrong PIN.")
+            self._pin_failures.pop(code, None)
             display_name = display_name.strip()
             if not display_name:
                 raise RoomError("Give yourself a name.")

@@ -422,10 +422,34 @@ def build_policy(spec: str) -> Policy:
     )
 
 
+BLUEPRINTS_DIR = _REPO_ROOT / "configs" / "blueprints"
+
+#: A blueprint id names a file. It arrives from a CLI policy spec and from run
+#: config JSON, so an id such as ``../../server_data/llm_settings`` would
+#: otherwise read the API key file into the doctrine section and copy it into
+#: the run bundle.
+_BLUEPRINT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+
+def blueprint_path(blueprint_id: str) -> Path:
+    """The frozen blueprint file for ``blueprint_id``, confined to
+    ``configs/blueprints``."""
+    if not _BLUEPRINT_ID_RE.fullmatch(str(blueprint_id or "")):
+        raise ValueError(
+            f"Invalid blueprint id {blueprint_id!r}: expected lowercase "
+            "letters, digits and hyphens, e.g. 'expansionist-v1'"
+        )
+    root = BLUEPRINTS_DIR.resolve()
+    path = (root / f"{blueprint_id}.json").resolve()
+    if not path.is_relative_to(root):
+        raise ValueError(f"Invalid blueprint id {blueprint_id!r}: escapes {root}")
+    return path
+
+
 def _load_blueprint(blueprint_id: str) -> dict | None:
     if not blueprint_id:
         return None
-    path = _REPO_ROOT / "configs" / "blueprints" / f"{blueprint_id}.json"
+    path = blueprint_path(blueprint_id)
     if not path.exists():
         raise ValueError(f"Unknown blueprint '{blueprint_id}': {path} missing")
     return json.loads(path.read_text(encoding="utf-8"))
@@ -1844,8 +1868,7 @@ def validate_official_preflight(config: dict) -> None:
         if not blueprint_id:
             continue
         expected_hash = frozen_blueprints.get(blueprint_id)
-        blueprint_path = _REPO_ROOT / "configs" / "blueprints" / f"{blueprint_id}.json"
-        actual_blueprint_hash = file_sha256(blueprint_path)
+        actual_blueprint_hash = file_sha256(blueprint_path(blueprint_id))
         if not expected_hash or actual_blueprint_hash != expected_hash:
             raise BundleError(
                 f"Official blueprint {blueprint_id!r} changed "
@@ -1904,7 +1927,7 @@ def _blueprint_prompt_hashes(config: dict) -> tuple[dict, dict[str, str]]:
         blueprint_id = entrant.get("blueprint", "")
         if not blueprint_id:
             continue
-        path = _REPO_ROOT / "configs" / "blueprints" / f"{blueprint_id}.json"
+        path = blueprint_path(blueprint_id)
         if not path.exists():
             raise ValueError(f"Blueprint file not found: {path}")
         blueprint = json.loads(path.read_text(encoding="utf-8"))
@@ -1971,7 +1994,7 @@ def prepare_bundle(config: dict, output: Path, run_id: str | None = None) -> "Ru
     bundle = RunBundle(run_dir)
 
     blueprint_paths = {
-        blueprint_id: _REPO_ROOT / "configs" / "blueprints" / f"{blueprint_id}.json"
+        blueprint_id: blueprint_path(blueprint_id)
         for entrant in config.get("entrants", [])
         for blueprint_id in [entrant.get("blueprint", "")]
         if blueprint_id

@@ -531,7 +531,7 @@ def test_play_game_fog_of_war_in_llm_messages(fake_brain):
     messages = context.build_messages(ctx)
     user = messages[1]["content"]
     state_section = user.split("=== STRUCTURED STATE ===")[1]
-    state_section = state_section.split("=== YOUR LAST TURN REPORT ===")[0]
+    state_section = state_section.split("=== YOUR LAST TURN REPORT")[0]
     assert "Silver Horde" not in state_section
     assert "Khan Tengri" not in state_section
     assert "player_2" not in state_section
@@ -695,6 +695,50 @@ def test_manifest_carries_provenance(fake_brain, tmp_path):
         copied.read_bytes()
         == (_REPO_ROOT / "configs" / "blueprints" / "expansionist-v1.json").read_bytes()
     )
+
+
+def test_blueprint_ids_cannot_escape_the_blueprint_directory(tmp_path):
+    """C6: the id becomes a path on both the read and the write side."""
+    from scripts.arena import BLUEPRINTS_DIR, blueprint_path, build_policy
+    from scripts.arena_bundle import RunBundle
+
+    key_file = "../../server_data/llm_settings"
+    for evil in (
+        key_file,
+        "..\\..\\server_data\\llm_settings",
+        "/etc/passwd",
+        "expansionist-v1/../../../pyproject",
+        "Expansionist-V1",
+        "",
+        "  ",
+    ):
+        with pytest.raises(ValueError):
+            blueprint_path(evil)
+
+    with pytest.raises(ValueError):
+        _load_blueprint(key_file)
+    with pytest.raises(ValueError):
+        build_policy(f"llm:openai/gpt-4o-mini:{key_file}")
+
+    good = blueprint_path("expansionist-v1")
+    assert good == (BLUEPRINTS_DIR / "expansionist-v1.json").resolve()
+    assert _load_blueprint("expansionist-v1")["id"]
+
+    # The bundle refuses to write a copy outside its own blueprints dir.
+    bundle = RunBundle(tmp_path / "run")
+    with pytest.raises(BundleError):
+        bundle.copy_blueprints(
+            {"../escaped": _REPO_ROOT / "configs" / "blueprints" / "expansionist-v1.json"}
+        )
+    assert not (tmp_path / "run" / "escaped.json").exists()
+    assert not (tmp_path / "escaped.json").exists()
+
+
+def test_manifest_rejects_a_traversing_blueprint_id(tmp_path):
+    config = _smoke_config()
+    config["entrants"][0]["blueprint"] = "../../server_data/llm_settings"
+    with pytest.raises(ValueError):
+        prepare_bundle(config, tmp_path / "arena")
 
 
 def test_manifest_captures_git_state_before_writing_output(

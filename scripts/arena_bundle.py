@@ -257,13 +257,22 @@ class RunBundle:
         _atomic_write_text(self.orders_path(game_id, turn, faction_id), text)
 
     def copy_blueprints(self, source_paths: dict[str, Path]) -> list[dict]:
-        """Copy frozen blueprint files into the bundle; returns hashes."""
+        """Copy frozen blueprint files into the bundle; returns hashes.
+
+        The id becomes a filename, so it is confined here too: the bundle must
+        not be able to write outside its own ``blueprints/`` directory.
+        """
         entries = []
+        root = self.blueprints_dir.resolve()
         for blueprint_id, path in source_paths.items():
-            path = Path(path)
-            data = path.read_bytes()
+            target = (self.blueprints_dir / f"{blueprint_id}.json").resolve()
+            if not target.is_relative_to(root) or target.name != f"{blueprint_id}.json":
+                raise BundleError(
+                    f"Invalid blueprint id {blueprint_id!r}: would write outside "
+                    f"{root}"
+                )
+            data = Path(path).read_bytes()
             digest = sha256_bytes(data)
-            target = self.blueprints_dir / f"{blueprint_id}.json"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
             entries.append({"id": blueprint_id, "hash": digest, "file": target.name})

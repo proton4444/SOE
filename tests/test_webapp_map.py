@@ -52,6 +52,34 @@ def _join(code, pin, name):
     return resp.json()
 
 
+def test_map_preview_is_confined_to_the_maps_directory():
+    """C2: the preview route is unauthenticated, so ``{name}`` must not be
+    able to name a file outside ``maps/``."""
+    from webapp import mapview, service
+
+    for escape in (
+        "..%5Cserver_data%5Cllm_settings.json",
+        "..%2Fserver_data%2Fllm_settings.json",
+        "..%5C..%5Cserver_data%5Cllm_settings.json",
+        "%2E%2E%5Cpyproject.toml",
+    ):
+        resp = client.get(f"/map/{escape}")
+        assert resp.status_code == 404, f"{escape} -> {resp.status_code}"
+
+    # Real map files that are not playable maps are not previewable either.
+    assert client.get("/map/soe_geography.json").status_code == 404
+
+    with pytest.raises(FileNotFoundError):
+        mapview.load_raw_map("../pyproject.toml")
+    with pytest.raises(FileNotFoundError):
+        mapview.load_raw_map("..\\pyproject.toml")
+
+    playable = service.default_map()
+    ok = client.get(f"/map/{playable}")
+    assert ok.status_code == 200
+    assert "<svg" in ok.text
+
+
 def test_map_requires_valid_key():
     room = _create_room()
     url = f"/api/rooms/{room['code']}/map"

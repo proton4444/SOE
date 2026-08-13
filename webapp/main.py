@@ -58,6 +58,14 @@ HOST_COOKIE = "soe_host"
 PLAYER_COOKIE = "soe_player"
 BETA_INVITE_HEADER = "X-SOE-Beta-Invite"
 BETA_ACCESS_CODE = os.environ.get("SOE_BETA_ACCESS_CODE", "").strip()
+# The server's LLM key and the URL that key is sent to are operator property,
+# not room property: anyone can create a room, so a host cookie is not proof
+# of anything here. Without a configured secret only the server's own console
+# qualifies.
+OPERATOR_COOKIE = "soe_operator"
+OPERATOR_HEADER = "X-SOE-Operator-Key"
+OPERATOR_KEY = os.environ.get("SOE_OPERATOR_KEY", "").strip()
+_LOOPBACK_CLIENTS = frozenset({"127.0.0.1", "::1", "localhost"})
 COOKIE_SECURE = os.environ.get("SOE_COOKIE_SECURE", "0").lower() in {
     "1",
     "true",
@@ -121,6 +129,40 @@ def _require_beta_invite(request: Request, supplied: str = "") -> None:
         and str(supplied or "").strip() != BETA_ACCESS_CODE
     ):
         raise HTTPException(403, "A valid beta invitation is required.")
+
+
+def _is_operator(request: Request, supplied: str = "") -> bool:
+    """True for the server operator, never merely for a room host."""
+    if OPERATOR_KEY:
+        offered = (
+            request.headers.get(OPERATOR_HEADER, ""),
+            request.cookies.get(OPERATOR_COOKIE, ""),
+            str(supplied or "").strip(),
+        )
+        return any(
+            secrets.compare_digest(value, OPERATOR_KEY) for value in offered if value
+        )
+    client = request.client
+    return (client.host if client else "").strip().lower() in _LOOPBACK_CLIENTS
+
+
+def _require_operator(request: Request, supplied: str = "") -> None:
+    if _is_operator(request, supplied):
+        return
+    raise HTTPException(
+        403,
+        f"LLM settings are operator-only: send {OPERATOR_HEADER}."
+        if OPERATOR_KEY
+        else "LLM settings are operator-only: set SOE_OPERATOR_KEY, or reach "
+        "this server from its own console.",
+    )
+
+
+def _remember_operator(response, supplied: str) -> None:
+    """Keep a browser operator signed in after a correct key."""
+    supplied = str(supplied or "").strip()
+    if OPERATOR_KEY and supplied and secrets.compare_digest(supplied, OPERATOR_KEY):
+        _set_auth_cookie(response, OPERATOR_COOKIE, OPERATOR_KEY)
 
 
 def _resolve_room(code: str) -> Room:
@@ -189,7 +231,7 @@ def _master_context(
     }
 
 
-def _setup_context(room: Room, notice: str = "") -> dict:
+def _setup_context(room: Room, notice: str = "", request: Request | None = None) -> dict:
     from webapp import llm_settings
 
     registry = default_registry()
@@ -218,6 +260,9 @@ def _setup_context(room: Room, notice: str = "") -> dict:
             "key": bool(os.environ.get("SOE_LLM_KEY", "").strip()),
             "model": os.environ.get("SOE_LLM_MODEL", "").strip(),
         },
+        "is_operator": bool(request is not None and _is_operator(request)),
+        "operator_key_required": bool(OPERATOR_KEY),
+        "allowed_base_hosts": llm_settings.allowed_base_hosts(),
     }
 
 
@@ -347,7 +392,13 @@ def _map_islands(name: str) -> str:
 
 @app.get("/map/{name}", response_class=HTMLResponse)
 def map_preview(name: str):
-    """HTMX fragment: SVG + landmass index for one map."""
+    """HTMX fragment: SVG + landmass index for one map.
+
+    Unauthenticated, so the name is checked against the playable-map list
+    rather than merely being resolved inside ``maps/``.
+    """
+    if name not in service.available_maps():
+        raise HTTPException(404, "No such map.")
     try:
         return mapview.render_map_fragment(name)
     except FileNotFoundError:
@@ -473,7 +524,7 @@ def setup_page(request: Request, code: str):
     return templates.TemplateResponse(
         request,
         "setup.html",
-        _setup_context(room, request.query_params.get("msg", "")),
+        _setup_context(room, request.query_params.get("msg", ""), request),
     )
 
 
@@ -539,10 +590,9 @@ def setup_agent(
 @app.get("/llm-settings", response_class=HTMLResponse)
 def llm_settings_page(request: Request):
     """Server-wide LLM settings, reachable from the home page. Readable by
-    anyone; writable only with a valid host session for any room."""
+    anyone; writable only by the operator."""
     from webapp import llm_settings
 
-    is_host = _any_host_session(request)
     return templates.TemplateResponse(
         request,
         "llm_settings.html",
@@ -553,7 +603,9 @@ def llm_settings_page(request: Request):
                 "key": bool(os.environ.get("SOE_LLM_KEY", "").strip()),
                 "model": os.environ.get("SOE_LLM_MODEL", "").strip(),
             },
-            "is_host": is_host,
+            "is_operator": _is_operator(request),
+            "operator_key_required": bool(OPERATOR_KEY),
+            "allowed_base_hosts": llm_settings.allowed_base_hosts(),
             "notice": request.query_params.get("msg", ""),
             "room": None,
         },
@@ -572,16 +624,18 @@ def llm_settings_save(
     max_tokens: str = Form(""),
     clear_key: str = Form(""),
     action: str = Form("save"),
+    operator_key: str = Form(""),
 ):
-    if not _any_host_session(request):
-        raise HTTPException(403, "A host session is required to change LLM settings.")
+    _require_operator(request, operator_key)
     msg = _apply_llm_settings(
         base_url, key, model, temperature, timeout_seconds, max_retries,
         max_tokens, clear_key, action,
     )
-    return RedirectResponse(
+    response = RedirectResponse(
         url=f"/llm-settings?msg={quote(msg)}", status_code=303
     )
+    _remember_operator(response, operator_key)
+    return response
 
 
 def _apply_llm_settings(
@@ -596,12 +650,20 @@ def _apply_llm_settings(
     action: str,
 ) -> str:
     """Shared save/clear/probe logic for both the room setup page and the
-    standalone /llm-settings page. Returns the notice message."""
+    standalone /llm-settings page. Returns the notice message.
+
+    Callers must have passed ``_require_operator`` first: this writes the key
+    the whole process uses and decides which host receives it.
+    """
     from webapp import llm_settings
 
     patch: dict = {}
-    if base_url.strip():
-        patch["base_url"] = base_url.strip().rstrip("/")
+    new_base = base_url.strip().rstrip("/")
+    if new_base:
+        problem = llm_settings.base_url_error(new_base)
+        if problem:
+            return f"Base URL rejected: {problem}"
+        patch["base_url"] = new_base
     if model.strip():
         patch["model"] = model.strip()
     if temperature.strip():
@@ -630,6 +692,17 @@ def _apply_llm_settings(
         patch["key"] = key.strip()
 
     if action == "probe":
+        saved_base = (
+            str(llm_settings.load_settings().get("base_url") or "").strip().rstrip("/")
+        )
+        if new_base and new_base != saved_base:
+            # A probe sends the live key to the base URL. Changing where it
+            # goes and sending it are two deliberate acts, not one.
+            llm_settings.save_settings(patch)
+            return (
+                "Base URL changed and saved without probing. Probe again to "
+                "send the key to the new endpoint."
+            )
         llm_settings.save_settings(patch)
         return _probe_llm()
     if action == "clear":
@@ -657,20 +730,26 @@ def setup_llm(
     max_tokens: str = Form(""),
     clear_key: str = Form(""),
     action: str = Form("save"),
+    operator_key: str = Form(""),
 ):
-    """Host-only: configure the server-wide LLM settings from the room setup
-    page. Env vars keep priority at runtime; the file fills the gaps. The key
-    is stored for the server, never echoed back (only a masked tail is shown).
+    """Operator-only: configure the server-wide LLM settings from the room
+    setup page. The host session gets you onto this page; changing the
+    process-wide key and its destination still needs the operator. Env vars
+    keep priority at runtime; the file fills the gaps. The key is stored for
+    the server, never echoed back (only a masked tail is shown).
     """
     room = _resolve_room(code)
     _require_master(request, room)
+    _require_operator(request, operator_key)
     msg = _apply_llm_settings(
         base_url, key, model, temperature, timeout_seconds, max_retries,
         max_tokens, clear_key, action,
     )
-    return RedirectResponse(
+    response = RedirectResponse(
         url=f"/room/{room.code}/setup?msg={quote(msg)}", status_code=303
     )
+    _remember_operator(response, operator_key)
+    return response
 
 
 def _probe_llm() -> str:
