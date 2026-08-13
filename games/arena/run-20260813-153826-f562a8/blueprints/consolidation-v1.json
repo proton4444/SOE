@@ -1,0 +1,10 @@
+{
+  "id": "consolidation-v1",
+  "version": 1,
+  "doctrine": {
+    "objective": "Consolidate a strong economic base first. Growth through income and reserves, never through risky conquest.",
+    "economy": "Keep a large gold reserve and recruit only when it is affordable. Solvency outranks soldiers in every budget decision.",
+    "risk": "Avoid losses. Fight only with overwhelming strength, and retreat from any engagement that could cost a character.",
+    "diplomacy": "Seek allies and keep relations open. Gifts, loans and neutrality protect the treasury better than any army."
+  }
+}

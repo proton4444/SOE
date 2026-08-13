@@ -118,21 +118,50 @@ citta iniziale.
 - Nessun run ufficiale parte da un worktree dirty.
 - Costo e durata per match sono noti.
 
-### Stato al 2026-08-13
+### Stato al 2026-08-13: gate superato
 
-Il gate **non e ancora superato**. Il contratto e ora eseguibile e rifiuta in
-preflight una mappa diversa, meno di 40 coppie, un avversario diverso,
-blueprint diversi da quelli congelati, chiave assente, probe del modello non
-riuscito nelle ultime 24 ore o worktree dirty. Mancano i due batch ufficiali
-provider-backed.
+Il gate **e superato**. I due batch ufficiali provider-backed sono conclusi e
+ciascuno riporta `phase0_run_gate.status = "pass"` con tutti e dodici i criteri
+verdi. Modello `openai/gpt-4o-mini`, scenario congelato `calib_12.json`, 40
+coppie di seed con scambio dei posti, worktree pulito.
 
-Lo smoke corretto `games/arena/run-20260813-121307-993ca7` chiude il blocker
-di prompt e misurazione: 240/240 chiamate completate, 7 vittorie a 1 contro
-`scripted:military`, 3 sweep del modello, 0 sweep dell'avversario e 1 split.
-Le righe emesse con warning sono 1/924 (0,11%); dopo validazione ed esecuzione
-sono 34/923 (3,68%), quindi anche il peggiore dei due tassi resta sotto il 5%.
-Il run non e evidenza ufficiale perche usa 4, non 40, coppie e il manifest
-registra `git_dirty: true`. E costato 0,119935 USD ed e durato 483 secondi.
+| | Competenza | Blueprint |
+|---|---|---|
+| Run | `run-20260813-141002-20e66d` | `run-20260813-153826-f562a8` |
+| Avversari | `expansionist-v1` contro `scripted:military` | `expansionist-v1` contro `consolidation-v1` |
+| Sweep | 25 a 1, split 14/40 | 40 a 0, split 0/40 |
+| p a una coda | 4.0e-07 | 9.1e-13 |
+| Chiamate | 2400/2400 accettate | 4800/4800 accettate |
+| Tasso warning peggiore | 3.61% | 3.70% |
+| Costo | 1.225473 USD | 2.410201 USD |
+
+Il divario comportamentale fra le due dottrine e ampio e soprattutto coerente
+con il testo che le definisce: `expansionist-v1` recluta (26.0% contro 4.6%),
+si muove e mette in sicurezza; `consolidation-v1` raccoglie (21.7% contro
+1.8%), investe e lavora. Il massimo divario per famiglia d'ordini e 20.5 punti
+percentuali contro i 5 richiesti. Le istruzioni cambiano davvero il gioco, non
+solo la prosa della rationale.
+
+Costo totale del gate: 3.64 USD. Durata circa 4 ore su 7200 chiamate a circa
+2 secondi l'una.
+
+### Due riserve da portare in Phase 1
+
+**La verifica del resume e piu debole di quanto suggerisca il criterio.** Il run
+blueprint e stato realmente interrotto al 82% e ripreso fino a chiusura senza
+perdere lavoro, il che e evidenza concreta che la ripresa funziona. Ma il
+controllo `state_hashes` implementato verifica soltanto che ogni partita abbia
+un `final_state_sha` di 64 caratteri: non confronta gli hash con quelli di un
+run non interrotto. Il criterio come scritto nella roadmap chiede il confronto,
+il codice non lo fa. Va rafforzato prima di dipenderne in Phase 3.
+
+**Le due dottrine non sono bilanciate.** `expansionist-v1` vince 80 partite su
+80. Il gate chiedeva che i blueprint si separassero, e si separano nel modo piu
+netto possibile, ma questo dice anche che `consolidation-v1` e semplicemente
+una strategia perdente su `calib_12.json`. Per una Coach League servono
+dottrine che si scambino il vantaggio, non una dominante e una dominata: e un
+problema di design del gioco, non del gate, e appartiene alla calibrazione
+delle mappe e delle regole.
 
 Evidenza: **un solo run reale**, `games/arena/run-20260811-110859-2464c0`
 (gpt-4o-mini, `expansionist-v1` contro `random`, 8 partite da 30 turni).
@@ -281,6 +310,8 @@ La calibrazione e chiusa: `calib_12.json` e lo scenario ufficiale congelato.
 
 Se il gate fallisce, non si costruisce il prodotto coach. Si correggono prompt,
 superficie informativa o scenario e si ripete il gate.
+
+Il gate e superato il 2026-08-13, quindi la Phase 1 e autorizzata.
 
 ## Phase 1 - Agent Blueprint
 
@@ -476,9 +507,18 @@ pubblico sono dipendenze successive, non lavoro parallelo al critical path.
 
 ## Prossimo incremento
 
-Il prossimo lavoro autorizzato resta esclusivamente la **Phase 0 - Agent
-Competence Gate**, che e iniziata ma non e superata. Il suo output deve essere
-un batch LLM riproducibile, non una nuova pagina della dashboard.
+La **Phase 0 - Agent Competence Gate** e chiusa il 2026-08-13 con entrambi i
+batch ufficiali a `pass`. Il prossimo lavoro autorizzato e la **Phase 1 - Agent
+Blueprint**.
+
+Due elementi della Phase 0 restano pero aperti e vanno portati dentro la Phase
+1, perche toccano proprio l'oggetto che la Phase 1 costruisce:
+
+- rafforzare la verifica del resume, che oggi controlla la forma degli hash e
+  non la loro uguaglianza rispetto a un run non interrotto;
+- riequilibrare le dottrine, dato che `expansionist-v1` vince 80 partite su 80
+  contro `consolidation-v1`: un blueprint versionato non ha senso se una sola
+  dottrina domina lo scenario.
 
 Ordine di lavoro, dal piu economico al piu costoso:
 

@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "run_id": "run-20260813-153826-f562a8",
+  "status": "complete",
+  "engine_version": "1.1.0a0",
+  "started_at": "2026-08-13T15:38:26.377896+00:00",
+  "completed_at": "2026-08-13T18:35:28.120647+00:00",
+  "mode": "official_blueprint_differentiation",
+  "map": "calib_12.json",
+  "map_hash": "ddabceecdba0395f8f4a0b38fb9a5d3245a3888abf46b3ce9b0df7080fbc557b",
+  "prompt_hashes": {
+    "expansionist-v1": "2f0cf817234ed1433452a9e72aad46602dbb04649fd70353ecd209c13e7a208c",
+    "consolidation-v1": "310eb4de204f0fe16640d753831d9caa85fdfc7e15ca8ca850515722f1936a70"
+  },
+  "blueprints": [
+    {
+      "id": "expansionist-v1",
+      "hash": "143f053911663e82596931b793137ff2e97f32c5c95b43065a3efe02be3076bf",
+      "file": "expansionist-v1.json"
+    },
+    {
+      "id": "consolidation-v1",
+      "hash": "92929261033b33b96cd69116cc98d610c438189c7f173d59241957f8863ad120",
+      "file": "consolidation-v1.json"
+    }
+  ],
+  "model": "openai/gpt-4o-mini",
+  "temperature": 0.0,
+  "max_tokens": 1500,
+  "retry_policy": {
+    "max_retries": 2,
+    "timeout_seconds": 120.0
+  },
+  "seed_pairs": 40,
+  "turns": 30,
+  "entrants": [
+    {
+      "type": "llm",
+      "model": "openai/gpt-4o-mini",
+      "blueprint": "expansionist-v1"
+    },
+    {
+      "type": "llm",
+      "model": "openai/gpt-4o-mini",
+      "blueprint": "consolidation-v1"
+    }
+  ],
+  "max_spend_usd": 3.0,
+  "seats": [
+    "llm",
+    "llm"
+  ],
+  "git_commit": "8bd4751b8319bf9c4adcc4ec13cd6daddcc0bd8a",
+  "git_dirty": false
+}
