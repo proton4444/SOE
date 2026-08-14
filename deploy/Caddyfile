@@ -1,0 +1,26 @@
+# Production HTTPS terminator for the controlled beta.
+# The application never speaks TLS; it listens on 127.0.0.1:8000 only.
+#
+#   $env:SOE_BETA_HOSTNAME = "beta.example.org"
+#   $env:SOE_TLS_EMAIL = "operator@example.org"
+#   caddy run --config deploy/Caddyfile
+#
+# Then: .\scripts\check_https.ps1 -BetaHostname $env:SOE_BETA_HOSTNAME
+#
+# For a local trusted drill without Caddy, use scripts/start_https.ps1.
+
+{
+	email {$SOE_TLS_EMAIL:operator@localhost}
+}
+
+http://{$SOE_BETA_HOSTNAME:localhost} {
+	redir https://{$SOE_BETA_HOSTNAME:localhost}{uri} permanent
+}
+
+{$SOE_BETA_HOSTNAME:localhost} {
+	reverse_proxy 127.0.0.1:8000
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

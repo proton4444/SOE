@@ -594,8 +594,12 @@ def _append_json_line(path: Path, event: dict) -> str:
     return existing + json.dumps(event, separators=(",", ":")) + "\n"
 
 
-def _read_jsonl(path: Path, limit: int = 20) -> list[dict]:
-    """Read the newest valid records from a small append-only operator log."""
+def _read_jsonl(path: Path, limit: int | None = 20) -> list[dict]:
+    """Read valid records from a small append-only operator log.
+
+    ``limit`` keeps the newest N records for dashboard snippets. Pass
+    ``limit=None`` when the full history is required (determinism verify).
+    """
     if not path.exists():
         return []
     try:
@@ -610,7 +614,7 @@ def _read_jsonl(path: Path, limit: int = 20) -> list[dict]:
             continue
         if isinstance(value, dict):
             records.append(value)
-        if len(records) >= limit:
+        if limit is not None and len(records) >= limit:
             break
     records.reverse()
     return records

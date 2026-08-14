@@ -22,8 +22,11 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from soe import models, parser  # noqa: E402
+from soe.models import PopulationBand  # noqa: E402
+
 from webapp.ai import brain  # noqa: E402
-from webapp.ai.orchestrator import extract_orders  # noqa: E402
+from webapp.ai.context import extract_marked_orders  # noqa: E402
 
 PROBE_RECEIPT = _REPO_ROOT / "server_data" / "phase0_probe.json"
 
@@ -61,18 +64,48 @@ def probe(model: str) -> tuple[bool, bool, str, dict]:
         ],
         temperature=0.0,
     )
-    orders = extract_orders(result.text)
+    marked = extract_marked_orders(result.text)
+    has_marker = marked is not None
+    parsed_ok = False
+    if has_marker and marked:
+        parsed = parser.parse_orders(marked, _probe_board(), "probe")
+        parsed_ok = any(not order.warnings for order in parsed)
     summary = {
         "attempts": result.attempts,
         "latency_ms": result.latency_ms,
         "usage": result.usage,
         "provider_request_id": result.provider_request_id,
     }
-    return orders != "", bool(orders), result.text, summary
+    return has_marker, parsed_ok, result.text, summary
+
+
+def _probe_board() -> models.GameState:
+    """Tiny board matching PROBE_TASK so parse_orders can accept a real command."""
+    gs = models.GameState()
+    gs.world_map.cities["highfell"] = models.City(
+        id="highfell", name="Highfell", population_band=PopulationBand.MEDIUM
+    )
+    gs.world_map.cities["redport"] = models.City(
+        id="redport", name="Redport", population_band=PopulationBand.MEDIUM
+    )
+    gs.factions["probe"] = models.Faction(
+        id="probe", name="Probe", controlled_city_ids={"highfell"}
+    )
+    gs.characters["marcus"] = models.Character(
+        id="marcus",
+        name="Emperor Marcus",
+        faction_id="probe",
+        location_city_id="highfell",
+        is_leader=True,
+    )
+    return gs
 
 
 def _order_lines(reply: str) -> int:
-    return sum(1 for line in extract_orders(reply).splitlines() if line.strip())
+    marked = extract_marked_orders(reply)
+    if not marked:
+        return 0
+    return sum(1 for line in marked.splitlines() if line.strip())
 
 
 def main() -> int:

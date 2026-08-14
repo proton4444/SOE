@@ -186,3 +186,72 @@ def test_restore_into_an_empty_registry_creates_just_that_room(tmp_path):
     restored = RoomStore(fresh_rooms)
     assert [r.code for r in restored.all()] == [room_a["code"]]
     assert restored.get(room_a["code"]).last_resolved_turn == 0
+
+
+def test_pre_turn_snapshot_copies_present_ledgers():
+    from webapp import backups
+    from webapp.rooms import SERVER_DATA
+
+    (SERVER_DATA / "coaches.json").write_text(
+        json.dumps({"coaches": [{"id": "c1"}]}), encoding="utf-8"
+    )
+    (SERVER_DATA / "blueprints.json").write_text(
+        json.dumps({"blueprints": [{"id": "b1"}]}), encoding="utf-8"
+    )
+    room = _room_with_a_resolved_turn()
+    backup = _backup_of(room["code"])
+    manifest = json.loads((backup / "manifest.json").read_text(encoding="utf-8"))
+    assert "coaches.json" in manifest["ledgers"]
+    assert "blueprints.json" in manifest["ledgers"]
+    assert (backup / "ledgers" / "coaches.json").is_file()
+
+
+def test_room_restore_does_not_rewind_ledgers():
+    from webapp import backups
+    from webapp.rooms import SERVER_DATA
+
+    coaches = SERVER_DATA / "coaches.json"
+    coaches.write_text(json.dumps({"coaches": [{"id": "before"}]}), encoding="utf-8")
+    room = _room_with_a_resolved_turn()
+    backup = _backup_of(room["code"])
+    coaches.write_text(json.dumps({"coaches": [{"id": "after"}]}), encoding="utf-8")
+
+    backups.restore_backup(backup)
+    live = json.loads(coaches.read_text(encoding="utf-8"))
+    assert live["coaches"][0]["id"] == "after"
+
+
+def test_ledger_backup_restore_rewinds_only_the_ledgers(tmp_path, monkeypatch):
+    from webapp import backups
+
+    data = tmp_path / "server_data"
+    data.mkdir()
+    monkeypatch.setattr(backups, "SERVER_DATA", data)
+    monkeypatch.setattr(backups, "BACKUP_ROOT", data / "backups")
+    (data / "coaches.json").write_text(
+        json.dumps({"coaches": [{"id": "original"}]}), encoding="utf-8"
+    )
+    (data / "blueprints.json").write_text(
+        json.dumps({"blueprints": [{"id": "bp1"}]}), encoding="utf-8"
+    )
+    (data / "competitions.json").write_text(
+        json.dumps({"seasons": []}), encoding="utf-8"
+    )
+    (data / "alpha.json").write_text(
+        json.dumps({"status": "idle"}), encoding="utf-8"
+    )
+
+    record = backups.create_ledger_backup(data_dir=data)
+    (data / "coaches.json").write_text(
+        json.dumps({"coaches": [{"id": "mutated"}]}), encoding="utf-8"
+    )
+    (data / "alpha.json").write_text(
+        json.dumps({"status": "open"}), encoding="utf-8"
+    )
+
+    backups.restore_ledgers(record.path, data_dir=data)
+    assert json.loads((data / "coaches.json").read_text())["coaches"][0]["id"] == "original"
+    assert json.loads((data / "alpha.json").read_text())["status"] == "idle"
+    preserved = list(data.glob("coaches.pre-restore-*.json"))
+    assert preserved
+    assert json.loads(preserved[0].read_text())["coaches"][0]["id"] == "mutated"

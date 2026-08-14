@@ -38,7 +38,7 @@ def main() -> int:
         print(f"No room with code {args.code}.", file=sys.stderr)
         return 2
 
-    events = service._read_jsonl(room.game_dir() / "resolution_events.jsonl", limit=100)
+    events = service._read_jsonl(room.game_dir() / "resolution_events.jsonl", limit=None)
     completed = [
         e
         for e in events

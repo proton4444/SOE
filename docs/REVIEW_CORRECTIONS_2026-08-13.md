@@ -1,6 +1,6 @@
 # Review Corrections — 2026-08-13
 
-Status: **in progress** — Waves 1–2 (C1–C23) closed  
+Status: **in progress** — Waves 1–2 and Wave 4 (C1–C23, C33–C37) closed  
 Date: 2026-08-13  
 Source: project-wide code review (engine, parser, webapp, AI/arena; 112 Python files)  
 Rules authority: [`MECHANICS.md`](../MECHANICS.md)
@@ -576,6 +576,9 @@ These are the reasons an official run can look valid when it is not.
 ### C33. Stable `state_sha`
 
 - Severity: bug
+- Status: **closed** — `state_sha` hashes the same bytes `storage.save_game_state` writes (`GameStateEncoder`, sets as sorted lists). Tested under two `PYTHONHASHSEED` values.
+  Tests: `tests/test_review_corrections_wave4.py::test_c33_state_sha_is_identical_under_two_pythonhashseed_values`,
+  `::test_c33_state_sha_matches_saved_state_json_bytes`.
 - File: `scripts/arena_bundle.py:79`
 - Defect: `json.dumps(..., default=str)` on `dataclasses.asdict` emits
   `str(set)`. Set order depends on `PYTHONHASHSEED`. Resume can raise
@@ -588,6 +591,9 @@ These are the reasons an official run can look valid when it is not.
 ### C34. Official runs must not inherit dashboard LLM knobs
 
 - Severity: bug
+- Status: **closed** — `isolate_headless_runtime` points `SOE_LLM_SETTINGS_FILE` at an empty isolated file and bridges only the dashboard key into `SOE_LLM_KEY`. `pin_official_llm_knobs` writes timeout/retries/tokens from the run config. The manifest records `_max_retries()` / `_timeout_seconds()`, not import-time constants.
+  Tests: `tests/test_review_corrections_wave4.py::test_c34_official_isolation_does_not_inherit_dashboard_knobs`,
+  `::test_c34_pin_official_knobs_from_run_config`.
 - File: `scripts/arena.py:2082`, `webapp/llm_settings.py:115`,
   `scripts/arena.py:1946`
 - Defect: Isolation claims “only the key from that file is bridged,”
@@ -604,6 +610,9 @@ These are the reasons an official run can look valid when it is not.
 ### C35. Probe must require ORDERS and a parse
 
 - Severity: bug
+- Status: **closed** — `extract_marked_orders` returns `None` without the marker. The probe parses the marked block against a tiny Highfell board and succeeds only when at least one warning-free command is produced.
+  Tests: `tests/test_review_corrections_wave4.py::test_c35_essay_without_orders_marker_fails_the_probe`,
+  `::test_c35_marked_valid_command_passes_the_probe`.
 - File: `scripts/probe_model.py:71`, `webapp/ai/context.py:448`
 - Defect: Official preflight treats any non-empty reply as
   `has_marker` / `parsed_ok` because `extract_orders` returns the whole
@@ -618,6 +627,9 @@ These are the reasons an official run can look valid when it is not.
 ### C36. Empty 200 is a provider failure
 
 - Severity: bug
+- Status: **closed** — `_post_once` raises `LLMError` on a blank 200. Arena records a `failure_class` and does not set `raw_reply`, so `calls_completed` stays 0. The orchestrator already maps `LLMError` to `STATE_ERROR`.
+  Tests: `tests/test_review_corrections_wave4.py::test_c36_empty_200_raises_llm_error`,
+  `::test_c36_empty_completion_does_not_count_as_completed_call`.
 - File: `webapp/ai/brain.py:327`, `webapp/ai/orchestrator.py:60`,
   `scripts/arena.py:384`
 - Defect: HTTP 200 with `content is None` or `""` is treated as
@@ -634,6 +646,8 @@ These are the reasons an official run can look valid when it is not.
 ### C37. Determinism verify must read the full log
 
 - Severity: bug
+- Status: **closed** — `_read_jsonl(..., limit=None)` scans the whole file. Dashboard callers keep the default newest-N cap. `verify_determinism.py` uses the full scan.
+  Test: `tests/test_review_corrections_wave4.py::test_c37_determinism_verify_reads_turn_1_of_a_60_turn_log`.
 - File: `scripts/verify_determinism.py:41`, `webapp/service.py:597`
 - Defect: `_read_jsonl(..., limit=100)` keeps only the newest records.
   Each turn writes at least `started` and `completed`, so after ~50
@@ -653,7 +667,7 @@ the matching wave if you are already in the file.
 | S2 | `soe/parser/dispatch.py:779` | Dedicated failed-parse order type; stop reifying garbage as MOVE. |
 | S3 | `soe/parser/dispatch.py:700` | Refuse a trailing mid-sentence IF, or document that the head always runs and THEN/ELSE do not inherit it. |
 | S4 | `webapp/llm_settings.py:612`, `webapp/ai/brain.py:79` | Cap timeout (120s), retries (5), max_tokens (4096), `SOE_SUBAGENT_TOKENS`. |
-| S5 | `webapp/main.py:306` | Strip model/base/key fingerprint from public HTML and `/healthz`. Drop `file` from `public_settings()`. |
+| S5 | `webapp/main.py:306` | **Closed.** `/healthz` reports only `ai.configured`. `public_settings()` no longer includes `file`. |
 | S6 | `webapp/main.py:830` | Accept only `X-Agent-Key` (or POST body) for mutating/state routes; deprecate `?key=`. |
 | S7 | `webapp/mapimg.py:53` | Cache PNG/SVG; bound concurrent Playwright; rate-limit `/map/{name}`. |
 | S8 | `webapp/ai/autoplay.py:155` | Default `wait_humans` on, or require an explicit force checkbox. |
@@ -675,15 +689,15 @@ the matching wave if you are already in the file.
 1. Wave 1 (C1–C6) — closed.
 2. Wave 2 (C7–C23) — closed.
 3. Wave 3 (C24–C32) — combat/fog/prisoner/finance rules.
-4. Wave 4 (C33–C37) — before the next official competence or blueprint run.
+4. Wave 4 (C33–C37) — closed.
 5. Suggestions and nits opportunistically.
 
 ## Counts
 
 | Severity | Open | Closed |
 |---|---|---|
-| bug | 14 | 23 |
+| bug | 9 | 28 |
 | suggestion | 11 | 0 |
 | nit | 4 | 0 |
 
-Waves 1–2 (twenty-three bugs) are closed. Waves 3–4 are the remaining 14.
+Waves 1–2 and Wave 4 are closed. Wave 3 (C24–C32) remains.

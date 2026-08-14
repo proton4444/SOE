@@ -548,4 +548,5 @@ def test_healthz_reports_ai_config():
     body = resp.json()
     assert "ai" in body
     assert "configured" in body["ai"]
-    assert "model" in body["ai"]
+    assert "model" not in body["ai"]
+    assert "base_url" not in body["ai"]

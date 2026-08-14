@@ -9,6 +9,9 @@ Set-Location $root
 if ([string]::IsNullOrWhiteSpace($env:SOE_BETA_ACCESS_CODE)) {
     throw 'SOE_BETA_ACCESS_CODE must be set before starting the controlled beta.'
 }
+if ([string]::IsNullOrWhiteSpace($env:SOE_OPERATOR_KEY)) {
+    throw 'SOE_OPERATOR_KEY must be set before starting the controlled beta.'
+}
 
 $dataDir = if ($env:SOE_DATA_DIR) { $env:SOE_DATA_DIR } else { Join-Path $root 'server_data' }
 $gamesDir = if ($env:SOE_GAMES_DIR) { $env:SOE_GAMES_DIR } else { Join-Path $root 'games' }
@@ -41,4 +44,5 @@ $process = Start-Process -FilePath $python -ArgumentList $arguments -WorkingDire
 $process.Id | Set-Content -LiteralPath $pidFile -NoNewline
 
 Write-Host "Started controlled beta PID $($process.Id) on 127.0.0.1:$Port."
-Write-Host 'HTTPS must terminate at the reverse proxy; this process is the single application worker.'
+Write-Host 'HTTPS must terminate in front of this process (deploy/Caddyfile or scripts/start_https.ps1).'
+Write-Host 'This process is the single application worker; do not publish port 8000.'

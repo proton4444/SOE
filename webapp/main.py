@@ -71,7 +71,14 @@ async def _lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="SOE", version=__version__, lifespan=_lifespan)
+app = FastAPI(
+    title="SOE",
+    version=__version__,
+    lifespan=_lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -395,9 +402,6 @@ def healthz():
         },
         "ai": {
             "configured": brain.is_configured(),
-            "model": brain.LLM_MODEL,
-            "base_url": brain.LLM_BASE_URL,
-            "vision": orchestrator.VISION_ENABLED,
         },
         "single_worker_required": True,
     }

@@ -159,7 +159,6 @@ def public_settings() -> dict:
         "max_tokens": settings.get("max_tokens", 1500),
         "key_set": bool((settings.get("key", "") or "").strip()),
         "key_masked": redact(settings.get("key", "")),
-        "file": str(SETTINGS_FILE),
         "updated_at": settings.get("updated_at", ""),
     }
 

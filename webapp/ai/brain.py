@@ -319,11 +319,13 @@ def _post_once(
         text = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
         raise LLMError("LLM returned an unexpected payload.") from exc
+    if text is None or not str(text).strip():
+        raise LLMError("LLM returned an empty completion.")
     usage = data.get("usage", {})
     if not isinstance(usage, dict):
         usage = {}
     request_id = str(data.get("id", "") or "")
-    return text or "", usage, request_id
+    return str(text), usage, request_id
 
 
 def _provider_error(response) -> str:

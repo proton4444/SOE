@@ -158,6 +158,15 @@ def test_health_check_is_non_sensitive_and_reports_storage_paths():
     assert body["single_worker_required"] is True
     assert "agent_key" not in response.text
     assert "host_key" not in response.text
+    assert "model" not in body.get("ai", {})
+    assert "base_url" not in body.get("ai", {})
+    assert "openrouter" not in response.text.lower()
+
+
+def test_openapi_docs_are_disabled():
+    assert client.get("/docs").status_code == 404
+    assert client.get("/redoc").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
 
 
 def test_human_join_cannot_take_over_an_existing_display_name():

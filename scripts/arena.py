@@ -67,6 +67,63 @@ PHASE0_PROBE_MAX_AGE_HOURS = 24
 os.environ.setdefault("SOE_BOT_VISION", "")
 
 
+def isolate_headless_runtime(
+    workdir: Path,
+    *,
+    repo_root: Path | None = None,
+    dashboard_path: Path | None = None,
+) -> None:
+    """Point the process at a throwaway data dir and bridge only the API key.
+
+    Official and unofficial headless runs must not inherit dashboard timeout,
+    retries, base URL, token cap or reasoning effort. The live
+    ``llm_settings.json`` may supply the key when ``SOE_LLM_KEY`` is unset;
+    every other field stays behind.
+    """
+    repo_root = repo_root or _REPO_ROOT
+    data_dir = workdir / "server_data"
+    games_dir = workdir / "games"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    games_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["SOE_DATA_DIR"] = str(data_dir)
+    os.environ["SOE_GAMES_DIR"] = str(games_dir)
+    isolated_settings = data_dir / "llm_settings.json"
+    os.environ["SOE_LLM_SETTINGS_FILE"] = str(isolated_settings)
+    _bridge_dashboard_key_only(
+        dashboard_path or (repo_root / "server_data" / "llm_settings.json")
+    )
+    try:
+        from webapp import llm_settings
+
+        llm_settings.SETTINGS_FILE = isolated_settings
+    except Exception:  # noqa: BLE001 - module may not be imported yet
+        pass
+
+
+def _bridge_dashboard_key_only(dashboard_path: Path) -> None:
+    if os.environ.get("SOE_LLM_KEY", "").strip():
+        return
+    try:
+        data = json.loads(dashboard_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return
+    key = str((data or {}).get("key") or "").strip()
+    if key:
+        os.environ["SOE_LLM_KEY"] = key
+
+
+def pin_official_llm_knobs(config: dict) -> None:
+    """Force env knobs from the frozen run config so the client matches the manifest."""
+    if config.get("timeout_seconds") is not None:
+        os.environ["SOE_LLM_TIMEOUT"] = str(config["timeout_seconds"])
+    if config.get("max_retries") is not None:
+        os.environ["SOE_LLM_RETRIES"] = str(config["max_retries"])
+    if config.get("max_tokens") is not None:
+        os.environ["SOE_LLM_MAX_TOKENS"] = str(config["max_tokens"])
+    if config.get("base_url"):
+        os.environ["SOE_LLM_BASE"] = str(config["base_url"])
+
+
 # ===========================================================================
 # policies
 # ===========================================================================
@@ -296,8 +353,8 @@ class LLMPolicy(Policy):
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "retry_policy": {
-                "max_retries": brain.MAX_RETRIES,
-                "timeout_seconds": brain.TIMEOUT_SECONDS,
+                "max_retries": brain._max_retries(),
+                "timeout_seconds": brain._timeout_seconds(),
             },
             "blueprint_id": self.blueprint_id or None,
             "seed": ctx.seed,
@@ -2019,8 +2076,10 @@ def manifest_fields(config: dict) -> dict:
         "temperature": config.get("temperature", 0.0),
         "max_tokens": config.get("max_tokens", brain.MAX_OUTPUT_TOKENS),
         "retry_policy": {
-            "max_retries": brain.MAX_RETRIES,
-            "timeout_seconds": brain.TIMEOUT_SECONDS,
+            "max_retries": int(config.get("max_retries", brain._max_retries())),
+            "timeout_seconds": float(
+                config.get("timeout_seconds", brain._timeout_seconds())
+            ),
         },
         "seed_pairs": int(config.get("seed_pairs", 4)),
         "turns": int(config.get("turns", 30)),
@@ -2037,6 +2096,7 @@ def prepare_bundle(config: dict, output: Path, run_id: str | None = None) -> "Ru
     from scripts.arena_bundle import RunBundle, git_provenance
 
     validate_official_preflight(config)
+    pin_official_llm_knobs(config)
     # Capture provenance before creating files under the repository. Otherwise
     # an unignored output directory can make a clean run describe itself as
     # dirty merely because it started writing its own evidence bundle.
@@ -2072,6 +2132,7 @@ def resume_bundle(output: Path, run_id: str, config: dict) -> "RunBundle":
     from scripts.arena_bundle import RunBundle, validate_resume_bundle
 
     bundle = RunBundle(output / run_id)
+    pin_official_llm_knobs(config)
     expected = manifest_fields(config)
     expected["schema_version"] = "1"
     validate_resume_bundle(bundle, expected, _REPO_ROOT)
@@ -2158,14 +2219,7 @@ def main() -> int:
 
     # Isolation must be in place before webapp binds its module-level paths.
     workdir = Path(tempfile.mkdtemp(prefix="soe_arena_"))
-    os.environ["SOE_DATA_DIR"] = str(workdir / "server_data")
-    os.environ["SOE_GAMES_DIR"] = str(workdir / "games")
-    # The dashboard's LLM setup (server_data/llm_settings.json) applies to
-    # headless runs too; only the key from that file is bridged, nothing else.
-    os.environ.setdefault(
-        "SOE_LLM_SETTINGS_FILE",
-        str(_REPO_ROOT / "server_data" / "llm_settings.json"),
-    )
+    isolate_headless_runtime(workdir)
 
     from webapp import service
 

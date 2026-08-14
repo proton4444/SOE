@@ -22,7 +22,6 @@ import hashlib
 import json
 import os
 import subprocess
-from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -75,11 +74,19 @@ def file_sha256(path: Path) -> str:
 
 
 def state_sha(game_state) -> str:
-    """Deterministic content hash of a GameState (for turns.jsonl)."""
-    canonical = json.dumps(
-        asdict(game_state), sort_keys=True, separators=(",", ":"), default=str
-    )
-    return sha256_bytes(canonical.encode("utf-8"))
+    """Deterministic content hash of a GameState (for turns.jsonl).
+
+    Hashes the same ``state.json`` bytes ``storage.save_game_state`` writes,
+    so sets become sorted lists and ``PYTHONHASHSEED`` cannot move the digest.
+    """
+    import tempfile
+
+    from soe import storage
+
+    with tempfile.TemporaryDirectory() as tmp:
+        directory = Path(tmp)
+        storage.save_game_state(game_state, directory)
+        return file_sha256(directory / "state.json")
 
 
 def git_provenance(repo_root: Path) -> dict:

@@ -106,6 +106,7 @@ def test_public_view_masks_key(settings_file):
     assert KEY not in json.dumps(public)
     assert public["key_masked"].endswith("1234")
     assert public["key_masked"].startswith("sk-or-")
+    assert "file" not in public
 
 
 def test_clear_key(settings_file):

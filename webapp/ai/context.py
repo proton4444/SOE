@@ -511,6 +511,22 @@ def prompt_signature(doctrine_text: str = "") -> str:
 # ============================================================================
 
 
+def extract_marked_orders(reply: str) -> str | None:
+    """Return the orders block only when the ORDERS marker is present.
+
+    Official probes must not treat an essay as orders. Live bots still use
+    ``extract_orders``, which falls back to the whole reply when the marker
+    is missing so a host can see what the model wrote.
+    """
+    segments = _ORDER_MARKER_RE.split(reply)
+    if len(segments) < 2:
+        return None
+    best = max(segments[1:], key=_order_line_count, default="")
+    if _order_line_count(best):
+        return best.strip()
+    return ""
+
+
 def extract_orders(reply: str) -> str:
     """Pull the orders block out of a strategist reply.
 
@@ -519,13 +535,10 @@ def extract_orders(reply: str) -> str:
     occurrence is not always the orders. Pick the marker segment that
     actually contains order-like lines.
     """
-    segments = _ORDER_MARKER_RE.split(reply)
-    if len(segments) < 2:
+    marked = extract_marked_orders(reply)
+    if marked is None:
         return reply.strip()
-    best = max(segments[1:], key=_order_line_count, default="")
-    if _order_line_count(best):
-        return best.strip()
-    return reply.strip()
+    return marked
 
 
 def rationale(reply: str) -> str:

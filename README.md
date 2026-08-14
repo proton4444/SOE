@@ -564,14 +564,19 @@ and per-player agent keys are the credentials.
 ```bash
 pip install -r requirements.txt
 set SOE_BETA_ACCESS_CODE=<private-invite-code>
+set SOE_OPERATOR_KEY=<operator-secret>
 set SOE_COOKIE_SECURE=1
 python -m uvicorn webapp.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
-For the controlled beta, prefer the archived
+For the controlled beta, prefer `scripts/start_beta.ps1` (requires
+`SOE_BETA_ACCESS_CODE` and `SOE_OPERATOR_KEY`) and put HTTPS termination in
+front of the loopback server. Production proxy: [`deploy/Caddyfile`](deploy/Caddyfile).
+Local trusted drill: `scripts/start_https.ps1` then
+`.\scripts\check_https.ps1 -BetaHostname 127.0.0.2 -HttpsPort 8443`.
+The archived
 [`controlled_beta_runbook.md`](docs/archive/pre-agent-competition-2026-08-11/controlled_beta_runbook.md)
-and `scripts/start_beta.ps1`; put HTTPS termination in front of the loopback
-server. Open the HTTPS host to create or join a game. The host resolves each turn
+still describes the stop/restore sequence. Open the HTTPS host to create or join a game. The host resolves each turn
 after every joined player has submitted orders, or may explicitly force an early
 resolution where missing players count as empty orders. Every turn runs with a
 seed derived from the room code and turn number, so results are reproducible.

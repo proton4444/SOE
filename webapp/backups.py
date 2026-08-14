@@ -1,8 +1,9 @@
 """Pre-turn snapshots and restore helpers for the controlled beta.
 
-Snapshots are intentionally file-based.  A snapshot contains the server room
-registry and one complete game directory, which is enough to restore the
-state that was authoritative immediately before a turn was resolved.
+A room snapshot contains the server room registry, one complete game
+directory, and copies of the coach / blueprint / competition / alpha
+ledgers as they stood at snapshot time. Restoring a room does not rewind
+those ledgers; use ``restore_ledgers`` for that.
 """
 
 from __future__ import annotations
@@ -22,6 +23,13 @@ from webapp.rooms import Room, ROOMS_FILE, SERVER_DATA
 
 
 BACKUP_ROOT = Path(os.environ.get("SOE_BACKUP_DIR", str(SERVER_DATA / "backups")))
+
+LEDGER_NAMES = (
+    "coaches.json",
+    "blueprints.json",
+    "competitions.json",
+    "alpha.json",
+)
 
 
 class BackupError(RuntimeError):
@@ -57,6 +65,46 @@ def _timestamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
 
 
+def _ledger_sources(data_dir: Path | None = None) -> list[tuple[str, Path]]:
+    root = Path(data_dir or SERVER_DATA)
+    return [(name, root / name) for name in LEDGER_NAMES]
+
+
+def _copy_ledgers(staging: Path, data_dir: Path | None = None) -> dict[str, str]:
+    """Copy present ledgers into ``staging/ledgers`` and return name -> sha256."""
+    dest_root = staging / "ledgers"
+    hashes: dict[str, str] = {}
+    for name, source in _ledger_sources(data_dir):
+        if not source.is_file():
+            continue
+        dest_root.mkdir(parents=True, exist_ok=True)
+        dest = dest_root / name
+        shutil.copy2(source, dest)
+        try:
+            json.loads(dest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise BackupError(f"Ledger {name} is not readable JSON") from exc
+        digest = _sha256(dest)
+        if digest != _sha256(source):
+            raise BackupError(f"Ledger snapshot hash verification failed: {name}")
+        hashes[name] = digest
+    return hashes
+
+
+def _verify_ledgers(path: Path, manifest: dict) -> None:
+    expected = manifest.get("ledgers") or {}
+    if not expected:
+        return
+    ledgers = path / "ledgers"
+    for name, digest in expected.items():
+        source = ledgers / name
+        if not source.is_file():
+            raise BackupError(f"Backup is missing ledger {name}")
+        if _sha256(source) != digest:
+            raise BackupError(f"Backup ledger hash does not match its manifest: {name}")
+        json.loads(source.read_text(encoding="utf-8"))
+
+
 def create_pre_turn_backup(room: Room, turn: int) -> BackupRecord:
     """Create and verify a snapshot before any turn-state mutation.
 
@@ -90,9 +138,10 @@ def create_pre_turn_backup(room: Room, turn: int) -> BackupRecord:
         json.loads(copied_rooms.read_text(encoding="utf-8"))
         if storage.load_game_state(staging_path / "game") is None:
             raise BackupError("Pre-turn state snapshot could not be loaded")
+        ledger_hashes = _copy_ledgers(staging_path)
 
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "room_code": room.code,
             "game_id": room.game_id(),
             "turn": turn,
@@ -101,6 +150,7 @@ def create_pre_turn_backup(room: Room, turn: int) -> BackupRecord:
             "state_version": state_version,
             "server_registry": "rooms.json",
             "game_directory": "game",
+            "ledgers": ledger_hashes,
         }
         (staging_path / "manifest.json").write_text(
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
@@ -139,6 +189,7 @@ def validate_backup(path: Path) -> dict:
         raise BackupError("Backup state hash does not match its manifest")
     if storage.load_game_state(game_dir) is None:
         raise BackupError("Backup game state could not be loaded")
+    _verify_ledgers(path, manifest)
     return manifest
 
 
@@ -236,4 +287,84 @@ def restore_backup(
     if target_game.exists():
         target_game.replace(games_root / f"room_{room_code}.pre-restore-{stamp}")
     shutil.copytree(path / "game", target_game)
+    return manifest
+
+
+def create_ledger_backup(*, data_dir: Path | None = None) -> BackupRecord:
+    """Snapshot coach, blueprint, competition and alpha ledgers.
+
+    Independent of a room turn. Restoring these files rewinds every coach
+    and season, so it is an operator disaster-recovery act, not the default
+    room restore.
+    """
+    data_dir = Path(data_dir or SERVER_DATA)
+    created_at = datetime.now(timezone.utc).isoformat()
+    present = [name for name, source in _ledger_sources(data_dir) if source.is_file()]
+    if not present:
+        raise BackupError("No coach, blueprint, competition or alpha ledgers to snapshot")
+
+    name = f"ledgers_{_timestamp()}"
+    final_path = BACKUP_ROOT / "ledgers" / name
+    staging_path = BACKUP_ROOT / "ledgers" / f".{name}.tmp-{secrets.token_hex(8)}"
+    try:
+        staging_path.mkdir(parents=True, exist_ok=False)
+        ledger_hashes = _copy_ledgers(staging_path, data_dir)
+        if not ledger_hashes:
+            raise BackupError("No coach, blueprint, competition or alpha ledgers to snapshot")
+        combined = "".join(f"{k}:{v}" for k, v in sorted(ledger_hashes.items()))
+        state_version = hashlib.sha256(combined.encode("utf-8")).hexdigest()
+        manifest = {
+            "schema_version": 2,
+            "kind": "ledgers",
+            "room_code": "SERVER",
+            "turn": 0,
+            "created_at": created_at,
+            "state_version": state_version,
+            "ledgers": ledger_hashes,
+        }
+        (staging_path / "manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        staging_path.replace(final_path)
+    except BackupError:
+        shutil.rmtree(staging_path, ignore_errors=True)
+        raise
+    except (OSError, ValueError, json.JSONDecodeError, TypeError) as exc:
+        shutil.rmtree(staging_path, ignore_errors=True)
+        raise BackupError("Could not create or verify the ledger backup") from exc
+
+    return BackupRecord(
+        path=final_path,
+        room_code="SERVER",
+        turn=0,
+        state_version=state_version,
+        created_at=created_at,
+    )
+
+
+def restore_ledgers(path: Path, *, data_dir: Path | None = None) -> dict:
+    """Restore snapshotted ledgers, keeping the replaced files beside them."""
+    path = Path(path)
+    data_dir = Path(data_dir or SERVER_DATA)
+    manifest_path = path / "manifest.json"
+    if not manifest_path.is_file():
+        raise BackupError("Backup is missing required files")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    expected = manifest.get("ledgers") or {}
+    if not expected:
+        raise BackupError("Backup has no ledgers")
+    _verify_ledgers(path, manifest)
+
+    stamp = _timestamp()
+    data_dir.mkdir(parents=True, exist_ok=True)
+    for name in expected:
+        source = path / "ledgers" / name
+        dest = data_dir / name
+        if dest.exists():
+            shutil.copy2(
+                dest, dest.with_name(f"{dest.stem}.pre-restore-{stamp}{dest.suffix}")
+            )
+        tmp = dest.with_name(f"{dest.name}.restore.tmp")
+        shutil.copy2(source, tmp)
+        tmp.replace(dest)
     return manifest
