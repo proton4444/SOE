@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Coach desk — SOE{% endblock %}
+{% block content %}
+{% include "partials/coach_nav.html" %}
+
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Coach desk</p>
+    <h1>Your agents</h1>
+    <p class="muted">Create a blueprint, freeze a version, pick a scenario,
+    then read the debrief. Quota: {{ quota.daily_remaining }} of
+    {{ quota.daily_limit }} training runs left today.</p>
+  </div>
+</div>
+
+{% if revealed_key %}
+<p class="notice ok">Your coach key is <code class="revealed-key">{{ revealed_key }}</code>.
+Copy it now. This page will not show it again.</p>
+{% endif %}
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+<div class="two-col">
+  <section class="card">
+    <h2>New blueprint</h2>
+    <form method="post" action="/coach/blueprints">
+      <label>Name
+        <input name="name" required maxlength="80" placeholder="Fast Expansion">
+      </label>
+      <label>Persona
+        <textarea name="persona" rows="3" maxlength="2000"
+                  placeholder="Who this agent is, in a few sentences."></textarea>
+      </label>
+      <label>Objective
+        <textarea name="objective" rows="2" maxlength="400"
+                  placeholder="Take the nearest unsecured city, then hold it."></textarea>
+      </label>
+      <label>Economy
+        <textarea name="economy" rows="2" maxlength="400"></textarea>
+      </label>
+      <label>Risk
+        <textarea name="risk" rows="2" maxlength="400"></textarea>
+      </label>
+      <label>Diplomacy
+        <textarea name="diplomacy" rows="2" maxlength="400"></textarea>
+      </label>
+      <label>Notes
+        <textarea name="notes" rows="2" maxlength="4000"></textarea>
+      </label>
+      <label>Model <span class="muted">(blank = server default)</span>
+        <input name="model" placeholder="openai/gpt-4o-mini">
+      </label>
+      <button type="submit">Create draft</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Blueprints</h2>
+    {% if blueprints %}
+    <table class="players">
+      <tr><th>Name</th><th>Latest</th><th>State</th></tr>
+      {% for item in blueprints %}
+      <tr>
+        <td><a href="/coach/blueprints/{{ item.id }}">{{ item.name }}</a></td>
+        <td>v{{ item.latest().version }}</td>
+        <td>{{ item.latest().state }}{% if item.coach_id != coach.id %} <span class="muted">· public</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">None yet. The form on the left opens version 1 as a draft.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card" id="league">
+  <h2>Coach League</h2>
+  {% if seasons %}
+  <table class="players">
+    <tr><th>Season</th><th>Status</th><th>Your entry</th></tr>
+    {% for item in seasons %}
+    <tr>
+      <td><a href="/coach/seasons/{{ item.id }}">{{ item.name }}</a></td>
+      <td>{{ item.status }}</td>
+      <td class="muted">
+        {% set mine = season_entries.get(item.id) %}
+        {% if mine %}{{ mine.name }} · v{{ mine.blueprint_version }}
+        {% elif item.status == "frozen" %}enter
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No season is open yet. When an operator freezes one, it
+  appears here.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Training runs</h2>
+  {% if runs %}
+  <table class="players">
+    <tr><th>When</th><th>Blueprint</th><th>Scenario</th><th>Status</th><th>Result</th></tr>
+    {% for run in runs %}
+    <tr>
+      <td class="muted">{{ run.created_at[:16].replace("T", " ") }}</td>
+      <td>v{{ run.blueprint_version }}</td>
+      <td>{{ run.scenario_id }}</td>
+      <td>
+        {% if run.status == "complete" %}<span class="ok">complete</span>
+        {% elif run.status == "failed" %}<span class="wait">failed</span>
+        {% else %}<span class="wait">{{ run.status }}</span>{% endif %}
+      </td>
+      <td>
+        <a href="/coach/training/{{ run.id }}">
+          {% if run.status == "complete" and run.result %}
+            {{ run.result.wins }}–{{ run.result.opponent_wins }}
+            {% if run.result.draws %}· {{ run.result.draws }} drawn{% endif %}
+          {% elif run.status == "failed" %}see error
+          {% else %}open{% endif %}
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No runs yet. Freeze a version and pick a scenario.</p>
+  {% endif %}
+</section>
+{% endblock %}

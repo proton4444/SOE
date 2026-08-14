@@ -1,0 +1,10 @@
+<nav class="coach-nav">
+  <div class="row">
+    <a href="/coach">Desk</a>
+    <a href="/coach#league">League</a>
+    <span class="muted">{{ coach.display_name }}</span>
+  </div>
+  <form method="post" action="/coach/leave">
+    <button type="submit" class="ghost">Leave</button>
+  </form>
+</nav>

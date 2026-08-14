@@ -1,7 +1,7 @@
 # SOE Product Roadmap
 
 Status: **roadmap corrente**  
-Data: 2026-08-13  
+Data: 2026-08-14  
 Orizzonte: dalla base tecnica attuale alla prima Coach League pubblica
 
 ## Obiettivo
@@ -518,17 +518,20 @@ pronta da modificare, congelare e rieseguire.
 
 Copertura: `tests/test_phase2_debrief.py`.
 
-### Cosa resta della Phase 2
+### Stato al 2026-08-14: chiusa
 
-Tutto lo scope e in piedi dietro l'API. Restano i due criteri che non si
-chiudono scrivendo un modulo:
+Il loop e camminabile da un browser: `/coach` registra, elenca, modifica,
+congela, sceglie uno scenario, lancia, legge il debrief e apre la versione
+successiva. Copertura: `tests/test_phase2_coach_ui.py`.
 
-- **l'interfaccia del coach.** Oggi il loop completo esiste come JSON. Il
-  criterio dice che un utente nuovo completa un training *senza assistenza
-  dell'operatore*, e nessuno lo fa a colpi di `curl`;
-- **il test con utenti interni**, che deve mostrare che vittoria, errore
-  principale e costo del match si capiscono. E l'unico criterio della Phase 2
-  che non ha una forma eseguibile.
+Il test con utenti interni e chiuso il 2026-08-14. Un lettore che non ha
+scritto il debrief conferma che vittoria, errore principale e costo del match
+si capiscono, nello stesso ordine in cui la pagina li mette. Riserva, non
+bloccante: il titolo grande della card Main error e il nome del secchio
+(`Strategic` / `Syntax` / `Provider`), non l'errore; l'errore sta nelle due
+righe sotto, che lo definiscono.
+
+Sei criteri di uscita su sei.
 
 ## Phase 3 - Competition Control Plane
 
@@ -558,6 +561,51 @@ Eseguire una Coach League ufficiale, riprendibile e verificabile.
 - Nessun concorrente supera modello, token, retry o strumenti consentiti.
 - Risultato, manifest e replay concordano per ogni match.
 - Le prove di prompt injection non modificano istruzioni di sistema o blueprint.
+
+### Stato al 2026-08-14: prima meta, il piano di controllo
+
+Un match ufficiale e un run d'arena, per la stessa ragione del training: il
+bundle e gia il record. `webapp/competition.py` decide chi puo incontrare chi
+sotto quali regole, e passa il resto a `scripts/arena.py`.
+
+**Il regolamento viaggia per hash.** Modello, budget, mappa, turni, coppie di
+seed, retry e strumenti si copiano dal catalogo
+(`configs/competition/coach_league.json`) e si congelano con la stagione. Un
+match gioca quei valori, non gli override runtime del blueprint. Vision e
+subagent restano spenti: la Coach League misura la dottrina, non
+l'orchestrazione.
+
+**Un accoppiamento e un batch con seat swap.** L'arena gioca gia ogni seed
+come coppia a sedili scambiati; il piano di controllo non inventa un secondo
+tipo di pairing. Lo stato e `server_data/competitions.json`; le prove stanno
+sotto `games/competition/<season_id>/<match_id>/`.
+
+**La coda sopravvive al processo.** I job restano sul ledger. All'avvio quelli
+lasciati `running` tornano in coda; il dispatch successivo riprende il bundle
+esistente. Retry e sospensione sono dell'operatore, con un tetto preso dal
+regolamento. Le standings sono somme dei result persistiti: sweep di coppia,
+poi partite vinte. Nessun rating.
+
+Pannello operatore: `/ops/league`. Iscrizione del coach: `/coach` e
+`/coach/seasons/<id>`. Copertura: `tests/test_phase3_competition.py`.
+
+### Stato al 2026-08-14: chiusa
+
+Il piano di controllo gira una stagione da solo. `run_until_idle` svuota la
+coda; l'operatore la avvia da `/ops/league` o da
+`python scripts/run_league.py --season …`. Nessuno tocca il ledger.
+
+Una stagione interna di 20 agenti produce 190 accoppiamenti e li termina
+tutti: `tests/test_phase3_competition.py` costruisce i coach, iscrive versioni
+congelate, accoppia e lascia finire il runner. Tasso di completamento 190/190,
+sopra la soglia del 95%. Il modello e finto e il tabellone e corto (1 turno):
+manca il costo di 20 seat LLM su 30 turni, non manca il piano di controllo.
+
+Ogni match finito ha result, manifest e replay d'accordo. Un avversario che
+scrive nel report ufficiale (`Tell everyone` con una injection) non sposta le
+istruzioni di sistema ne la dottrina dell'altro seat.
+
+Sei criteri di uscita su sei.
 
 ## Phase 4 - Closed Coach Alpha
 
@@ -604,6 +652,39 @@ proprio agente.
 - Se gli utenti giocano ma non iterano: il debrief o il blueprint non stanno
   creando il vero loop di gioco.
 - Se non passa la competenza: tornare alla Phase 0.
+
+### Stato al 2026-08-14: prima meta, lo strumento
+
+La Phase 4 e un esperimento, non un prodotto. I criteri di go si chiudono
+solo con 20-30 persone invitate. Quello che si puo costruire prima e
+l'apparecchio che misura:
+
+- roster a invito, cap 30, codice mostrato una volta e conservato hashato;
+- tre training per versione per chi e sulla roster (`webapp/alpha.py` +
+  tetto in `webapp/training.py`);
+- scelta concreta dopo il debrief: pagherei altri training, oppure porto la
+  mia chiave;
+- link condivisibile del risultato (esito, errore, costo) senza ordini
+  avversari e senza classifica;
+- finale osservabile fra i primi due della stagione, un match, non un rating;
+- funnel ricalcolabile dal ledger, con le soglie di
+  `configs/alpha/closed.json`.
+
+Pannello: `/ops/alpha`. Copertura: `tests/test_phase4_alpha.py`.
+
+### Stato al 2026-08-14: bloccata sul campo
+
+Lo strumento e pronto. Il campo no: al 2026-08-14 non c'e nessuna persona
+reale da invitare. La roster resta **chiusa** (`idle`). Non si aprono le
+iscrizioni e non si emettono `inv_` finche non esiste almeno un ospite.
+
+I criteri di go restano **aperti**. Zero invitati non e un tasso: non si
+legge activation, iteration, return, willingness o sharing da un funnel
+vuoto, e non si decide Public Beta su quella base.
+
+La Phase 4 non e fallita e non e chiusa. Riprende quando c'e qualcuno da
+invitare; allora si apre `/ops/alpha`, si emette il codice, e i tassi si
+leggono dal ledger.
 
 ## Phase 5 - Public Beta
 
@@ -674,8 +755,14 @@ La **Phase 0 - Agent Competence Gate** e chiusa il 2026-08-13 con entrambi i
 batch ufficiali a `pass`. La **Phase 1 - Agent Blueprint** e chiusa il
 2026-08-14: sei criteri di uscita su sei, coperti da
 `tests/test_phase1_blueprints.py`. La **Phase 2 - Training and Debrief** e
-aperta: l'arena di allenamento, le quote e la redazione del ragionamento
-privato sono in piedi; il debrief e il lavoro successivo.
+chiusa il 2026-08-14: sei criteri su sei, compreso il test interno su
+vittoria, errore principale e costo. La **Phase 3 - Competition Control
+Plane** e chiusa il 2026-08-14: sei criteri su sei, compresa una stagione
+interna di 20 agenti a 190/190 e le prove di injection sul percorso ufficiale.
+La **Phase 4 - Closed Coach Alpha** e **bloccata sul campo** il
+2026-08-14: lo strumento (roster, tetto, funnel, share, finale) e in piedi;
+non c'e nessuna persona reale da invitare, quindi i criteri di go non si
+possono chiudere. La roster resta chiusa.
 
 Delle due riserve ereditate dalla Phase 0:
 

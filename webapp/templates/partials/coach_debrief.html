@@ -1,0 +1,170 @@
+<section class="card master-hero" id="debrief-headline">
+  <div class="master-hero-copy">
+    <p class="eyebrow">Debrief</p>
+    <h2>{{ blueprint_name }} · v{{ run.blueprint_version }}</h2>
+    <p>{{ run.scenario_id }} against {{ run.opponent }}
+       · <code>{{ view.content_hash[:12] }}</code></p>
+  </div>
+</section>
+
+<section class="stat-row" aria-label="Result, main error, and match cost">
+  <article class="card stat-card outcome-{{ outcome.kind }}">
+    <p class="eyebrow">Result</p>
+    <p class="figure">{{ outcome.line }}</p>
+    <p class="muted">{{ view.headline.won }} won · {{ view.headline.lost }} lost
+       · {{ view.headline.drawn }} drawn
+       · {{ view.headline.games }} game(s)</p>
+  </article>
+  <article class="card stat-card error-{{ main_error.kind }}">
+    <p class="eyebrow">Main error</p>
+    <p class="figure">{{ main_error.title }}</p>
+    <p class="muted">{{ main_error.summary }}</p>
+    {% if main_error.note %}<p class="muted">{{ main_error.note }}</p>{% endif %}
+  </article>
+  <article class="card stat-card">
+    <p class="eyebrow">Match cost</p>
+    <p class="figure">{{ cost.line }}</p>
+    <p class="muted">
+      {% if view.cost.latency_ms_median is not none %}
+      median {{ view.cost.latency_ms_median|round(0)|int }} ms
+      {% endif %}
+      {% if view.cost.prompt_tokens is not none %}
+      · {{ view.cost.prompt_tokens }} prompt tokens
+      {% endif %}
+    </p>
+  </article>
+</section>
+
+<section class="card">
+  <h2>Three kinds of error</h2>
+  <div class="three-col">
+    <div>
+      <h3>Syntax</h3>
+      <p>{{ view.errors.syntax.discarded_lines }} discarded line(s),
+         {{ view.errors.syntax.warned_orders }} warning(s).</p>
+      {% for line in view.errors.syntax.examples %}
+      <p class="muted"><code>{{ line }}</code></p>
+      {% endfor %}
+    </div>
+    <div>
+      <h3>Provider</h3>
+      <p>{{ view.errors.provider.total }} failure(s).</p>
+      <p class="muted">A 429 is not a reason to rewrite doctrine.</p>
+    </div>
+    <div>
+      <h3>Strategic</h3>
+      <p>{{ view.errors.strategic.silent_turns }} silent ·
+         {{ view.errors.strategic.idle_turns }} idle.</p>
+      <p class="muted">{{ view.errors.strategic.note }}</p>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Reliability</h2>
+  <p>{{ view.reliability.calls_completed }} of
+     {{ view.reliability.calls_attempted }} calls completed
+     · accepted rate {{ view.reliability.accepted_call_rate }}
+     · {{ view.reliability.no_op_turns }} no-op turns
+     · {{ view.reliability.retried_calls }} retried.</p>
+</section>
+
+{% for game in view.games %}
+<section class="card">
+  <h2>Game {{ loop.index }} · {{ game.outcome }}</h2>
+  <p class="muted">{{ game.turns_played }} turn(s). Position is yours only.</p>
+  {% for turn in game.turns %}
+  <article class="turn-block">
+    <h3>Turn {{ turn.turn }}</h3>
+    <p>{{ turn.rationale }}</p>
+    <div class="three-col">
+      <div>
+        <h4>Proposed</h4>
+        {% for line in turn.proposed %}<p class="muted">{{ line }}</p>
+        {% else %}<p class="muted">—</p>{% endfor %}
+      </div>
+      <div>
+        <h4>Discarded</h4>
+        {% for line in turn.discarded %}<p class="muted">{{ line }}</p>
+        {% else %}<p class="muted">—</p>{% endfor %}
+      </div>
+      <div>
+        <h4>Accepted</h4>
+        {% for line in turn.accepted %}<p class="muted">{{ line }}</p>
+        {% else %}<p class="muted">—</p>{% endfor %}
+      </div>
+    </div>
+    <p class="muted">
+      territory {{ turn.position.get("secured", 0) }}/{{ turn.position.get("controlled", 0) }}
+      · army {{ turn.position.get("soldiers", 0) }}/{{ turn.position.get("characters_alive", 0) }}
+      · gold {{ turn.position.get("gold", 0) }}
+      {% if turn.effect %}
+      · Δ secured {{ turn.effect.secured }} · Δ soldiers {{ turn.effect.soldiers }} · Δ gold {{ turn.effect.gold }}
+      {% endif %}
+      {% if turn.latency_ms is not none %} · {{ turn.latency_ms|round(0)|int }} ms{% endif %}
+      {% if turn.cost_usd is not none %} · ${{ "%.4f"|format(turn.cost_usd) }}{% endif %}
+    </p>
+  </article>
+  {% endfor %}
+</section>
+{% endfor %}
+
+{% if alpha_member %}
+<section class="card">
+  <h2>After this match</h2>
+  <p class="muted">A concrete choice, not a survey. Either is enough for the
+  alpha to count you as willing.</p>
+  {% if alpha_intent %}
+  <p>You chose <strong>{{ alpha_intent.kind }}</strong>.</p>
+  {% else %}
+  <div class="row">
+    <form method="post" action="/coach/alpha/intent">
+      <input type="hidden" name="source" value="{{ run.id }}">
+      <input type="hidden" name="kind" value="pay">
+      <button type="submit">I would pay for more training</button>
+    </form>
+    <form method="post" action="/coach/alpha/intent">
+      <input type="hidden" name="source" value="{{ run.id }}">
+      <input type="hidden" name="kind" value="byok">
+      <button type="submit" class="ghost">I will bring my own key</button>
+    </form>
+  </div>
+  {% endif %}
+  {% if alpha_share %}
+  <p>Shared: <a href="/alpha/s/{{ alpha_share.token }}">/alpha/s/{{ alpha_share.token }}</a></p>
+  {% else %}
+  <form method="post" action="/coach/training/{{ run.id }}/share">
+    <button type="submit" class="ghost">Share this result</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Iterate</h2>
+  <p class="muted">Opens the next draft of what was just played, ready to
+  edit, freeze and run again.</p>
+  <div class="row">
+    <form method="post" action="/coach/training/{{ run.id }}/iterate">
+      <button type="submit">Open the next version</button>
+    </form>
+    <form method="post" action="/coach/training/{{ run.id }}/iterate" class="row">
+      <input type="hidden" name="as_clone" value="1">
+      <input name="name" placeholder="Name of the clone">
+      <button type="submit" class="ghost">Clone instead</button>
+    </form>
+  </div>
+  {% if other_runs %}
+  <form method="get" action="/coach/compare" class="row">
+    <input type="hidden" name="left" value="{{ run.id }}">
+    <label>Compare with
+      <select name="right">
+        {% for other in other_runs %}
+        <option value="{{ other.id }}">v{{ other.blueprint_version }} · {{ other.scenario_id }} · {{ other.id }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="ghost">Compare</button>
+  </form>
+  {% endif %}
+</section>

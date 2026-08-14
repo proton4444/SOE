@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Final — {{ season.name }} — SOE{% endblock %}
+{% block content %}
+<section class="card master-hero">
+  <div class="master-hero-copy">
+    <p class="eyebrow">Observable final</p>
+    <h2>{{ season.name }}</h2>
+    <p class="muted">One match between the top two of this season.
+    Not a standing, not a rating.</p>
+  </div>
+</section>
+<section class="card">
+  <h2>{{ left.name }} v{{ left.blueprint_version }}
+      vs {{ right.name }} v{{ right.blueprint_version }}</h2>
+  <p>{{ match.status }}
+     {% if match.result %}
+     · {{ match.result.left_wins }}–{{ match.result.right_wins }}
+     {% if match.result.draws %} · {{ match.result.draws }} drawn{% endif %}
+     {% endif %}
+  </p>
+</section>
+{% endblock %}

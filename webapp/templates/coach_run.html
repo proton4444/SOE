@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Training {{ run.id }} — Coach desk{% endblock %}
+{% block content %}
+{% include "partials/coach_nav.html" %}
+
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Training</p>
+    <h1>{{ blueprint_name }}</h1>
+    <p class="muted">{{ run.scenario_id }} · version {{ run.blueprint_version }}
+       · {{ run.status }}</p>
+  </div>
+  <a class="button ghost" href="/coach/blueprints/{{ run.blueprint_id }}?v={{ run.blueprint_version }}">Blueprint</a>
+</div>
+
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% include "partials/coach_status.html" %}
+{% endblock %}

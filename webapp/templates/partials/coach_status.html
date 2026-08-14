@@ -1,0 +1,28 @@
+<div id="run-panel"
+     {% if run.status in ("queued", "running") %}
+     hx-get="/coach/training/{{ run.id }}/panel"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML"
+     {% endif %}>
+
+  {% if run.status == "complete" and view %}
+    {% include "partials/coach_debrief.html" %}
+  {% elif run.status == "failed" %}
+    <section class="card">
+      <h2>The run failed</h2>
+      <p class="notice error">{{ run.error or "The training run did not finish." }}</p>
+      <p class="muted">The next version of the blueprint is still available.
+      A failed run still counts against the quota.</p>
+      <form method="post" action="/coach/training/{{ run.id }}/iterate">
+        <button type="submit">Open the next version</button>
+      </form>
+    </section>
+  {% else %}
+    <section class="card">
+      <h2>Training {{ run.status }}</h2>
+      <p class="muted">{{ run.scenario_id }} · version {{ run.blueprint_version }}.
+      This page refreshes on its own. A short sparring pair takes a few minutes.</p>
+      <p class="wait">Waiting for the match record…</p>
+    </section>
+  {% endif %}
+</div>

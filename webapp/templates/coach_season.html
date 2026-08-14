@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ season.name }} — SOE{% endblock %}
+{% block content %}
+{% include "partials/coach_nav.html" %}
+
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Coach League</p>
+    <h1>{{ season.name }}</h1>
+    <p class="muted">{{ season.status }}
+       · everyone plays {{ rules.model }}
+       · {{ rules.map }}
+       · {{ rules.turns }} turns
+       · seats swap on every pairing</p>
+  </div>
+</div>
+
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+{% if mine %}
+<section class="card">
+  <h2>Your entry</h2>
+  <p>{{ mine.name }} · v{{ mine.blueprint_version }}
+     · <code>{{ mine.blueprint_hash[:12] }}</code></p>
+  {% if season.status == "frozen" %}
+  <form method="post" action="/coach/seasons/{{ season.id }}/withdraw">
+    <button type="submit" class="ghost">Withdraw</button>
+  </form>
+  {% endif %}
+</section>
+{% elif season.status == "frozen" %}
+<section class="card">
+  <h2>Enter a frozen version</h2>
+  {% if eligible %}
+  <form method="post" action="/coach/seasons/{{ season.id }}/enter">
+    <label>Blueprint
+      <select name="blueprint_id">
+        {% for item in eligible %}
+        <option value="{{ item.id }}">{{ item.name }} · v{{ item.latest_frozen().version }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Enter this season</button>
+  </form>
+  {% else %}
+  <p class="muted">Freeze a version that names {{ rules.model }}, or leaves the
+  model blank, then come back.</p>
+  {% endif %}
+</section>
+{% else %}
+<p class="muted">Entries are closed.</p>
+{% endif %}
+
+{% if table %}
+<section class="card">
+  <h2>Standings</h2>
+  <table class="players">
+    <tr><th>Agent</th><th>Sweeps</th><th>Won</th><th>Lost</th><th>Drawn</th><th>Played</th></tr>
+    {% for row in table %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.sweeps }}</td>
+      <td>{{ row.won }}</td>
+      <td>{{ row.lost }}</td>
+      <td>{{ row.drawn }}</td>
+      <td>{{ row.played }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">Pair sweeps first, then games won. No rating.</p>
+</section>
+{% endif %}
+{% endblock %}

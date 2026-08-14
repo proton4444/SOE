@@ -1,0 +1,16 @@
+{
+  "_comment": "Closed Coach Alpha format. 20-30 invited coaches, same model and limits, three training runs per frozen version, paired duels and one observable final. No payment, no prize, no permanent ranking.",
+  "id": "closed_alpha",
+  "name": "Closed Coach Alpha",
+  "capacity": 30,
+  "minimum_invites": 20,
+  "training_per_version": 3,
+  "gates": {
+    "activation": 0.6,
+    "iteration": 0.4,
+    "match_completion": 0.9,
+    "return": 0.3,
+    "willingness": 0.2,
+    "sharing": 0.25
+  }
+}

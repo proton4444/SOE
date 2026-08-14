@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}{{ season.name }} — operator — SOE{% endblock %}
+{% block content %}
+<p class="muted"><a href="/ops/league">All seasons</a></p>
+<div class="master-title">
+  <div>
+    <p class="eyebrow">{{ season.competition }}</p>
+    <h1>{{ season.name }}</h1>
+    <p class="muted">{{ season.status }}
+       · {{ rules.model }}
+       · {{ rules.map }}
+       · {{ rules.turns }} turns
+       · {{ rules.seed_pairs }} seed pair(s)
+       · ${{ "%.2f"|format(rules.max_spend_usd) }} cap
+       {% if season.regulation_hash %}
+       · <code>{{ season.regulation_hash[:12] }}</code>
+       {% endif %}
+    </p>
+  </div>
+</div>
+
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+<section class="card">
+  <h2>Actions</h2>
+  <div class="row">
+    {% if season.status == "draft" %}
+    <form method="post" action="/ops/league/seasons/{{ season.id }}/freeze">
+      <button type="submit">Freeze regulation</button>
+    </form>
+    {% endif %}
+    {% if season.status == "frozen" %}
+    <form method="post" action="/ops/league/seasons/{{ season.id }}/pair">
+      <button type="submit">Seal pairings</button>
+    </form>
+    {% endif %}
+    {% if queued %}
+    <form method="post" action="/ops/league/seasons/{{ season.id }}/run">
+      <button type="submit">Run the season</button>
+    </form>
+    <form method="post" action="/ops/league/seasons/{{ season.id }}/dispatch">
+      <button type="submit" class="ghost">Run next match</button>
+    </form>
+    <form method="post" action="/ops/league/seasons/{{ season.id }}/recover">
+      <button type="submit" class="ghost">Recover orphans</button>
+    </form>
+    {% endif %}
+    {% if season.status == "complete" and not season.final_match_id %}
+    <form method="post" action="/ops/league/seasons/{{ season.id }}/final">
+      <button type="submit">Stage the final</button>
+    </form>
+    {% endif %}
+    {% if season.final_match_id %}
+    <p class="muted">Final: <a href="/alpha/final/{{ season.id }}">watch</a>
+       · {{ season.final_match_id }}</p>
+    {% endif %}
+    {% if season.status == "frozen" or season.status == "sealed" %}
+    <form method="post" action="/ops/league/seasons/{{ season.id }}/suspend">
+      <input name="reason" placeholder="Why">
+      <button type="submit" class="ghost">Suspend</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Entries</h2>
+  {% if entries %}
+  <table class="players">
+    <tr><th>Coach</th><th>Blueprint</th><th>Version</th><th>Hash</th></tr>
+    {% for item in entries %}
+    <tr>
+      <td class="muted">{{ item.coach_id }}</td>
+      <td>{{ item.name }}</td>
+      <td>v{{ item.blueprint_version }}</td>
+      <td><code>{{ item.blueprint_hash[:12] }}</code></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No entries yet.</p>
+  {% endif %}
+</section>
+
+{% if table %}
+<section class="card">
+  <h2>Standings</h2>
+  <table class="players">
+    <tr><th>Agent</th><th>Sweeps</th><th>Won</th><th>Lost</th><th>Drawn</th><th>Played</th></tr>
+    {% for row in table %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.sweeps }}</td>
+      <td>{{ row.won }}</td>
+      <td>{{ row.lost }}</td>
+      <td>{{ row.drawn }}</td>
+      <td>{{ row.played }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">Pair sweeps first, then games won. No rating.</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Jobs</h2>
+  {% if jobs %}
+  <p class="muted">{{ finished }} of {{ jobs|length }} finished automatically
+     ({{ (100 * finished / jobs|length)|round(0)|int }}%).</p>
+  <table class="players">
+    <tr><th>Job</th><th>Match</th><th>Status</th><th>Attempts</th><th></th></tr>
+    {% for job in jobs %}
+    <tr>
+      <td><code>{{ job.id }}</code></td>
+      <td class="muted">{{ job.match_id }}</td>
+      <td>{{ job.status }}{% if job.last_error %} · {{ job.last_error }}{% endif %}</td>
+      <td>{{ job.attempts }}</td>
+      <td>
+        {% if job.status == "failed" %}
+        <form method="post" action="/ops/league/jobs/{{ job.id }}/retry">
+          <button type="submit" class="ghost">Retry</button>
+        </form>
+        {% elif job.status == "queued" %}
+        <form method="post" action="/ops/league/jobs/{{ job.id }}/suspend">
+          <button type="submit" class="ghost">Hold</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">Pair the season to queue the matches.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Audit</h2>
+  {% for row in audit %}
+  <p class="muted">{{ row.at[:19].replace("T", " ") }} · {{ row.kind }} · {{ row.detail }}</p>
+  {% else %}
+  <p class="muted">Nothing recorded yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}

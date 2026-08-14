@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ card.blueprint }} — result — SOE{% endblock %}
+{% block content %}
+<section class="card master-hero">
+  <div class="master-hero-copy">
+    <p class="eyebrow">Shared result</p>
+    <h2>{{ card.blueprint }} · v{{ card.version }}</h2>
+    <p class="muted">{{ card.notice }}</p>
+  </div>
+</section>
+<section class="stat-row" aria-label="Result and match cost">
+  <article class="card stat-card">
+    <p class="eyebrow">Result</p>
+    <p class="figure">{{ card.outcome }}</p>
+  </article>
+  <article class="card stat-card">
+    <p class="eyebrow">Main error</p>
+    <p class="figure">{{ card.main_error }}</p>
+  </article>
+  <article class="card stat-card">
+    <p class="eyebrow">Match cost</p>
+    <p class="figure">{{ card.cost }}</p>
+  </article>
+</section>
+{% endblock %}

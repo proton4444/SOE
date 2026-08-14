@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import secrets
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -36,7 +37,10 @@ from webapp import (
     backups,
     blueprints,
     coaches,
+    coach_ui,
+    competition,
     debrief,
+    alpha,
     mapimg,
     mapview,
     service,
@@ -60,7 +64,14 @@ from webapp.rooms import (
     default_store,
 )
 
-app = FastAPI(title="SOE", version=__version__)
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Jobs left running when the last process died go back on the queue."""
+    competition.default_store().requeue_orphans()
+    yield
+
+
+app = FastAPI(title="SOE", version=__version__, lifespan=_lifespan)
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -76,6 +87,9 @@ BETA_INVITE_HEADER = "X-SOE-Beta-Invite"
 #: A coach key is a separate credential from a room's seat key: it proves who
 #: owns a blueprint, not who holds a seat.
 COACH_KEY_HEADER = "X-Coach-Key"
+COACH_COOKIE = "soe_coach"
+#: One-shot display of the plaintext key after register. Not the session.
+COACH_FLASH_COOKIE = "soe_coach_once"
 BETA_ACCESS_CODE = os.environ.get("SOE_BETA_ACCESS_CODE", "").strip()
 # The server's LLM key and the URL that key is sent to are operator property,
 # not room property: anyone can create a room, so a host cookie is not proof
@@ -349,6 +363,7 @@ def index(request: Request):
             "is_any_host": _any_host_session(request),
             "llm_summary": _llm_summary(),
             "llm_env_key": bool(os.environ.get("SOE_LLM_KEY", "").strip()),
+            "is_operator": _is_operator(request),
         },
     )
 
@@ -969,6 +984,917 @@ def _profile_payload(faction_id: str, profile: AgentProfile) -> dict:
     }
 
 
+# ============================================================================
+# coach pages — the Phase 2 loop a new user can finish without curl
+# ============================================================================
+
+
+def _coach_gate(request: Request, error: str = ""):
+    return templates.TemplateResponse(
+        request,
+        "coach_gate.html",
+        {
+            "error": error or request.query_params.get("error", ""),
+            "beta_invite_required": bool(BETA_ACCESS_CODE),
+            "alpha_invite_required": alpha.default_store().is_open(),
+        },
+    )
+
+
+def _coach_desk(
+    request: Request,
+    coach: Coach,
+    *,
+    revealed_key: str = "",
+    error: str = "",
+    notice: str = "",
+):
+    store = training.default_store()
+    visible = blueprints.default_store().visible_to(coach)
+    league = competition.default_store()
+    seasons = [
+        item
+        for item in league.seasons()
+        if item.status
+        in (
+            competition.STATUS_FROZEN,
+            competition.STATUS_SEALED,
+            competition.STATUS_COMPLETE,
+            competition.STATUS_SUSPENDED,
+        )
+    ]
+    return templates.TemplateResponse(
+        request,
+        "coach_desk.html",
+        {
+            "coach": coach,
+            "revealed_key": revealed_key,
+            "error": error or request.query_params.get("error", ""),
+            "notice": notice or request.query_params.get("notice", ""),
+            "quota": store.quota_state(coach),
+            "blueprints": visible,
+            "runs": store.for_coach(coach),
+            "seasons": seasons,
+            "season_entries": {
+                item.id: league.entry_for_coach(item.id, coach) for item in seasons
+            },
+        },
+    )
+
+
+def _blueprint_page(
+    request: Request,
+    coach: Coach,
+    blueprint,
+    *,
+    version: int | None = None,
+    error: str = "",
+    notice: str = "",
+):
+    current = (
+        blueprint.version(version) if version is not None else blueprint.latest()
+    )
+    return templates.TemplateResponse(
+        request,
+        "coach_blueprint.html",
+        {
+            "coach": coach,
+            "blueprint": blueprint,
+            "current": current,
+            "mine": blueprint.writable_by(coach),
+            "doctrine_sections": blueprints.DOCTRINE_SECTIONS,
+            "frozen_versions": [v for v in blueprint.versions if v.frozen],
+            "scenarios": list(training.scenarios().values()),
+            "error": error or request.query_params.get("error", ""),
+            "notice": notice or request.query_params.get("notice", ""),
+        },
+    )
+
+
+def _load_blueprint(coach: Coach, blueprint_id: str):
+    try:
+        return blueprints.default_store().get(coach, blueprint_id)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+
+
+def _run_page_context(request: Request, coach: Coach, run: training.TrainingRun) -> dict:
+    view = None
+    if run.status == training.STATUS_COMPLETE:
+        try:
+            view = debrief.build(run)
+        except debrief.DebriefError as exc:
+            return {
+                "coach": coach,
+                "run": run,
+                "view": None,
+                "blueprint_name": _blueprint_name(coach, run.blueprint_id),
+                "error": str(exc),
+            }
+    name = _blueprint_name(coach, run.blueprint_id)
+    ctx: dict = {
+        "coach": coach,
+        "run": run,
+        "view": view,
+        "blueprint_name": name,
+        "error": request.query_params.get("error", ""),
+    }
+    if view is not None:
+        ctx.update(
+            {
+                "outcome": {
+                    "kind": coach_ui.outcome_kind(view.headline),
+                    "line": coach_ui.outcome_line(view.headline),
+                },
+                "main_error": coach_ui.main_error(view.errors),
+                "cost": {"line": coach_ui.cost_line(view.cost)},
+                "other_runs": [
+                    item
+                    for item in training.default_store().for_coach(coach)
+                    if item.id != run.id and item.status == training.STATUS_COMPLETE
+                ],
+                "alpha_member": bool(alpha.default_store().claimed_by(coach.id)),
+                "alpha_intent": alpha.default_store().intent_for(coach),
+                "alpha_share": alpha.default_store().share_for(coach, run.id),
+            }
+        )
+    return ctx
+
+
+def _blueprint_name(coach: Coach, blueprint_id: str) -> str:
+    try:
+        return blueprints.default_store().get(coach, blueprint_id).name
+    except BlueprintError:
+        return blueprint_id
+
+
+def _set_coach_cookie(response, key: str) -> None:
+    _set_auth_cookie(response, COACH_COOKIE, key)
+
+
+def _html_training_error(path: str, exc: Exception) -> RedirectResponse:
+    return RedirectResponse(
+        url=f"{path}?error={quote(str(exc))}", status_code=303
+    )
+
+
+@app.get("/coach", response_class=HTMLResponse)
+def coach_desk(request: Request):
+    """The coach's front door: register, or the desk if the browser is signed in."""
+    coach = _optional_coach(request)
+    if coach is None:
+        return _coach_gate(request)
+    flash = request.cookies.get(COACH_FLASH_COOKIE, "")
+    response = _coach_desk(request, coach, revealed_key=flash)
+    if flash:
+        response.delete_cookie(
+            COACH_FLASH_COOKIE, samesite="lax", secure=COOKIE_SECURE
+        )
+    return response
+
+
+@app.post("/coach/register")
+def coach_register(
+    request: Request,
+    name: str = Form(""),
+    invite: str = Form(""),
+):
+    try:
+        _require_beta_invite(request, invite)
+        roster = alpha.default_store()
+        if roster.is_open():
+            roster.peek(invite)
+        _coach, key = coaches.default_store().create(name)
+        if roster.is_open():
+            roster.claim(invite, _coach)
+    except HTTPException as exc:
+        return _coach_gate(request, error=str(exc.detail))
+    except (CoachError, alpha.AlphaError) as exc:
+        return _coach_gate(request, error=str(exc))
+    response = RedirectResponse(url="/coach", status_code=303)
+    _set_coach_cookie(response, key)
+    _set_auth_cookie(response, COACH_FLASH_COOKIE, key)
+    return response
+
+
+@app.post("/coach/signin")
+def coach_signin(request: Request, coach_key: str = Form("")):
+    try:
+        coaches.default_store().require(coach_key.strip())
+    except CoachAuthError as exc:
+        return _coach_gate(request, error=str(exc))
+    response = RedirectResponse(url="/coach", status_code=303)
+    _set_coach_cookie(response, coach_key.strip())
+    return response
+
+
+@app.post("/coach/leave")
+def coach_leave():
+    response = RedirectResponse(url="/coach", status_code=303)
+    response.delete_cookie(COACH_COOKIE, samesite="lax", secure=COOKIE_SECURE)
+    return response
+
+
+@app.post("/coach/blueprints")
+def coach_create_blueprint(
+    request: Request,
+    name: str = Form(""),
+    persona: str = Form(""),
+    notes: str = Form(""),
+    objective: str = Form(""),
+    economy: str = Form(""),
+    risk: str = Form(""),
+    diplomacy: str = Form(""),
+    model: str = Form(""),
+    temperature: str = Form(""),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        blueprint = blueprints.default_store().create(
+            coach,
+            name,
+            persona=persona,
+            doctrine=coach_ui.doctrine_from_mapping(
+                {
+                    "objective": objective,
+                    "economy": economy,
+                    "risk": risk,
+                    "diplomacy": diplomacy,
+                }
+            ),
+            runtime=coach_ui.runtime_from_mapping(
+                {"model": model, "temperature": temperature}
+            ),
+            notes=notes,
+        )
+    except BlueprintError as exc:
+        return _coach_desk(request, coach, error=str(exc))
+    return RedirectResponse(url=f"/coach/blueprints/{blueprint.id}", status_code=303)
+
+
+@app.get("/coach/blueprints/{blueprint_id}", response_class=HTMLResponse)
+def coach_blueprint_page(
+    blueprint_id: str, request: Request, v: Optional[int] = Query(None)
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    blueprint = _load_blueprint(coach, blueprint_id)
+    try:
+        return _blueprint_page(request, coach, blueprint, version=v)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+
+
+@app.post("/coach/blueprints/{blueprint_id}")
+def coach_edit_blueprint(
+    blueprint_id: str,
+    request: Request,
+    version: int = Form(...),
+    name: str = Form(""),
+    persona: str = Form(""),
+    notes: str = Form(""),
+    objective: str = Form(""),
+    economy: str = Form(""),
+    risk: str = Form(""),
+    diplomacy: str = Form(""),
+    model: str = Form(""),
+    temperature: str = Form(""),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        blueprints.default_store().edit(
+            coach,
+            blueprint_id,
+            version,
+            persona=persona,
+            doctrine=coach_ui.doctrine_from_mapping(
+                {
+                    "objective": objective,
+                    "economy": economy,
+                    "risk": risk,
+                    "diplomacy": diplomacy,
+                }
+            ),
+            runtime=coach_ui.runtime_from_mapping(
+                {"model": model, "temperature": temperature}
+            ),
+            notes=notes,
+            name=name,
+        )
+        blueprint = blueprints.default_store().get(coach, blueprint_id)
+    except BlueprintError as exc:
+        return _html_training_error(
+            f"/coach/blueprints/{blueprint_id}?v={version}", exc
+        )
+    return RedirectResponse(
+        url=f"/coach/blueprints/{blueprint.id}?v={version}", status_code=303
+    )
+
+
+@app.post("/coach/blueprints/{blueprint_id}/versions")
+def coach_new_blueprint_version(
+    blueprint_id: str,
+    request: Request,
+    from_version: Optional[int] = Form(None),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    store = blueprints.default_store()
+    try:
+        store.new_version(coach, blueprint_id, from_version=from_version)
+        blueprint = store.get(coach, blueprint_id)
+    except BlueprintError as exc:
+        return _html_training_error(f"/coach/blueprints/{blueprint_id}", exc)
+    return RedirectResponse(
+        url=f"/coach/blueprints/{blueprint.id}?v={blueprint.latest().version}",
+        status_code=303,
+    )
+
+
+@app.post("/coach/blueprints/{blueprint_id}/versions/{version}/freeze")
+def coach_freeze_blueprint(
+    blueprint_id: str, version: int, request: Request
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        blueprints.default_store().freeze(coach, blueprint_id, version)
+    except BlueprintError as exc:
+        return _html_training_error(
+            f"/coach/blueprints/{blueprint_id}?v={version}", exc
+        )
+    return RedirectResponse(
+        url=f"/coach/blueprints/{blueprint_id}?v={version}", status_code=303
+    )
+
+
+@app.post("/coach/training")
+def coach_start_training(
+    request: Request,
+    background: BackgroundTasks,
+    blueprint_id: str = Form(""),
+    scenario_id: str = Form(""),
+    version: Optional[int] = Form(None),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    store = training.default_store()
+    try:
+        run = store.start(coach, blueprint_id, scenario_id, version=version)
+    except (training.TrainingError, BlueprintError) as exc:
+        target = f"/coach/blueprints/{blueprint_id}" if blueprint_id else "/coach"
+        return _html_training_error(target, exc)
+    background.add_task(training.execute, run, store)
+    return RedirectResponse(url=f"/coach/training/{run.id}", status_code=303)
+
+
+@app.get("/coach/training/{run_id}", response_class=HTMLResponse)
+def coach_training_page(run_id: str, request: Request):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        run = training.default_store().get(coach, run_id)
+    except training.TrainingError as exc:
+        raise HTTPException(404, str(exc))
+    return templates.TemplateResponse(
+        request, "coach_run.html", _run_page_context(request, coach, run)
+    )
+
+
+@app.get("/coach/training/{run_id}/panel", response_class=HTMLResponse)
+def coach_training_panel(run_id: str, request: Request):
+    """HTMX fragment: status while the match is running, debrief when it is not."""
+    coach = _optional_coach(request)
+    if coach is None:
+        raise HTTPException(401, "Sign in at /coach first.")
+    try:
+        run = training.default_store().get(coach, run_id)
+    except training.TrainingError as exc:
+        raise HTTPException(404, str(exc))
+    return templates.TemplateResponse(
+        request, "partials/coach_status.html", _run_page_context(request, coach, run)
+    )
+
+
+@app.post("/coach/training/{run_id}/iterate")
+def coach_iterate(
+    run_id: str,
+    request: Request,
+    as_clone: str = Form(""),
+    name: str = Form(""),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        run = training.default_store().get(coach, run_id)
+    except training.TrainingError as exc:
+        raise HTTPException(404, str(exc))
+    store = blueprints.default_store()
+    try:
+        if as_clone:
+            blueprint = store.clone(
+                coach,
+                run.blueprint_id,
+                from_version=run.blueprint_version,
+                name=name,
+            )
+        else:
+            store.new_version(
+                coach, run.blueprint_id, from_version=run.blueprint_version
+            )
+            blueprint = store.get(coach, run.blueprint_id)
+    except BlueprintError as exc:
+        return _html_training_error(f"/coach/training/{run_id}", exc)
+    return RedirectResponse(
+        url=f"/coach/blueprints/{blueprint.id}?v={blueprint.latest().version}",
+        status_code=303,
+    )
+
+
+@app.get("/coach/compare", response_class=HTMLResponse)
+def coach_compare(
+    request: Request,
+    left: str = Query(""),
+    right: str = Query(""),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    comparison = debrief.compare(
+        _debrief_or_404(coach, left), _debrief_or_404(coach, right)
+    )
+    return templates.TemplateResponse(
+        request,
+        "coach_compare.html",
+        {
+            "coach": coach,
+            "comparison": comparison,
+            "left_id": left,
+            "right_id": right,
+        },
+    )
+
+
+# ======================================================================
+# Coach League — operator panel and coach entry (Phase 3)
+# ======================================================================
+
+
+def _html_league_error(path: str, exc: Exception) -> RedirectResponse:
+    return RedirectResponse(url=f"{path}?error={quote(str(exc))}", status_code=303)
+
+
+def _catalogue_rows() -> list[dict]:
+    rows = []
+    for item in competition.catalogues().values():
+        rows.append(
+            {
+                "id": item.get("id"),
+                "name": item.get("name") or item.get("id"),
+            }
+        )
+    return rows
+
+
+def _eligible_blueprints(coach: Coach, rules: competition.Regulation):
+    eligible = []
+    for item in blueprints.default_store().owned_by(coach):
+        frozen = item.latest_frozen()
+        if frozen is None:
+            continue
+        model = str((frozen.runtime or {}).get("model") or "").strip()
+        if model and model != rules.model:
+            continue
+        eligible.append(item)
+    return eligible
+
+
+def _ops_league_page(request: Request, *, error: str = "", notice: str = ""):
+    _require_operator(request)
+    return templates.TemplateResponse(
+        request,
+        "ops_league.html",
+        {
+            "seasons": competition.default_store().seasons(),
+            "catalogues": _catalogue_rows(),
+            "error": error or request.query_params.get("error", ""),
+            "notice": notice or request.query_params.get("notice", ""),
+        },
+    )
+
+
+def _ops_season_page(request: Request, season_id: str, *, error: str = "", notice: str = ""):
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        season = store.season(season_id)
+    except competition.CompetitionError as exc:
+        raise HTTPException(404, str(exc))
+    return templates.TemplateResponse(
+        request,
+        "ops_season.html",
+        {
+            "season": season,
+            "rules": season.rules(),
+            "entries": store.entries(season.id, include_withdrawn=True),
+            "jobs": store.jobs(season.id),
+            "queued": [
+                item
+                for item in store.jobs(season.id)
+                if item.status == competition.JOB_QUEUED
+            ],
+            "finished": sum(
+                1
+                for item in store.jobs(season.id)
+                if item.status == competition.JOB_COMPLETE
+            ),
+            "table": competition.standings(store, season.id),
+            "audit": store.audit(season.id),
+            "error": error or request.query_params.get("error", ""),
+            "notice": notice or request.query_params.get("notice", ""),
+        },
+    )
+
+
+def _coach_season_page(
+    request: Request, coach: Coach, season_id: str, *, error: str = "", notice: str = ""
+):
+    store = competition.default_store()
+    try:
+        season = store.season(season_id)
+    except competition.CompetitionError as exc:
+        raise HTTPException(404, str(exc))
+    return templates.TemplateResponse(
+        request,
+        "coach_season.html",
+        {
+            "coach": coach,
+            "season": season,
+            "rules": season.rules(),
+            "mine": store.entry_for_coach(season.id, coach),
+            "eligible": _eligible_blueprints(coach, season.rules()),
+            "table": competition.standings(store, season.id),
+            "error": error or request.query_params.get("error", ""),
+            "notice": notice or request.query_params.get("notice", ""),
+        },
+    )
+
+
+def _apply_regulation_overrides(season: competition.Season, data: dict) -> None:
+    current = season.rules()
+    payload = competition.regulation_payload(current)
+    if data.get("map"):
+        payload["map"] = str(data["map"]).strip()
+    if data.get("turns"):
+        payload["turns"] = int(data["turns"])
+    if data.get("model"):
+        payload["model"] = str(data["model"]).strip()
+    if data.get("seed_pairs"):
+        payload["seed_pairs"] = int(data["seed_pairs"])
+    if payload != competition.regulation_payload(current):
+        competition.default_store().set_regulation(
+            season.id, competition.regulation_from_mapping(payload)
+        )
+
+
+@app.get("/ops/league", response_class=HTMLResponse)
+def ops_league(request: Request):
+    return _ops_league_page(request)
+
+
+@app.post("/ops/league/seasons")
+def ops_create_season(
+    request: Request,
+    name: str = Form(""),
+    catalogue_id: str = Form("coach_league"),
+    map: str = Form(""),
+    turns: str = Form(""),
+    model: str = Form(""),
+    seed_pairs: str = Form(""),
+):
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        season = store.create_season(name, catalogue_id=catalogue_id or "coach_league")
+        _apply_regulation_overrides(
+            season,
+            {"map": map, "turns": turns, "model": model, "seed_pairs": seed_pairs},
+        )
+    except (competition.CompetitionError, ValueError) as exc:
+        return _ops_league_page(request, error=str(exc))
+    return RedirectResponse(url=f"/ops/league/seasons/{season.id}", status_code=303)
+
+
+@app.get("/ops/league/seasons/{season_id}", response_class=HTMLResponse)
+def ops_season(season_id: str, request: Request):
+    return _ops_season_page(request, season_id)
+
+
+@app.post("/ops/league/seasons/{season_id}/freeze")
+def ops_freeze_season(season_id: str, request: Request):
+    _require_operator(request)
+    try:
+        competition.default_store().freeze(season_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error(f"/ops/league/seasons/{season_id}", exc)
+    return RedirectResponse(url=f"/ops/league/seasons/{season_id}", status_code=303)
+
+
+@app.post("/ops/league/seasons/{season_id}/pair")
+def ops_pair_season(season_id: str, request: Request):
+    _require_operator(request)
+    try:
+        competition.default_store().pair(season_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error(f"/ops/league/seasons/{season_id}", exc)
+    return RedirectResponse(url=f"/ops/league/seasons/{season_id}", status_code=303)
+
+
+@app.post("/ops/league/seasons/{season_id}/run")
+def ops_run_season(
+    season_id: str, request: Request, background: BackgroundTasks
+):
+    """Play every queued match. The operator starts it; they do not edit the ledger."""
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        job = store.next_job(season_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error(f"/ops/league/seasons/{season_id}", exc)
+    if job is None:
+        return _html_league_error(
+            f"/ops/league/seasons/{season_id}",
+            competition.CompetitionError("Nothing is queued."),
+        )
+    background.add_task(competition.run_until_idle, store, season_id)
+    return RedirectResponse(url=f"/ops/league/seasons/{season_id}", status_code=303)
+
+
+@app.post("/ops/league/seasons/{season_id}/dispatch")
+def ops_dispatch_season(
+    season_id: str, request: Request, background: BackgroundTasks
+):
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        job = store.next_job(season_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error(f"/ops/league/seasons/{season_id}", exc)
+    if job is None:
+        return _html_league_error(
+            f"/ops/league/seasons/{season_id}",
+            competition.CompetitionError("Nothing is queued."),
+        )
+    background.add_task(competition.execute, job, store)
+    return RedirectResponse(url=f"/ops/league/seasons/{season_id}", status_code=303)
+
+
+@app.post("/ops/league/seasons/{season_id}/recover")
+def ops_recover_season(
+    season_id: str, request: Request, background: BackgroundTasks
+):
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        store.season(season_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error("/ops/league", exc)
+    store.requeue_orphans()
+    job = store.next_job(season_id)
+    if job is not None:
+        background.add_task(competition.execute, job, store)
+    return RedirectResponse(url=f"/ops/league/seasons/{season_id}", status_code=303)
+
+
+@app.post("/ops/league/seasons/{season_id}/final")
+def ops_stage_final(season_id: str, request: Request):
+    _require_operator(request)
+    try:
+        competition.default_store().stage_final(season_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error(f"/ops/league/seasons/{season_id}", exc)
+    return RedirectResponse(url=f"/ops/league/seasons/{season_id}", status_code=303)
+
+
+@app.post("/ops/league/seasons/{season_id}/suspend")
+def ops_suspend_season(season_id: str, request: Request, reason: str = Form("")):
+    _require_operator(request)
+    try:
+        competition.default_store().suspend(season_id, reason)
+    except competition.CompetitionError as exc:
+        return _html_league_error(f"/ops/league/seasons/{season_id}", exc)
+    return RedirectResponse(url=f"/ops/league/seasons/{season_id}", status_code=303)
+
+
+@app.post("/ops/league/jobs/{job_id}/retry")
+def ops_retry_job(job_id: str, request: Request):
+    _require_operator(request)
+    try:
+        job = competition.default_store().retry(job_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error("/ops/league", exc)
+    return RedirectResponse(url=f"/ops/league/seasons/{job.season_id}", status_code=303)
+
+
+@app.post("/ops/league/jobs/{job_id}/suspend")
+def ops_suspend_job(job_id: str, request: Request):
+    _require_operator(request)
+    try:
+        job = competition.default_store().suspend_job(job_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error("/ops/league", exc)
+    return RedirectResponse(url=f"/ops/league/seasons/{job.season_id}", status_code=303)
+
+
+@app.get("/coach/seasons/{season_id}", response_class=HTMLResponse)
+def coach_season_page(season_id: str, request: Request):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    return _coach_season_page(request, coach, season_id)
+
+
+@app.post("/coach/seasons/{season_id}/enter")
+def coach_enter_season(
+    season_id: str,
+    request: Request,
+    blueprint_id: str = Form(""),
+    version: str = Form(""),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    chosen = int(version) if str(version).strip() else None
+    try:
+        competition.default_store().enter(
+            coach, season_id, blueprint_id, chosen
+        )
+    except (competition.CompetitionError, BlueprintError, ValueError) as exc:
+        return _html_league_error(f"/coach/seasons/{season_id}", exc)
+    return RedirectResponse(url=f"/coach/seasons/{season_id}", status_code=303)
+
+
+@app.post("/coach/seasons/{season_id}/withdraw")
+def coach_withdraw_season(season_id: str, request: Request):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        competition.default_store().withdraw(coach, season_id)
+    except competition.CompetitionError as exc:
+        return _html_league_error(f"/coach/seasons/{season_id}", exc)
+    return RedirectResponse(url=f"/coach/seasons/{season_id}", status_code=303)
+
+
+@app.get("/ops/alpha", response_class=HTMLResponse)
+def ops_alpha(request: Request):
+    _require_operator(request)
+    roster = alpha.default_store()
+    return templates.TemplateResponse(
+        request,
+        "ops_alpha.html",
+        {
+            "roster": roster,
+            "fmt": roster.format,
+            "funnel": alpha.funnel(
+                roster,
+                coaches=coaches.default_store(),
+                blueprints=blueprints.default_store(),
+                training=training.default_store(),
+                competition=competition.default_store(),
+            ),
+            "revealed": request.query_params.get("invite", ""),
+            "error": request.query_params.get("error", ""),
+            "notice": request.query_params.get("notice", ""),
+        },
+    )
+
+
+@app.post("/ops/alpha/open")
+def ops_alpha_open(request: Request):
+    _require_operator(request)
+    alpha.default_store().open()
+    return RedirectResponse(url="/ops/alpha", status_code=303)
+
+
+@app.post("/ops/alpha/close")
+def ops_alpha_close(request: Request):
+    _require_operator(request)
+    alpha.default_store().close()
+    return RedirectResponse(url="/ops/alpha", status_code=303)
+
+
+@app.post("/ops/alpha/invites")
+def ops_alpha_invite(request: Request, name: str = Form("")):
+    _require_operator(request)
+    try:
+        _invite, code = alpha.default_store().issue(name)
+    except alpha.AlphaError as exc:
+        return RedirectResponse(
+            url=f"/ops/alpha?error={quote(str(exc))}", status_code=303
+        )
+    return RedirectResponse(url=f"/ops/alpha?invite={quote(code)}", status_code=303)
+
+
+@app.post("/coach/training/{run_id}/share")
+def coach_share_run(run_id: str, request: Request):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        run = training.default_store().get(coach, run_id)
+    except training.TrainingError as exc:
+        return _html_training_error(f"/coach/training/{run_id}", exc)
+    if run.status != training.STATUS_COMPLETE:
+        return _html_training_error(
+            f"/coach/training/{run_id}",
+            training.TrainingError("Share a finished run."),
+        )
+    item = alpha.default_store().share(coach, run.id)
+    return RedirectResponse(url=f"/alpha/s/{item.token}", status_code=303)
+
+
+@app.post("/coach/alpha/intent")
+def coach_alpha_intent(
+    request: Request,
+    kind: str = Form(""),
+    source: str = Form(""),
+):
+    coach = _optional_coach(request)
+    if coach is None:
+        return RedirectResponse(url="/coach", status_code=303)
+    try:
+        alpha.default_store().record_intent(coach, kind, source=source)
+    except alpha.AlphaError as exc:
+        target = f"/coach/training/{source}" if source else "/coach"
+        return _html_training_error(target, exc)
+    target = f"/coach/training/{source}" if source else "/coach"
+    return RedirectResponse(url=target, status_code=303)
+
+
+@app.get("/alpha/s/{token}", response_class=HTMLResponse)
+def alpha_share_page(token: str, request: Request):
+    roster = alpha.default_store()
+    try:
+        item = roster.share_by_token(token)
+    except alpha.AlphaError as exc:
+        raise HTTPException(404, str(exc))
+    try:
+        run = training.default_store().get_shared(item.run_id)
+    except training.TrainingError:
+        raise HTTPException(404, "That shared result is gone.")
+    try:
+        view = debrief.build(run)
+    except debrief.DebriefError as exc:
+        raise HTTPException(409, str(exc))
+    coach = coaches.default_store().get(item.coach_id)
+    name = run.blueprint_id
+    if coach is not None:
+        try:
+            name = blueprints.default_store().get(coach, run.blueprint_id).name
+        except BlueprintError:
+            name = run.blueprint_id
+    return templates.TemplateResponse(
+        request,
+        "alpha_share.html",
+        {"card": alpha.public_card(run, view, blueprint_name=name), "token": token},
+    )
+
+
+@app.get("/alpha/final/{season_id}", response_class=HTMLResponse)
+def alpha_final_page(season_id: str, request: Request):
+    store = competition.default_store()
+    try:
+        season = store.season(season_id)
+        if not season.final_match_id:
+            raise competition.CompetitionError("No final has been staged.")
+        match = store.match(season.final_match_id)
+    except competition.CompetitionError as exc:
+        raise HTTPException(404, str(exc))
+    left = store.entry(match.left_entry_id)
+    right = store.entry(match.right_entry_id)
+    return templates.TemplateResponse(
+        request,
+        "alpha_final.html",
+        {
+            "season": season,
+            "match": match,
+            "left": left,
+            "right": right,
+        },
+    )
+
+
 @app.post("/api/rooms")
 def api_create_room(request: Request, payload: dict):
     _require_beta_invite(request, payload.get("invite", ""))
@@ -1262,13 +2188,31 @@ def api_run_all_agents(code: str, request: Request, key: Optional[str] = Query(N
 # ============================================================================
 
 
+def _presented_coach_key(request: Request, key: Optional[str] = None) -> str:
+    return (
+        request.headers.get(COACH_KEY_HEADER)
+        or (key or "")
+        or request.cookies.get(COACH_COOKIE, "")
+    ).strip()
+
+
 def _coach_key(request: Request, key: Optional[str] = None) -> str:
-    token = request.headers.get(COACH_KEY_HEADER) or key
+    token = _presented_coach_key(request, key)
     if not token:
         raise HTTPException(
             401, f"Missing coach key ({COACH_KEY_HEADER} header or ?coach_key=)."
         )
     return token
+
+
+def _optional_coach(request: Request, key: Optional[str] = None) -> Coach | None:
+    token = _presented_coach_key(request, key)
+    if not token:
+        return None
+    try:
+        return coaches.default_store().require(token)
+    except CoachAuthError:
+        return None
 
 
 def _require_coach(request: Request, key: Optional[str] = None) -> Coach:
@@ -1735,6 +2679,201 @@ def api_training_compare(
     return debrief.compare(
         _debrief_or_404(coach, run_id), _debrief_or_404(coach, other_run_id)
     )
+
+
+def _season_payload(season: competition.Season, store: competition.CompetitionStore) -> dict:
+    return {
+        "id": season.id,
+        "competition": season.competition,
+        "name": season.name,
+        "status": season.status,
+        "regulation": season.regulation,
+        "regulation_hash": season.regulation_hash,
+        "entries": [item.id for item in store.entries(season.id)],
+        "matches": [item.id for item in store.matches(season.id)],
+        "created_at": season.created_at,
+        "frozen_at": season.frozen_at,
+        "sealed_at": season.sealed_at,
+    }
+
+
+def _league_http(exc: Exception) -> HTTPException:
+    if isinstance(exc, competition.CompetitionIntegrityError):
+        return HTTPException(409, str(exc))
+    if isinstance(exc, BlueprintError):
+        return _blueprint_http(exc)
+    return HTTPException(400, str(exc))
+
+
+@app.get("/api/seasons")
+def api_list_seasons(request: Request, coach_key: Optional[str] = Query(None)):
+    """Seasons a coach may see. Drafts stay on the operator side."""
+    _require_coach(request, coach_key)
+    store = competition.default_store()
+    visible = [
+        item
+        for item in store.seasons()
+        if item.status != competition.STATUS_DRAFT
+    ]
+    return {"seasons": [_season_payload(item, store) for item in visible]}
+
+
+@app.post("/api/seasons")
+def api_create_season(request: Request, payload: Optional[dict] = None):
+    _require_operator(request)
+    body = payload or {}
+    store = competition.default_store()
+    try:
+        season = store.create_season(
+            str(body.get("name") or ""),
+            catalogue_id=str(body.get("catalogue_id") or "coach_league"),
+        )
+        _apply_regulation_overrides(season, body)
+        season = store.season(season.id)
+    except (competition.CompetitionError, ValueError) as exc:
+        raise _league_http(exc)
+    return _season_payload(season, store)
+
+
+@app.get("/api/seasons/{season_id}")
+def api_get_season(season_id: str, request: Request, coach_key: Optional[str] = Query(None)):
+    _require_coach(request, coach_key)
+    store = competition.default_store()
+    try:
+        season = store.season(season_id)
+    except competition.CompetitionError as exc:
+        raise HTTPException(404, str(exc))
+    return {
+        **_season_payload(season, store),
+        "standings": competition.standings(store, season.id),
+    }
+
+
+@app.post("/api/seasons/{season_id}/freeze")
+def api_freeze_season(season_id: str, request: Request):
+    _require_operator(request)
+    try:
+        season = competition.default_store().freeze(season_id)
+    except competition.CompetitionError as exc:
+        raise _league_http(exc)
+    return _season_payload(season, competition.default_store())
+
+
+@app.post("/api/seasons/{season_id}/enter")
+def api_enter_season(
+    season_id: str,
+    request: Request,
+    payload: Optional[dict] = None,
+    coach_key: Optional[str] = Query(None),
+):
+    coach = _require_coach(request, coach_key)
+    body = payload or {}
+    try:
+        entry = competition.default_store().enter(
+            coach,
+            season_id,
+            str(body.get("blueprint_id") or ""),
+            body.get("version"),
+        )
+    except (competition.CompetitionError, BlueprintError) as exc:
+        raise _league_http(exc)
+    return {
+        "id": entry.id,
+        "season_id": entry.season_id,
+        "blueprint_id": entry.blueprint_id,
+        "blueprint_version": entry.blueprint_version,
+        "blueprint_hash": entry.blueprint_hash,
+    }
+
+
+@app.post("/api/seasons/{season_id}/pair")
+def api_pair_season(season_id: str, request: Request):
+    _require_operator(request)
+    try:
+        matches = competition.default_store().pair(season_id)
+    except competition.CompetitionError as exc:
+        raise _league_http(exc)
+    return {"matches": [item.id for item in matches]}
+
+
+@app.post("/api/seasons/{season_id}/dispatch")
+def api_dispatch_season(
+    season_id: str,
+    request: Request,
+    background: BackgroundTasks,
+):
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        job = store.next_job(season_id)
+    except competition.CompetitionError as exc:
+        raise _league_http(exc)
+    if job is None:
+        raise HTTPException(409, "Nothing is queued.")
+    background.add_task(competition.execute, job, store)
+    return {"job_id": job.id, "match_id": job.match_id, "status": job.status}
+
+
+@app.post("/api/seasons/{season_id}/run")
+def api_run_season(
+    season_id: str,
+    request: Request,
+    background: BackgroundTasks,
+):
+    """Play every queued match. The operator starts it; they do not edit the ledger."""
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        job = store.next_job(season_id)
+    except competition.CompetitionError as exc:
+        raise _league_http(exc)
+    if job is None:
+        raise HTTPException(409, "Nothing is queued.")
+    background.add_task(competition.run_until_idle, store, season_id)
+    return competition.completion(store, season_id)
+
+
+@app.post("/api/seasons/{season_id}/recover")
+def api_recover_season(season_id: str, request: Request):
+    _require_operator(request)
+    store = competition.default_store()
+    try:
+        store.season(season_id)
+    except competition.CompetitionError as exc:
+        raise HTTPException(404, str(exc))
+    orphans = store.requeue_orphans()
+    return {"requeued": [item.id for item in orphans]}
+
+
+@app.get("/api/seasons/{season_id}/standings")
+def api_standings(season_id: str, request: Request, coach_key: Optional[str] = Query(None)):
+    _require_coach(request, coach_key)
+    store = competition.default_store()
+    try:
+        store.season(season_id)
+    except competition.CompetitionError as exc:
+        raise HTTPException(404, str(exc))
+    return {"standings": competition.standings(store, season_id)}
+
+
+@app.post("/api/jobs/{job_id}/retry")
+def api_retry_job(job_id: str, request: Request):
+    _require_operator(request)
+    try:
+        job = competition.default_store().retry(job_id)
+    except competition.CompetitionError as exc:
+        raise _league_http(exc)
+    return {"job_id": job.id, "status": job.status, "attempts": job.attempts}
+
+
+@app.post("/api/jobs/{job_id}/suspend")
+def api_suspend_job(job_id: str, request: Request):
+    _require_operator(request)
+    try:
+        job = competition.default_store().suspend_job(job_id)
+    except competition.CompetitionError as exc:
+        raise _league_http(exc)
+    return {"job_id": job.id, "status": job.status}
 
 
 if __name__ == "__main__":

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Closed alpha — operator — SOE{% endblock %}
+{% block content %}
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Operator</p>
+    <h1>{{ fmt.name }}</h1>
+    <p class="muted">{{ roster.status() }}
+       · {{ fmt.capacity }} invitations max
+       · {{ fmt.training_per_version }} training runs per version
+       · no prize, no permanent ranking</p>
+  </div>
+</div>
+
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+{% if revealed %}
+<p class="notice ok">Invitation <code class="revealed-key">{{ revealed }}</code>.
+Copy it now. This page will not show it again.</p>
+{% endif %}
+
+<section class="card">
+  <h2>Roster</h2>
+  <div class="row">
+    {% if roster.status() != "open" %}
+    <form method="post" action="/ops/alpha/open">
+      <button type="submit">Open registration</button>
+    </form>
+    {% else %}
+    <form method="post" action="/ops/alpha/close">
+      <button type="submit" class="ghost">Close registration</button>
+    </form>
+    {% endif %}
+  </div>
+  <form method="post" action="/ops/alpha/invites" class="row">
+    <input name="name" required maxlength="64" placeholder="Invitee name">
+    <button type="submit">Issue invitation</button>
+  </form>
+  {% if roster.invites() %}
+  <table class="players">
+    <tr><th>Name</th><th>Claimed</th></tr>
+    {% for item in roster.invites() %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td class="muted">{% if item.claimed_by %}{{ item.claimed_at[:16].replace("T", " ") }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No invitations yet. 20–30 is the field.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Funnel</h2>
+  <p class="muted">{{ funnel.issued }} invited · {{ funnel.claimed }} claimed ·
+     {{ funnel.activated }} froze a blueprint</p>
+  <table class="players">
+    <tr><th>Metric</th><th>Value</th><th>Gate</th><th></th></tr>
+    {% for key, row in funnel.verdict.items() %}
+    <tr>
+      <td>{{ key }}</td>
+      <td>{% if row.value is not none %}{{ (100 * row.value)|round(0)|int }}%{% else %}—{% endif %}</td>
+      <td>{{ (100 * row.gate)|round(0)|int }}%</td>
+      <td>{% if row.value is none %}pending{% elif row.pass %}<span class="ok">pass</span>{% else %}<span class="wait">short</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">
+    {% if funnel.cost_per_match is not none %}Cost per finished match ${{ "%.4f"|format(funnel.cost_per_match) }} · {% endif %}
+    {% if funnel.median_seconds_to_freeze is not none %}median time to first freeze {{ funnel.median_seconds_to_freeze|round(0)|int }}s{% endif %}
+  </p>
+  <p class="muted">These rates close the phase only when the invited field is real.
+  The table is this season, not a ranking.</p>
+</section>
+{% endblock %}

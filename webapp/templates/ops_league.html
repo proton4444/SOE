@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Coach League — operator — SOE{% endblock %}
+{% block content %}
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Operator</p>
+    <h1>Coach League</h1>
+    <p class="muted">Freeze a regulation, take entries, pair with seat swap,
+    then dispatch. Matches resume from their bundle after a restart.</p>
+  </div>
+</div>
+
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+<div class="two-col">
+  <section class="card">
+    <h2>New season</h2>
+    <form method="post" action="/ops/league/seasons">
+      <label>Name
+        <input name="name" required maxlength="80" placeholder="Coach League I">
+      </label>
+      <label>Catalogue
+        <select name="catalogue_id">
+          {% for item in catalogues %}
+          <option value="{{ item.id }}">{{ item.name }} ({{ item.id }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <p class="muted">Leave the next fields blank to use the catalogue as-is.
+      They exist so an internal season can run a shorter board.</p>
+      <label>Map override
+        <input name="map" placeholder="calib_12.json">
+      </label>
+      <label>Turns override
+        <input name="turns" inputmode="numeric" placeholder="30">
+      </label>
+      <button type="submit">Open as draft</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Seasons</h2>
+    {% if seasons %}
+    <table class="players">
+      <tr><th>Name</th><th>Status</th><th>Model</th></tr>
+      {% for item in seasons %}
+      <tr>
+        <td><a href="/ops/league/seasons/{{ item.id }}">{{ item.name }}</a></td>
+        <td>{{ item.status }}</td>
+        <td class="muted">{{ item.rules().model }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">None yet. A draft locks nothing until you freeze it.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

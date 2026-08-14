@@ -244,6 +244,14 @@ class TrainingStore:
                 raise TrainingError(f"No training run '{run_id}'.")
             return run
 
+    def get_shared(self, run_id: str) -> TrainingRun:
+        """A finished run addressed by a share token, not by a coach session."""
+        with self._lock:
+            run = self._runs.get(run_id)
+            if not run or run.status != STATUS_COMPLETE:
+                raise TrainingError(f"No training run '{run_id}'.")
+            return run
+
     def for_coach(self, coach: Coach) -> list[TrainingRun]:
         with self._lock:
             return sorted(
@@ -279,14 +287,24 @@ class TrainingStore:
         }
         if blueprint_id:
             used = len(self.for_version(coach, blueprint_id, version))
+            limit = self._version_limit(coach)
             state.update(
                 {
                     "version_used": used,
-                    "version_limit": QUOTA_PER_VERSION,
-                    "version_remaining": max(0, QUOTA_PER_VERSION - used),
+                    "version_limit": limit,
+                    "version_remaining": max(0, limit - used),
                 }
             )
         return state
+
+    def _version_limit(self, coach: Coach) -> int:
+        try:
+            from webapp import alpha as alpha_mod
+
+            invited = alpha_mod.version_limit_for(coach)
+        except Exception:  # noqa: BLE001 - a missing alpha ledger must not block training
+            invited = None
+        return invited if invited is not None else QUOTA_PER_VERSION
 
     def _check_quota(self, coach: Coach, blueprint_id: str, version: int) -> None:
         state = self.quota_state(coach, blueprint_id, version)
@@ -297,7 +315,7 @@ class TrainingStore:
             )
         if state["version_remaining"] <= 0:
             raise QuotaExceeded(
-                f"Version {version} has used all {QUOTA_PER_VERSION} of its training "
+                f"Version {version} has used all {state['version_limit']} of its training "
                 "runs. Open a new version to keep going."
             )
 

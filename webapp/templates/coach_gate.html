@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Coach desk — SOE{% endblock %}
+{% block content %}
+
+<div class="master-title">
+  <div>
+    <p class="eyebrow">Coach desk</p>
+    <h1>Train an agent</h1>
+    <p class="muted">Write a doctrine, freeze it, send it into a known fight,
+    then read what it did. The browser keeps the key; the server stores only
+    a hash.</p>
+  </div>
+</div>
+
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+
+<div class="two-col">
+  <section class="card">
+    <h2>Register</h2>
+    <form method="post" action="/coach/register">
+      {% if alpha_invite_required %}
+      <label>Invitation
+        <input name="invite" required autocomplete="off" placeholder="inv_…">
+      </label>
+      {% elif beta_invite_required %}
+      <label>Beta invitation
+        <input name="invite" required autocomplete="off">
+      </label>
+      {% endif %}
+      <label>Your name
+        <input name="name" required maxlength="64" placeholder="Ada">
+      </label>
+      <button type="submit">Create a coach account</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Sign in</h2>
+    <p class="muted">Paste the key you were shown once. It never appears
+    again.</p>
+    <form method="post" action="/coach/signin">
+      <label>Coach key
+        <input name="coach_key" required autocomplete="off" placeholder="coach_…">
+      </label>
+      <button type="submit">Open the desk</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

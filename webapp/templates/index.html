@@ -83,6 +83,25 @@
   </section>
 
   <section class="card">
+    <h2>Coach desk</h2>
+    <p class="muted">Write a doctrine, freeze it, send it into a known fight,
+    then read what it did — victory, the error worth acting on, and the
+    cost of the match.</p>
+    <a class="button" href="/coach">Open the coach desk</a>
+  </section>
+
+  <section class="card">
+    <h2>Coach League</h2>
+    <p class="muted">Official seasons freeze the model, the map and the
+    budget, then pair frozen blueprint versions with a seat swap.</p>
+    <a class="button" href="/coach">Enter from the desk</a>
+    {% if is_operator %}
+    <p><a href="/ops/league">Operator league</a>
+       · <a href="/ops/alpha">Closed alpha</a></p>
+    {% endif %}
+  </section>
+
+  <section class="card">
     <h2>Model setup</h2>
     <p class="muted">Configure the model brain once: bots in every game and
     headless arena runs that do not pin their own environment read these
