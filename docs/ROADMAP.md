@@ -484,20 +484,51 @@ loro debrief sono confrontabili.
 
 Copertura: `tests/test_phase2_training.py`.
 
+### Stato al 2026-08-14: seconda meta, il debrief
+
+`webapp/debrief.py` non calcola niente da una partita viva: ogni campo esce dal
+bundle (`manifest.json`, `games.jsonl`, `turns.jsonl`, `decisions/`,
+`arena_results.json`) o e aritmetica che il coach puo rifare. Perche cio fosse
+possibile, `record_turn` persiste ora anche le metriche per fazione a fine
+turno: erano gia calcolate per il sommario, non erano scritte.
+
+**Una sedia sola.** Il bundle e il record dell'operatore e contiene entrambi i
+lati; il debrief e la vista dal posto del coach. Ordini, posizione turno per
+turno e id di fazione dell'avversario non entrano nel payload. L'esito e
+riportato come vinto, perso o pari, perche quello il coach l'ha giocato.
+`test_the_opponents_per_turn_position_never_reaches_the_coach` e
+`test_the_opponents_orders_never_reach_the_coach` confrontano il payload con il
+record su disco, e falliscono entrambi se si fa leggere alla proiezione la
+fazione sbagliata.
+
+**La rationale e derivata, non chiesta.** Un modello a cui si chiede di
+spiegarsi obbedisce, e la spiegazione e una seconda generazione, non una prova.
+La frase per turno viene da cio che e stato emesso e da cio che si e mosso:
+noiosa e vera, a costo zero di token e senza toccare il prompt congelato in
+Phase 0.
+
+**Tre errori, non uno.** Una riga che il parser scarta, un provider che
+risponde 429 e un turno di ordini legali che non muove niente sono tre guasti
+con tre rimedi diversi. Un coach che non li distingue riscrive la dottrina per
+riparare un rate limit.
+
+**Il cerchio si chiude.** `POST /api/training/{id}/iterate` apre dal debrief la
+versione successiva del blueprint appena allenato — o un clone separato — gia
+pronta da modificare, congelare e rieseguire.
+
+Copertura: `tests/test_phase2_debrief.py`.
+
 ### Cosa resta della Phase 2
 
-- rationale sintetica derivata dal record — **non** chiesta al modello, cosi il
-  prompt resta quello congelato in Phase 0 e il coach legge cio che e successo,
-  non cio che il modello dice di aver pensato;
-- ordini proposti, scartati e accettati con i loro effetti osservabili: il
-  record li contiene gia (`orders_extracted_text` contro `orders_text`), manca
-  la proiezione;
-- replay turno per turno da `turns.jsonl`;
-- territorio, esercito, economia, affidabilita, costo e latenza;
-- confronto fra due versioni dello stesso blueprint;
-- tassonomia leggibile degli errori: sintattici, di provider, strategici;
-- il test con utenti interni, che e l'unico criterio che non si chiude scrivendo
-  codice.
+Tutto lo scope e in piedi dietro l'API. Restano i due criteri che non si
+chiudono scrivendo un modulo:
+
+- **l'interfaccia del coach.** Oggi il loop completo esiste come JSON. Il
+  criterio dice che un utente nuovo completa un training *senza assistenza
+  dell'operatore*, e nessuno lo fa a colpi di `curl`;
+- **il test con utenti interni**, che deve mostrare che vittoria, errore
+  principale e costo del match si capiscono. E l'unico criterio della Phase 2
+  che non ha una forma eseguibile.
 
 ## Phase 3 - Competition Control Plane
 

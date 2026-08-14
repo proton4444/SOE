@@ -32,7 +32,16 @@ from fastapi.templating import Jinja2Templates
 
 from soe import __version__, map_loader
 
-from webapp import backups, blueprints, coaches, mapimg, mapview, service, training
+from webapp import (
+    backups,
+    blueprints,
+    coaches,
+    debrief,
+    mapimg,
+    mapview,
+    service,
+    training,
+)
 from webapp.ai import autoplay, brain, orchestrator
 from webapp.ai.registry import AgentProfile, default_registry
 from webapp.blueprints import (
@@ -1634,6 +1643,98 @@ def api_get_training(
     except training.TrainingError as exc:
         raise HTTPException(404, str(exc))
     return _run_payload(run)
+
+
+def _debrief_or_404(coach: Coach, run_id: str) -> debrief.Debrief:
+    store = training.default_store()
+    try:
+        run = store.get(coach, run_id)
+    except training.TrainingError as exc:
+        raise HTTPException(404, str(exc))
+    if run.status != training.STATUS_COMPLETE:
+        raise HTTPException(
+            409,
+            f"Training run '{run_id}' is {run.status}"
+            + (f": {run.error}" if run.error else "."),
+        )
+    try:
+        return debrief.build(run)
+    except debrief.DebriefError as exc:
+        raise HTTPException(409, str(exc))
+
+
+@app.get("/api/training/{run_id}/debrief")
+def api_training_debrief(
+    run_id: str, request: Request, coach_key: Optional[str] = Query(None)
+):
+    """What this run's agent did, turn by turn, from the coach's seat only.
+
+    Every field is read out of the persisted bundle. The opponent's orders and
+    position are not in the payload: the coach gets the result of the match and
+    a full account of their own play.
+    """
+    coach = _require_coach(request, coach_key)
+    return _debrief_or_404(coach, run_id).as_dict()
+
+
+@app.post("/api/training/{run_id}/iterate")
+def api_training_iterate(
+    run_id: str,
+    request: Request,
+    payload: Optional[dict] = None,
+    coach_key: Optional[str] = Query(None),
+):
+    """Go from a debrief to the next attempt in one call.
+
+    The loop Phase 2 exists to close is create, try, understand, change, and
+    the last step is where a coach gives up if it takes six requests. This
+    opens the next draft of the blueprint that was just trained — a new version
+    of it by default, or a separate clone with ``as_clone`` — and returns it
+    ready to edit, freeze and run again.
+    """
+    coach = _require_coach(request, coach_key)
+    body = payload or {}
+    try:
+        run = training.default_store().get(coach, run_id)
+    except training.TrainingError as exc:
+        raise HTTPException(404, str(exc))
+    store = blueprints.default_store()
+    try:
+        if body.get("as_clone"):
+            blueprint = store.clone(
+                coach,
+                run.blueprint_id,
+                from_version=run.blueprint_version,
+                name=body.get("name", ""),
+            )
+        else:
+            store.new_version(
+                coach, run.blueprint_id, from_version=run.blueprint_version
+            )
+            blueprint = store.get(coach, run.blueprint_id)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return {
+        "from_run": run.id,
+        "from_version": run.blueprint_version,
+        "blueprint": _blueprint_payload(blueprint, coach=coach),
+        "next_version": blueprint.latest().version,
+    }
+
+
+@app.get("/api/training/{run_id}/compare/{other_run_id}")
+def api_training_compare(
+    run_id: str,
+    other_run_id: str,
+    request: Request,
+    coach_key: Optional[str] = Query(None),
+):
+    """Two of this coach's runs side by side — normally two versions of one
+    blueprint. The payload says whether they were even asked the same question."""
+    coach = _require_coach(request, coach_key)
+    return debrief.compare(
+        _debrief_or_404(coach, run_id), _debrief_or_404(coach, other_run_id)
+    )
 
 
 if __name__ == "__main__":

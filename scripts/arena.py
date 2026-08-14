@@ -871,6 +871,12 @@ def play_game(
                         "reports": {
                             fid: _text_sha(prev_reports[fid]) for fid in prev_reports
                         },
+                        # Per-faction position at the end of this turn. Already
+                        # computed for the batch summary; persisting it is what
+                        # lets a debrief show a turn's observable effect without
+                        # replaying the engine, and therefore without any number
+                        # the record cannot account for.
+                        "metrics": per_turn[-1]["metrics"],
                     }
                 )
 
