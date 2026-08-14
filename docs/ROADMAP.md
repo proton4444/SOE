@@ -339,6 +339,84 @@ Rendere l'agente un oggetto posseduto e versionato, indipendente da una stanza.
 - Il runtime usa esattamente l'hash iscritto al match.
 - Migrazione e autorizzazioni sono coperte da test.
 
+### Stato al 2026-08-14: sei criteri su sei
+
+Il blueprint non e piu un file scelto da riga di comando ma un oggetto
+posseduto: `webapp/blueprints.py` per l'entita, `webapp/coaches.py` per
+l'identita minima che la possiede, `tests/test_phase1_blueprints.py` per i
+criteri di uscita, uno per uno.
+
+Una versione tiene separate tre cose, e la separazione e la parte che conta:
+
+- **strategia** (`persona`, `doctrine`): l'unica parte che il modello legge;
+- **runtime** (`model`, `temperature`, `max_tokens`): non e prompt, ma un
+  modello diverso gioca una partita diversa, quindi l'hash lo include;
+- **editoriale** (nome, note, visibilita, stato): fuori dall'hash, cosi
+  rinominare un blueprint non invalida un match gia giocato contro di lui.
+
+L'hash copre le prime due piu id e numero di versione. Ne segue che due
+versioni con lo stesso testo restano distinte, e cosi un blueprint e il suo
+clone: un match iscrive *questa* versione di *quell'agente*, non "un testo che
+suona cosi".
+
+Il confine e il freeze. Una bozza e del coach; una versione congelata non e di
+nessuno, nemmeno dell'operatore. Un seat puo iscrivere solo versioni congelate,
+e a ogni turno `orchestrator._enrolled_strategy` ricalcola l'hash e rifiuta di
+giocare se si e mosso: l'iscrizione porta id, numero e hash, mai il testo.
+
+L'autorizzazione nega leggendo, non solo scrivendo, e risponde 404 e non 403
+sul blueprint privato altrui: un 403 su un id conferma che quell'id esiste.
+
+La migrazione (`migrate_personas`) solleva ogni `persona` di seat in un
+blueprint congelato, la iscrive sul seat e svuota il campo vecchio: due
+sorgenti di strategia sullo stesso seat prima o poi divergono.
+
+### La prima riserva di Phase 0 e chiusa
+
+`test_resume_reproduces_every_turn_hash_not_just_the_final_one` confronta la
+traccia intera — turno per turno, partita per partita — fra un run interrotto e
+ripreso e un run mai interrotto. Gli hash finali uguali dicevano solo che i due
+run finiscono nello stesso posto; una ripresa che ci fosse arrivata per un'altra
+strada sarebbe passata lo stesso.
+
+### La seconda riserva ha una causa, e non e la dottrina
+
+`expansionist-v1` vince 80 partite su 80 contro `consolidation-v1`, con 40 sweep
+e zero split. Il bundle `run-20260813-153826-f562a8` dice pero anche questo:
+
+| | expansionist-v1 | consolidation-v1 |
+|---|---:|---:|
+| Attacchi | 0 | 0 |
+| Eliminazioni | 0 | 0 |
+| Sopravvivenza | 1.0 | 1.0 |
+| Secure | 655 | 94 |
+| Recruit | 2447 | 511 |
+| Collect + Invest + Work | 182 | 4727 |
+
+Le due dottrine non si scontrano mai. Il primo contatto e al turno 2 e nessuno
+attacca in 80 partite: la partita finisce al turno 30 e viene assegnata da un
+confronto di metriche, non da una conquista. E la catena e
+`TIEBREAK = (secured, controlled, soldiers, characters_alive, gold)`.
+
+`expansionist-v1` ha in dottrina "secure cities" e "recruit soldiers", cioe la
+prima e la terza voce della catena. `consolidation-v1` ha "costruisci economia",
+cioe l'ultima, raggiunta solo se tutto il resto pareggia. Il 100% non misura una
+dottrina piu forte: misura una dottrina scritta sulla funzione di punteggio
+contro una scritta altrove. Riformulare il testo di `consolidation-v1` non
+toglie il problema, lo sposta.
+
+Le due leve vere sono di design, non di prompt:
+
+1. **il punteggio** — se l'economia deve poter vincere, deve pesare nella
+   decisione, non stare in fondo alla catena di spareggio;
+2. **lo scenario** — a 30 turni senza un attacco, l'economia non ha tempo ne
+   motivo di convertirsi in forza. Un contesto in cui i due si contendono
+   davvero qualcosa e cio che rende comparabili due dottrine diverse.
+
+La scelta fra le due e una decisione di prodotto e costa una ri-esecuzione
+d'arena (circa 2.43 USD a 40 coppie di seed), quindi resta aperta e va presa
+prima di trattare la lega come una classifica di dottrine.
+
 ## Phase 2 - Training and Debrief
 
 ### Risultato
@@ -508,17 +586,20 @@ pubblico sono dipendenze successive, non lavoro parallelo al critical path.
 ## Prossimo incremento
 
 La **Phase 0 - Agent Competence Gate** e chiusa il 2026-08-13 con entrambi i
-batch ufficiali a `pass`. Il prossimo lavoro autorizzato e la **Phase 1 - Agent
-Blueprint**.
+batch ufficiali a `pass`. La **Phase 1 - Agent Blueprint** e chiusa il
+2026-08-14: sei criteri di uscita su sei, coperti da
+`tests/test_phase1_blueprints.py`. Il prossimo lavoro autorizzato e la
+**Phase 2 - Training and Debrief**.
 
-Due elementi della Phase 0 restano pero aperti e vanno portati dentro la Phase
-1, perche toccano proprio l'oggetto che la Phase 1 costruisce:
+Delle due riserve ereditate dalla Phase 0:
 
-- rafforzare la verifica del resume, che oggi controlla la forma degli hash e
-  non la loro uguaglianza rispetto a un run non interrotto;
-- riequilibrare le dottrine, dato che `expansionist-v1` vince 80 partite su 80
-  contro `consolidation-v1`: un blueprint versionato non ha senso se una sola
-  dottrina domina lo scenario.
+- la verifica del resume e chiusa: si confronta la traccia intera di hash, non
+  piu solo lo stato finale;
+- il dominio di `expansionist-v1` su `consolidation-v1` ha una causa
+  identificata — la catena di spareggio premia territorio e soldati e le due
+  dottrine non si scontrano mai — ma la correzione e una scelta di design fra
+  punteggio e scenario, e costa una ri-esecuzione d'arena. Resta **aperta**, e
+  va decisa prima di leggere una lega come classifica di dottrine.
 
 Ordine di lavoro, dal piu economico al piu costoso:
 

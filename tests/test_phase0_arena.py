@@ -638,6 +638,46 @@ def test_resume_reproduces_interrupted_run_state(fake_brain, tmp_path):
     assert resumed_summary["wins"] == fresh_summary["wins"]
 
 
+def _turn_hashes(bundle) -> dict[tuple[str, int], str]:
+    """Every recorded (game, turn) -> state hash in a run bundle."""
+    hashes: dict[tuple[str, int], str] = {}
+    for line in bundle.turns_path.read_text(encoding="utf-8").splitlines():
+        record = json.loads(line)
+        hashes[(record["game"], record["turn"])] = record["state_sha"]
+    return hashes
+
+
+def test_resume_reproduces_every_turn_hash_not_just_the_final_one(fake_brain, tmp_path):
+    """The reserve Phase 0 left open: equality of the whole trace.
+
+    Matching final hashes only prove the two runs ended in the same place.
+    A resumed batch that took a different route to it — replaying a decision
+    against a state rebuilt slightly differently — would still pass that. The
+    contract Phase 1 needs from a resumable league is stronger: turn by turn,
+    game by game, an interrupted-and-resumed run and an uninterrupted one are
+    the same run.
+    """
+    config = _smoke_config()
+    out = tmp_path / "arena"
+
+    bundle = prepare_bundle(config, out)
+    _partial_run(config, out, bundle)
+    resumed = resume_bundle(out, bundle.run_id, config)
+    run_batch(config, resumed.run_dir, bundle=resumed)
+
+    fresh_bundle = prepare_bundle(config, tmp_path / "arena-fresh")
+    run_batch(config, fresh_bundle.run_dir, bundle=fresh_bundle)
+
+    resumed_hashes = _turn_hashes(resumed)
+    fresh_hashes = _turn_hashes(fresh_bundle)
+
+    assert resumed_hashes, "the resumed run recorded no turns"
+    assert set(resumed_hashes) == set(fresh_hashes)
+    assert resumed_hashes == fresh_hashes
+    # Every hash is a real digest, not an empty string compared to itself.
+    assert all(len(sha) == 64 for sha in resumed_hashes.values())
+
+
 def test_resume_refuses_changed_config(fake_brain, tmp_path):
     config = _smoke_config()
     out = tmp_path / "arena"

@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -46,6 +47,22 @@ class AgentProfile:
     state: str = STATE_IDLE
     last_error: str = ""
     last_run_at: str = ""
+    # The frozen blueprint version this seat entered the match with: id,
+    # number and hash, never the text. The seat reads the strategy back
+    # through ``webapp.blueprints.resolve``, which refuses a version that has
+    # moved since. Empty means the pre-Phase-1 arrangement, where ``persona``
+    # and ``model`` on this profile are themselves the agent.
+    blueprint_id: str = ""
+    blueprint_version: int = 0
+    blueprint_hash: str = ""
+
+    def blueprint_ref(self):
+        """The enrolled reference, or None for a seat with no blueprint."""
+        if not self.blueprint_id:
+            return None
+        from webapp.blueprints import BlueprintRef
+
+        return BlueprintRef(self.blueprint_id, self.blueprint_version, self.blueprint_hash)
 
 
 class AgentRegistry:
@@ -96,9 +113,28 @@ class AgentRegistry:
     # queries
     # ------------------------------------------------------------------
 
+    @contextmanager
+    def transaction(self):
+        """Serialise a read-modify-write of the registry with its own save.
+
+        Same reason as ``RoomStore.transaction``: sync FastAPI routes run in a
+        threadpool, so two seats can be reconfigured at once.
+        """
+        with self._lock:
+            yield self
+
     def get(self, room_code: str, faction_id: str) -> AgentProfile | None:
         with self._lock:
             return self._profiles.get(room_code.upper(), {}).get(faction_id)
+
+    def all_profiles(self) -> dict[str, dict[str, AgentProfile]]:
+        """Every seat profile, keyed room code -> faction id.
+
+        The profiles are the live objects, not copies: a caller holding
+        ``transaction()`` may edit them and then ``save()``.
+        """
+        with self._lock:
+            return {code: dict(factions) for code, factions in self._profiles.items()}
 
     def for_room(self, room_code: str) -> dict[str, AgentProfile]:
         with self._lock:
@@ -120,6 +156,25 @@ class AgentRegistry:
     ) -> AgentProfile:
         with self._lock:
             self._profiles.setdefault(room_code.upper(), {})[faction_id] = profile
+            self.save()
+            return profile
+
+    def enroll_blueprint(self, room_code: str, faction_id: str, ref) -> AgentProfile:
+        """Bind a seat to a frozen blueprint version, or clear the binding.
+
+        ``ref`` is a ``webapp.blueprints.BlueprintRef``, or None to go back to
+        the profile's own persona and model. The seat must already have a
+        profile: enrolling an agent is a change to how a seat plays, not a way
+        to create one.
+        """
+        with self._lock:
+            profile = self.get(room_code, faction_id)
+            if profile is None:
+                raise KeyError(f"No agent profile for {faction_id} in room {room_code}.")
+            profile.blueprint_id = ref.blueprint_id if ref else ""
+            profile.blueprint_version = ref.version if ref else 0
+            profile.blueprint_hash = ref.content_hash if ref else ""
+            self._profiles[room_code.upper()][faction_id] = profile
             self.save()
             return profile
 

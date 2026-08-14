@@ -31,9 +31,15 @@ from fastapi.templating import Jinja2Templates
 
 from soe import __version__, map_loader
 
-from webapp import backups, mapimg, mapview, service
+from webapp import backups, blueprints, coaches, mapimg, mapview, service
 from webapp.ai import autoplay, brain, orchestrator
 from webapp.ai.registry import AgentProfile, default_registry
+from webapp.blueprints import (
+    BlueprintAccessError,
+    BlueprintError,
+    BlueprintIntegrityError,
+)
+from webapp.coaches import Coach, CoachAuthError, CoachError
 from webapp.observability import logger, request_id
 from webapp.rooms import (
     GAMES_ROOT,
@@ -57,6 +63,9 @@ _store = default_store()
 HOST_COOKIE = "soe_host"
 PLAYER_COOKIE = "soe_player"
 BETA_INVITE_HEADER = "X-SOE-Beta-Invite"
+#: A coach key is a separate credential from a room's seat key: it proves who
+#: owns a blueprint, not who holds a seat.
+COACH_KEY_HEADER = "X-Coach-Key"
 BETA_ACCESS_CODE = os.environ.get("SOE_BETA_ACCESS_CODE", "").strip()
 # The server's LLM key and the URL that key is sent to are operator property,
 # not room property: anyone can create a room, so a host cookie is not proof
@@ -936,6 +945,17 @@ def _profile_payload(faction_id: str, profile: AgentProfile) -> dict:
         "state": profile.state,
         "last_error": profile.last_error,
         "last_run_at": profile.last_run_at,
+        # The enrolled blueprint, by reference. The strategy text is not
+        # copied here: the seat reads it back from the store by hash.
+        "blueprint": (
+            {
+                "blueprint_id": profile.blueprint_id,
+                "version": profile.blueprint_version,
+                "content_hash": profile.blueprint_hash,
+            }
+            if profile.blueprint_id
+            else None
+        ),
     }
 
 
@@ -1225,6 +1245,291 @@ def api_run_all_agents(code: str, request: Request, key: Optional[str] = Query(N
     if not results:
         raise HTTPException(400, "No enabled bots in this room.")
     return {"results": results}
+
+
+# ============================================================================
+# coach API — the agent as an owned object (Phase 1)
+# ============================================================================
+
+
+def _coach_key(request: Request, key: Optional[str] = None) -> str:
+    token = request.headers.get(COACH_KEY_HEADER) or key
+    if not token:
+        raise HTTPException(
+            401, f"Missing coach key ({COACH_KEY_HEADER} header or ?coach_key=)."
+        )
+    return token
+
+
+def _require_coach(request: Request, key: Optional[str] = None) -> Coach:
+    try:
+        return coaches.default_store().require(_coach_key(request, key))
+    except CoachAuthError as exc:
+        raise HTTPException(403, str(exc))
+
+
+def _version_payload(version) -> dict:
+    return {
+        "version": version.version,
+        "state": version.state,
+        "persona": version.persona,
+        "doctrine": dict(version.doctrine),
+        "runtime": dict(version.runtime),
+        "notes": version.notes,
+        "created_at": version.created_at,
+        "frozen_at": version.frozen_at,
+        "content_hash": version.content_hash,
+    }
+
+
+def _blueprint_payload(blueprint, *, coach: Coach) -> dict:
+    return {
+        "id": blueprint.id,
+        "name": blueprint.name,
+        "coach_id": blueprint.coach_id,
+        "mine": blueprint.coach_id == coach.id,
+        "visibility": blueprint.visibility,
+        "retired": blueprint.retired,
+        "created_at": blueprint.created_at,
+        "updated_at": blueprint.updated_at,
+        "versions": [_version_payload(v) for v in blueprint.versions],
+    }
+
+
+def _blueprint_http(exc: BlueprintError) -> HTTPException:
+    """Access failures are 404, not 403: a 403 confirms the id exists."""
+    if isinstance(exc, BlueprintAccessError):
+        return HTTPException(404, str(exc))
+    if isinstance(exc, BlueprintIntegrityError):
+        return HTTPException(409, str(exc))
+    return HTTPException(400, str(exc))
+
+
+@app.post("/api/coaches")
+def api_create_coach(request: Request, payload: Optional[dict] = None):
+    """Register a coach. The key is returned once and stored only hashed."""
+    body = payload or {}
+    _require_beta_invite(request, body.get("invite", ""))
+    try:
+        coach, key = coaches.default_store().create(body.get("name", ""))
+    except CoachError as exc:
+        raise HTTPException(400, str(exc))
+    return {
+        "coach_id": coach.id,
+        "name": coach.display_name,
+        "coach_key": key,
+        "created_at": coach.created_at,
+    }
+
+
+@app.get("/api/blueprints")
+def api_list_blueprints(request: Request, coach_key: Optional[str] = Query(None)):
+    """Every blueprint this coach may read: their own, plus public ones."""
+    coach = _require_coach(request, coach_key)
+    store = blueprints.default_store()
+    return {
+        "coach_id": coach.id,
+        "blueprints": [
+            _blueprint_payload(b, coach=coach) for b in store.visible_to(coach)
+        ],
+    }
+
+
+@app.post("/api/blueprints")
+def api_create_blueprint(
+    request: Request, payload: dict, coach_key: Optional[str] = Query(None)
+):
+    """Create a blueprint owned by this coach, with version 1 as a draft."""
+    coach = _require_coach(request, coach_key)
+    try:
+        blueprint = blueprints.default_store().create(
+            coach,
+            payload.get("name", ""),
+            persona=payload.get("persona", ""),
+            doctrine=payload.get("doctrine"),
+            runtime=payload.get("runtime"),
+            notes=payload.get("notes", ""),
+            visibility=payload.get("visibility", blueprints.VISIBILITY_PRIVATE),
+        )
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _blueprint_payload(blueprint, coach=coach)
+
+
+@app.get("/api/blueprints/{blueprint_id}")
+def api_get_blueprint(
+    blueprint_id: str, request: Request, coach_key: Optional[str] = Query(None)
+):
+    coach = _require_coach(request, coach_key)
+    try:
+        blueprint = blueprints.default_store().get(coach, blueprint_id)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _blueprint_payload(blueprint, coach=coach)
+
+
+@app.patch("/api/blueprints/{blueprint_id}/versions/{version}")
+def api_edit_blueprint_version(
+    blueprint_id: str,
+    version: int,
+    request: Request,
+    payload: Optional[dict] = None,
+    coach_key: Optional[str] = Query(None),
+):
+    """Edit a version. Strategy and runtime only while it is still a draft."""
+    coach = _require_coach(request, coach_key)
+    body = payload or {}
+    try:
+        blueprints.default_store().edit(
+            coach,
+            blueprint_id,
+            version,
+            persona=body.get("persona"),
+            doctrine=body.get("doctrine"),
+            runtime=body.get("runtime"),
+            notes=body.get("notes"),
+            name=body.get("name"),
+            visibility=body.get("visibility"),
+        )
+        blueprint = blueprints.default_store().get(coach, blueprint_id)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _blueprint_payload(blueprint, coach=coach)
+
+
+@app.post("/api/blueprints/{blueprint_id}/versions")
+def api_new_blueprint_version(
+    blueprint_id: str,
+    request: Request,
+    payload: Optional[dict] = None,
+    coach_key: Optional[str] = Query(None),
+):
+    """Open a new draft version from an existing one."""
+    coach = _require_coach(request, coach_key)
+    body = payload or {}
+    try:
+        blueprints.default_store().new_version(
+            coach, blueprint_id, from_version=body.get("from_version")
+        )
+        blueprint = blueprints.default_store().get(coach, blueprint_id)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _blueprint_payload(blueprint, coach=coach)
+
+
+@app.post("/api/blueprints/{blueprint_id}/versions/{version}/freeze")
+def api_freeze_blueprint_version(
+    blueprint_id: str,
+    version: int,
+    request: Request,
+    coach_key: Optional[str] = Query(None),
+):
+    """Seal a version and give it the hash a match can be bound to."""
+    coach = _require_coach(request, coach_key)
+    try:
+        frozen = blueprints.default_store().freeze(coach, blueprint_id, version)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _version_payload(frozen)
+
+
+@app.post("/api/blueprints/{blueprint_id}/clone")
+def api_clone_blueprint(
+    blueprint_id: str,
+    request: Request,
+    payload: Optional[dict] = None,
+    coach_key: Optional[str] = Query(None),
+):
+    """Copy a readable blueprint into a new private one owned by this coach."""
+    coach = _require_coach(request, coach_key)
+    body = payload or {}
+    try:
+        clone = blueprints.default_store().clone(
+            coach,
+            blueprint_id,
+            from_version=body.get("from_version"),
+            name=body.get("name", ""),
+        )
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _blueprint_payload(clone, coach=coach)
+
+
+@app.post("/api/blueprints/{blueprint_id}/retire")
+def api_retire_blueprint(
+    blueprint_id: str, request: Request, coach_key: Optional[str] = Query(None)
+):
+    """Take a blueprint out of circulation. Played matches still resolve it."""
+    coach = _require_coach(request, coach_key)
+    try:
+        blueprint = blueprints.default_store().retire(coach, blueprint_id)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _blueprint_payload(blueprint, coach=coach)
+
+
+@app.post("/api/rooms/{code}/agents/{faction_id}/blueprint")
+def api_enroll_blueprint(
+    code: str,
+    faction_id: str,
+    request: Request,
+    payload: Optional[dict] = None,
+    key: Optional[str] = Query(None),
+    coach_key: Optional[str] = Query(None),
+):
+    """Enter a frozen blueprint version on one seat.
+
+    Two credentials, because two different things are being authorised: the
+    seat key (or the host key) says this seat may be reconfigured, and the
+    coach key says this coach may play that blueprint. Neither implies the
+    other — that is what lets a coach, not only the host, field their own
+    agent. Passing ``blueprint_id: null`` clears the binding.
+    """
+    room = _resolve_room(code)
+    seat = _faction_by_id(room, faction_id)
+    token = _key(request, key)
+    if token != room.host_key and token != seat.agent_key:
+        raise HTTPException(403, "This key does not hold that seat.")
+    coach = _require_coach(request, coach_key)
+    body = payload or {}
+    blueprint_id = body.get("blueprint_id")
+    if default_registry().get(room.code, faction_id) is None:
+        raise HTTPException(404, "No agent profile for that faction.")
+    try:
+        ref = (
+            blueprints.default_store().enroll(
+                coach, blueprint_id, body.get("version")
+            )
+            if blueprint_id
+            else None
+        )
+        profile = default_registry().enroll_blueprint(room.code, faction_id, ref)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return _profile_payload(faction_id, profile)
+
+
+@app.post("/api/blueprints/migrate-personas")
+def api_migrate_personas(
+    request: Request,
+    payload: Optional[dict] = None,
+    coach_key: Optional[str] = Query(None),
+    operator_key: str = "",
+):
+    """One-off: turn every seat persona into a frozen blueprint for this coach.
+
+    Operator-gated, because it reads and rewrites profiles across every room,
+    not only the calling coach's. The blueprints it creates belong to the coach
+    whose key is presented.
+    """
+    body = payload or {}
+    _require_operator(request, body.get("operator_key", operator_key))
+    coach = _require_coach(request, coach_key)
+    try:
+        migrated = blueprints.migrate_personas(coach)
+    except BlueprintError as exc:
+        raise _blueprint_http(exc)
+    return {"coach_id": coach.id, "migrated": migrated}
 
 
 if __name__ == "__main__":

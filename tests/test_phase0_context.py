@@ -104,11 +104,14 @@ def _headless_context(room: Room, faction_id: str, **overrides) -> context.Decis
 
 
 def _web_context(room: Room, faction_id: str) -> context.DecisionContext:
+    from webapp.ai.registry import AgentProfile
+
     player = next(p for p in room.players if p.faction_id == faction_id)
-    profile = type(
-        "Profile", (), {"model": "", "persona": "", "temperature": 0.0}
-    )()
-    return orchestrator._decision_context(room, player, profile)
+    # A seat with no blueprint entered: persona and model are its own, which
+    # is the arrangement the headless side has too.
+    profile = AgentProfile(model="", persona="", temperature=0.0)
+    strategy = orchestrator._enrolled_strategy(profile)
+    return orchestrator._decision_context(room, player, strategy)
 
 
 def test_web_and_headless_build_identical_prompts():

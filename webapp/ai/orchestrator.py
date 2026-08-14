@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import base64
 import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from webapp import service
+from webapp import blueprints, service
 from webapp.ai import brain, subagents
 from webapp.ai import context
 from webapp.ai.context import ORDERS_MARKER, extract_orders
@@ -125,20 +126,21 @@ def _ask_strategist(
     intel: str | None,
     field: str | None,
 ) -> str:
-    ctx = _decision_context(room, player, profile)
+    strategy = _enrolled_strategy(profile)
+    ctx = _decision_context(room, player, strategy)
     messages = context.build_messages(ctx, intel=intel, field=field)
     return brain.chat(
-        model=brain.model_name(profile.model),
+        model=brain.model_name(strategy.model),
         messages=messages,
-        temperature=profile.temperature,
+        temperature=strategy.temperature,
         images=_vision_images(room, player),
     )
 
 
 def _decision_context(
-    room: Room, player: RoomPlayer, profile: AgentProfile
+    room: Room, player: RoomPlayer, strategy: SeatStrategy
 ) -> context.DecisionContext:
-    """Adapter: a Room + AgentProfile -> the shared pure DecisionContext."""
+    """Adapter: a Room + a resolved seat strategy -> the pure DecisionContext."""
     return context.DecisionContext(
         game_state=service.load_state(room),
         faction_id=player.faction_id,
@@ -147,7 +149,45 @@ def _decision_context(
         map_file=room.map_file,
         previous_report=_latest_report(room, player.faction_id),
         game_id=room.code,
-        persona=profile.persona,
+        blueprint=strategy.blueprint,
+        persona=strategy.persona,
+    )
+
+
+@dataclass(frozen=True)
+class SeatStrategy:
+    """What one seat plays this turn: prompt text and runtime configuration."""
+
+    blueprint: dict | None
+    persona: str
+    model: str
+    temperature: float
+
+
+def _enrolled_strategy(profile: AgentProfile) -> SeatStrategy:
+    """The strategy this seat entered the match with.
+
+    A seat with no blueprint plays its profile's own persona and model, as
+    before Phase 1. A seat with one plays the frozen version whose hash it
+    enrolled, read back through the store: if that version no longer hashes to
+    what was inscribed, the turn stops here rather than quietly playing
+    different text. The blueprint's runtime section wins over the profile's
+    model and temperature, because a match pinned to a hash that does not also
+    pin the model is not pinned to anything.
+    """
+    ref = profile.blueprint_ref()
+    if ref is None:
+        return SeatStrategy(None, profile.persona, profile.model, profile.temperature)
+    try:
+        version = blueprints.default_store().resolve(ref)
+    except blueprints.BlueprintError as exc:
+        raise BotError(str(exc)) from exc
+    runtime = version.runtime or {}
+    return SeatStrategy(
+        blueprint=blueprints.runtime_blueprint(ref.blueprint_id, version),
+        persona=version.persona,
+        model=str(runtime.get("model") or profile.model),
+        temperature=float(runtime.get("temperature", profile.temperature)),
     )
 
 
