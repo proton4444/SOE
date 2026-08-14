@@ -1,6 +1,6 @@
 # Review Corrections — 2026-08-13
 
-Status: **in progress** — Wave 1 (C1–C6) closed  
+Status: **in progress** — Waves 1–2 (C1–C23) closed  
 Date: 2026-08-13  
 Source: project-wide code review (engine, parser, webapp, AI/arena; 112 Python files)  
 Rules authority: [`MECHANICS.md`](../MECHANICS.md)
@@ -163,9 +163,19 @@ pre-fix source before the fix was accepted.
 
 These make a player (or bot) issue a command the engine does not honour.
 
+**All seventeen are closed.** Each named test was confirmed to fail against the
+pre-fix source before the fix was accepted.
+
 ### C7. Revive NAME
 
 - Severity: bug
+- Status: **closed** — `parse_name_order` resolves the actor (HAVE or implicit
+  leader); short names fail with a warning and are not padded; `process_name`
+  takes a stack in that character's group at their city.
+  Tests: `tests/test_review_corrections_wave2.py::test_implicit_name_creates_a_character_from_a_local_stack`,
+  `::test_have_name_creates_a_character_from_a_local_stack`,
+  `::test_short_names_fail_loudly`,
+  `::test_name_does_not_consume_a_distant_stack`.
 - File: `soe/parser/verbs_units.py:291`, `soe/phases/units.py:540`,
   `soe/phases/common.py:42`
 - Defect: `parse_name_order` sets `actor_id = player_id` (faction id).
@@ -184,6 +194,10 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C8. TELEPORT / FLY must move the group that was priced
 
 - Severity: bug
+- Status: **closed** — both spells call `groups.move_group` then write the
+  leader's city, the same way land movement does.
+  Tests: `tests/test_review_corrections_wave2.py::test_teleport_moves_the_soldiers_that_were_priced`,
+  `::test_a_lone_wizard_still_flies_alone`.
 - File: `soe/phases/magic.py:45` (`:60`, `:94`)
 - Defect: Power uses `group_encumbrance` (leader + subordinates + owned
   units) but only the wizard/target `location_city_id` is written. Units and
@@ -197,6 +211,9 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C9. GET join must attach
 
 - Severity: bug
+- Status: **closed** — the no-cargo form calls `groups.attach`; `get_join` is
+  logged only on success.
+  Test: `tests/test_review_corrections_wave2.py::test_get_with_no_cargo_attaches_the_donor`.
 - File: `soe/phases/finance.py:44`
 - Defect: The character-join form logs `get_join` and returns without
   `groups.attach`. The order is a no-op that looks like a join.
@@ -208,6 +225,10 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C10. GET units must honour ownership
 
 - Severity: bug
+- Status: **closed** — GET mirrors ASSIGN: donor-owned stack first, then
+  unowned local pool; received stacks are owned by the recipient.
+  Tests: `tests/test_review_corrections_wave2.py::test_get_cannot_pull_another_characters_troops`,
+  `::test_received_troops_travel_with_the_recipient`.
 - File: `soe/phases/finance.py:82`
 - Defect: GET of units selects the first same-faction, same-city stack of
   that type, ignoring `owner_character_id`. New stacks are created without
@@ -221,6 +242,11 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C11. Possessive `her` must not flatten percent invest
 
 - Severity: bug
+- Status: **closed** — `\bher\b` is left alone when the next word is a
+  possession noun (`her gold`, `her soldiers`), so the invest/offer percent
+  regex still matches.
+  Tests: `tests/test_review_corrections_wave2.py::test_percent_invest_of_her_gold_uses_the_agents_purse`,
+  `::test_percent_offer_of_her_gold_uses_the_agents_purse`.
 - File: `soe/pronouns.py:256`, `soe/parser/verbs_economy.py:480`
 - Defect: `\bher\b` is always the object pronoun. After another woman is
   named, `Have Mary Wise invest 75 percent of her gold in Redport` rewrites
@@ -235,6 +261,12 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C12. IF branches must keep HAVE and failed clauses
 
 - Severity: bug
+- Status: **closed** — branch bodies prefix HAVE on elided verbs; an
+  unparseable clause becomes the same warned placeholder as the top level;
+  `restore_order_quotes` recurses into list fields.
+  Tests: `tests/test_review_corrections_wave2.py::test_if_then_have_julia_recruits_both_stacks`,
+  `::test_garbage_if_branch_clause_appears_as_a_warning`,
+  `::test_quoted_say_inside_if_is_restored`.
 - File: `soe/parser/control.py:212`, `:214`; `soe/parser/text.py:82`
 - Defect: Branch bodies re-apply sticky HAVE only when the next clause
   starts with a verb, so `then have Julia recruit 5 soldiers and 3 workers`
@@ -251,6 +283,11 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C13. THEN is a barrier, not AND
 
 - Severity: bug
+- Status: **closed** — `split_clauses` treats `then` as a command boundary;
+  the following order carries `then_after`; `_drain_actor` does not release
+  that order in the same pass as the command before it. Attack is not a
+  same-turn non-blocking action.
+  Test: `tests/test_review_corrections_wave2.py::test_recruit_after_attack_then_does_not_run_the_same_turn`.
 - File: `soe/parser/dispatch.py:724`, `soe/order_queue.py:409`
 - Defect: MECHANICS says THEN sequences so the second command begins when
   the first completes. The parser strips a leading `then` and treats the
@@ -266,6 +303,11 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C14. TAX is a verb, not a substring
 
 - Severity: bug
+- Status: **closed** — HAVE and implicit forms require `\btax\b` as the
+  command verb; `query the taxman` and `report on taxation` fall through.
+  Tests: `tests/test_review_corrections_wave2.py::test_query_the_taxman_is_not_tax`,
+  `::test_have_joe_report_on_taxation_is_not_tax`,
+  `::test_have_joe_tax_for_2_weeks_still_is_tax`.
 - File: `soe/parser/verbs_economy.py:196`, `soe/parser/dispatch.py:423`
 - Defect: HAVE match is `have\s+(.+?)\s+tax` (no word boundary); otherwise
   any clause with `'tax' in sentence` is TAX. Dispatch tries TAX long
@@ -278,6 +320,10 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C15. Duration units must be parsed
 
 - Severity: bug
+- Status: **closed** — STUDY, COLLECT and MINE use `parse_duration_days`;
+  STUDY converts days to weeks (`21 days` → 3 weeks).
+  Tests: `tests/test_review_corrections_wave2.py::test_study_for_21_days_is_three_weeks`,
+  `::test_collect_for_2_weeks_is_14_days`.
 - File: `soe/parser/verbs_magic.py:183`; `soe/parser/verbs_economy.py:230`,
   `:328`
 - Defect: STUDY reads `for\s+(\d+)` as weeks, so `study combat for 21 days`
@@ -292,6 +338,10 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C16. One STUDY, one skill — or split it
 
 - Severity: bug
+- Status: **closed** — `study A and B` expands to two STUDY orders. The
+  chain test that pinned “one STUDY of two skills” now expects both skills.
+  Tests: `tests/test_review_corrections_wave2.py::test_study_magic_and_sailing_covers_both_skills`,
+  `tests/test_v10_and_chain.py::test_skill_lists_are_not_split`.
 - File: `soe/parser/verbs_magic.py:183`, `tests/test_v10_and_chain.py:281`
 - Defect: `study magic and sailing for 1 week` is one clause; the regex
   captures only the first skill. The test pins “one STUDY of two skills”
@@ -304,6 +354,10 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C17. Unknown city on BLESS/CURSE/SCRY is invalid
 
 - Severity: bug
+- Status: **closed** — a city phrase that does not resolve is a warning;
+  execution skips warned BLESS/CURSE/SCRY and no longer falls back to the
+  priest's hex.
+  Test: `tests/test_review_corrections_wave2.py::test_unknown_city_does_not_bless_the_actors_location`.
 - File: `soe/parser/verbs_magic.py:109`, `:135`, `:345`;
   `soe/phases/magic.py:255`
 - Defect: An unknown city produces no warning and leaves `city_id` empty.
@@ -316,6 +370,11 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C18. Honour documented COLLECT / TEACH forms
 
 - Severity: bug
+- Status: **closed** — COLLECT accepts an optional count (stored,
+  duration still governs); implicit-leader `Teach Mike magic to level 10`
+  is implemented.
+  Tests: `tests/test_review_corrections_wave2.py::test_have_engineer_collect_40_wood_parses`,
+  `::test_teach_mike_magic_to_level_10_parses`.
 - File: `soe/parser/verbs_economy.py:230`, `soe/parser/verbs_magic.py:230`
 - Defect: Docstring lists `Have Engineer collect 40 wood`; the regex
   requires `(wood|stone)` immediately after the verb. Implicit-leader
@@ -329,6 +388,9 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C19. Reflexives on independent NPCs
 
 - Severity: bug
+- Status: **closed** — `find_agent` / `_leading_character` include
+  independent NPCs, matching `resolve_character`.
+  Test: `tests/test_review_corrections_wave2.py::test_independent_heal_herself_heals_that_character`.
 - File: `soe/pronouns.py:139`, `soe/parser/resolve.py:51`
 - Defect: `find_agent` only considers `faction_id == player_id`.
   `resolve_character` resolves independent NPCs, so before an offer is
@@ -341,6 +403,10 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C20. Multi-actor HAVE
 
 - Severity: bug
+- Status: **closed** — HAVE and STOP/HALT targets that resolve as several
+  characters emit one order each; `stop them` therefore addresses both.
+  Tests: `tests/test_review_corrections_wave2.py::test_have_two_named_characters_both_receive_tax`,
+  `::test_stop_them_stops_both`.
 - File: `soe/parser/verbs_economy.py:196`, `soe/pronouns.py:462`
 - Defect: `Have Alan Reed and Mary Wise tax for 4 weeks` stores actor
   `alan reed and mary wise`. Lookup fails. `them` rewrites to the same
@@ -352,6 +418,9 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C21. Thousands separators in quantities
 
 - Severity: bug
+- Status: **closed** — `1,000` is collapsed to `1000` before leftover
+  commas are blanked.
+  Test: `tests/test_review_corrections_wave2.py::test_recruit_1000_soldiers_with_a_comma`.
 - File: `soe/parser/text.py:20`
 - Defect: `normalize_text` replaces every comma with a space.
   `Recruit 1,000 soldiers` becomes `recruit 1 000 soldiers` (count 1,
@@ -363,6 +432,8 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C22. `If Joe has soldiers` means any, not zero
 
 - Severity: bug
+- Status: **closed** — a countable unit with no amount is `more than 0`.
+  Test: `tests/test_review_corrections_wave2.py::test_if_joe_has_soldiers_is_true_when_he_has_at_least_one`.
 - File: `soe/parser/control.py:183`
 - Defect: A countable unit with no amount and no `any`/`some` becomes
   `comparator=exactly, amount=0` — the opposite of the English.
@@ -373,6 +444,10 @@ These make a player (or bot) issue a command the engine does not honour.
 ### C23. CLI example order filenames
 
 - Severity: bug
+- Status: **closed** — `example_setup` prints dest names
+  `player_1_turn1.txt` / `player_2_turn1.txt`, which is what
+  `process_turn` reads.
+  Test: `tests/test_review_corrections_wave2.py::test_example_setup_copy_lines_use_the_names_process_turn_reads`.
 - File: `cli.py:427`, `cli.py:259`
 - Defect: `example_setup` tells the operator to copy
   `examples/orders_player1_turn1.txt` into `games/example/orders/`.
@@ -597,8 +672,8 @@ the matching wave if you are already in the file.
 
 ## Suggested sequence
 
-1. Wave 1 (C1–C6) — do not expose the process until C1–C3 and C6 are in.
-2. Wave 2 (C7–C23) — NAME, TELEPORT/FLY, GET, `her`, THEN, TAX first.
+1. Wave 1 (C1–C6) — closed.
+2. Wave 2 (C7–C23) — closed.
 3. Wave 3 (C24–C32) — combat/fog/prisoner/finance rules.
 4. Wave 4 (C33–C37) — before the next official competence or blueprint run.
 5. Suggestions and nits opportunistically.
@@ -607,8 +682,8 @@ the matching wave if you are already in the file.
 
 | Severity | Open | Closed |
 |---|---|---|
-| bug | 31 | 6 |
+| bug | 14 | 23 |
 | suggestion | 11 | 0 |
 | nit | 4 | 0 |
 
-Wave 1 (six bugs) is closed. Waves 2–4 are the remaining 31.
+Waves 1–2 (twenty-three bugs) are closed. Waves 3–4 are the remaining 14.

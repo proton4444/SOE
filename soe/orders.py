@@ -41,6 +41,9 @@ class Order(ABC):
     # so execution re-reads the actor's real location. Default False keeps an
     # order built in code, or restored from an older save, taken at its word.
     city_implicit: bool = False
+    # True when this command was written after THEN: it must not start until
+    # the previous command has completed (the next drain pass).
+    then_after: bool = False
 
     @abstractmethod
     def order_type(self) -> str:

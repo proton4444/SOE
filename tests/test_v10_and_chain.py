@@ -279,11 +279,12 @@ def test_repeatedly_governs_only_its_own_clause(court):
 
 
 def test_skill_lists_are_not_split(court):
-    # "study magic and sailing" is one STUDY of two skills, not a chain --
-    # "sailing" is not a command verb, so the `and` stays inside the clause.
+    # "study magic and sailing" is two STUDY orders (C16); sailing is not a
+    # command verb, so the `and` used to stay inside one clause and drop it.
     orders = parse(court, "Have Mike Fenton study magic and sailing for 1 week.")
-    assert types(orders) == ["STUDY"]
-    assert not orders[0].warnings
+    assert types(orders) == ["STUDY", "STUDY"]
+    assert {o.skill_name for o in orders} == {"magic", "sailing"}
+    assert not any(o.warnings for o in orders)
 
 
 def test_city_waypoints_are_not_split(court):

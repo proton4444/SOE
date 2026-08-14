@@ -426,8 +426,8 @@ Have Khan Tengri go to Highfell.
     typer.echo("\nTo create and run the example game:")
     typer.echo("  1. soe init-game example --map maps/starter_map.json --players examples/players.yaml")
     typer.echo("  2. mkdir -p games/example/orders")
-    typer.echo("  3. cp examples/orders_player1_turn1.txt games/example/orders/")
-    typer.echo("  4. cp examples/orders_player2_turn1.txt games/example/orders/")
+    typer.echo("  3. cp examples/orders_player1_turn1.txt games/example/orders/player_1_turn1.txt")
+    typer.echo("  4. cp examples/orders_player2_turn1.txt games/example/orders/player_2_turn1.txt")
     typer.echo("  5. soe process-turn example --turn 1 --seed 42")
     typer.echo("  6. cat games/example/reports/player_1_turn1.txt")
 

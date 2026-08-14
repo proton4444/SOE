@@ -9,7 +9,7 @@ from soe.models import (
     GameState,
 )
 from soe.orders import (
-    Order, AwaitOrder,
+    Order, AwaitOrder, MoveOrder,
     RepeatOrder, HaltOrder, StopOrder, IfOrder,
 )
 from soe import config
@@ -181,7 +181,12 @@ def parse_if_condition(text: str, game_state: GameState, player_id: str) -> Opti
         power_modifier = "either"
 
     if comparator is None:
-        comparator = "exactly"
+        if amount is None:
+            # "If Joe has soldiers" means any, not exactly zero.
+            comparator = "more than"
+            amount = 0
+        else:
+            comparator = "exactly"
 
     return {
         "subject_name": subject_name,
@@ -210,7 +215,8 @@ def _parse_clause_body(text: str, game_state: GameState, player_id: str,
             if have_target:
                 clause = f"have {have_target} {clause}"
         elif prev_verb:
-            clause = f"{prev_verb} {clause}"
+            prefix = f"have {have_target} " if have_target else ""
+            clause = f"{prefix}{prev_verb} {clause}"
         order = _dispatch_clause(clause, game_state, player_id)
         verb = _leading_verb(clause)
         if verb:
@@ -221,6 +227,10 @@ def _parse_clause_body(text: str, game_state: GameState, player_id: str,
             if clause.startswith("have "):
                 order.explicit_actor = True
             orders.append(order)
+        else:
+            generic = MoveOrder(player_id=player_id, original_text=clause)
+            generic.warnings.append(f"Could not parse order: '{clause}'")
+            orders.append(generic)
     return orders
 
 def parse_await_order(sentence: str, game_state: GameState, player_id: str) -> Optional[AwaitOrder]:

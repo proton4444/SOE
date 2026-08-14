@@ -193,6 +193,56 @@ def _have_target(clause: str) -> str:
     return " ".join(taken)
 
 
+_STUDY_SKILLS = ("combat", "magic", "religion", "sailing")
+
+
+def _split_have_actors(have_target: str, game_state: GameState,
+                       player_id: str) -> list[str]:
+    """Split a HAVE target on `and` when each part is a real character."""
+    from soe.parser.resolve import resolve_character
+    parts = [p.strip() for p in re.split(r'\s+and\s+', have_target) if p.strip()]
+    if len(parts) < 2:
+        return [have_target] if have_target else []
+    names: list[str] = []
+    for part in parts:
+        if not resolve_character(part, game_state, player_id).found:
+            return [have_target]
+        names.append(part)
+    return names
+
+
+def _expand_multi_actor_clause(clause: str, game_state: GameState,
+                               player_id: str) -> list[str]:
+    """One HAVE/STOP clause naming several people becomes one clause each."""
+    if clause.startswith("have "):
+        target = _have_target(clause)
+        actors = _split_have_actors(target, game_state, player_id)
+        if len(actors) > 1:
+            rest = clause[len("have ") + len(target):].lstrip()
+            return [f"have {actor} {rest}" for actor in actors]
+    halt = re.match(r'(immediately\s+)?(halt|stop)\s+(.+)$', clause)
+    if halt:
+        actors = _split_have_actors(halt.group(3).strip(), game_state, player_id)
+        if len(actors) > 1:
+            prefix = f"{halt.group(1) or ''}{halt.group(2)}"
+            return [f"{prefix} {actor}" for actor in actors]
+    return [clause]
+
+
+def _expand_study_skills(clause: str) -> list[str]:
+    """`study magic and sailing` is two STUDY commands, not one silent drop."""
+    skills = "|".join(_STUDY_SKILLS)
+    match = re.search(
+        rf'^((?:have\s+.+?\s+)?)study\s+({skills})\s+and\s+({skills})\b(.*)$',
+        clause,
+    )
+    if not match:
+        return [clause]
+    prefix, first, second, rest = match.groups()
+    return [f"{prefix}study {first}{rest}".strip(),
+            f"{prefix}study {second}{rest}".strip()]
+
+
 def _replicate_target(prefix: str, remainder: str, elided_verb: str,
                       game_state: GameState, player_id: str) -> Optional[str]:
     """
@@ -261,7 +311,7 @@ def split_clauses(sentence: str, game_state: GameState,
     start = 0
     prev_verb = ""
 
-    for match in re.finditer(r"\s+and\s+", sentence):
+    for match in re.finditer(r"\s+(?:and|then)\s+", sentence):
         prefix = sentence[start:match.start()].strip()
         if not prefix:
             continue
@@ -271,7 +321,13 @@ def split_clauses(sentence: str, game_state: GameState,
 
         if _clause_complete(prefix, prev_verb, game_state, player_id):
             clauses.append(prefix)
-            start = match.end()
+            # Leave a bare `then` on the next clause so parse_orders can mark
+            # it as a THEN barrier. `and then` already lands that way because
+            # the match is `and` and the tail starts with `then`.
+            if match.group(0).strip() == "then":
+                start = sentence.find("then", match.start())
+            else:
+                start = match.end()
             verb = _leading_verb(prefix)
             if verb:
                 prev_verb = verb
@@ -716,14 +772,15 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
         prev_verb = ""
         sentence_silent = False
 
-        for clause in clauses:
-            clause = clause.strip()
+        for raw_clause in clauses:
+            clause = raw_clause.strip()
             if not clause:
                 continue
 
             # `then` sequencing ("wait for 2 weeks and then go to Salem") is
-            # a clause boundary; the queue behind a wait already holds the
-            # rest, so the marker itself can go.
+            # a clause boundary. The second command waits until the first
+            # has completed, so the marker is recorded, not discarded.
+            then_after = bool(re.match(r'^then\s+', clause))
             clause = re.sub(r'^then\s+', '', clause)
 
             if clause.startswith("have "):
@@ -742,47 +799,55 @@ def parse_orders(raw_text: str, game_state: GameState, player_id: str) -> list[O
                     prefix = f"have {have_target} " if have_target else ""
                     clause = f"{prefix}{prev_verb} {clause}"
 
-            clause_original = clause
-            quiet_clause = bool(re.search(r'\bquietly\b', clause))
-            if re.search(r'\bsilently\b', clause):
-                sentence_silent = True
-            clause, repeat_times = strip_repeatedly(clause)
+            expanded = []
+            for actor_clause in _expand_multi_actor_clause(
+                    clause, game_state, player_id):
+                expanded.extend(_expand_study_skills(actor_clause))
 
-            order = _dispatch_clause(clause, game_state, player_id)
-            verb = _leading_verb(clause_original)
-            if verb:
-                prev_verb = verb
+            for clause in expanded:
+                clause_original = clause
+                quiet_clause = bool(re.search(r'\bquietly\b', clause))
+                if re.search(r'\bsilently\b', clause):
+                    sentence_silent = True
+                clause, repeat_times = strip_repeatedly(clause)
 
-            if order:
-                # Information commands must always report their requested
-                # result even when they follow SILENTLY in the same sentence.
-                informational = {"REPORT", "INTERROGATE", "PROBE", "MESSAGE", "SCAN"}
-                order.silent = ((sentence_silent or quiet_clause)
-                                and order.order_type() not in informational)
-                # the design's HAVE form delegates to a named character, and
-                # that makes them a group leader. Not every parser routes
-                # through resolve_actor, so the delegation is recognised
-                # centrally here.
-                if HAVE_PREFIX.match(clause_original):
-                    order.explicit_actor = True
+                order = _dispatch_clause(clause, game_state, player_id)
+                verb = _leading_verb(clause_original)
+                if verb:
+                    prev_verb = verb
 
-                if repeat_times is not None:
-                    # The loop marker takes the same actor as the command it
-                    # governs, so the two can never drift apart.
-                    orders.append(RepeatOrder(
-                        player_id=player_id,
-                        original_text=clause_original,
-                        actor_id=getattr(order, 'actor_id', ''),
-                        times=repeat_times,
-                    ))
-                orders.append(order)
-            else:
-                # Unparseable order - create placeholder with warning
-                generic_order = MoveOrder(
-                    player_id=player_id, original_text=clause)
-                generic_order.warnings.append(
-                    f"Could not parse order: '{clause}'")
-                orders.append(generic_order)
+                if order:
+                    # Information commands must always report their requested
+                    # result even when they follow SILENTLY in the same sentence.
+                    informational = {"REPORT", "INTERROGATE", "PROBE", "MESSAGE", "SCAN"}
+                    order.silent = ((sentence_silent or quiet_clause)
+                                    and order.order_type() not in informational)
+                    # the design's HAVE form delegates to a named character, and
+                    # that makes them a group leader. Not every parser routes
+                    # through resolve_actor, so the delegation is recognised
+                    # centrally here.
+                    if HAVE_PREFIX.match(clause_original):
+                        order.explicit_actor = True
+                    order.then_after = then_after
+
+                    if repeat_times is not None:
+                        # The loop marker takes the same actor as the command it
+                        # governs, so the two can never drift apart.
+                        orders.append(RepeatOrder(
+                            player_id=player_id,
+                            original_text=clause_original,
+                            actor_id=getattr(order, 'actor_id', ''),
+                            times=repeat_times,
+                        ))
+                    orders.append(order)
+                else:
+                    # Unparseable order - create placeholder with warning
+                    generic_order = MoveOrder(
+                        player_id=player_id, original_text=clause)
+                    generic_order.warnings.append(
+                        f"Could not parse order: '{clause}'")
+                    generic_order.then_after = then_after
+                    orders.append(generic_order)
 
         if if_tail:
             if_order = parse_if_order(if_tail, game_state, player_id)

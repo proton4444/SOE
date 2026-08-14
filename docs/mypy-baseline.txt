@@ -1,10 +1,22 @@
 SOE mypy baseline
 ==============================
 
-Baseline error count: 589
+Baseline error count: 102
 
 Reproduce with:
     mypy soe webapp cli.py --no-incremental
 
 The baseline is a count gate for the controlled beta. New code must not increase
 the count. This is intentionally not a repository-wide cleanup target.
+
+History:
+    589  first baseline
+    102  2026-08-14, closing Wave 2. `OrderParserBase.create_order` and
+         `add_warning` are generic over the order subclass, so a parser that
+         declares `Optional[NameOrder]` is checked against `NameOrder` instead
+         of the abstract base. That removed ~500 attr-defined and return-value
+         errors at once and turned the parser's order fields into real checks.
+         `actor_id` lives on the subclasses, not on `Order`: TEACH and SUMMON
+         name their actor `teacher_id` / `summoner_id` and now read the leader
+         through `resolve_leader_id` instead of writing a scratch `actor_id`
+         that nothing executes.

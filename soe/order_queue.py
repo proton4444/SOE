@@ -328,6 +328,7 @@ def _drain_actor(actor: Character, queue: List[QueueEntry],
                  released: Dict[str, List[Order]],
                  time_budget: TurnTimeBudget) -> None:
     """Pop entries for one character until the queue blocks or empties."""
+    released_this_pass = False
     for _ in range(_MAX_DRAIN_PER_ACTOR):
         if not queue:
             return
@@ -406,6 +407,9 @@ def _drain_actor(actor: Character, queue: List[QueueEntry],
                          character_id=actor.id)
             return  # the next pass belongs to the next turn
 
+        if getattr(order, "then_after", False) and released_this_pass:
+            return
+
         duration_days = max(0, int(getattr(order, "duration_days", 0)))
         if duration_days:
             used = time_budget.days_used.get(actor.id, 0)
@@ -438,6 +442,7 @@ def _drain_actor(actor: Character, queue: List[QueueEntry],
 
         queue.pop(0)
         _release(released, order)
+        released_this_pass = True
 
 
 def _resolve_wait(actor: Character, entry: QueueEntry, order: AwaitOrder,

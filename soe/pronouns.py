@@ -41,6 +41,17 @@ from typing import Optional
 from soe.models import Character, GameState
 
 
+_POSSESSIVE_AFTER_HER = re.compile(
+    r"\s+(gold|soldiers?|sailors?|workers?|slaves?|horses?|units?|items?|"
+    r"wood|stone|iron|copper|silver|gems?|group|purse|troops?)\b"
+)
+
+
+def _is_independent_npc(char: Character, game_state: GameState) -> bool:
+    faction = game_state.factions.get(char.faction_id)
+    return bool(faction and faction.is_npc)
+
+
 # `I` is included even though orders are lowercased before this runs.
 LEADER_PRONOUNS = ("i", "me", "you")
 REFLEXIVE_PRONOUNS = ("myself", "yourself", "himself", "herself",
@@ -137,7 +148,7 @@ def _leading_character(text: str, game_state: GameState,
     "Alan Reed" must not race.
     """
     candidates = [c for c in game_state.characters.values()
-                  if c.faction_id == player_id]
+                  if c.faction_id == player_id or _is_independent_npc(c, game_state)]
     for char in sorted(candidates, key=lambda c: -len(c.name)):
         if text.startswith(char.name.lower()):
             return char
@@ -257,6 +268,10 @@ def _resolve_him_her(sentence: str, context: ReferentContext,
         while mentions and mentions[0][0] < match.start():
             _, gender, name = mentions.pop(0)
             remember(gender, name)
+
+        # Possessive `her gold` / `her soldiers` is not the object pronoun.
+        if match.group(0) == "her" and _POSSESSIVE_AFTER_HER.match(sentence[match.end():]):
+            continue
 
         have_position = bool(re.search(r"\bhave\s+$", sentence[:match.start()]))
         barred = (leader,) if have_position else (agent_name, leader)

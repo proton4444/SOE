@@ -16,6 +16,13 @@ def normalize_text(text: str) -> str:
     """Normalize text for parsing (lowercase, clean whitespace)."""
     # Remove comments (# to end of line)
     text = re.sub(r'#.*?$', '', text, flags=re.MULTILINE)
+    # Thousands separators stay attached to the number ("1,000" → "1000")
+    # before leftover commas are blanked.
+    while True:
+        stripped = re.sub(r'(\d),(\d{3})\b', r'\1\2', text)
+        if stripped == text:
+            break
+        text = stripped
     # Remove commas, colons, semicolons (rules say they're ignored)
     text = text.replace(',', ' ').replace(':', ' ').replace(';', ' ')
     # Normalize whitespace
@@ -83,6 +90,10 @@ def restore_order_quotes(order: Order, quoted: list[str]) -> None:
         value = getattr(order, f.name, None)
         if isinstance(value, str) and "zqz" in value:
             setattr(order, f.name, restore_quotes(value, quoted))
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, Order):
+                    restore_order_quotes(item, quoted)
 
 
 def strip_wand(sentence: str, game_state: GameState) -> tuple[str, str]:

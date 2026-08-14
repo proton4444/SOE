@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Optional, Type
+from typing import Optional, Type, TypeVar
 from dataclasses import dataclass
 
 from soe.models import GameState, Character, TITLE_WORDS
 from soe.orders import MoveOrder, Order
 from soe.fog import parse_position_prefix
+
+#: Preserves the concrete order subclass through ``create_order`` and
+#: ``add_warning``, so a parser that returns ``Optional[NameOrder]`` keeps
+#: seeing a ``NameOrder`` and its fields.
+OrderT = TypeVar('OrderT', bound=Order)
 
 
 @dataclass
@@ -169,11 +174,11 @@ class OrderParserBase:
         self.player_id = player_id
         self.original_text = original_text
 
-    def create_order(self, order_class: Type[Order]) -> Order:
+    def create_order(self, order_class: Type[OrderT]) -> OrderT:
         """Create an order instance with base attributes."""
         return order_class(player_id=self.player_id, original_text=self.original_text)
 
-    def add_warning(self, order: Order, message: str) -> Order:
+    def add_warning(self, order: OrderT, message: str) -> OrderT:
         """Add a warning to an order."""
         order.warnings.append(message)
         return order
@@ -203,6 +208,22 @@ class OrderParserBase:
             order.actor_id = leader.id
 
         return True
+
+    def resolve_leader_id(self, order: Order) -> Optional[str]:
+        """
+        Return the faction leader's id, warning on the order if there is none.
+
+        For orders that name their actor with a field of their own --
+        ``teacher_id``, ``summoner_id`` -- instead of ``actor_id``.
+
+        Returns:
+            The leader's character ID, or None if the faction has no leader
+        """
+        leader = get_player_leader(self.game_state, self.player_id)
+        if not leader:
+            self.add_warning(order, "No leader character found")
+            return None
+        return leader.id
 
     def resolve_location(self, order: Order, city_name: Optional[str],
                         use_actor_location: bool = True) -> bool:

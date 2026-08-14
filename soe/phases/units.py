@@ -530,6 +530,27 @@ def process_assign(orders_by_player: Dict[str, List[Order]], game_state: GameSta
                             character_id=donor.id)
 
 
+def _nameable_stack(actor, unit_type: str, player_id: str, game_state: GameState):
+    """A stack of `unit_type` in the actor's group at their city, or None."""
+    city = actor.location_city_id
+    members = groups.member_ids(actor, game_state)
+    owned = unowned = group_owned = None
+    for stack in game_state.unit_stacks.values():
+        if (stack.faction_id != player_id
+                or stack.unit_type.name != unit_type
+                or stack.count <= 0
+                or stack.location_city_id != city):
+            continue
+        if stack.owner_character_id == actor.id:
+            owned = stack
+            break
+        if not stack.owner_character_id and unowned is None:
+            unowned = stack
+        elif stack.owner_character_id in members and group_owned is None:
+            group_owned = stack
+    return owned or unowned or group_owned
+
+
 def process_name(orders_by_player: Dict[str, List[Order]], game_state: GameState, turn_log: TurnLog):
     """Process NAME orders to convert units to named characters."""
     for player_id, orders in orders_by_player.items():
@@ -544,18 +565,18 @@ def process_name(orders_by_player: Dict[str, List[Order]], game_state: GameState
             if not faction:
                 continue
 
-            # Find a unit stack of the specified type for this faction
-            unit_stack = None
-            for stack in game_state.unit_stacks.values():
-                if (stack.faction_id == player_id and
-                    stack.unit_type.name == order.unit_type and
-                    stack.count > 0):
-                    unit_stack = stack
-                    break
+            actor = game_state.characters.get(order.actor_id)
+            if not actor:
+                turn_log.add("name", player_id, "name_failed",
+                            "No actor to name a unit",
+                            success=False)
+                continue
 
+            unit_stack = _nameable_stack(actor, order.unit_type, player_id, game_state)
             if not unit_stack:
                 turn_log.add("name", player_id, "name_failed",
-                            f"No {order.unit_type.lower()}s available to name",
+                            f"No {order.unit_type.lower()}s available to name "
+                            f"at {actor.name}'s location",
                             success=False)
                 continue
 

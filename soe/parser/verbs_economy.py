@@ -191,11 +191,10 @@ def parse_tax_order(sentence: str, game_state: GameState, player_id: str) -> Opt
             # 12 daylight hours per day
             duration_days = max(1, amount // 12)
 
-    # Pattern: "have <actor> tax..."
-    # Example: "have Captain Jones tax for 2 weeks"
-    match = re.search(r'have\s+(.+?)\s+tax', sentence)
-    if match:
-        actor_name = match.group(1).strip()
+    # TAX is the command verb (HAVE or leading), not a substring of taxman.
+    have_tax = re.search(r'have\s+(.+?)\s+\btax\b', sentence)
+    if have_tax:
+        actor_name = have_tax.group(1).strip()
         actor_resolved = resolve_character(actor_name, game_state, player_id)
         if not actor_resolved.found:
             parser.add_warning(order, f"Actor '{actor_name}' not found")
@@ -204,9 +203,7 @@ def parse_tax_order(sentence: str, game_state: GameState, player_id: str) -> Opt
         order.duration_days = duration_days
         return order
 
-    # Pattern: "tax" (implicit actor - use faction leader)
-    if 'tax' in sentence:
-        # Use faction leader as implicit actor
+    if re.search(r'^\s*tax\b', sentence):
         if not parser.resolve_actor(order, None):
             return order
         order.duration_days = duration_days
@@ -226,12 +223,18 @@ def parse_collect_order(sentence: str, game_state: GameState, player_id: str) ->
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(CollectOrder)
 
-    # Pattern: "have <actor> collect/gather <resource> [for <duration>]"
-    match = re.search(r'have\s+(.+?)\s+(?:collect|gather)\s+(wood|stone)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    # Pattern: "have <actor> collect/gather [count] <resource> [for <duration>]"
+    match = re.search(
+        r'have\s+(.+?)\s+(?:collect|gather)\s+(?:(\d+)\s+)?(wood|stone)',
+        sentence, re.IGNORECASE,
+    )
     if match:
         actor_name = match.group(1).strip()
-        resource = match.group(2).strip().lower()
-        duration = int(match.group(3)) if match.group(3) else 7
+        count = int(match.group(2)) if match.group(2) else 0
+        resource = match.group(3).strip().lower()
+        duration = parse_duration_days(sentence)
+        if duration is None:
+            duration = 7
 
         actor_resolved = resolve_character(actor_name, game_state, player_id)
         if not actor_resolved.found:
@@ -241,19 +244,29 @@ def parse_collect_order(sentence: str, game_state: GameState, player_id: str) ->
         order.actor_id = actor_resolved.entity_id
         order.resource_type = resource
         order.duration_days = duration
+        if count:
+            order.target_amount = count
         return order
 
-    # Pattern: "collect/gather <resource> [for <duration>]" (implicit actor)
-    match = re.search(r'(?:collect|gather)\s+(wood|stone)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    # Pattern: "collect/gather [count] <resource> [for <duration>]" (implicit actor)
+    match = re.search(
+        r'(?:collect|gather)\s+(?:(\d+)\s+)?(wood|stone)',
+        sentence, re.IGNORECASE,
+    )
     if match:
-        resource = match.group(1).strip().lower()
-        duration = int(match.group(2)) if match.group(2) else 7
+        count = int(match.group(1)) if match.group(1) else 0
+        resource = match.group(2).strip().lower()
+        duration = parse_duration_days(sentence)
+        if duration is None:
+            duration = 7
 
         if not parser.resolve_actor(order, None):
             return order
 
         order.resource_type = resource
         order.duration_days = duration
+        if count:
+            order.target_amount = count
         return order
 
     return None
@@ -325,11 +338,13 @@ def parse_mine_order(sentence: str, game_state: GameState, player_id: str) -> Op
     order = parser.create_order(MineOrder)
 
     # Pattern: "have <actor> mine <resource> [for <duration>]"
-    match = re.search(r'have\s+(.+?)\s+mine\s+(iron|gold|silver|copper|gems)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    match = re.search(r'have\s+(.+?)\s+mine\s+(iron|gold|silver|copper|gems)', sentence, re.IGNORECASE)
     if match:
         actor_name = match.group(1).strip()
         resource = match.group(2).strip().lower()
-        duration = int(match.group(3)) if match.group(3) else 7
+        duration = parse_duration_days(sentence)
+        if duration is None:
+            duration = 7
 
         actor_resolved = resolve_character(actor_name, game_state, player_id)
         if not actor_resolved.found:
@@ -342,10 +357,12 @@ def parse_mine_order(sentence: str, game_state: GameState, player_id: str) -> Op
         return order
 
     # Pattern: "mine <resource> [for <duration>]" (implicit actor)
-    match = re.search(r'mine\s+(iron|gold|silver|copper|gems)(?:\s+for\s+(\d+))?', sentence, re.IGNORECASE)
+    match = re.search(r'mine\s+(iron|gold|silver|copper|gems)', sentence, re.IGNORECASE)
     if match:
         resource = match.group(1).strip().lower()
-        duration = int(match.group(2)) if match.group(2) else 7
+        duration = parse_duration_days(sentence)
+        if duration is None:
+            duration = 7
 
         if not parser.resolve_actor(order, None):
             return order

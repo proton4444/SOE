@@ -17,8 +17,9 @@ from soe.orders import (
 )
 from soe import items
 from soe.parser.text import (
-    strip_wand,
+    strip_wand, parse_duration_days,
 )
+import math
 from soe.parser.resolve import (
     resolve_character, resolve_city, OrderParserBase,
 )
@@ -106,17 +107,25 @@ def parse_bless_order(sentence: str, game_state: GameState, player_id: str) -> O
         actor_name = match.group(1).strip()
         if not parser.resolve_actor(order, actor_name):
             return order
-        city_resolved = resolve_city(match.group(2).strip(), game_state)
-        if city_resolved.found:
-            order.city_id = city_resolved.entity_id
+        city_name = match.group(2).strip()
+        if city_name:
+            city_resolved = resolve_city(city_name, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+            else:
+                parser.add_warning(order, f"City '{city_name}' not found")
         return order
 
     if re.search(r'^bless\s', sentence):
         if not parser.resolve_actor(order, None):
             return order
-        city_resolved = resolve_city(sentence.replace('bless', '').strip(), game_state)
-        if city_resolved.found:
-            order.city_id = city_resolved.entity_id
+        city_name = sentence.replace('bless', '').strip()
+        if city_name:
+            city_resolved = resolve_city(city_name, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+            else:
+                parser.add_warning(order, f"City '{city_name}' not found")
         return order
 
     return None
@@ -132,17 +141,25 @@ def parse_curse_order(sentence: str, game_state: GameState, player_id: str) -> O
         actor_name = match.group(1).strip()
         if not parser.resolve_actor(order, actor_name):
             return order
-        city_resolved = resolve_city(match.group(2).strip(), game_state)
-        if city_resolved.found:
-            order.city_id = city_resolved.entity_id
+        city_name = match.group(2).strip()
+        if city_name:
+            city_resolved = resolve_city(city_name, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+            else:
+                parser.add_warning(order, f"City '{city_name}' not found")
         return order
 
     if re.search(r'^curse\s', sentence):
         if not parser.resolve_actor(order, None):
             return order
-        city_resolved = resolve_city(sentence.replace('curse', '').strip(), game_state)
-        if city_resolved.found:
-            order.city_id = city_resolved.entity_id
+        city_name = sentence.replace('curse', '').strip()
+        if city_name:
+            city_resolved = resolve_city(city_name, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+            else:
+                parser.add_warning(order, f"City '{city_name}' not found")
         return order
 
     return None
@@ -179,13 +196,18 @@ def parse_study_order(sentence: str, game_state: GameState, player_id: str) -> O
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(StudyOrder)
 
+    duration_days = parse_duration_days(sentence)
+    if duration_days is not None:
+        duration_weeks = max(1, math.ceil(duration_days / 7))
+    else:
+        duration_weeks = 1
+
     # Pattern: "have <actor> study <skill> [for <duration>] [to <level>]"
-    match = re.search(r'have\s+(.+?)\s+study\s+(combat|magic|religion|sailing)(?:\s+for\s+(\d+))?(?:\s+to\s+(?:level\s+)?(\d+))?', sentence, re.IGNORECASE)
+    match = re.search(r'have\s+(.+?)\s+study\s+(combat|magic|religion|sailing)(?:\s+to\s+(?:level\s+)?(\d+))?', sentence, re.IGNORECASE)
     if match:
         actor_name = match.group(1).strip()
         skill = match.group(2).strip().lower()
-        duration = int(match.group(3)) if match.group(3) else 1
-        target_level = int(match.group(4)) if match.group(4) else 0
+        target_level = int(match.group(3)) if match.group(3) else 0
 
         actor_resolved = resolve_character(actor_name, game_state, player_id)
         if not actor_resolved.found:
@@ -194,22 +216,21 @@ def parse_study_order(sentence: str, game_state: GameState, player_id: str) -> O
 
         order.actor_id = actor_resolved.entity_id
         order.skill_name = skill
-        order.duration_weeks = duration
+        order.duration_weeks = duration_weeks
         order.target_level = target_level
         return order
 
     # Pattern: "study <skill> [for <duration>] [to <level>]" (implicit actor)
-    match = re.search(r'study\s+(combat|magic|religion|sailing)(?:\s+for\s+(\d+))?(?:\s+to\s+(?:level\s+)?(\d+))?', sentence, re.IGNORECASE)
+    match = re.search(r'study\s+(combat|magic|religion|sailing)(?:\s+to\s+(?:level\s+)?(\d+))?', sentence, re.IGNORECASE)
     if match:
         skill = match.group(1).strip().lower()
-        duration = int(match.group(2)) if match.group(2) else 1
-        target_level = int(match.group(3)) if match.group(3) else 0
+        target_level = int(match.group(2)) if match.group(2) else 0
 
         if not parser.resolve_actor(order, None):
             return order
 
         order.skill_name = skill
-        order.duration_weeks = duration
+        order.duration_weeks = duration_weeks
         order.target_level = target_level
         return order
 
@@ -253,6 +274,29 @@ def parse_teach_order(sentence: str, game_state: GameState, player_id: str) -> O
         order.student_id = student_resolved.entity_id
         order.skill_name = skill
         order.duration_weeks = duration
+        order.target_level = target_level
+        return order
+
+    # Implicit-leader: "Teach Mike magic to level 10"
+    match = re.search(
+        r'^teach\s+(.+?)\s+(combat|magic|religion|sailing)(?:\s+to\s+(?:level\s+)?(\d+))?',
+        sentence, re.IGNORECASE,
+    )
+    if match:
+        student_name = re.sub(r'[.,;!?]+$', '', match.group(1).strip())
+        skill = match.group(2).strip().lower()
+        target_level = int(match.group(3)) if match.group(3) else 0
+        leader_id = parser.resolve_leader_id(order)
+        if leader_id is None:
+            return order
+        student_resolved = resolve_character(student_name, game_state, player_id)
+        if not student_resolved.found:
+            parser.add_warning(order, f"Student '{student_name}' not found")
+            return order
+        order.teacher_id = leader_id
+        order.student_id = student_resolved.entity_id
+        order.skill_name = skill
+        order.duration_weeks = 1
         order.target_level = target_level
         return order
 
@@ -310,10 +354,11 @@ def parse_summon_order(sentence: str, game_state: GameState, player_id: str) -> 
     if match:
         creatures_part = match.group(1).strip()
 
-        if not parser.resolve_actor(order, None):
+        leader_id = parser.resolve_leader_id(order)
+        if leader_id is None:
             return order
 
-        order.summoner_id = order.actor_id  # Use the resolved actor as summoner
+        order.summoner_id = leader_id  # Use the resolved leader as summoner
 
         # Parse creature list
         creature_phrases = [p.strip() for p in re.split(r'\s+and\s+', creatures_part, flags=re.IGNORECASE)]
@@ -342,17 +387,25 @@ def parse_scry_order(sentence: str, game_state: GameState, player_id: str) -> Op
         actor_name = match.group(1).strip()
         if not parser.resolve_actor(order, actor_name):
             return order
-        city_resolved = resolve_city(match.group(2).strip(), game_state)
-        if city_resolved.found:
-            order.city_id = city_resolved.entity_id
+        city_name = match.group(2).strip()
+        if city_name:
+            city_resolved = resolve_city(city_name, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+            else:
+                parser.add_warning(order, f"City '{city_name}' not found")
         return order
 
     match = re.search(r'^scry\s+(.*)', sentence)
     if match:
         parser.resolve_actor(order, None)
-        city_resolved = resolve_city(match.group(1).strip(), game_state)
-        if city_resolved.found:
-            order.city_id = city_resolved.entity_id
+        city_name = match.group(1).strip()
+        if city_name:
+            city_resolved = resolve_city(city_name, game_state)
+            if city_resolved.found:
+                order.city_id = city_resolved.entity_id
+            else:
+                parser.add_warning(order, f"City '{city_name}' not found")
         return order
 
     return None

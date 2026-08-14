@@ -258,44 +258,39 @@ def parse_name_order(sentence: str, game_state: GameState, player_id: str) -> Op
     Examples:
         - "Name male soldier Joe Henley"
         - "name female sailor Donna Majesti"
-        - "Have Jema Kendi recruit 1 sailor and name female sailor Donna Majesti"
+        - "Have Jema Kendi name female sailor Donna Majesti"
     """
     parser = OrderParserBase(game_state, player_id, sentence)
     order = parser.create_order(NameOrder)
 
-    # Pattern: "name <gender> <unit_type> <name>"
-    # Example: "name male soldier Joe Henley"
-    match = re.search(r'name\s+(male|female)\s+(soldier|sailor|worker)\s+(.+)', sentence, re.IGNORECASE)
-    if match:
-        gender = match.group(1).strip().lower()
-        unit_type = match.group(2).strip().lower()
-        new_name = match.group(3).strip()
+    match = re.search(
+        r'(?:have\s+(.+?)\s+)?name\s+(male|female)\s+(soldier|sailor|worker)\s+(.+)',
+        sentence, re.IGNORECASE,
+    )
+    if not match:
+        return None
 
-        # Remove punctuation at the end if any
-        new_name = re.sub(r'[.,;!?]+$', '', new_name)
+    actor_name = match.group(1).strip() if match.group(1) else None
+    if not parser.resolve_actor(order, actor_name):
+        return order
 
-        # Validate name length (8-32 chars)
-        if len(new_name) < 8:
-            # Pad with random characters
-            import random
-            while len(new_name) < 8:
-                new_name += chr(random.randint(97, 122))  # a-z
-            parser.add_warning(order, f"Name too short, padded to: {new_name}")
-        elif len(new_name) > 32:
-            # Truncate
-            new_name = new_name[:32]
-            parser.add_warning(order, f"Name too long, truncated to: {new_name}")
+    gender = match.group(2).strip().lower()
+    unit_type = match.group(3).strip().lower()
+    new_name = re.sub(r'[.,;!?]+$', '', match.group(4).strip())
 
-        # Find the group leader (actor is implicit - the faction's leader at some location)
-        # For simplicity, we'll use the player_id as actor and resolve in engine
-        order.actor_id = player_id
+    if len(new_name) < 8:
+        parser.add_warning(order, f"Name too short: '{new_name}' (minimum 8 characters)")
         order.unit_type = unit_type.upper()
         order.gender = gender
         order.new_name = new_name
-
         return order
+    if len(new_name) > 32:
+        new_name = new_name[:32]
 
-    return None
+    order.unit_type = unit_type.upper()
+    order.gender = gender
+    order.new_name = new_name
+    return order
 
 
 def parse_promote_order(sentence: str, game_state: GameState, player_id: str) -> Optional[PromoteOrder]:

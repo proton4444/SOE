@@ -15,7 +15,7 @@ from soe.orders import (
     SummonOrder, PrayOrder, BlessOrder, CurseOrder, ResurrectOrder,
     ScryOrder, ConjureOrder, ChargeOrder, AbsorbOrder,
 )
-from soe import config, encumbrance, items
+from soe import config, encumbrance, groups, items
 from soe.turn_log import TurnLog
 from soe.phases.common import allocate_id
 
@@ -55,8 +55,9 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                                 character_id=wizard.id, success=False)
                     continue
 
-                # Teleport target
+                # Teleport the priced group, not just the named character.
                 old_city = game_state.world_map.cities[target.location_city_id]
+                groups.move_group(target, order.destination_city_id, game_state)
                 target.location_city_id = order.destination_city_id
 
                 turn_log.add("magic", player_id, "teleport",
@@ -89,8 +90,9 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                                 character_id=wizard.id, success=False)
                     continue
 
-                # Fly the wizard
+                # Fly the priced group, not just the wizard.
                 old_city = game_state.world_map.cities[wizard.location_city_id]
+                groups.move_group(wizard, order.destination_city_id, game_state)
                 wizard.location_city_id = order.destination_city_id
 
                 turn_log.add("magic", player_id, "fly",
@@ -154,6 +156,8 @@ def process_magic(orders_by_player: Dict[str, List[Order]], game_state: GameStat
                                 location=healer.location_city_id, character_id=healer.id)
 
             elif isinstance(order, ScryOrder):
+                if order.warnings:
+                    continue
                 seer = game_state.characters.get(order.actor_id)
                 target_city = game_state.world_map.cities.get(order.city_id)
                 if not seer or not target_city:
@@ -249,6 +253,8 @@ def process_religion(orders_by_player: Dict[str, List[Order]], game_state: GameS
                             character_id=priest.id)
 
             elif isinstance(order, BlessOrder):
+                if order.warnings:
+                    continue
                 priest = game_state.characters.get(order.actor_id)
                 if not priest or priest.religion_skill <= 0:
                     continue
@@ -260,6 +266,8 @@ def process_religion(orders_by_player: Dict[str, List[Order]], game_state: GameS
                             location=city_id, character_id=priest.id)
 
             elif isinstance(order, CurseOrder):
+                if order.warnings:
+                    continue
                 priest = game_state.characters.get(order.actor_id)
                 if not priest or priest.religion_skill <= 0:
                     continue

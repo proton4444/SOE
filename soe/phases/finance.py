@@ -41,9 +41,15 @@ def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                             character_id=recipient.id, success=False)
                 continue
 
-            # Character-join form: no gold/units/resources — just co-locate
+            # Character-join form: no gold/units/resources — attach the donor.
             if (order.gold_amount <= 0 and order.unit_count <= 0
                     and not order.resources):
+                refusal = groups.attach(donor, recipient, game_state)
+                if refusal:
+                    turn_log.add("get", player_id, "get_failed",
+                                f"{donor.name} could not join {recipient.name}: {refusal}",
+                                character_id=recipient.id, success=False)
+                    continue
                 turn_log.add("get", player_id, "get_join",
                             f"{donor.name} joined {recipient.name}",
                             character_id=recipient.id)
@@ -80,13 +86,23 @@ def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                             character_id=recipient.id)
 
             if order.unit_count > 0 and order.unit_type:
-                donor_stack = next(
-                    (s for s in game_state.unit_stacks.values()
-                     if s.faction_id == donor.faction_id
-                     and s.location_city_id == donor.location_city_id
-                     and s.unit_type.name == order.unit_type),
-                    None,
-                )
+                # Donor-owned first, then the unowned local pool — same as ASSIGN.
+                donor_stack = None
+                for stack in game_state.unit_stacks.values():
+                    if (stack.faction_id == donor.faction_id
+                            and stack.location_city_id == donor.location_city_id
+                            and stack.unit_type.name == order.unit_type
+                            and stack.owner_character_id == donor.id):
+                        donor_stack = stack
+                        break
+                if donor_stack is None or donor_stack.count < order.unit_count:
+                    for stack in game_state.unit_stacks.values():
+                        if (stack.faction_id == donor.faction_id
+                                and stack.location_city_id == donor.location_city_id
+                                and stack.unit_type.name == order.unit_type
+                                and not stack.owner_character_id):
+                            donor_stack = stack
+                            break
                 if not donor_stack or donor_stack.count < order.unit_count:
                     turn_log.add("get", player_id, "get_failed",
                                 f"{recipient.name}: not enough {order.unit_type.lower()}s to take",
@@ -97,7 +113,8 @@ def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                     (s for s in game_state.unit_stacks.values()
                      if s.faction_id == recipient.faction_id
                      and s.location_city_id == recipient.location_city_id
-                     and s.unit_type.name == order.unit_type),
+                     and s.unit_type.name == order.unit_type
+                     and s.owner_character_id == recipient.id),
                     None,
                 )
                 if recip_stack:
@@ -110,6 +127,7 @@ def process_get(orders_by_player: Dict[str, List[Order]], game_state: GameState,
                         location_city_id=recipient.location_city_id,
                         unit_type=UnitType[order.unit_type],
                         count=order.unit_count,
+                        owner_character_id=recipient.id,
                     )
                 if donor_stack.count <= 0:
                     del game_state.unit_stacks[donor_stack.id]
