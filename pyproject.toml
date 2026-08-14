@@ -62,6 +62,14 @@ python_functions = "test_*"
 # Ignore generated build artifacts so `mypy .` is reproducible from a checkout.
 exclude = '(^|/)(build|dist|\.venv|venv)/'
 
+# The baseline gate measures `mypy soe webapp cli.py`. `webapp.training` hands a
+# run to `scripts.arena`, and following that import would drag the whole
+# operator-tooling tree into a count that does not claim to cover it. Skipped
+# when reached as an import; still checked when named on the command line.
+[[tool.mypy.overrides]]
+module = "scripts.*"
+follow_imports = "skip"
+
 [tool.setuptools]
 py-modules = ["cli"]
 

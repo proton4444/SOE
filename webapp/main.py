@@ -19,6 +19,7 @@ from typing import Optional
 from urllib.parse import quote
 
 from fastapi import (
+    BackgroundTasks,
     FastAPI,
     Form,
     HTTPException,
@@ -31,7 +32,7 @@ from fastapi.templating import Jinja2Templates
 
 from soe import __version__, map_loader
 
-from webapp import backups, blueprints, coaches, mapimg, mapview, service
+from webapp import backups, blueprints, coaches, mapimg, mapview, service, training
 from webapp.ai import autoplay, brain, orchestrator
 from webapp.ai.registry import AgentProfile, default_registry
 from webapp.blueprints import (
@@ -1530,6 +1531,109 @@ def api_migrate_personas(
     except BlueprintError as exc:
         raise _blueprint_http(exc)
     return {"coach_id": coach.id, "migrated": migrated}
+
+
+# ============================================================================
+# training API — create, try, understand, change (Phase 2)
+# ============================================================================
+
+
+def _run_payload(run: training.TrainingRun) -> dict:
+    return {
+        "id": run.id,
+        "blueprint_id": run.blueprint_id,
+        "version": run.blueprint_version,
+        "content_hash": run.blueprint_hash,
+        "scenario_id": run.scenario_id,
+        "opponent": run.opponent,
+        "model": run.model,
+        "status": run.status,
+        "created_at": run.created_at,
+        "finished_at": run.finished_at,
+        "run_id": run.run_id,
+        "error": run.error,
+        "result": run.result,
+    }
+
+
+def _training_http(exc: Exception) -> HTTPException:
+    if isinstance(exc, training.QuotaExceeded):
+        return HTTPException(429, str(exc))
+    if isinstance(exc, BlueprintError):
+        return _blueprint_http(exc)
+    return HTTPException(400, str(exc))
+
+
+@app.get("/api/training/scenarios")
+def api_training_scenarios(request: Request, coach_key: Optional[str] = Query(None)):
+    """The fixed catalogue. Nothing here is chosen at request time."""
+    _require_coach(request, coach_key)
+    return {
+        "scenarios": [
+            {
+                "id": scenario.id,
+                "name": scenario.name,
+                "description": scenario.description,
+                "map": scenario.map,
+                "turns": scenario.turns,
+                "seed_pairs": scenario.seed_pairs,
+                "opponent": scenario.opponent_label,
+            }
+            for scenario in training.scenarios().values()
+        ]
+    }
+
+
+@app.get("/api/training")
+def api_list_training(request: Request, coach_key: Optional[str] = Query(None)):
+    """This coach's runs, newest first, with what is left of their allowance."""
+    coach = _require_coach(request, coach_key)
+    store = training.default_store()
+    return {
+        "coach_id": coach.id,
+        "quota": store.quota_state(coach),
+        "runs": [_run_payload(r) for r in store.for_coach(coach)],
+    }
+
+
+@app.post("/api/training")
+def api_start_training(
+    request: Request,
+    payload: dict,
+    background: BackgroundTasks,
+    coach_key: Optional[str] = Query(None),
+):
+    """Start a training run of a frozen version against a catalogue opponent.
+
+    The run is recorded before it is played and then played in the background:
+    a batch takes minutes, and a coach should not be holding a request open to
+    find out how it went. Poll ``GET /api/training/{id}``.
+    """
+    coach = _require_coach(request, coach_key)
+    store = training.default_store()
+    try:
+        run = store.start(
+            coach,
+            payload.get("blueprint_id", ""),
+            payload.get("scenario_id", ""),
+            version=payload.get("version"),
+        )
+    except (training.TrainingError, BlueprintError) as exc:
+        raise _training_http(exc)
+    background.add_task(training.execute, run, store)
+    return _run_payload(run)
+
+
+@app.get("/api/training/{run_id}")
+def api_get_training(
+    run_id: str, request: Request, coach_key: Optional[str] = Query(None)
+):
+    coach = _require_coach(request, coach_key)
+    try:
+        run = training.default_store().get(coach, run_id)
+    except training.TrainingError as exc:
+        raise HTTPException(404, str(exc))
+    return _run_payload(run)
 
 
 if __name__ == "__main__":

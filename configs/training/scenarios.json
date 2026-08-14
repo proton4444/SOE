@@ -1,0 +1,35 @@
+{
+  "_comment": "Frozen training scenarios. A coach picks one of these; nothing here is chosen at request time, so two coaches training the same blueprint face the same board and the same opponent, and their debriefs are comparable. One seed pair is two games with the seats exchanged: a single game is mostly start-city luck.",
+  "scenarios": [
+    {
+      "id": "sparring",
+      "name": "Sparring partner",
+      "description": "A balanced scripted opponent on the calibrated map. The first run to make: it shows whether the blueprint plays a coherent turn at all.",
+      "map": "calib_12.json",
+      "turns": 30,
+      "seed_pairs": 1,
+      "opponent": {"type": "scripted", "style": "balanced"},
+      "max_spend_usd": 0.15
+    },
+    {
+      "id": "aggressor",
+      "name": "Aggressor",
+      "description": "A scripted opponent that recruits and pushes. Shows whether the blueprint reacts to pressure or keeps building through it.",
+      "map": "calib_12.json",
+      "turns": 30,
+      "seed_pairs": 1,
+      "opponent": {"type": "scripted", "style": "military"},
+      "max_spend_usd": 0.15
+    },
+    {
+      "id": "wild-card",
+      "name": "Wild card",
+      "description": "A random legal opponent. The cheapest floor check: a blueprint that cannot beat arbitrary legal play has a problem the doctrine text will not fix.",
+      "map": "calib_12.json",
+      "turns": 30,
+      "seed_pairs": 1,
+      "opponent": {"type": "random"},
+      "max_spend_usd": 0.15
+    }
+  ]
+}

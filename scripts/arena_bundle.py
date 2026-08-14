@@ -278,6 +278,36 @@ class RunBundle:
             entries.append({"id": blueprint_id, "hash": digest, "file": target.name})
         return entries
 
+    def write_blueprints(self, payloads: dict[str, dict]) -> list[dict]:
+        """Write blueprints held by value into the bundle; returns hashes.
+
+        A Phase 1 blueprint is a row in a store, not a file in
+        ``configs/blueprints``, so a training run has nothing to copy. Writing
+        the payload here keeps the bundle self-describing for exactly the same
+        reason the file case is copied: a run must still be readable, and
+        resumable, after the store has moved on.
+
+        The bytes are canonical — sorted keys, fixed separators — so the same
+        blueprint written twice hashes to the same thing.
+        """
+        entries = []
+        root = self.blueprints_dir.resolve()
+        for blueprint_id, payload in payloads.items():
+            target = (self.blueprints_dir / f"{blueprint_id}.json").resolve()
+            if not target.is_relative_to(root) or target.name != f"{blueprint_id}.json":
+                raise BundleError(
+                    f"Invalid blueprint id {blueprint_id!r}: would write outside "
+                    f"{root}"
+                )
+            data = json.dumps(
+                payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+            ).encode("utf-8")
+            digest = sha256_bytes(data)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            entries.append({"id": blueprint_id, "hash": digest, "file": target.name})
+        return entries
+
     # ------------------------------------------------------------------
     # resume helpers
     # ------------------------------------------------------------------

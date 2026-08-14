@@ -267,12 +267,19 @@ class LLMPolicy(Policy):
         temperature: float = 0.0,
         max_tokens: int | None = None,
         budget: SpendBudget | None = None,
+        record_reasoning: bool = True,
     ):
         self.model = model
         self.blueprint = blueprint
         self.blueprint_id = blueprint_id
         self.temperature = temperature
         self.budget = budget
+        #: Whether the model's free text before the orders marker is persisted.
+        #: An internal run keeps it for debugging. A coach-facing training run
+        #: must not: that text is private chain-of-thought, and a debrief built
+        #: on it would be showing a coach the model's inner monologue rather
+        #: than what it did. What survives redaction is the record of play.
+        self.record_reasoning = record_reasoning
         from webapp.ai import brain
 
         self.max_tokens = max_tokens or brain.MAX_OUTPUT_TOKENS
@@ -347,8 +354,11 @@ class LLMPolicy(Policy):
             trace["budget_limit_usd"] = self.budget.limit_usd
             trace["budget_cost_known"] = self.budget.cost_known
         trace["provider_request_id"] = result.provider_request_id
-        trace["raw_reply"] = result.text
-        trace["rationale"] = context.rationale(result.text)
+        if self.record_reasoning:
+            trace["raw_reply"] = result.text
+            trace["rationale"] = context.rationale(result.text)
+        else:
+            trace["reasoning_redacted"] = True
         extracted = context.extract_orders(result.text)
         trace["orders_extracted_text"] = extracted
         (
@@ -429,6 +439,11 @@ BLUEPRINTS_DIR = _REPO_ROOT / "configs" / "blueprints"
 #: otherwise read the API key file into the doctrine section and copy it into
 #: the run bundle.
 _BLUEPRINT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+#: A blueprint held by value still becomes a filename inside the bundle, so it
+#: is confined the same way. Underscores are allowed here and not in a file id,
+#: which is what keeps a store label from ever resolving to a file.
+_BLUEPRINT_LABEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 
 def blueprint_path(blueprint_id: str) -> Path:
@@ -901,6 +916,28 @@ def play_game(
 # ===========================================================================
 
 
+def entrant_blueprint(entrant: dict) -> tuple[str, dict | None]:
+    """One entrant's blueprint, by file id or held by value.
+
+    Phase 0 named a file in ``configs/blueprints``. Phase 1 blueprints are rows
+    in a coach's store with no file to name, so a training entrant carries the
+    prompt-facing payload itself under ``blueprint_inline`` and a label under
+    ``blueprint_label``. The two forms never collide: a file id is lowercase
+    and hyphenated, and a store label carries the version suffix.
+    """
+    inline = entrant.get("blueprint_inline")
+    if isinstance(inline, dict):
+        label = str(entrant.get("blueprint_label") or inline.get("id") or "inline")
+        if not _BLUEPRINT_LABEL_RE.fullmatch(label):
+            raise ValueError(
+                f"Invalid blueprint label {label!r}: expected letters, digits, "
+                "hyphen or underscore"
+            )
+        return label, inline
+    blueprint_id = entrant.get("blueprint", "")
+    return blueprint_id, (_load_blueprint(blueprint_id) if blueprint_id else None)
+
+
 def build_policies_from_config(config: dict) -> list[Policy]:
     """Entrants list -> policies (blueprints resolved from configs/blueprints)."""
     policies: list[Policy] = []
@@ -917,15 +954,16 @@ def build_policies_from_config(config: dict) -> list[Policy]:
         elif kind == "scripted":
             policies.append(ScriptedPolicy(entrant.get("style", "balanced")))
         elif kind == "llm":
-            blueprint_id = entrant.get("blueprint", "")
+            label, blueprint = entrant_blueprint(entrant)
             policies.append(
                 LLMPolicy(
                     model=entrant.get("model", ""),
-                    blueprint=_load_blueprint(blueprint_id),
-                    blueprint_id=blueprint_id,
+                    blueprint=blueprint,
+                    blueprint_id=label,
                     temperature=config.get("temperature", 0.0),
                     max_tokens=config.get("max_tokens"),
                     budget=budget,
+                    record_reasoning=not bool(config.get("redact_reasoning")),
                 )
             )
         else:
@@ -1924,20 +1962,28 @@ def _blueprint_prompt_hashes(config: dict) -> tuple[dict, dict[str, str]]:
     blueprint_hashes: dict[str, str] = {}
     prompt_hashes: dict[str, str] = {}
     for entrant in config.get("entrants", []):
-        blueprint_id = entrant.get("blueprint", "")
-        if not blueprint_id:
+        label, blueprint = entrant_blueprint(entrant)
+        if not label or blueprint is None:
             continue
-        path = blueprint_path(blueprint_id)
-        if not path.exists():
-            raise ValueError(f"Blueprint file not found: {path}")
-        blueprint = json.loads(path.read_text(encoding="utf-8"))
-        blueprint_hashes[blueprint_id] = hashlib.sha256(
-            path.read_bytes()
-        ).hexdigest()
-        prompt_hashes[blueprint_id] = context.prompt_signature(
+        if isinstance(entrant.get("blueprint_inline"), dict):
+            blueprint_hashes[label] = _inline_blueprint_hash(blueprint)
+        else:
+            path = blueprint_path(label)
+            if not path.exists():
+                raise ValueError(f"Blueprint file not found: {path}")
+            blueprint_hashes[label] = hashlib.sha256(path.read_bytes()).hexdigest()
+        prompt_hashes[label] = context.prompt_signature(
             context.doctrine_section(blueprint)
         )
     return blueprint_hashes, prompt_hashes
+
+
+def _inline_blueprint_hash(payload: dict) -> str:
+    """Hash of a blueprint held by value, over the bytes the bundle stores."""
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def manifest_fields(config: dict) -> dict:
@@ -1993,18 +2039,24 @@ def prepare_bundle(config: dict, output: Path, run_id: str | None = None) -> "Ru
     run_dir = output / run_id
     bundle = RunBundle(run_dir)
 
-    blueprint_paths = {
-        blueprint_id: blueprint_path(blueprint_id)
-        for entrant in config.get("entrants", [])
-        for blueprint_id in [entrant.get("blueprint", "")]
-        if blueprint_id
-    }
+    blueprint_paths: dict[str, Path] = {}
+    inline_blueprints: dict[str, dict] = {}
+    for entrant in config.get("entrants", []):
+        label, blueprint = entrant_blueprint(entrant)
+        if not label or blueprint is None:
+            continue
+        if isinstance(entrant.get("blueprint_inline"), dict):
+            inline_blueprints[label] = blueprint
+        else:
+            blueprint_paths[label] = blueprint_path(label)
     for blueprint_id, path in blueprint_paths.items():
         if not path.exists():
             raise ValueError(f"Blueprint file not found: {path}")
 
     fields = manifest_fields(config)
-    fields["blueprints"] = bundle.copy_blueprints(blueprint_paths)
+    fields["blueprints"] = bundle.copy_blueprints(
+        blueprint_paths
+    ) + bundle.write_blueprints(inline_blueprints)
     fields.update(provenance)
     return RunBundle.start(run_dir, fields)
 

@@ -193,6 +193,30 @@ def test_llm_policy_happy_path(fake_brain):
     assert turn_outcome.trace["blueprint_id"] == "expansionist-v1"
 
 
+def test_llm_policy_redacts_private_reasoning_when_asked(fake_brain):
+    """The control for the training record: the flag is what does the work.
+
+    An internal run keeps the model's free text for debugging. A coach-facing
+    run must not, so the same policy with ``record_reasoning=False`` keeps
+    every trace of what was *done* and drops what was *thought*.
+    """
+    kept = LLMPolicy(model="openai/gpt-4o-mini").orders(
+        _ctx(), __import__("random").Random(1)
+    )
+    assert kept.trace["raw_reply"] == FAKE_REPLY
+    assert kept.trace["rationale"] == "I will tax and recruit."
+
+    redacted = LLMPolicy(
+        model="openai/gpt-4o-mini", record_reasoning=False
+    ).orders(_ctx(), __import__("random").Random(1))
+    assert "raw_reply" not in redacted.trace
+    assert "rationale" not in redacted.trace
+    assert redacted.trace["reasoning_redacted"] is True
+    assert redacted.trace["orders_text"] == kept.trace["orders_text"]
+    assert redacted.trace["order_types"] == kept.trace["order_types"]
+    assert redacted.trace["orders_accepted"] == kept.trace["orders_accepted"]
+
+
 def test_llm_policy_missing_marker_falls_back_to_whole_reply(fake_brain, monkeypatch):
     monkeypatch.setattr(
         brain,

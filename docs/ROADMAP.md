@@ -445,6 +445,60 @@ dell'operatore.
 - Un test con utenti interni dimostra che vittoria, errore principale e costo
   del match sono comprensibili.
 
+### Stato al 2026-08-14: prima meta, la prova
+
+Il loop e `crea -> prova -> comprende -> modifica`. La Phase 1 ha chiuso
+*crea*; questa meta chiude *prova*, e lascia *comprende* al debrief.
+
+**Un training run e un run d'arena.** L'arena persiste gia cio su cui un
+debrief deve poggiare — hash di stato per turno, ogni decisione, gli ordini
+come emessi e come accettati, costo, latenza, fallimenti del provider — e sa
+riprendere. Costruire un secondo runner avrebbe voluto dire un secondo record
+piu debole. `webapp/training.py` decide quindi solo *chi puo eseguire cosa* e
+passa il resto a `scripts/arena.py`.
+
+**Il blueprint viaggia per valore.** L'arena prendeva i blueprint da
+`configs/blueprints`; un blueprint di Phase 1 e una riga in uno store. La
+config di un training porta quindi il payload inline (`blueprint_inline`) e il
+bundle lo scrive in forma canonica: il run resta leggibile e riproducibile dopo
+che lo store e andato avanti. `run_config` risolve la versione attraverso lo
+store, non dal record, quindi una versione modificata dopo l'avvio fa fallire
+il run *prima* di spendere — lo stesso rifiuto che riceve un seat di lega.
+
+**Niente chain-of-thought su disco.** I run del coach girano con
+`redact_reasoning`, quindi il testo libero del modello prima del marker non
+viene mai persistito. Il controllo e in
+`test_llm_policy_redacts_private_reasoning_when_asked`: a parita di ordini,
+tipi e accettati, spariscono `raw_reply` e `rationale`. Un debrief deve al
+coach il resoconto di cosa il suo agente **ha fatto**; il monologo interno del
+modello non e ne affidabile come spiegazione ne suo da leggere.
+
+**Le quote sono due, non una.** Quella giornaliera limita il conto; quella per
+versione impedisce di bruciare l'intera giornata rieseguendo una versione che
+non si e cambiata. Aprire una versione nuova apre una nuova allowance, che e
+esattamente l'incentivo giusto.
+
+Il catalogo (`configs/training/scenarios.json`) e fisso: due coach che allenano
+lo stesso blueprint incontrano la stessa mappa e lo stesso avversario, quindi i
+loro debrief sono confrontabili.
+
+Copertura: `tests/test_phase2_training.py`.
+
+### Cosa resta della Phase 2
+
+- rationale sintetica derivata dal record — **non** chiesta al modello, cosi il
+  prompt resta quello congelato in Phase 0 e il coach legge cio che e successo,
+  non cio che il modello dice di aver pensato;
+- ordini proposti, scartati e accettati con i loro effetti osservabili: il
+  record li contiene gia (`orders_extracted_text` contro `orders_text`), manca
+  la proiezione;
+- replay turno per turno da `turns.jsonl`;
+- territorio, esercito, economia, affidabilita, costo e latenza;
+- confronto fra due versioni dello stesso blueprint;
+- tassonomia leggibile degli errori: sintattici, di provider, strategici;
+- il test con utenti interni, che e l'unico criterio che non si chiude scrivendo
+  codice.
+
 ## Phase 3 - Competition Control Plane
 
 ### Risultato
@@ -588,8 +642,9 @@ pubblico sono dipendenze successive, non lavoro parallelo al critical path.
 La **Phase 0 - Agent Competence Gate** e chiusa il 2026-08-13 con entrambi i
 batch ufficiali a `pass`. La **Phase 1 - Agent Blueprint** e chiusa il
 2026-08-14: sei criteri di uscita su sei, coperti da
-`tests/test_phase1_blueprints.py`. Il prossimo lavoro autorizzato e la
-**Phase 2 - Training and Debrief**.
+`tests/test_phase1_blueprints.py`. La **Phase 2 - Training and Debrief** e
+aperta: l'arena di allenamento, le quote e la redazione del ragionamento
+privato sono in piedi; il debrief e il lavoro successivo.
 
 Delle due riserve ereditate dalla Phase 0:
 

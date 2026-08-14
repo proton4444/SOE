@@ -118,3 +118,8 @@ maps/_web_preview.svg
 
 # Live room game data: runtime state, not source. Stays on disk.
 games/room_*/
+
+# Coach training runs: one bundle per attempt, owned by the coach who made it.
+# The debrief reads them from disk; they are not repository evidence the way an
+# official gate bundle is.
+games/training/
