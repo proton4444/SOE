@@ -1,0 +1,701 @@
+/* The Living Atlas — poster page.
+   Dark, warm, cartographic. One column. The board is the only ornament, and
+   the only thing that moves. */
+
+:root {
+  --ground: #0c0a08;
+  --ground-2: #131010;
+  --panel: #1a1614;
+  --board: #191614;
+  --rule: #2e2823;
+  --rule-soft: #221d1a;
+
+  --text: #ede4d4;
+  --muted: #9c9184;
+  --faint: #6c635a;
+
+  --gold: #c8a45c;
+  --seat-1: #e0703a;
+  --seat-2: #5aa9d6;
+
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --measure: 38rem;
+  --gutter: clamp(1.25rem, 5vw, 2rem);
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--ground);
+  color: var(--text);
+  font: 400 17px/1.65 var(--serif);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection { background: rgba(200, 164, 92, 0.28); }
+
+.masthead, main > section, .foot {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+h1, h2, h3 { font-weight: 400; }
+
+/* ---- publish gate -------------------------------------------------- */
+
+.publish-gate {
+  padding: 0.7rem var(--gutter);
+  border-bottom: 1px solid #6d4a1a;
+  background: #241a0c;
+  color: #eec98d;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.publish-gate strong {
+  display: block;
+  color: #f6dcae;
+  letter-spacing: 0.04em;
+}
+
+/* ---- masthead ------------------------------------------------------ */
+
+.masthead { padding-block: clamp(4rem, 14vh, 7rem) clamp(2.5rem, 7vh, 4rem); }
+
+.eyebrow {
+  margin: 0 0 1.5rem;
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+h1 {
+  margin: 0 0 1.75rem;
+  font-size: clamp(3rem, 13vw, 5.5rem);
+  line-height: 0.93;
+  letter-spacing: -0.025em;
+}
+
+.sentence {
+  margin: 0 0 2rem;
+  max-width: 30rem;
+  font-size: clamp(1.1875rem, 4.6vw, 1.5rem);
+  line-height: 1.42;
+  color: #f3ebdd;
+  text-wrap: pretty;
+}
+
+.mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mode span { display: inline-flex; align-items: center; }
+.mode span + span::before {
+  content: "";
+  width: 3px; height: 3px;
+  margin-right: 0.75rem;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+/* ---- sections ------------------------------------------------------ */
+
+main > section { padding-block: clamp(3rem, 9vh, 4.5rem); }
+main > section + section { border-top: 1px solid var(--rule-soft); }
+
+.section-heading {
+  margin: 0 0 1.75rem;
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ---- board --------------------------------------------------------- */
+
+.board-section { padding-top: clamp(1rem, 4vh, 2rem); }
+
+.board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.board-head h2 {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.board-meta {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+}
+
+.board-figure { margin: 0; }
+
+.board-frame {
+  position: relative;
+  /* A tilted rectangle covers at most about 60% of its frame — the corners are
+     backdrop no matter how tightly the camera is fitted. So this is not filler
+     to be hidden: it is the table the board lies on, lit by the same lamp, and
+     it carries nearly half the picture. Left near-black it dragged the whole
+     frame down to luma 89 while the board itself sat at 152. */
+  background:
+    radial-gradient(130% 100% at 46% 4%, #4a4235 0%, #332d24 48%, #1c1813 100%);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 214, 0.05),
+    0 24px 60px -32px rgba(0, 0, 0, 0.9);
+}
+
+/* The board is a tilted 3D scene now, so the frame owns the aspect and the
+   canvas fills it. Wider than the old flat plate, because a tilted board
+   spends height on perspective. */
+.board-frame { aspect-ratio: 16 / 11; }
+
+#atlas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#atlas:active { cursor: grabbing; }
+
+/* City names ride the DOM above the canvas, so they stay crisp at any zoom
+   and keep the page's own type. Positioned per frame by board3d.js. */
+.atlas-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.atlas-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  /* Georgia, matching mapview's `.map-label` — the game names its cities in a
+     serif and the board should read the same way. Back to light-on-dark now
+     that the ground is the game's navy rather than the teal. */
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  /* Dark on a light halo: the ground is board stock, not the game's navy. */
+  color: #241d12;
+  text-shadow:
+    0 0 3px rgba(252, 247, 236, 0.95),
+    0 0 8px rgba(252, 247, 236, 0.85),
+    0 1px 2px rgba(252, 247, 236, 0.9);
+  transition: opacity 200ms ease-out;
+  will-change: transform;
+}
+
+.atlas-label.is-quiet { color: #5d5644; }
+
+@media (max-width: 640px) {
+  .board-frame { aspect-ratio: 4 / 3.6; }
+  .atlas-label { font-size: 0.62rem; letter-spacing: 0.04em; }
+}
+
+.board-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(92% 92% at 50% 48%,
+    transparent 76%, rgba(6, 5, 4, 0.22) 100%);
+}
+
+/* The failure panel, shown only when the replay cannot be loaded.
+   `display: grid` on the bare class beat the browser's own
+   `[hidden] { display: none }` — an author rule always wins over the user-agent
+   sheet — so this 85%-opaque black panel sat over the board at all times and
+   every version of it was seen through a veil. Scope the display to the visible
+   state; the [hidden] rule underneath is the belt to that braces. */
+.board-status:not([hidden]) {
+  display: grid;
+}
+
+.board-status[hidden] {
+  display: none;
+}
+
+.board-status {
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  color: var(--muted);
+  background: rgba(12, 10, 8, 0.85);
+}
+
+/* ---- readouts ------------------------------------------------------ */
+
+.readouts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 1px;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule);
+  border-top: 0;
+}
+
+.readout {
+  padding: 0.7rem 0.85rem;
+  background: var(--ground-2);
+  border-top: 2px solid var(--seat);
+}
+
+.readout-name {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--seat);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.readout-stats {
+  display: flex;
+  gap: 1.1rem;
+  margin-top: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--faint);
+}
+
+.readout-stats b {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+/* ---- transport ----------------------------------------------------- */
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.play {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--ground-2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.play:hover { border-color: var(--gold); color: var(--gold); }
+.play:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.play-glyph {
+  width: 8px; height: 9px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* Two bars, drawn with a gradient rather than a self-intersecting polygon. */
+.play.is-playing .play-glyph {
+  clip-path: none;
+  background: linear-gradient(90deg,
+    currentColor 0 34%, transparent 34% 66%, currentColor 66% 100%);
+}
+
+.track { position: relative; flex: 1 1 auto; min-width: 0; }
+
+.ticks {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 16px;
+  margin-bottom: 3px;
+}
+
+.tick {
+  flex: 1 1 0;
+  min-height: 2px;
+  background: var(--rule);
+  border-radius: 1px;
+  transition: background-color 0.2s;
+}
+
+.tick.is-past { background: #5c4d38; }
+.tick.is-now { background: var(--gold); }
+
+#scrub {
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+#scrub:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+#scrub::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--rule);
+}
+#scrub::-moz-range-track { height: 2px; background: var(--rule); }
+#scrub::-moz-range-progress { height: 2px; background: var(--gold); }
+
+#scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px; height: 11px;
+  margin-top: -4.5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--gold);
+}
+#scrub::-moz-range-thumb {
+  width: 11px; height: 11px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.turn-label {
+  flex: 0 0 auto;
+  min-width: 2.25rem;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- caption + legend ---------------------------------------------- */
+
+.board-caption { margin: 1rem 0 0; }
+
+.outcome {
+  display: block;
+  min-height: 1.5rem;
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.outcome:empty { min-height: 0; }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+.legend li { display: flex; align-items: center; gap: 0.4rem; }
+
+.legend .swatch {
+  width: 0.6rem; height: 0.6rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.legend .swatch.is-ring {
+  background: none;
+  border: 2px solid var(--muted);
+  width: 0.7rem; height: 0.7rem;
+}
+
+.legend .swatch.is-dashed { border-style: dotted; }
+
+/* ---- proof --------------------------------------------------------- */
+
+.proof {
+  margin: 0 0 1.1rem;
+  padding-left: 1.1rem;
+  border-left: 2px solid var(--gold);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.fine {
+  margin: 1.5rem 0 0;
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--faint);
+}
+
+/* ---- coach loop ---------------------------------------------------- */
+
+.loop-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1px;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+}
+
+.loop-steps li { padding: 1.25rem 1.1rem; background: var(--ground); }
+
+.step-num {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.loop-steps h3 {
+  margin: 0.35rem 0 0.4rem;
+  font-size: 1.375rem;
+  letter-spacing: -0.01em;
+}
+
+.loop-steps p {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ---- offer --------------------------------------------------------- */
+
+.offer-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: offer;
+}
+
+.offer-list li {
+  position: relative;
+  counter-increment: offer;
+  padding: 0.85rem 0 0.85rem 2.5rem;
+  border-bottom: 1px solid var(--rule-soft);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.offer-list li:first-child { padding-top: 0; }
+.offer-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.offer-list li::before {
+  content: counter(offer, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 1.05rem;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--gold);
+}
+
+.offer-list li:first-child::before { top: 0.2rem; }
+
+/* ---- form ---------------------------------------------------------- */
+
+.field { margin-bottom: 1.35rem; }
+
+label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+input[type="text"], textarea {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--ground-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  transition: border-color 0.15s;
+}
+
+input[type="text"]:hover, textarea:hover { border-color: #3d352e; }
+
+input[type="text"]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200, 164, 92, 0.14);
+}
+
+::placeholder { color: #5b524a; }
+
+textarea { resize: vertical; min-height: 5rem; }
+
+.hint {
+  margin: 0.4rem 0 0;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+/* Honeypot: off-screen rather than display:none, which some bots skip. */
+.hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px; height: 1px;
+  overflow: hidden;
+}
+
+.form-error {
+  margin: 0 0 1.1rem;
+  padding: 0.7rem 0.85rem;
+  border-left: 2px solid #b4553a;
+  background: #241310;
+  color: #f0a892;
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.privacy {
+  margin: 1.6rem 0;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--faint);
+}
+
+.submit {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  background: var(--gold);
+  color: #17120b;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.submit:hover:not(:disabled) { background: #dcb872; border-color: #dcb872; }
+.submit:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+.submit:disabled {
+  background: transparent;
+  border-color: var(--rule);
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+.thanks {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+/* ---- footer -------------------------------------------------------- */
+
+.foot {
+  padding-block: 2.5rem 4rem;
+  border-top: 1px solid var(--rule-soft);
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.foot p { margin: 0 0 0.45rem; }
+.foot-note { color: var(--faint); max-width: 26rem; }
+
+/* ---- wider screens ------------------------------------------------- */
+
+@media (min-width: 46rem) {
+  .board-section { max-width: 54rem; }
+  .loop-steps { grid-template-columns: repeat(3, 1fr); }
+  .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 60rem) {
+  .masthead { padding-block: clamp(5rem, 18vh, 9rem) 4rem; }
+}
+
+/* ---- reduced motion ------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

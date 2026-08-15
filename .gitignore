@@ -123,3 +123,7 @@ games/room_*/
 # The debrief reads them from disk; they are not repository evidence the way an
 # official gate bundle is.
 games/training/
+
+# Waitlist ledger: real names, handles, and doctrine sentences, collected under
+# a privacy notice that promises they are not published. Never committed.
+private/

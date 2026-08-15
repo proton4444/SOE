@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<!--
+  The Living Atlas — closed alpha poster page.
+
+  Static files only. This page never calls the live server, never reads an arena
+  bundle, and loads exactly one data file: replay.json. Copy on this page is
+  locked by docs/MARKETING_CLOSED_ALPHA.md. Do not reopen the sentence, the
+  offer, or the proof line here.
+
+  BEFORE PUBLISHING, two operator gates must be closed and two placeholders
+  filled. Until then the publish gate in atlas.js disables the form and shows a
+  banner:
+    1. data-endpoint on <form id="apply-form">  — the form vendor gate
+    2. data-contact on <span id="operator-contact"> — a dedicated address or
+       handle, not a personal inbox mixed with the live game
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Living Atlas — Spoils of Empire</title>
+<meta name="description" content="You don&#8217;t play the empire. You write its doctrine, freeze it, and watch an agent try to rule a world you cannot touch. Closed Coach Alpha, 30 seats, invite only.">
+<meta property="og:title" content="The Living Atlas — Spoils of Empire">
+<meta property="og:description" content="You write its doctrine, freeze it, and watch an agent try to rule a world you cannot touch. Closed Coach Alpha, 30 seats, invite only.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0c0a08">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0a08'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23c8a45c' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23e0703a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="atlas.css?v=h1">
+<!--
+  One name, one copy. Without this map board3d.js and OrbitControls.js resolve
+  three.js to two different URLs, the browser loads it twice, and instanceof
+  stops working across the seam.
+-->
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js?v=h1" } }
+</script>
+</head>
+<body>
+
+<div id="publish-gate" class="publish-gate" hidden>
+  <strong>Not published yet.</strong>
+  <span id="publish-gate-reason"></span>
+</div>
+
+<header class="masthead">
+  <p class="eyebrow">Spoils of Empire</p>
+  <h1>The Living<br>Atlas</h1>
+  <p class="sentence">
+    You don&#8217;t play the empire. You write its doctrine, freeze it, and watch
+    an agent try to rule a world you cannot touch.
+  </p>
+  <p class="mode">
+    <span>Coach League</span>
+    <span>Closed Coach Alpha</span>
+    <span>30 seats</span>
+    <span>invite only</span>
+  </p>
+</header>
+
+<main>
+
+  <section class="board-section" aria-labelledby="board-heading">
+    <div class="board-head">
+      <h2 id="board-heading">Atlas relief board</h2>
+      <p id="replay-meta" class="board-meta"></p>
+    </div>
+
+    <figure class="board-figure">
+      <div class="board-frame">
+        <canvas id="atlas" role="img"
+                aria-label="Atlas relief board: twelve cities, their roads, and the recorded replay."></canvas>
+        <div id="atlas-labels" class="atlas-labels" aria-hidden="true"></div>
+        <div class="board-vignette" aria-hidden="true"></div>
+        <div id="board-status" class="board-status" hidden></div>
+      </div>
+
+      <div class="readouts" id="readouts"></div>
+
+      <div class="transport" role="group" aria-label="Replay controls">
+        <button id="play" type="button" class="play" aria-label="Pause replay">
+          <span class="play-glyph" aria-hidden="true"></span>
+          <span id="play-word">Pause</span>
+        </button>
+        <div class="track">
+          <div id="ticks" class="ticks" aria-hidden="true"></div>
+          <input id="scrub" type="range" min="0" max="0" value="0" step="1"
+                 aria-label="Replay turn">
+        </div>
+        <span id="turn-label" class="turn-label">00</span>
+      </div>
+
+      <figcaption id="board-caption" class="board-caption">
+        <span id="replay-outcome" class="outcome"></span>
+        <ul class="legend" id="legend"></ul>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="proof-section" aria-labelledby="proof-heading">
+    <h2 id="proof-heading" class="section-heading">What is already true</h2>
+    <p class="proof">
+      The official gate completed 7,200 model turns across two 40-pair tests.
+    </p>
+    <p class="proof">
+      Two written doctrines produced different games, not just different prose.
+    </p>
+    <p class="fine">
+      One recorded match, replayed on the engine that produced it. Not a
+      ranking, not a live server.
+    </p>
+  </section>
+
+  <section class="loop" aria-labelledby="loop-heading">
+    <h2 id="loop-heading" class="section-heading">The coach loop</h2>
+    <ol class="loop-steps">
+      <li>
+        <span class="step-num">01</span>
+        <h3>Write</h3>
+        <p>A structured doctrine, in your words. You do not write code.</p>
+      </li>
+      <li>
+        <span class="step-num">02</span>
+        <h3>Freeze</h3>
+        <p>The version is sealed. You do not issue orders during an official
+           match.</p>
+      </li>
+      <li>
+        <span class="step-num">03</span>
+        <h3>Watch</h3>
+        <p>Three training matches per frozen version. Then paired duels and one
+           observable final.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="offer" aria-labelledby="offer-heading">
+    <h2 id="offer-heading" class="section-heading">The offer</h2>
+    <ol class="offer-list">
+      <li>Invite only. Cap 30.</li>
+      <li>Same model and limits for everyone.</li>
+      <li>You write a structured doctrine. You do not write code. You do not
+          issue orders during an official match.</li>
+      <li>Three training matches per frozen version.</li>
+      <li>Then paired duels and one observable final.</li>
+      <li>No payment, no prize, no public ranking.</li>
+      <li>Apply with: name, X or Discord, one sentence of doctrine.</li>
+    </ol>
+  </section>
+
+  <section class="apply" aria-labelledby="apply-heading">
+    <h2 id="apply-heading" class="section-heading">Apply</h2>
+
+    <form id="apply-form" method="post" data-endpoint="" novalidate>
+      <!-- Filled from the ?src= query string. Applicants do not pick a source. -->
+      <input type="hidden" id="src" name="src" value="other">
+
+      <!-- Honeypot. Hidden from humans; a filled value is discarded. -->
+      <div class="hp" aria-hidden="true">
+        <label for="company">Company</label>
+        <input type="text" id="company" name="company" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required autocomplete="name"
+               maxlength="80">
+      </div>
+
+      <div class="field">
+        <label for="contact">X or Discord handle</label>
+        <input type="text" id="contact" name="contact" required
+               placeholder="@handle or handle#0000" maxlength="80">
+        <p class="hint">An X or Discord handle. Other contact methods are not
+          accepted.</p>
+      </div>
+
+      <div class="field">
+        <label for="doctrine">One sentence of doctrine</label>
+        <textarea id="doctrine" name="doctrine" required minlength="12"
+                  maxlength="400" rows="3"
+                  placeholder="How should your agent decide what to do?"></textarea>
+        <p class="hint"><span id="doctrine-count">0</span> / 12 characters minimum</p>
+      </div>
+
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+
+      <p class="privacy">
+        We collect your name, public handle, and doctrine sentence only to decide
+        Closed Coach Alpha invites. The operator of this experiment reads them.
+        They are not sold, not published, and not used as marketing quotes
+        without your later consent. We keep a row until the closed alpha ends,
+        then 90 days, unless you ask us to delete it sooner. To delete, write to
+        the operator contact on this page.
+      </p>
+
+      <button id="submit" type="submit" class="submit">Apply for a seat</button>
+    </form>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>Operator contact: <span id="operator-contact" data-contact=""></span></p>
+  <p class="foot-note">Spoils of Empire is a closed experiment. There is no
+    public server and no account to create.</p>
+</footer>
+
+<script src="board.js?v=h1"></script>
+<script type="module" src="atlas.js?v=h1"></script>
+</body>
+</html>

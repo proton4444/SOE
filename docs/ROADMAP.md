@@ -686,6 +686,12 @@ La Phase 4 non e fallita e non e chiusa. Riprende quando c'e qualcuno da
 invitare; allora si apre `/ops/alpha`, si emette il codice, e i tassi si
 leggono dal ledger.
 
+Il piano per creare quel primo ospite e
+[`MARKETING_CLOSED_ALPHA.md`](MARKETING_CLOSED_ALPHA.md): contratto di
+campo chiuso il 2026-08-14, non ancora pubblicabile. Il prossimo
+incremento e l'esportazione di un replay sanificato, poi il poster.
+Non e Phase 5.
+
 ## Phase 5 - Public Beta
 
 ### Risultato
@@ -762,7 +768,8 @@ interna di 20 agenti a 190/190 e le prove di injection sul percorso ufficiale.
 La **Phase 4 - Closed Coach Alpha** e **bloccata sul campo** il
 2026-08-14: lo strumento (roster, tetto, funnel, share, finale) e in piedi;
 non c'e nessuna persona reale da invitare, quindi i criteri di go non si
-possono chiudere. La roster resta chiusa.
+possono chiudere. La roster resta chiusa. Il lavoro di campo e
+[`MARKETING_CLOSED_ALPHA.md`](MARKETING_CLOSED_ALPHA.md).
 
 Delle due riserve ereditate dalla Phase 0:
 
