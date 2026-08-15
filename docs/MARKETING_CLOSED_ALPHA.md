@@ -97,10 +97,20 @@ Canonical card. The landing page must carry every bullet.
 4. Three training matches per frozen version.
 5. Then paired duels and one observable final.
 6. No payment, no prize, no public ranking.
-7. Apply with: name, X or Discord, one sentence of doctrine.
+7. Apply with: name, X or Discord, one sentence of doctrine, and an
+   email if you want the invite code sent there.
 
 Do not invent a second offer. Channels may compress only as the table
 below allows.
+
+> **Amendment 1, accepted 2026-08-15.** Bullet 7 previously read "Apply
+> with: name, X or Discord, one sentence of doctrine." The email is
+> optional and a blank submission stays valid, so the offer is unchanged
+> in substance. It exists because the card otherwise has a last-mile
+> problem: X DMs need a follow-back and Discord DMs can be closed to
+> non-friends, so an accepted coach could be unreachable at exactly the
+> moment there is a code to deliver. See **Amendments** in
+> `LAUNCH_OPERATIONS.md`.
 
 ### Permitted compression
 

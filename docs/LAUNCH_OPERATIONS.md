@@ -244,7 +244,8 @@ or a date that is not decided.
 
 Three. The first is required; the others are corrections.
 
-**1. Add an optional email field to the form.** Offer bullet 7 becomes:
+**1. Add an optional email field to the form.** **Accepted 2026-08-15
+and applied.** Offer bullet 7 becomes:
 
 > Apply with: name, X or Discord, one sentence of doctrine, and an email
 > if you want the invite code sent there.
@@ -252,6 +253,13 @@ Three. The first is required; the others are corrections.
 Reason: **The last-mile problem** above. Without it, accepted coaches may
 be unreachable. The privacy notice gains `email` in its first sentence
 and is otherwise unchanged.
+
+Applied in three places: the card's bullet 7 carries the amendment note,
+the page grows an optional `email` input whose format is checked only
+when non-empty, and `waitlist.py invite` already refused to issue a code
+to a row with no email unless forced. The form now also states the reply
+promise out loud — "You will hear back within 7 days, either way" — which
+is the sentence `waitlist.py due` exists to keep.
 
 **2. "It reads `replay.json` and nothing else" is not satisfiable.**
 `replay.json` carries `city_id` references but no coordinates, terrain,

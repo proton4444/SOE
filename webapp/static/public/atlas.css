@@ -623,6 +623,23 @@ textarea { resize: vertical; min-height: 5rem; }
   line-height: 1.5;
 }
 
+/* The reply promise. Louder than the privacy note under it: it is the one
+   commitment the applicant is owed, and `waitlist.py due` is what keeps it. */
+.promise {
+  margin: 1.4rem 0 0;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.optional {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--faint);
+}
+
 .privacy {
   margin: 1.6rem 0;
   font-family: var(--sans);

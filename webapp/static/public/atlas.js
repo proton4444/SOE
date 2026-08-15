@@ -484,6 +484,16 @@ import { createBoard } from "./board3d.js?v=h1";
     return /^@?[\w.#-]{2,}$/.test(v);
   }
 
+  // Deliberately loose. The only job is to catch a typo before it costs us a
+  // delivery channel; anything stricter rejects addresses that are perfectly
+  // real. The vendor and the operator both see it again before a code is sent.
+  function looksLikeEmail(value) {
+    var v = value.trim();
+    if (v.length < 6 || v.length > 120) { return false; }
+    if (/\s/.test(v)) { return false; }
+    return /^[^@]+@[^@.]+(\.[^@.]+)+$/.test(v);
+  }
+
   function publishGate() {
     var form = byId("apply-form");
     var contact = byId("operator-contact");
@@ -525,6 +535,7 @@ import { createBoard } from "./board3d.js?v=h1";
 
       var name = byId("name").value.trim();
       var contact = byId("contact").value.trim();
+      var email = byId("email").value.trim();
       var text = doctrine.value.trim();
 
       var problem = null;
@@ -533,6 +544,12 @@ import { createBoard } from "./board3d.js?v=h1";
       } else if (!looksLikeHandle(contact)) {
         problem = "Please give an X or Discord handle. Other contact methods " +
           "are not accepted.";
+      } else if (email && !looksLikeEmail(email)) {
+        // Optional, but a typo here is worse than a blank: it is the channel
+        // the invite code travels down. The form carries novalidate, so the
+        // type="email" attribute checks nothing on its own.
+        problem = "That email does not look right. Leave it blank if you " +
+          "would rather be reached on your handle.";
       } else if (text.length < MIN_DOCTRINE) {
         problem = "One sentence of doctrine, at least " + MIN_DOCTRINE +
           " characters. One word is not enough.";
@@ -558,7 +575,8 @@ import { createBoard } from "./board3d.js?v=h1";
           var thanks = document.createElement("p");
           thanks.className = "thanks";
           thanks.textContent = "Thank you. Your application is in the queue. " +
-            "Seats are issued one at a time, and the operator answers every reply.";
+            "You will hear back within 7 days, either way. Seats are issued " +
+            "one at a time, and the operator answers every reply.";
           form.replaceChildren(thanks);
         })
         .catch(function () {

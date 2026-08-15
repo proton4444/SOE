@@ -175,6 +175,14 @@
       </div>
 
       <div class="field">
+        <label for="email">Email <span class="optional">(optional)</span></label>
+        <input type="email" id="email" name="email" autocomplete="email"
+               maxlength="120" placeholder="you@example.com">
+        <p class="hint">Only if you want the invite code sent there. A handle
+          alone is enough to apply, but DMs can be closed to strangers.</p>
+      </div>
+
+      <div class="field">
         <label for="doctrine">One sentence of doctrine</label>
         <textarea id="doctrine" name="doctrine" required minlength="12"
                   maxlength="400" rows="3"
@@ -184,9 +192,13 @@
 
       <p id="form-error" class="form-error" role="alert" hidden></p>
 
+      <p class="promise">
+        You will hear back within 7 days, either way.
+      </p>
+
       <p class="privacy">
-        We collect your name, public handle, and doctrine sentence only to decide
-        Closed Coach Alpha invites. The operator of this experiment reads them.
+        We collect your name, public handle, email if you give one, and doctrine
+        sentence only to decide Closed Coach Alpha invites. The operator of this experiment reads them.
         They are not sold, not published, and not used as marketing quotes
         without your later consent. We keep a row until the closed alpha ends,
         then 90 days, unless you ask us to delete it sooner. To delete, write to
