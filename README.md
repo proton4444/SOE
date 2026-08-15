@@ -569,6 +569,18 @@ set SOE_COOKIE_SECURE=1
 python -m uvicorn webapp.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
+`SOE_OPERATOR_KEY` is not optional once anything is in front of the server.
+Without it the operator routes fall back to trusting the server's own console,
+and a TLS terminator on the same host makes every visitor look like that
+console. The fallback now refuses any request carrying a proxy's headers, so
+the failure is a locked-out operator rather than an open dashboard — but set
+the key. `scripts/start_beta.ps1` will not start without it.
+
+Two ceilings guard what costs money, both per visitor and generous by default:
+`SOE_RATE_LIMIT_SIGNUP` (30 room/join/register calls per 10 minutes) and
+`SOE_RATE_LIMIT_BOT` (60 bot turns per hour, each one a live LLM call on the
+operator's key). Set either to `0` to turn it off.
+
 For the controlled beta, prefer `scripts/start_beta.ps1` (requires
 `SOE_BETA_ACCESS_CODE` and `SOE_OPERATOR_KEY`) and put HTTPS termination in
 front of the loopback server. Production proxy: [`deploy/Caddyfile`](deploy/Caddyfile).
@@ -864,11 +876,38 @@ pytest tests/ -v
 pytest tests/ --cov=soe --cov-report=html
 ```
 
+### Gates
+
+Four, and [CI](.github/workflows/ci.yml) runs all of them on every push, for
+Python 3.11 and 3.12:
+
+```bash
+ruff check soe webapp cli.py scripts tests
+```
+
+```bash
+pwsh ./scripts/check_mypy_baseline.ps1
+```
+
+Lint is pass/fail. Types are a count gate: `docs/mypy-baseline.txt` records the
+accepted number and the script reads it from there, so lowering the count means
+editing that file and saying why. Then `pytest -q`, and `bandit -q -r soe webapp
+cli.py -lll` for medium-and-above findings.
+
+One hook ships with the repository and guards what must never be committed —
+waitlist rows, live server data, private keys. Git will not enable a tracked
+hooks directory by itself:
+
+```bash
+pwsh ./scripts/install_hooks.ps1
+```
+
 ### Adding New Order Types
 
 1. Define order class in `soe/orders.py`
-2. Add parser in `soe/parser.py`
-3. Add processing logic in `soe/engine.py` (appropriate phase)
+2. Add the verb to the matching `soe/parser/verbs_*.py`, and register it in
+   `soe/parser/dispatch.py`
+3. Add processing logic in the matching `soe/phases/*.py`
 4. Update `soe/reporting.py` for event logging
 5. Write tests in `tests/`
 

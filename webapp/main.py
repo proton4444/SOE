@@ -43,6 +43,8 @@ from webapp import (
     alpha,
     mapimg,
     mapview,
+    net,
+    ratelimit,
     service,
     training,
 )
@@ -67,6 +69,11 @@ from webapp.rooms import (
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     """Jobs left running when the last process died go back on the queue."""
+    if not OPERATOR_KEY:
+        logger.warning(
+            "operator_key_unset: operator routes fall back to this server's own "
+            "console. Set SOE_OPERATOR_KEY before putting a proxy in front."
+        )
     competition.default_store().requeue_orphans()
     yield
 
@@ -182,6 +189,15 @@ def _is_operator(request: Request, supplied: str = "") -> bool:
         return any(
             secrets.compare_digest(value, OPERATOR_KEY) for value in offered if value
         )
+    # Without a configured secret only the server's own console qualifies --
+    # and only when it reached us directly. Both documented deployments put a
+    # TLS terminator on this host and forward to 127.0.0.1, so every visitor
+    # on the internet arrives from a loopback address: trusting loopback on a
+    # proxied request would hand the operator's seat to all of them.
+    # `scripts/start_beta.ps1` refuses to start without the key; this is what
+    # stands behind that when someone runs uvicorn by hand.
+    if net.arrived_via_proxy(request):
+        return False
     client = request.client
     return (client.host if client else "").strip().lower() in _LOOPBACK_CLIENTS
 
@@ -194,7 +210,7 @@ def _require_operator(request: Request, supplied: str = "") -> None:
         f"LLM settings are operator-only: send {OPERATOR_HEADER}."
         if OPERATOR_KEY
         else "LLM settings are operator-only: set SOE_OPERATOR_KEY, or reach "
-        "this server from its own console.",
+        "this server from its own console without a proxy in between.",
     )
 
 
@@ -451,6 +467,7 @@ def create_room(
     map_file: str = Form(None),
     beta_invite: str = Form(""),
 ):
+    ratelimit.check(request, "signup")
     _require_beta_invite(request, beta_invite)
     map_file = map_file or service.default_map()
     if map_file not in service.available_maps():
@@ -474,6 +491,7 @@ def join_room(
     beta_invite: str = Form(""),
 ):
     try:
+        ratelimit.check(request, "signup")
         _require_beta_invite(request, beta_invite)
     except HTTPException as exc:
         return RedirectResponse(url=f"/?error={exc.detail}", status_code=303)
@@ -606,10 +624,13 @@ def setup_agent(
     registry.set(room.code, faction_id, profile)
     if action == "run":
         try:
+            ratelimit.check(request, "bot")
             result = orchestrator.run_bot_turn(room, player)
             msg = (
                 f"Bot {player.faction_name} ran: {result['parsed']} order(s) submitted."
             )
+        except HTTPException as exc:
+            msg = f"Bot {player.faction_name} not run: {exc.detail}"
         except orchestrator.BotError as exc:
             msg = f"Bot {player.faction_name} not run: {exc}"
         except Exception as exc:  # noqa: BLE001 - keep the dashboard usable
@@ -1164,6 +1185,7 @@ def coach_register(
     invite: str = Form(""),
 ):
     try:
+        ratelimit.check(request, "signup")
         _require_beta_invite(request, invite)
         roster = alpha.default_store()
         if roster.is_open():
@@ -1901,6 +1923,7 @@ def alpha_final_page(season_id: str, request: Request):
 
 @app.post("/api/rooms")
 def api_create_room(request: Request, payload: dict):
+    ratelimit.check(request, "signup")
     _require_beta_invite(request, payload.get("invite", ""))
     name = payload.get("name", "")
     slots = int(payload.get("slots", 2))
@@ -1929,6 +1952,7 @@ def api_create_room(request: Request, payload: dict):
 
 @app.post("/api/join")
 def api_join(request: Request, payload: dict):
+    ratelimit.check(request, "signup")
     _require_beta_invite(request, payload.get("invite", ""))
     try:
         room, player = _store.join(payload["code"], payload["pin"], payload["name"])
@@ -2107,6 +2131,7 @@ def api_run_agent(
     """Host-only: have one bot decide and submit orders for the next turn."""
     room = _resolve_room(code)
     _require_host_key(request, room, key)
+    ratelimit.check(request, "bot")
     player = _faction_by_id(room, faction_id)
     try:
         return orchestrator.run_bot_turn(room, player)
@@ -2173,6 +2198,15 @@ def api_run_all_agents(code: str, request: Request, key: Optional[str] = Query(N
         profile = registry.get(room.code, player.faction_id)
         if not profile or not profile.enabled:
             continue
+        # One charge per bot: this endpoint's cost scales with the room's
+        # size, so counting the request once would price it wrong. Stopping
+        # beats a 429 here -- the bots above this one already ran, and the
+        # caller needs to be told which.
+        try:
+            ratelimit.check(request, "bot")
+        except HTTPException as exc:
+            results.append({"faction_id": player.faction_id, "error": exc.detail})
+            break
         try:
             results.append(orchestrator.run_bot_turn(room, player))
         except Exception as exc:  # noqa: BLE001 - report per-bot, keep going
@@ -2267,6 +2301,7 @@ def _blueprint_http(exc: BlueprintError) -> HTTPException:
 def api_create_coach(request: Request, payload: Optional[dict] = None):
     """Register a coach. The key is returned once and stored only hashed."""
     body = payload or {}
+    ratelimit.check(request, "signup")
     _require_beta_invite(request, body.get("invite", ""))
     try:
         coach, key = coaches.default_store().create(body.get("name", ""))

@@ -64,6 +64,20 @@ class _Proxy(BaseHTTPRequestHandler):
             if key.lower() not in _HOP_BY_HOP
         }
         headers["Host"] = f"{self.upstream_host}:{self.upstream_port}"
+        # Tell the application a hop happened, and who the visitor was. Both
+        # matter upstream: without this every caller looks like 127.0.0.1, so
+        # the loopback operator fallback would open to anyone and every
+        # visitor would share one rate-limit bucket. Append rather than
+        # replace, and read the last entry upstream: whatever the client sent
+        # ahead of ours stays where it can only be ignored.
+        peer = self.client_address[0] if self.client_address else ""
+        seen = ""
+        for key in [k for k in headers if k.lower() == "x-forwarded-for"]:
+            seen = headers.pop(key)
+        headers["X-Forwarded-For"] = f"{seen}, {peer}" if seen else peer
+        for key in [k for k in headers if k.lower() == "x-forwarded-proto"]:
+            headers.pop(key)
+        headers["X-Forwarded-Proto"] = "https"
         conn = http.client.HTTPConnection(
             self.upstream_host, self.upstream_port, timeout=30
         )

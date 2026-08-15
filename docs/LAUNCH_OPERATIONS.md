@@ -89,6 +89,26 @@ It also carries Email Routing for `operator@`, so hosting and the
 operator address close together on one vendor. GitHub Pages passes the
 first four and cannot do the mail, which is why it is second.
 
+### The game server, which is not the poster
+
+The poster is static and hosted away from the engine. When the engine itself
+goes behind HTTPS, two settings decide whether it is safe there, and neither
+has a safe default:
+
+- **`SOE_OPERATOR_KEY` must be set.** Without it the operator routes fall back
+  to trusting the server's own console, and every documented terminator
+  forwards from `127.0.0.1`, so without the key every visitor would arrive
+  looking like that console. The fallback refuses proxied requests, which
+  turns the hole into a locked-out operator — recoverable, but not the state
+  to launch in. `scripts/start_beta.ps1` refuses to start without the key;
+  a bare `uvicorn` will not.
+- **The spend ceilings.** `SOE_RATE_LIMIT_SIGNUP` (default 30 per 10 minutes)
+  and `SOE_RATE_LIMIT_BOT` (default 60 per hour) are per visitor, read through
+  the proxy's forwarded address. The bot ceiling is the one that costs real
+  money: each call under it is an LLM request on the operator's key. The
+  invite code decides who may start; these decide how much a leaked invite can
+  cost before it is rotated.
+
 ## Form vendor gate: recommended
 
 Tally passes all six criteria. Verify each one in the account before
