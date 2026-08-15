@@ -1,0 +1,26 @@
+# Every checkout gets the same bytes, on every platform.
+#
+# The Phase 0 contract in configs/phase0_gate.json pins SHA-256 hashes of files
+# in this tree, and it hashes them as they sit on disk. Without this line,
+# `core.autocrlf` decides those bytes and the contract stops meaning anything a
+# second machine can check: the frozen map hash was recorded from a Windows
+# checkout, so no clone on Linux could reproduce it, while a fresh clone on
+# Windows could not reproduce the two blueprint hashes. Neither platform could
+# verify the whole record. Frozen evidence has to mean the bytes in git, not
+# one machine's rendering of them.
+#
+# It also keeps githooks/pre-commit runnable: a shell script checked out with
+# CRLF fails with a bad-interpreter error on the `#!/bin/sh` line.
+
+* text=auto eol=lf
+
+# Binary, and said out loud rather than left to detection.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.woff binary
+*.woff2 binary
