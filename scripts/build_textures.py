@@ -12,6 +12,13 @@ Tiles are made seamless by four-way mirroring, which is exact rather than
 approximate, and each is normalised to sit near white so the multiply
 darkens only where the texture has detail.
 
+Two products share these tiles. `maps/textures/` is the renderer's set, all
+eight of them. `webapp/static/public/textures/` is the poster's, and holds the
+four the 3D board loads: that page promises static files and no build step, so
+it carries its own copy rather than reaching across the tree for one. The copy
+is deliberate; the two drifting apart is not, which is why this script writes
+both and `tests/test_texture_assets.py` checks they still match.
+
 Usage:
     python scripts/build_textures.py --manifest docs/texture_sources.json
 """
@@ -21,6 +28,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import shutil
 import urllib.request
 from pathlib import Path
 
@@ -29,6 +37,9 @@ from PIL import Image
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = REPO_ROOT / "maps" / "textures"
+#: The poster's own copy, and the tiles board3d.js actually loads.
+WEB_TEXTURES = REPO_ROOT / "webapp" / "static" / "public" / "textures"
+WEB_TILES = ("desert", "hills", "paper", "plain")
 
 # Mean brightness each tile is normalised to, and how much contrast it
 # keeps. Ground textures carry more tooth than the paper and sea washes.
@@ -65,6 +76,12 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--size", type=int, default=1024)
     parser.add_argument("--quality", type=int, default=82)
+    parser.add_argument(
+        "--web-out",
+        type=Path,
+        default=WEB_TEXTURES,
+        help="Where the poster's copy of the shared tiles goes.",
+    )
     args = parser.parse_args()
 
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
@@ -78,12 +95,16 @@ def main() -> int:
         tile = normalise(seamless(img, args.size), mean, spread)
         path = args.out / f"{name}.jpg"
         tile.save(path, "JPEG", quality=args.quality, optimize=True)
+        if name in WEB_TILES:
+            args.web_out.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, args.web_out / f"{name}.jpg")
         print(
             f"  {name:<10} {original[0]}x{original[1]} -> {tile.size[0]}x"
             f"{tile.size[1]}  {path.stat().st_size / 1024:5.0f} KB"
         )
 
     print(f"wrote {len(manifest['textures'])} tiles to {args.out}")
+    print(f"copied {len(WEB_TILES)} shared tiles to {args.web_out}")
     return 0
 
 

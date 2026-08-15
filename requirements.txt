@@ -1,14 +1,15 @@
-# Core dependencies
-typer>=0.9.0
-pyyaml>=6.0
+# pyproject.toml is the source of truth for dependencies. This file kept a
+# second, drifting copy of them -- it was missing bandit, mypy, ruff and build
+# for long enough that a fresh environment could pass `pip install -r` and
+# still not run the gates. It now installs the same sets by name.
+#
+#   pip install -r requirements.txt      (from the repository root)
+#
+# Engine only, without the web server or the tooling:
+#
+#   pip install .
+#
+# Regenerating the world map additionally needs the `map` extra (numpy,
+# pillow, scipy, scikit-image). It is a build-time input, not a runtime one.
 
-# Web server (beta)
-fastapi>=0.110
-uvicorn[standard]>=0.29
-jinja2>=3.1
-python-multipart>=0.0.9
-
-# Development dependencies
-pytest>=7.0
-pytest-cov>=4.0
-httpx>=0.27
+.[web,dev]

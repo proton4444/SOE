@@ -97,7 +97,7 @@ games/arena/*/decisions/
 games/arena/*/orders/
 
 # Third-party source material: development inputs only, never distributed.
-# See docs/ip_cleanroom.md.
+# See docs/archive/pre-agent-competition-2026-08-11/ip_cleanroom.md.
 reference/
 
 # Maps derived from that source material, and everything rendered from them.
