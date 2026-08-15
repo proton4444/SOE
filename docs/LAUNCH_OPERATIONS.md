@@ -107,17 +107,68 @@ If any check fails, the fallback is a Cloudflare Worker writing to D1 —
 same vendor, full data control, no third party in the privacy notice. It
 is more build and should not be chosen first.
 
-## The page
+### The form build sheet
 
-One static bundle. No framework, no build step, no Three.js.
+Build these six fields, in this order, with these labels **exactly**.
+`waitlist.py ingest` matches vendor columns by lowercased substring, so
+the label is not cosmetic: it is the integration contract. Renaming
+"X or Discord handle" to "Handle" still works; renaming it to "Contact
+me at" still works; renaming it to "Where do we reach you" does not, and
+ingest will refuse the file rather than guess.
+
+| # | Label | Type | Required | Notes |
+|---|---|---|---|---|
+| 1 | `Name` | short text | yes | max 80 |
+| 2 | `X or Discord handle` | short text | yes | max 80. Hint: "An X or Discord handle. Other contact methods are not accepted." |
+| 3 | `Email (optional)` | email | **no** | max 120. Hint: "Only if you want the invite code sent there." |
+| 4 | `One sentence of doctrine` | long text | yes | min 12, max 400 |
+| 5 | `src` | hidden | — | populated from the query string, never shown |
+| 6 | `Company` | honeypot | — | hidden from humans; a filled value is discarded |
+
+The vendor's own timestamp column ships as `Submitted at` and maps to
+`received_at`. Do not rename it.
+
+Verified: an export carrying exactly these headers ingests with every
+column mapped and nothing unmatched. Re-run that check after any label
+edit, on a two-row test export, before trusting a real one:
 
 ```text
-index.html      structure and all copy
-atlas.css       layout, type, dark board
-atlas.js        board render + replay playback + src capture
-replay.json     the exported official-gate match, unmodified
-textures/       desert forest hills mountains plain swamp paper
+python -m scripts.waitlist --ledger /tmp/probe.csv init
+python -m scripts.waitlist --ledger /tmp/probe.csv ingest export.csv
 ```
+
+A silent mismap looks like a successful ingest with a blank column, so
+read the row back with `show` rather than trusting the count.
+
+Two copy obligations the form carries beyond the page, both from the
+card and neither optional:
+
+- the privacy notice, verbatim, including `email` in its first sentence;
+- the sentence **"You will hear back within 7 days, either way."**
+  `waitlist.py due` is what keeps it.
+
+## The page
+
+One static bundle. No framework and no build step, but three.js **is**
+shipped: the board is a tilted 3D relief, which the card's contract
+permits. An earlier draft of this line said "no Three.js" and was wrong
+about what was built.
+
+```text
+index.html              structure and all copy
+atlas.css               layout, type, dark board
+atlas.js                replay playback, src capture, form + publish gate
+board.js                2D fallback board
+board3d.js              3D relief board (three.js)
+replay.json             the exported official-gate match, unmodified
+textures/               desert hills paper plain
+vendor/three.module.js  three.js, 1.27 MB uncompressed
+vendor/OrbitControls.js camera control
+```
+
+Asset URLs carry a `?v=` token that is **hardcoded in `index.html`, not
+generated**. Bump it by hand whenever `atlas.css` or `atlas.js` changes,
+or returning visitors keep the old file. It is currently `v=h2`.
 
 `sea.jpg` is **not** shipped. There is no sea. Shipping the texture
 invites its use.
