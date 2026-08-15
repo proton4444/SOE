@@ -16,7 +16,15 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from soe import config, engine, map_loader, models, parser, reporting, storage
+from soe import (  # noqa: E402 - after the sys.path bootstrap above, on purpose
+    config,
+    engine,
+    map_loader,
+    models,
+    parser,
+    reporting,
+    storage,
+)
 
 
 DEFAULT_OUTPUT = ROOT / "games" / "gameplay_smoke"
@@ -262,7 +270,6 @@ def run_smoke(output_dir: Path = DEFAULT_OUTPUT) -> dict:
         warning_count += turn_warning_count
 
     p1 = state.factions["player_1"]
-    p1_leader = state.characters["char_player_1_leader"]
     p2 = state.factions["player_2"]
     checks = [
         {

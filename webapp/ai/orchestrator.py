@@ -21,7 +21,10 @@ from datetime import datetime, timezone
 from webapp import blueprints, service
 from webapp.ai import brain, subagents
 from webapp.ai import context
-from webapp.ai.context import ORDERS_MARKER, extract_orders
+#: Re-exported: callers reach the orders block through the orchestrator, which
+#: is the seam they already import. `webapp.ai.context` owns the parsing.
+from webapp.ai.context import ORDERS_MARKER as ORDERS_MARKER
+from webapp.ai.context import extract_orders as extract_orders
 from webapp.ai.registry import (
     STATE_ERROR,
     STATE_SUBMITTED,
@@ -207,11 +210,6 @@ def _vision_images(room: Room, player: RoomPlayer) -> tuple[str, ...]:
 def _latest_report(room: Room, faction_id: str) -> str:
     reports = room.reports.get(room.last_resolved_turn, {})
     return reports.get(faction_id, "(no report yet)")
-
-
-def extract_orders(reply: str) -> str:
-    """Pull the orders block out of a strategist reply (shared, pure)."""
-    return context.extract_orders(reply)
 
 
 def _filter_clean_orders(room: Room, player: RoomPlayer, text: str) -> str:

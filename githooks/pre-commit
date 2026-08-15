@@ -1,0 +1,52 @@
+#!/bin/sh
+# Refuse commits that would publish something this repository promises to keep.
+#
+# There was a scanner before this one, but it lived in the operator's home
+# directory via `core.hooksPath`, so it protected exactly one clone. What it
+# guards is real: `private/` holds waitlist rows collected under a notice that
+# says they are not published, and `server_data/` holds TLS keys and live
+# ledgers. Both are gitignored, which stops an accident and not a `git add -f`.
+#
+# Install with: scripts/install_hooks.ps1   (or: git config core.hooksPath githooks)
+
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+fail=0
+note() {
+	echo "pre-commit: $1" >&2
+	fail=1
+}
+
+for path in $staged; do
+	case "$path" in
+		private/*)
+			note "$path is waitlist data collected under a privacy notice. Never commit private/." ;;
+		server_data/*)
+			note "$path is live server data (TLS keys, ledgers). Never commit server_data/." ;;
+		*.key|*.pem|*.pfx|*.p12|*.jks)
+			note "$path looks like a private key." ;;
+		reference/*)
+			note "$path is third-party source material, development input only." ;;
+	esac
+done
+
+# High-signal secrets only. A noisy scanner gets bypassed with --no-verify,
+# and a hook that is routinely bypassed protects nothing.
+patterns='sk-or-v1-[A-Za-z0-9]\{16\}|SOE_OPERATOR_KEY *= *["'"'"']\{0,1\}[A-Za-z0-9]\{8\}|SOE_LLM_KEY *= *["'"'"']\{0,1\}[A-Za-z0-9]\{8\}|BEGIN \(RSA \|EC \|OPENSSH \)\{0,1\}PRIVATE KEY'
+for path in $staged; do
+	case "$path" in
+		*.png|*.jpg|*.jpeg|*.pdf|*.gif|*.ico) continue ;;
+	esac
+	if git show ":$path" 2>/dev/null | grep -qE "$patterns"; then
+		note "$path contains something shaped like a live credential."
+	fi
+done
+
+if [ "$fail" -ne 0 ]; then
+	echo "pre-commit: refused. Override with --no-verify only if you are certain." >&2
+	exit 1
+fi
+exit 0

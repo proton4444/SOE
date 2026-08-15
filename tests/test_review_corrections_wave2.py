@@ -14,7 +14,7 @@ import pytest
 
 from soe import engine, models, orders, parser
 from soe.parser import control as parse_control
-from soe.phases import finance, magic, units
+from soe.phases import finance, magic
 
 
 @pytest.fixture

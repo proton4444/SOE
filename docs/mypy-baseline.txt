@@ -1,7 +1,7 @@
 SOE mypy baseline
 ==============================
 
-Baseline error count: 102
+Baseline error count: 101
 
 Reproduce with:
     mypy soe webapp cli.py --no-incremental
@@ -9,7 +9,17 @@ Reproduce with:
 The baseline is a count gate for the controlled beta. New code must not increase
 the count. This is intentionally not a repository-wide cleanup target.
 
+`scripts/check_mypy_baseline.ps1` reads the count above rather than carrying its
+own default, so this file is the gate. Update it in the same commit that changes
+the count, with a line here saying why.
+
 History:
+    101  2026-08-15, project audit. `webapp/ai/orchestrator.py` defined
+         `extract_orders` over the name it had just imported from
+         `webapp.ai.context`; the wrapper called the same function, so the
+         redefinition was only a `no-redef` error and a dead import. The
+         script's own default had drifted to 589 against a recorded 102,
+         which left room for 487 new errors before the gate would fail.
     589  first baseline
     102  2026-08-14, closing Wave 2. `OrderParserBase.create_order` and
          `add_warning` are generic over the order subclass, so a parser that

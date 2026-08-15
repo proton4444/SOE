@@ -189,7 +189,6 @@ def test_restore_into_an_empty_registry_creates_just_that_room(tmp_path):
 
 
 def test_pre_turn_snapshot_copies_present_ledgers():
-    from webapp import backups
     from webapp.rooms import SERVER_DATA
 
     (SERVER_DATA / "coaches.json").write_text(

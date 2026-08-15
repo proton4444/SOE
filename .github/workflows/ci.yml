@@ -1,0 +1,55 @@
+name: CI
+
+# Every gate this project has was a PowerShell script a human remembered to
+# run. These are the same scripts and the same commands, run for them.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,web]"
+
+      - name: Lint
+        run: ruff check soe webapp cli.py scripts tests
+
+      - name: Type debt gate
+        shell: pwsh
+        run: ./scripts/check_mypy_baseline.ps1
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Security scan
+        # Advisory: the six low findings are accepted in
+        # docs/archive/pre-agent-competition-2026-08-11/controlled_beta_readiness_2026-08-09.md.
+        # Fail only on medium and above.
+        run: bandit -q -r soe webapp cli.py -lll
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build

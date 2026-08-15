@@ -40,8 +40,6 @@ ALLOWED_BASE = "https://openrouter.ai/api/v1"
 
 @pytest.fixture(autouse=True)
 def _clean_store():
-    import shutil
-
     from webapp import rooms
     from webapp.ai import registry as ai_registry
     from webapp.rooms import ROOMS_FILE
@@ -270,7 +268,6 @@ def test_settings_file_override_env(monkeypatch, tmp_path):
     """SOE_LLM_SETTINGS_FILE lets isolated processes (the arena) honour the
     dashboard's LLM setup without touching its data dir."""
     live_file = tmp_path / "live.json"
-    isolated = tmp_path / "isolated.json"
     live_file.write_text(
         json.dumps({"key": KEY, "model": "poolside/laguna-s-2.1:free"}),
         encoding="utf-8",

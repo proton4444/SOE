@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import ssl
 import subprocess
 import tempfile
@@ -15,6 +16,44 @@ from pathlib import Path
 import pytest
 
 from scripts import https_proxy
+
+
+def _openssl_works() -> bool:
+    """Whether an openssl on PATH can actually issue a certificate.
+
+    Being on PATH is not enough. The one Strawberry Perl installs on Windows
+    answers `version` and then fails every real command, because it looks for
+    a config file at a build-time path that does not exist on this machine.
+    A drill this test cannot run is a skip; only a proxy that forwards wrong
+    is a failure.
+    """
+    if not shutil.which("openssl"):
+        return False
+    # Has to be a real issue, not `-help`: the failure mode above answers
+    # `version`, `-help` and `genrsa` with 0 and only breaks once a command
+    # reads openssl.cnf.
+    with tempfile.TemporaryDirectory() as work:
+        try:
+            return (
+                subprocess.call(
+                    [
+                        "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+                        "-keyout", str(Path(work) / "probe.key"),
+                        "-out", str(Path(work) / "probe.crt"),
+                        "-days", "1", "-subj", "/CN=probe",
+                    ],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                == 0
+            )
+        except OSError:
+            return False
+
+
+requires_openssl = pytest.mark.skipif(
+    not _openssl_works(), reason="no working openssl on PATH to issue test certificates"
+)
 
 
 def _certs(tmp_path: Path) -> tuple[Path, Path]:
@@ -78,6 +117,7 @@ class _Upstream(BaseHTTPRequestHandler):
         return
 
 
+@requires_openssl
 def test_https_proxy_forwards_healthz_over_tls(tmp_path):
     leaf_crt, leaf_key, ca_crt = _certs(tmp_path)
     # SAN includes soe.local; the unit test binds loopback so it does not
