@@ -288,6 +288,11 @@ main > section + section { border-top: 1px solid var(--rule-soft); }
   padding: 0.7rem 0.85rem;
   background: var(--ground-2);
   border-top: 2px solid var(--seat);
+  /* A grid item's `min-width: auto` floors its column at the item's content
+     width, so `1fr 1fr` silently resolves wider than the container and the
+     whole page scrolls sideways on a phone. Setting it to 0 lets 1fr mean
+     1fr. The stacking rule below then keeps the numbers from truncating. */
+  min-width: 0;
 }
 
 .readout-name {
@@ -318,6 +323,14 @@ main > section + section { border-top: 1px solid var(--rule-soft); }
   color: var(--text);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+}
+
+/* Two seat readouts side by side do not fit a phone: the numbers are tabular
+   and will not wrap, so they crowd hard at 375px. Stack them instead. Must
+   stay after the `.readouts` rule above, which has equal specificity and
+   would otherwise win on source order. */
+@media (max-width: 26rem) {
+  .readouts { grid-template-columns: 1fr; }
 }
 
 /* ---- transport ----------------------------------------------------- */
@@ -573,7 +586,11 @@ label {
   color: var(--muted);
 }
 
-input[type="text"], textarea {
+/* Every text-entry control on the form. Match on the types we actually use
+   rather than a bare `input`, which would also catch the range slider on the
+   replay transport. A new input type must be added here or it renders as a
+   raw browser default among styled fields. */
+input[type="text"], input[type="email"], textarea {
   width: 100%;
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--rule);
@@ -585,9 +602,11 @@ input[type="text"], textarea {
   transition: border-color 0.15s;
 }
 
-input[type="text"]:hover, textarea:hover { border-color: #3d352e; }
+input[type="text"]:hover, input[type="email"]:hover, textarea:hover {
+  border-color: #3d352e;
+}
 
-input[type="text"]:focus, textarea:focus {
+input[type="text"]:focus, input[type="email"]:focus, textarea:focus {
   outline: none;
   border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(200, 164, 92, 0.14);
