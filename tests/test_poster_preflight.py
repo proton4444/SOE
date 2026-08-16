@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import shutil
 
 import pytest
@@ -278,6 +279,78 @@ def test_an_asset_that_loses_its_token_is_refused(bundle, manifest):
 def test_a_missing_manifest_is_refused(bundle, tmp_path):
     findings = run(bundle, tmp_path / "absent.json")
     assert any("does not exist" in m for m in blockers(findings, "token"))
+
+
+# ---------------------------------------------------------------------------
+# the board agrees with the map it mirrors
+# ---------------------------------------------------------------------------
+
+
+def board_road_style(bundle):
+    """ROAD_STYLE out of board3d.js, as {quality: (colour, width, dashed)}."""
+    source = (bundle / "board3d.js").read_text(encoding="utf-8")
+    block = re.search(r"const ROAD_STYLE = \{(.*?)\};", source, re.DOTALL)
+    assert block, "board3d.js no longer declares ROAD_STYLE"
+    out = {}
+    for row in re.finditer(
+        r"(\w+):\s*\{\s*color:\s*0x([0-9a-fA-F]{6}),\s*width:\s*([\d.]+),"
+        r"\s*dashed:\s*(true|false)",
+        block.group(1),
+    ):
+        out[row.group(1)] = (int(row.group(2), 16), float(row.group(3)), row.group(4) == "true")
+    return out
+
+
+def luminance(rgb: int) -> float:
+    r, g, b = (rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def test_the_board_carries_the_same_road_qualities_as_the_map(bundle):
+    from webapp import mapview
+
+    board = board_road_style(bundle)
+    assert set(board) == {q.value for q in mapview.RoadQuality}
+
+
+def test_the_board_dashes_a_road_where_the_map_dashes_it(bundle):
+    from webapp import mapview
+
+    board = board_road_style(bundle)
+    for quality, (_, _, dashed) in board.items():
+        _, _, dash = mapview._ROAD_STYLES[mapview.RoadQuality(quality)]
+        assert dashed == (dash != "none"), f"{quality}: dash disagrees with the map"
+
+
+def test_the_board_inverts_the_map_ramp_because_its_ground_is_cream(bundle):
+    """The two ramps must be monotonic and opposite.
+
+    The board is a print on cream and the map is ink on near-black, so "better
+    road" means darker on one and lighter on the other. Both say the same
+    thing -- the better the road, the more it stands off its ground -- and this
+    is the invariant that broke silently when the map's palette changed and the
+    board's did not.
+    """
+    from webapp import mapview
+
+    ramp = ["excellent", "good", "fair", "poor"]
+    board = [luminance(board_road_style(bundle)[q][0]) for q in ramp]
+    screen = [
+        luminance(int(mapview._ROAD_STYLES[mapview.RoadQuality(q)][0].lstrip("#"), 16))
+        for q in ramp
+    ]
+    assert board == sorted(board), "on cream the best road must be the darkest"
+    assert screen == sorted(screen, reverse=True), "on navy the best road must be the lightest"
+
+
+def test_the_board_ranks_road_width_the_way_the_map_does(bundle):
+    from webapp import mapview
+
+    ramp = ["excellent", "good", "fair", "poor"]
+    board = [board_road_style(bundle)[q][1] for q in ramp]
+    screen = [mapview._ROAD_STYLES[mapview.RoadQuality(q)][1] for q in ramp]
+    assert board == sorted(board, reverse=True)
+    assert screen == sorted(screen, reverse=True)
 
 
 # ---------------------------------------------------------------------------

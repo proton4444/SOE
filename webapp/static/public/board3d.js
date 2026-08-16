@@ -22,7 +22,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h3";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h4";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -103,18 +103,27 @@ const GRID_MAJOR_EVERY = 5;    // a heavier rule every fifth square
 const SHEET_INSET = 30;        // board units from sheet edge to the neatline
 const SHEET_EDGE = 0x3a3125;   // binder board under the print, seen at this tilt
 
-/* Roads carry their quality in colour and dash, exactly as the game draws
-   them. Width follows mapview's stroke weights, scaled to board units. */
-/* Inked down a stop from mapview's screen values. Those are strokes on the
-   game's near-black navy; here they are printed on cream, and a pale road on
-   pale paper is not a road. Hue and dash — the parts that carry quality — are
-   unchanged. */
+/* Roads carry their quality exactly as the game map does, which is the whole
+   point of the board matching it: a reader who has seen one should not have to
+   learn the other.
+ *
+ * mapview used to carry quality in hue — a green, a blue-grey, an orange, a
+ * salmon — and this mirrored those hues. It no longer does. With terrain
+ * painted under the routes, a green road disappeared into forest and the
+ * orange fought the desert, so quality moved onto weight, dash and contrast
+ * within one warm ink family, and the board followed it here.
+ *
+ * Followed, not copied. There the ink is laid on near-black navy, so the best
+ * road is the LIGHTEST; here it is printed on cream, so the best road is the
+ * DARKEST. Both say the same thing — the better the road, the more it stands
+ * off its ground — and inverting the ramp is what keeps that true on paper.
+ * A pale road on pale paper is not a road. */
 const ROAD_STYLE = {
-  excellent: { color: 0x2f7d4a, width: 7.0, dashed: false },
-  good:      { color: 0x4a5a70, width: 6.1, dashed: false },
-  fair:      { color: 0xa8702a, width: 5.3, dashed: true  },
-  poor:      { color: 0xa8443a, width: 4.7, dashed: true  },
-  sea:       { color: 0x2b7fa8, width: 5.7, dashed: true  }
+  excellent: { color: 0x3a3024, width: 7.0, dashed: false },
+  good:      { color: 0x5a4e3a, width: 6.1, dashed: false },
+  fair:      { color: 0x7d6e56, width: 5.3, dashed: true  },
+  poor:      { color: 0x9a8b73, width: 4.7, dashed: true  },
+  sea:       { color: 0x2b6f92, width: 5.7, dashed: true  }
 };
 const ROAD_FALLBACK = { color: 0x5a6474, width: 5.1, dashed: false };
 /* Every road gets a wider, near-black bed under it, the way an engraved map
