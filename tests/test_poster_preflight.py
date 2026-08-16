@@ -57,6 +57,13 @@ def blockers(findings, check=None):
     ]
 
 
+def token(bundle):
+    """The bundle's current cache token, so these tests never pin a literal."""
+    tokens, _ = check_poster.token_scan(bundle)
+    assert len(tokens) == 1, f"the tree should carry one token, found {sorted(tokens)}"
+    return tokens.pop()
+
+
 def edit(path, old, new):
     text = path.read_text(encoding="utf-8")
     assert old in text, f"fixture is stale: {old!r} is not in {path.name}"
@@ -235,7 +242,8 @@ def test_two_tokens_in_one_bundle_are_refused(bundle, manifest):
     -- moves one and leaves the other, and a returning visitor gets a new
     atlas.js against a cached board3d.js.
     """
-    edit(bundle / "atlas.js", "board3d.js?v=h2", "board3d.js?v=h1")
+    now = token(bundle)
+    edit(bundle / "atlas.js", f"board3d.js?v={now}", f"board3d.js?v={now}-stale")
     assert any("more than one cache token" in m for m in blockers(run(bundle, manifest), "token"))
 
 
@@ -246,9 +254,12 @@ def test_changed_assets_under_an_unchanged_token_are_refused(bundle, manifest):
 
 def test_bumping_the_token_everywhere_clears_it(bundle, manifest):
     edit(bundle / "atlas.css", "body", "body /* touched */")
+    now = token(bundle)
     for name in ("index.html", "atlas.js", "board3d.js"):
         path = bundle / name
-        path.write_text(path.read_text(encoding="utf-8").replace("?v=h2", "?v=h3"), encoding="utf-8")
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(f"?v={now}", f"?v={now}next"), encoding="utf-8"
+        )
     assert check_poster.accept_token(bundle, manifest, force=False) == 0
     assert blockers(run(bundle, manifest), "token") == []
 
@@ -260,7 +271,7 @@ def test_accept_token_refuses_to_record_changed_assets_under_the_same_token(bund
 
 
 def test_an_asset_that_loses_its_token_is_refused(bundle, manifest):
-    edit(bundle / "index.html", 'href="atlas.css?v=h2"', 'href="atlas.css"')
+    edit(bundle / "index.html", f'href="atlas.css?v={token(bundle)}"', 'href="atlas.css"')
     assert any("set of assets" in m for m in blockers(run(bundle, manifest), "token"))
 
 

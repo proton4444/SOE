@@ -22,7 +22,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h2";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h3";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -730,7 +730,21 @@ export function createBoard(options) {
 
   /* --- textures */
   const ANISO = Math.min(16, renderer.capabilities.getMaxAnisotropy());
-  const loader = new THREE.TextureLoader();
+
+  /* A parked board draws exactly once, and these jpgs decode later than that.
+     Without this the reduce-motion visitor keeps the frame that was painted
+     before they arrived — untextured mounds and a sheet with no tooth — for
+     as long as they leave the page open, because nothing ever asks for
+     another frame. The running loop repaints anyway, so this only fires on
+     the path that needs it. */
+  const texManager = new THREE.LoadingManager();
+  texManager.onLoad = function () {
+    if (!running) {
+      placeLabels();
+      renderer.render(scene, camera);
+    }
+  };
+  const loader = new THREE.TextureLoader(texManager);
   const terrainTex = {};
   function terrainMap(name) {
     if (!terrainTex[name]) {
@@ -1358,14 +1372,37 @@ export function createBoard(options) {
 
     /* Redraw on demand when the loop is parked — the reduced-motion board and
        the scrolled-away board are both static, but the reader can still turn
-       them with the mouse and that has to paint. */
+       them with the mouse and that has to paint.
+
+       The pump runs inside a frame callback, never inside the event handler.
+       controls.update() dispatches "change" whenever it moves the camera, and
+       with damping on it moves the camera on nearly every call, so calling
+       update() from the change handler called it again, and again, until the
+       stack overflowed. The board then never drew and the page showed "The
+       replay could not be loaded." — the exception surfaced in the replay
+       promise's catch, which is the last place anyone would look for it.
+       Every visitor with reduce-motion set hit it on load, because that path
+       parks the loop and opens with renderOnce(), whose first act is an
+       update().
+
+       The flag keeps the change *caused by* the pump from starting a second
+       pump, and update()'s return value says whether the camera is still
+       settling, which is exactly when another frame is worth drawing. */
     renderOnIdleChange: function () {
+      var pumping = false;
+
+      function pump() {
+        if (running) { pumping = false; return; }
+        var settling = controls.update();
+        placeLabels();
+        renderer.render(scene, camera);
+        if (settling) { requestAnimationFrame(pump); } else { pumping = false; }
+      }
+
       controls.addEventListener("change", function () {
-        if (!running) {
-          controls.update();
-          placeLabels();
-          renderer.render(scene, camera);
-        }
+        if (running || pumping) { return; }
+        pumping = true;
+        requestAnimationFrame(pump);
       });
     },
 
