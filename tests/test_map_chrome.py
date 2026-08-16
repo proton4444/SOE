@@ -244,6 +244,18 @@ def test_the_lanes_are_still_visible_at_all():
     assert ink["sea"] / ink["land"] > 0.10
 
 
+def test_the_bar_clears_the_landmass_roster():
+    """Both live bottom-left, and on a sparse map they were drawn on top of
+    each other -- the roster panel straight through the ruler."""
+    svg = mapview.render_svg("calib_12.json")
+    bar = re.search(r'<g class="map-scale"[^>]*transform="translate\([\d.]+,([\d.]+)\)"', svg)
+    roster = re.search(
+        r'<g class="map-island-roster"[^>]*>\s*<rect x="[\d.-]+" y="([\d.-]+)"', svg
+    )
+    assert bar and roster, "this map should carry both"
+    assert float(bar.group(1)) + 18 <= float(roster.group(1))
+
+
 def test_a_map_without_geography_gets_no_bar(tmp_path, monkeypatch):
     """Without a mile field the frame is nominal, and a bar would be invented.
 

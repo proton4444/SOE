@@ -799,7 +799,9 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     )
     parts.append(_terrain_svg(geo, layout))
     parts.append(_compass(w - 48, h - 48))
-    parts.append(_scale_bar(layout))
+    # The roster only exists on sparse maps; its panel is what the bar clears.
+    roster_h = 0.0 if dense else (len(masses) * 18 + 36 + 14)
+    parts.append(_scale_bar(layout, reserved_bottom=roster_h))
     parts.append(_title_block(stats, dense=dense))
     # On-map landmass roster only for small maps; dense maps use the HTML index.
     if not dense:
@@ -1377,7 +1379,7 @@ def scale_bar_miles(layout: MapLayout, target_fraction: float = 0.16) -> int:
     return min(_SCALE_STEPS, key=lambda step: abs(step - want))
 
 
-def _scale_bar(layout: MapLayout) -> str:
+def _scale_bar(layout: MapLayout, reserved_bottom: float = 0.0) -> str:
     """A cartographic scale bar, in the units the engine prices travel in.
 
     The map has always been drawn to scale -- towns carry mile coordinates and
@@ -1400,7 +1402,9 @@ def _scale_bar(layout: MapLayout) -> str:
     height = 7.0
 
     x = layout.pad_x + 18
-    y = layout.pad_y + layout.map_h - 26
+    # The landmass roster is drawn in this same corner on sparse maps, so the
+    # bar steps up over whatever it occupies rather than through it.
+    y = layout.pad_y + layout.map_h - 26 - reserved_bottom
 
     parts = [
         f'<g class="map-scale" aria-label="Scale bar: {miles} miles" '
