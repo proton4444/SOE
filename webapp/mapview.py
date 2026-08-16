@@ -768,6 +768,7 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     parts.append(_landmasses_svg(masses, dense=dense, traced=layout.has_geography))
     parts.append(_terrain_svg(geo, layout))
     parts.append(_compass(w - 48, h - 48))
+    parts.append(_scale_bar(layout))
     parts.append(_title_block(stats, dense=dense))
     # On-map landmass roster only for small maps; dense maps use the HTML index.
     if not dense:
@@ -1331,6 +1332,71 @@ def _compass(cx: float, cy: float) -> str:
         font-family="Georgia, serif">N</text>
 </g>
 """.strip()
+
+
+#: Bar lengths worth printing, in miles. A scale bar is read by its number,
+#: so the number has to be one a person holds in their head while looking
+#: somewhere else -- never 137 miles because that was 15% of the frame.
+_SCALE_STEPS = (50, 100, 200, 250, 500, 1000)
+
+
+def scale_bar_miles(layout: MapLayout, target_fraction: float = 0.16) -> int:
+    """The roundest bar length that lands near `target_fraction` of the map."""
+    want = layout.field_w_mi * target_fraction
+    return min(_SCALE_STEPS, key=lambda step: abs(step - want))
+
+
+def _scale_bar(layout: MapLayout) -> str:
+    """A cartographic scale bar, in the units the engine prices travel in.
+
+    The map has always been drawn to scale -- towns carry mile coordinates and
+    routes are priced in miles -- and has never said so, which left every
+    distance on it unreadable. Alternating segments rather than a plain rule,
+    because that is what lets someone step a distance off by eye.
+
+    Only drawn with geography, where the viewBox really is the mile field.
+    Without it the frame is nominal and a bar would be a measurement invented
+    for the occasion.
+    """
+    if not layout.has_geography or not layout.field_w_mi:
+        return ""
+
+    miles = scale_bar_miles(layout)
+    units_per_mile = layout.map_w / layout.field_w_mi
+    length = miles * units_per_mile
+    segments = 4
+    seg = length / segments
+    height = 7.0
+
+    x = layout.pad_x + 18
+    y = layout.pad_y + layout.map_h - 26
+
+    parts = [
+        f'<g class="map-scale" aria-label="Scale bar: {miles} miles" '
+        f'transform="translate({x:.1f},{y:.1f})">'
+    ]
+    parts.append(
+        f'<rect x="-6" y="-19" width="{length + 12:.1f}" height="{height + 30:.1f}" '
+        f'rx="3" fill="#0e1118" fill-opacity="0.62" stroke="#2e3644" stroke-width="0.8"/>'
+    )
+    for i in range(segments):
+        fill = "#e8dcc2" if i % 2 == 0 else "#2a3140"
+        parts.append(
+            f'<rect x="{i * seg:.1f}" y="0" width="{seg:.1f}" height="{height:.1f}" '
+            f'fill="{fill}" stroke="#e8dcc2" stroke-width="0.8"/>'
+        )
+    for i in (0, segments // 2, segments):
+        label = int(miles * i / segments)
+        parts.append(
+            f'<text x="{i * seg:.1f}" y="-5" text-anchor="middle" fill="#c8cedb" '
+            f'font-size="9.5" font-family="Georgia, serif">{label}</text>'
+        )
+    parts.append(
+        f'<text x="{length / 2:.1f}" y="{height + 11:.1f}" text-anchor="middle" '
+        f'fill="#8d97a8" font-size="8.5" letter-spacing="1.1">MILES</text>'
+    )
+    parts.append("</g>")
+    return "\n".join(parts)
 
 
 def _poly_path(pts: list[tuple[float, float]]) -> str:
