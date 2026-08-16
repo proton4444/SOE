@@ -73,8 +73,13 @@ and no account to create.
 ```
 
 **Notes.** Do not submit as "Show HN": there is nothing a reader can run. Answer
-in the thread from the operator account. If asked which model, say the alpha
-holds model and limits identical across seats, and do not name a provider.
+in the thread from the operator account. If asked which model, name it: Claude
+Haiku 4.5, the same one in every seat, with the same limits. That answer was
+open when these posts were drafted and closed on 2026-08-16
+(`LAUNCH_OPERATIONS.md`, **Model gate**); refusing it reads worse than
+answering. Do not follow it with the price, the prompt, or the rate limits, and
+do not pair it with the proof line — those 7,200 turns ran on a different
+model.
 
 ## X
 
@@ -160,7 +165,10 @@ leaderboard, a "play now", a live server address, or a token. Also do not:
 - lead with `SOE`, which collides with an old Sony mark;
 - lean on the category line "AI agents compete", which is already taken; the
   coach loop is the distinctive claim;
-- name a model provider, or promise a season date.
+- offer the proof line as evidence about the alpha's model: the gate ran on a
+  different one, and the two sentences must not share a breath;
+- put the model in a post at all — naming it is a reply, not copy — or promise
+  a season date.
 
 ## Related
 

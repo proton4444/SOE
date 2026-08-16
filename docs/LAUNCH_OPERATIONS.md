@@ -109,6 +109,47 @@ has a safe default:
   invite code decides who may start; these decide how much a leaked invite can
   cost before it is rotated.
 
+## Model gate: closed
+
+**Claude Haiku 4.5, from Anthropic.** Decided 2026-08-16. The frozen
+regulation names it (`configs/competition/coach_league.json`), and a
+blueprint naming anything else is refused entry, which is what "same
+model and limits for everyone" is enforced by.
+
+| | |
+|---|---|
+| Model id | `claude-haiku-4-5` (`claude-haiku-4-5-20251001` pins the snapshot) |
+| Context | 200K tokens |
+| List price | $1.00 per million input, $5.00 per million output |
+| Base URL | `https://api.anthropic.com/v1` — `SOE_LLM_BASE` must be moved off the OpenRouter default |
+
+Three things follow, and none of them is optional.
+
+**1. A claude.ai subscription is not API access.** The seats are played by
+`webapp/ai/brain.py` over HTTP, which bills through the Anthropic API on
+its own key from `console.anthropic.com` and its own balance. A Pro or
+Max plan buys nothing here. `SOE_LLM_KEY` holds that API key.
+
+**2. The gate's competence evidence was produced on a different model.**
+The 7,200 turns behind the proof line ran on `openai/gpt-4o-mini`
+(`docs/ROADMAP.md`, Phase 0). The proof line stays literally true — it
+says what the gate completed, not what the alpha runs — but it is no
+longer evidence about the model the alpha runs, and it must never be
+offered as if it were. Re-running the gate on Haiku is the only thing
+that would make it that, and it costs money that is not yet budgeted.
+
+**3. The spend ceiling stops working differently here.** Anthropic
+returns token counts and never a dollar figure, so `usage["cost"]` — what
+the official record and `SpendBudget` both read — is absent. The ceiling
+now falls back to list-price arithmetic (`webapp/ai/anthropic_chat.py`,
+`PRICES_PER_MTOK`), recorded in every trace as
+`budget_cost_estimated: true` and `budget_cost_known: false`. That is
+enough to stop a runaway alpha. It is **not** enough for an official gate
+run: `official-gate` requires a provider-declared cost, so a gate re-run
+on Anthropic fails that criterion by design. An official re-run therefore
+needs either OpenRouter's Claude (which declares cost) or a decision to
+change what that criterion means.
+
 ## Form vendor gate: recommended
 
 Tally passes all six criteria. Verify each one in the account before
@@ -312,7 +353,7 @@ the compression table governs what may be dropped.
 | Question | Answer |
 |---|---|
 | Can I try it now? | Not yet — invite only, 30 seats. Tagged URL for that thread. |
-| Which model? | Decide this before posting and answer it plainly. Refusing reads worse than answering. The forbidden list covers the replay file and the page, not conversation. |
+| Which model? | Claude Haiku 4.5, the same one in every seat, with the same limits. Nothing more — no price, no prompt, no rate. See **Model gate: closed**. |
 | Is it open source? | Answer honestly, one sentence, no roadmap promise. |
 | How is this different from Agent Arena / Agent Sports League? | The coach loop: you write a doctrine, freeze it, and cannot touch the match. Not a leaderboard. |
 | Why no ranking or prize? | Ranking turns a doctrine experiment into a scoring contest. Explicit non-goal. |

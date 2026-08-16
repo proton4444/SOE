@@ -339,6 +339,24 @@ una ri-esecuzione del gate con un modello sulla nuova mappa, cioe spesa reale
 sotto un tetto di budget che non e ancora deciso. Fino ad allora `calib_12.json`
 resta congelata e le 7.200 chiamate del gate descrivono quella, non questa.
 
+#### Il modello dell'alpha non e il modello del gate (2026-08-16)
+
+L'alpha e stata decisa su **Claude Haiku 4.5** (`claude-haiku-4-5`), scritto
+nella regulation congelata `configs/competition/coach_league.json`. Il gate ha
+girato su `openai/gpt-4o-mini`. La proof line resta vera alla lettera — dice
+cosa ha completato il gate, non su cosa gira l'alpha — ma **non e piu evidenza
+sul modello che gioca l'alpha**, e non va presentata come tale.
+
+Una ri-esecuzione del gate su Anthropic ha un ostacolo in piu della spesa: il
+criterio `cost_and_duration` pretende un costo dichiarato dal provider, e
+Anthropic fattura in token senza mai dichiarare dollari. Il tetto di spesa
+adesso ripiega sull'aritmetica a listino (`webapp/ai/anthropic_chat.py`) e ogni
+trace lo dice — `budget_cost_estimated: true`, `budget_cost_known: false` — il
+che basta a fermare un run che scappa, non a superare il criterio. Un gate
+ufficiale su Haiku richiede quindi Claude via OpenRouter, che il costo lo
+dichiara, oppure una decisione esplicita su cosa quel criterio debba
+significare.
+
 ### Decisione
 
 Se il gate fallisce, non si costruisce il prodotto coach. Si correggono prompt,

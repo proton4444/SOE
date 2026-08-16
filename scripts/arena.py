@@ -202,18 +202,29 @@ class SpendBudget:
     spent_usd: float = 0.0
     exhausted: bool = False
     cost_known: bool = True
+    #: True once any charge came from a list-price estimate rather than from
+    #: a figure the provider stated. Travels into the trace so a run's spend
+    #: is never read as provider-declared when it is not.
+    estimated: bool = False
 
     def __post_init__(self) -> None:
         if self.limit_usd <= 0:
             self.exhausted = True
 
-    def charge(self, cost) -> None:
+    def charge(self, cost, estimate=None) -> None:
         if not isinstance(cost, (int, float)):
-            # A ceiling cannot be enforced when the provider omits cost. Stop
-            # before another paid call instead of silently running unbounded.
+            # Anthropic bills in tokens and declares no dollars, so the
+            # ceiling falls back to the caller's own list-price arithmetic.
+            # ``cost_known`` still says no: the provider stated nothing.
             self.cost_known = False
-            self.exhausted = True
-            return
+            if not isinstance(estimate, (int, float)):
+                # Neither a declared cost nor a priced model: a ceiling cannot
+                # be enforced at all. Stop before another paid call instead of
+                # silently running unbounded.
+                self.exhausted = True
+                return
+            self.estimated = True
+            cost = estimate
         self.spent_usd += float(cost)
         if self.spent_usd >= self.limit_usd:
             self.exhausted = True
@@ -406,10 +417,14 @@ class LLMPolicy(Policy):
         trace["latency_ms"] = result.latency_ms
         trace["usage"] = result.usage
         if self.budget is not None:
-            self.budget.charge((result.usage or {}).get("cost"))
+            usage = result.usage or {}
+            self.budget.charge(
+                usage.get("cost"), estimate=usage.get("cost_estimated_usd")
+            )
             trace["budget_spent_usd"] = round(self.budget.spent_usd, 6)
             trace["budget_limit_usd"] = self.budget.limit_usd
             trace["budget_cost_known"] = self.budget.cost_known
+            trace["budget_cost_estimated"] = self.budget.estimated
         trace["provider_request_id"] = result.provider_request_id
         if self.record_reasoning:
             trace["raw_reply"] = result.text
