@@ -81,12 +81,21 @@ class MapLayout:
 
 
 # Road stroke: (color, width, dasharray)
+# Roads are ink laid on the ground, so quality is carried by weight, dash and
+# lightness within one warm family -- never by hue. The previous set was a
+# green, a blue-grey, an orange and a salmon, chosen when the land was a
+# single flat fill and nothing competed with them. With terrain painted
+# underneath, the green road disappeared into forest and the orange and salmon
+# fought the desert and the hills, so the network read as four unrelated
+# things instead of one network in four states.
+#
+# Sea keeps its blue. That one is not a hue chosen for contrast; it is water.
 _ROAD_STYLES = {
-    RoadQuality.EXCELLENT: ("#6fbf73", 3.8, "none"),
-    RoadQuality.GOOD: ("#a8b4c4", 3.2, "none"),
-    RoadQuality.FAIR: ("#d8a04b", 2.8, "9 5"),
-    RoadQuality.POOR: ("#d16b5f", 2.4, "3 4"),
-    RoadQuality.SEA: ("#4aa8d8", 3.0, "12 8"),
+    RoadQuality.EXCELLENT: ("#f4ead6", 3.6, "none"),
+    RoadQuality.GOOD: ("#d6c9ae", 3.0, "none"),
+    RoadQuality.FAIR: ("#b0a488", 2.6, "10 6"),
+    RoadQuality.POOR: ("#8d8369", 2.2, "3 5"),
+    RoadQuality.SEA: ("#5ba7d0", 2.8, "12 8"),
 }
 
 _BAND_RADIUS = {
@@ -1099,13 +1108,21 @@ def islands_html(map_file: str) -> str:
 
 
 def legend_svg() -> str:
-    """Compact SVG legend (kept for callers that still embed it)."""
+    """Compact SVG legend (kept for callers that still embed it).
+
+    Read out of `_ROAD_STYLES` rather than restated. A legend is a promise
+    about the map, and the only way to keep it is to not have a second copy
+    of the palette to forget.
+    """
     items = [
-        ("#6fbf73", "none", "excellent"),
-        ("#a8b4c4", "none", "good"),
-        ("#d8a04b", "9 5", "fair"),
-        ("#d16b5f", "3 4", "poor"),
-        ("#4aa8d8", "12 8", "sea lane"),
+        (_ROAD_STYLES[quality][0], _ROAD_STYLES[quality][2], label)
+        for quality, label in (
+            (RoadQuality.EXCELLENT, "excellent"),
+            (RoadQuality.GOOD, "good"),
+            (RoadQuality.FAIR, "fair"),
+            (RoadQuality.POOR, "poor"),
+            (RoadQuality.SEA, "sea lane"),
+        )
     ]
     parts = [
         '<svg class="legend-svg" width="220" height="210" viewBox="0 0 220 210" '
@@ -1136,7 +1153,7 @@ def legend_svg() -> str:
     y_port = y_mf + 18
     parts.append(
         f'<path d="M 16 {y_port + 4} a 10 10 0 0 1 16 0" fill="none" '
-        f'stroke="#4aa8d8" stroke-width="1.5"/>'
+        f'stroke="#5ba7d0" stroke-width="1.5"/>'
     )
     parts.append(
         f'<text x="54" y="{y_port + 4}" fill="#9aa7b8" font-size="11">port</text>'
@@ -1368,9 +1385,13 @@ def _terrain_svg(geo: Optional[dict], layout: MapLayout) -> str:
             if len(poly) >= 3
         )
         if paths:
+            # A hairline edge in the region's own shadow. Without it two
+            # adjacent greens meet on a colour change alone and the map reads
+            # as camouflage; with it each region is a place with a border.
             parts.append(
                 f'<path class="terrain-{kind}" d="{paths}" fill="{fill}" '
-                f'fill-opacity="0.85" stroke="none"/>'
+                f'fill-opacity="0.88" stroke="#161a12" stroke-width="0.7" '
+                f'stroke-opacity="0.35" stroke-linejoin="round"/>'
             )
     for lake in geo.get("lakes") or []:
         if len(lake) < 3:
@@ -1930,7 +1951,7 @@ def _city_svg(
         chunks.append(
             f'<path d="M {x - pr:.1f} {y + radius + 2:.1f} '
             f'a {pr:.1f} {pr:.1f} 0 0 1 {2 * pr:.1f} 0" '
-            f'fill="none" stroke="#4aa8d8" stroke-width="1.5" opacity="0.95"/>'
+            f'fill="none" stroke="#5ba7d0" stroke-width="1.5" opacity="0.95"/>'
         )
 
     if resources and plan.radius_scale >= 0.7:
