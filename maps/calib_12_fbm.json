@@ -1,0 +1,334 @@
+{
+  "cities": [
+    {
+      "id": "ossaridge",
+      "name": "Ossaridge",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "C4",
+      "x": 0.3035,
+      "y": 0.2351,
+      "x_miles": 394.5,
+      "y_miles": 235.1,
+      "region": "Barunreach march"
+    },
+    {
+      "id": "ithothwold",
+      "name": "Ithothwold",
+      "population_band": "< 1k",
+      "population": 253,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D10",
+      "x": 0.7622,
+      "y": 0.336,
+      "x_miles": 990.8,
+      "y_miles": 336.0,
+      "region": "Morathford reach"
+    },
+    {
+      "id": "braeadale",
+      "name": "Braeadale",
+      "population_band": "< 1k",
+      "population": 322,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D9",
+      "x": 0.6748,
+      "y": 0.3787,
+      "x_miles": 877.3,
+      "y_miles": 378.7,
+      "region": "Morathford reach"
+    },
+    {
+      "id": "torathreach",
+      "name": "Torathreach",
+      "population_band": "< 1k",
+      "population": 0,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": true,
+      "grid_ref": "H5",
+      "x": 0.3385,
+      "y": 0.7425,
+      "x_miles": 440.0,
+      "y_miles": 742.5,
+      "region": "Barunreach march"
+    },
+    {
+      "id": "zeleis",
+      "name": "Zeleis",
+      "population_band": "< 1k",
+      "population": 613,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "G10",
+      "x": 0.7132,
+      "y": 0.619,
+      "x_miles": 927.2,
+      "y_miles": 619.0,
+      "region": "Quenethhaven vale"
+    },
+    {
+      "id": "wenoreach",
+      "name": "Wenoreach",
+      "population_band": "< 1k",
+      "population": 654,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H6",
+      "x": 0.4505,
+      "y": 0.728,
+      "x_miles": 585.7,
+      "y_miles": 728.0,
+      "region": "Barunreach march"
+    },
+    {
+      "id": "vasaridge",
+      "name": "Vasaridge",
+      "population_band": "< 1k",
+      "population": 352,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "D7",
+      "x": 0.4669,
+      "y": 0.3295,
+      "x_miles": 607.0,
+      "y_miles": 329.5,
+      "region": "Barunreach march"
+    },
+    {
+      "id": "ossanmere",
+      "name": "Ossanmere",
+      "population_band": "< 1k",
+      "population": 569,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F8",
+      "x": 0.5651,
+      "y": 0.5489,
+      "x_miles": 734.6,
+      "y_miles": 548.9,
+      "region": "Barunreach march"
+    },
+    {
+      "id": "eshunis",
+      "name": "Eshunis",
+      "population_band": "< 1k",
+      "population": 884,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "F12",
+      "x": 0.9109,
+      "y": 0.5949,
+      "x_miles": 1184.2,
+      "y_miles": 594.9,
+      "region": "Quenethhaven vale"
+    },
+    {
+      "id": "xanegate",
+      "name": "Xanegate",
+      "population_band": "< 1k",
+      "population": 655,
+      "terrain": [
+        "desert"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H10",
+      "x": 0.7103,
+      "y": 0.7278,
+      "x_miles": 923.4,
+      "y_miles": 727.8,
+      "region": "Quenethhaven vale"
+    },
+    {
+      "id": "dunogate",
+      "name": "Dunogate",
+      "population_band": "< 1k",
+      "population": 593,
+      "terrain": [
+        "plain"
+      ],
+      "is_port": false,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "H11",
+      "x": 0.8059,
+      "y": 0.7224,
+      "x_miles": 1047.7,
+      "y_miles": 722.4,
+      "region": "Quenethhaven vale"
+    },
+    {
+      "id": "rhaethvale",
+      "name": "Rhaethvale",
+      "population_band": "< 1k",
+      "population": 275,
+      "terrain": [
+        "forest"
+      ],
+      "is_port": true,
+      "is_magic_free": false,
+      "is_ruin": false,
+      "grid_ref": "C11",
+      "x": 0.8123,
+      "y": 0.266,
+      "x_miles": 1056.0,
+      "y_miles": 266.0,
+      "region": "Morathford reach"
+    }
+  ],
+  "roads": [
+    {
+      "id": "ossaridge__vasaridge__poor",
+      "from": "ossaridge",
+      "to": "vasaridge",
+      "quality": "poor",
+      "distance_miles": 267,
+      "bidirectional": true
+    },
+    {
+      "id": "ithothwold__rhaethvale__good",
+      "from": "ithothwold",
+      "to": "rhaethvale",
+      "quality": "good",
+      "distance_miles": 110,
+      "bidirectional": true
+    },
+    {
+      "id": "braeadale__ithothwold__poor",
+      "from": "braeadale",
+      "to": "ithothwold",
+      "quality": "poor",
+      "distance_miles": 139,
+      "bidirectional": true
+    },
+    {
+      "id": "braeadale__rhaethvale__good",
+      "from": "braeadale",
+      "to": "rhaethvale",
+      "quality": "good",
+      "distance_miles": 243,
+      "bidirectional": true
+    },
+    {
+      "id": "torathreach__wenoreach__fair",
+      "from": "torathreach",
+      "to": "wenoreach",
+      "quality": "fair",
+      "distance_miles": 168,
+      "bidirectional": true
+    },
+    {
+      "id": "zeleis__dunogate__good",
+      "from": "zeleis",
+      "to": "dunogate",
+      "quality": "good",
+      "distance_miles": 183,
+      "bidirectional": true
+    },
+    {
+      "id": "wenoreach__ossanmere__good",
+      "from": "wenoreach",
+      "to": "ossanmere",
+      "quality": "good",
+      "distance_miles": 268,
+      "bidirectional": true
+    },
+    {
+      "id": "vasaridge__ossanmere__good",
+      "from": "vasaridge",
+      "to": "ossanmere",
+      "quality": "good",
+      "distance_miles": 292,
+      "bidirectional": true
+    },
+    {
+      "id": "ossanmere__braeadale__fair",
+      "from": "ossanmere",
+      "to": "braeadale",
+      "quality": "fair",
+      "distance_miles": 255,
+      "bidirectional": true
+    },
+    {
+      "id": "ossanmere__zeleis__fair",
+      "from": "ossanmere",
+      "to": "zeleis",
+      "quality": "fair",
+      "distance_miles": 236,
+      "bidirectional": true
+    },
+    {
+      "id": "eshunis__zeleis__good",
+      "from": "eshunis",
+      "to": "zeleis",
+      "quality": "good",
+      "distance_miles": 297,
+      "bidirectional": true
+    },
+    {
+      "id": "eshunis__dunogate__good",
+      "from": "eshunis",
+      "to": "dunogate",
+      "quality": "good",
+      "distance_miles": 215,
+      "bidirectional": true
+    },
+    {
+      "id": "xanegate__zeleis__fair",
+      "from": "xanegate",
+      "to": "zeleis",
+      "quality": "fair",
+      "distance_miles": 125,
+      "bidirectional": true
+    },
+    {
+      "id": "dunogate__xanegate__poor",
+      "from": "dunogate",
+      "to": "xanegate",
+      "quality": "poor",
+      "distance_miles": 143,
+      "bidirectional": true
+    }
+  ]
+}

@@ -306,6 +306,39 @@ adottata negli exit criteria:
 
 La calibrazione e chiusa: `calib_12.json` e lo scenario ufficiale congelato.
 
+#### Candidato successivo: `calib_12_fbm.json` (2026-08-16)
+
+Lo screen di qualificazione, che era prosa, ora e uno script:
+`scripts/screen_gate_map.py`. Riproduce prima la mappa nota — `calib_12.json`
+e `--seed 1 --towns 12 --regions 3`, byte per byte — e legge entrambi gli assi
+sugli sweep con un sign test.
+
+Screenati 60 seed sul rilievo `fbm` con la regola `detour`: otto qualificano, e
+tutti e otto tengono a 80 coppie. Il migliore e il seed 24, congelato come
+`calib_12_fbm.json` con il suo sidecar. A 80 coppie:
+
+| Mappa | strategico (`balanced` vs `random`) | stilistico (`military` vs `religious`) |
+|---|---|---|
+| `calib_12.json` | 36-0 (a 40 coppie) | 27-11, p=0.014 |
+| `calib_12_fbm.json` | **76-0, p=2.6e-23** | **31-8, p=0.00029** |
+
+Due avvertenze registrate.
+
+**Il campione da 40 coppie e sottodimensionato sul motore di oggi.** Sull'asse
+stilistico `calib_12` risulta piatta a 40 coppie (14-6, p=0.12) e separa a 80
+(27-11, p=0.014). La mappa non e decaduta; il campione era piccolo. Nessuno
+screen singolo a 40 coppie vale come verdetto.
+
+**Un taglio a dodici citta di `world2` non qualifica.** Il seed 49 e la mappa
+scelta per il lavoro cartografico e le dodici citta stanno davvero sul suo
+continente, ma l'asse stilistico e piatto a 40 coppie e ancora a 80: military
+13, religious 20, p=0.30. La taglia e necessaria, la topologia decide.
+
+`calib_12_fbm.json` **non e ancora lo scenario ufficiale**. Diventarlo richiede
+una ri-esecuzione del gate con un modello sulla nuova mappa, cioe spesa reale
+sotto un tetto di budget che non e ancora deciso. Fino ad allora `calib_12.json`
+resta congelata e le 7.200 chiamate del gate descrivono quella, non questa.
+
 ### Decisione
 
 Se il gate fallisce, non si costruisce il prodotto coach. Si correggono prompt,

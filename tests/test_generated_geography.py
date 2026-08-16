@@ -388,6 +388,49 @@ def test_a_map_without_roads_gets_no_sea_routes():
     assert gg.build_geography(W2_SEED, relief=W2_RELIEF)["sea_routes"] == {}
 
 
+# ---------------------------------------------------------------------------
+# the screened gate map
+# ---------------------------------------------------------------------------
+
+GATE_SEED = 24
+GATE_RECIPE = dict(towns=12, regions=3, relief="fbm", sea_rule="detour")
+
+
+def test_the_gate_map_regenerates_from_its_recipe():
+    """A frozen scenario has to be reproducible from the line that made it.
+
+    calib_12's own recipe was recovered this way -- `--seed 1 --towns 12
+    --regions 3` and nothing else reproduces it -- and the new one records
+    its own so the next person does not have to search for it.
+    """
+    frozen = json.loads((REPO_MAPS / "calib_12_fbm.json").read_text(encoding="utf-8"))
+    produced = gw.generate(
+        GATE_SEED,
+        towns=GATE_RECIPE["towns"],
+        regions=GATE_RECIPE["regions"],
+        relief=GATE_RECIPE["relief"],
+        sea_rule=GATE_RECIPE["sea_rule"],
+    )
+    assert produced == frozen
+
+
+def test_the_gate_map_stands_on_its_own_field():
+    land, terrain = gg.build_field(GATE_SEED, GATE_RECIPE["relief"])
+    frozen = json.loads((REPO_MAPS / "calib_12_fbm.json").read_text(encoding="utf-8"))
+    assert gg.verify_field(frozen["cities"], land, terrain, frozen["roads"]) == []
+
+
+def test_the_gate_sidecar_matches_a_fresh_build():
+    shipped = json.loads(
+        (REPO_MAPS / "calib_12_fbm_geography.json").read_text(encoding="utf-8")
+    )
+    source = json.loads((REPO_MAPS / "calib_12_fbm.json").read_text(encoding="utf-8"))
+    fresh = gg.build_geography(
+        GATE_SEED, source["cities"], relief=GATE_RECIPE["relief"], roads=source["roads"]
+    )
+    assert shipped == json.loads(json.dumps(fresh))
+
+
 @pytest.mark.parametrize("name", ["world", "calib_12"])
 def test_the_shipped_sidecar_matches_a_fresh_build(name):
     """A sidecar in the tree that no longer matches its seed is a stale map."""
