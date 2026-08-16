@@ -95,7 +95,11 @@ _ROAD_STYLES = {
     RoadQuality.GOOD: ("#d6c9ae", 3.0, "none"),
     RoadQuality.FAIR: ("#b0a488", 2.6, "10 6"),
     RoadQuality.POOR: ("#8d8369", 2.2, "3 5"),
-    RoadQuality.SEA: ("#5ba7d0", 2.8, "12 8"),
+    # Thinner and more broken than it looks like it should be, because a lane
+    # is long: nineteen of them, 9% of the routes, were carrying 41% of the
+    # network's stroke ink and reading as the subject of the map. Measured
+    # again after, they sit near 22%.
+    RoadQuality.SEA: ("#5ba7d0", 2.0, "10 12"),
 }
 
 _BAND_RADIUS = {
@@ -1696,11 +1700,11 @@ def _sailed_route_svg(
     return (
         f'<g class="map-route map-route-sea" data-road="{rid}">'
         f"<title>{_esc(' · '.join(title_bits))}</title>"
-        f'<path d="{d}" fill="none" stroke="#1e3a4a" stroke-width="{width + 4}" '
-        f'stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>'
+        f'<path d="{d}" fill="none" stroke="#1e3a4a" stroke-width="{width + 2.5}" '
+        f'stroke-linecap="round" stroke-linejoin="round" opacity="0.38"/>'
         f'<path d="{d}" fill="none" stroke="{color}" stroke-width="{width}" '
         f'stroke-dasharray="{dash}" stroke-linecap="round" stroke-linejoin="round" '
-        f'opacity="0.92"/>'
+        f'opacity="0.82"/>'
         f"</g>"
     )
 

@@ -186,6 +186,64 @@ def test_a_caption_is_sized_to_its_land():
     assert sizes[ordered[0]] <= sizes[ordered[-1]]
 
 
+# ---------------------------------------------------------------------------
+# visual hierarchy
+# ---------------------------------------------------------------------------
+
+
+def route_ink(map_file: str) -> dict[str, float]:
+    """Stroke area per route class: length x width x the lit part of the dash.
+
+    A crude proxy for visual weight, but an objective one, and it caught what
+    looking could not put a number on.
+    """
+    layout = mapview.layout_for_map(map_file)
+    data = mapview.load_raw_map(map_file)
+    pos = mapview.positions(map_file)
+    sailed = (mapview.load_geography(map_file) or {}).get("sea_routes") or {}
+
+    ink: dict[str, float] = {}
+    for road in data["roads"]:
+        try:
+            _, width, dash = mapview._ROAD_STYLES[mapview.RoadQuality(road["quality"])]
+        except (KeyError, ValueError):
+            continue
+        path = sailed.get(road["id"])
+        if path:
+            points = [layout.project_miles(x, y) for x, y in path]
+            length = sum(math.dist(points[i], points[i + 1]) for i in range(len(points) - 1))
+        else:
+            a, b = pos.get(road["from"]), pos.get(road["to"])
+            if not a or not b:
+                continue
+            length = math.dist(a, b)
+        lit = 1.0
+        if dash != "none":
+            parts = [float(v) for v in dash.split()]
+            lit = parts[0] / sum(parts)
+        key = "sea" if road["quality"] == "sea" else "land"
+        ink[key] = ink.get(key, 0.0) + length * width * lit
+    return ink
+
+
+def test_sea_lanes_support_the_network_rather_than_dominate_it():
+    """Nineteen routes were carrying 41% of the network's ink.
+
+    A lane is long -- 273 units against a road's 48 -- so drawn at road weight
+    it reads as the subject of the map, which on a map about marching is the
+    wrong subject. Thinner and more broken brings it back to a fifth.
+    """
+    ink = route_ink(GEO_MAP)
+    share = ink["sea"] / ink["land"]
+    assert share < 0.30, f"sea lanes carry {share:.0%} of the road network's ink"
+
+
+def test_the_lanes_are_still_visible_at_all():
+    """The other direction: a lane nobody can see is a lane nobody can use."""
+    ink = route_ink(GEO_MAP)
+    assert ink["sea"] / ink["land"] > 0.10
+
+
 def test_a_map_without_geography_gets_no_bar(tmp_path, monkeypatch):
     """Without a mile field the frame is nominal, and a bar would be invented.
 
