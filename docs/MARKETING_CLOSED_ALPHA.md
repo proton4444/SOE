@@ -513,7 +513,7 @@ first `inv_`. Every item is a blocker.
 | Day 0 | This file is the card. Sentence, offer, states, visual contract, replay schema, and form rules stay closed. | Contract locked |
 | ~~Next slice~~ **done 2026-08-14** | Exporter + leakage test. Reconstruction audit over both bundles. One sanitized replay JSON (`AR031_ba`). | **Replay chosen** |
 | ~~Next slice~~ **built 2026-08-14** | The poster page itself: atlas relief board, replay transport, locked copy, form markup with honeypot and `src` capture. Not hosted, not wired to a vendor. | Page builds and renders |
-| Next slice | Form vendor and host that pass their gates. Fill the two publish-gate placeholders. One poster page on a phone. One test submit from each tagged URL. Deletion of the three test rows. | `poster live` |
+| Next slice | Form vendor and host that pass their gates. Fill the two publish-gate placeholders. `python -m scripts.check_poster` exits 0. One poster page on a phone. One test submit from each tagged URL. Deletion of the three test rows. | `poster live` |
 | Same window | Controlled-beta preflight without an invite. | Infrastructure proven, roster still `idle` |
 | URL day | Three tagged posts. | Outreach started |
 | As they arrive | Answer every reply. Mark ledger rows. | `first application` |
@@ -613,6 +613,25 @@ silently broken or silently swallow an application.
 | `data-endpoint` on `<form id="apply-form">` | `index.html` | Form vendor gate |
 | `data-contact` on `<span id="operator-contact">` | `index.html` | Operator picks a dedicated address or handle |
 
+**The bundle is checked before it is published.**
+`scripts/check_poster.py` is the preflight, and it is the last repo-side gate:
+it refuses a bundle whose placeholders are unfilled, whose locked sentence,
+offer bullets, proof line, privacy notice or reply promise have been edited,
+whose `replay.json` fails the leakage test or names a city the board cannot
+draw, whose `board.js` has drifted from `maps/calib_12.json`, which points at
+the live server or a third party, whose `?v=` cache token is split or stale,
+or which is over the weight gate. Run it at the publish stage before the
+files go to the host:
+
+```text
+python -m scripts.check_poster            # exit 0 = clear to publish
+python -m scripts.check_poster --stage build   # placeholders still open
+```
+
+`tests/test_poster_preflight.py` keeps it honest and runs the build stage
+over the tree in CI, so a copy edit that reopens a locked line fails the
+suite rather than the launch.
+
 The form already carries the abuse controls: off-screen honeypot,
 12-character doctrine minimum, handle-shaped contact check that rejects
 emails and URLs, and a courtesy one-per-day throttle. The binding rate
@@ -636,6 +655,10 @@ Everything else in this file is decided.
 - Drafted, unsent posts for the three tagged URLs:
   [`OUTREACH_POSTS.md`](OUTREACH_POSTS.md)
 - Paste-ready replies: [`REPLY_TEMPLATES.md`](REPLY_TEMPLATES.md)
+- The publish preflight, run before the bundle goes to the host:
+  `python -m scripts.check_poster --help`. Its cache-token record is
+  `configs/poster.json`; bump `?v=` everywhere, then re-record with
+  `--accept-token`.
 - The ledger itself is not a spreadsheet to eyeball. `scripts/waitlist.py`
   merges the vendor export into `private/ledger.csv` (gitignored), keeps one
   row per contact, discards what the abuse controls say to discard, reports

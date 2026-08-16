@@ -186,9 +186,21 @@ vendor/three.module.js  three.js, 1.27 MB uncompressed
 vendor/OrbitControls.js camera control
 ```
 
-Asset URLs carry a `?v=` token that is **hardcoded in `index.html`, not
-generated**. Bump it by hand whenever `atlas.css` or `atlas.js` changes,
-or returning visitors keep the old file. It is currently `v=h2`.
+Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump it
+by hand whenever a versioned asset changes, or returning visitors keep the old
+file. It is currently `v=h2`.
+
+The token is not only in `index.html`, and that was a trap: `atlas.js` imports
+`board3d.js?v=`, and `board3d.js` imports `vendor/OrbitControls.js?v=`. Those
+two sat at `h1` while the page had moved to `h2`, so a bump made the
+documented way — by hand, on the file you edited — would have shipped a new
+`atlas.js` against a cached `board3d.js`. All six versioned assets are on one
+token now, and `scripts/check_poster.py` refuses a bundle carrying two.
+
+Staleness is not visible in the files, so `configs/poster.json` records the
+token and a digest of the assets that carried it. Change a versioned asset
+without bumping and the preflight refuses; bump it everywhere, then re-record
+with `python -m scripts.check_poster --accept-token`.
 
 `sea.jpg` is **not** shipped. There is no sea. Shipping the texture
 invites its use.
@@ -256,7 +268,7 @@ Days are relative to the first working session, not calendar dates.
 | 1–3 | Build the page. Test on a real phone, not a resized window. | Board renders, replay plays, page under 1.5 MB |
 | 3 | Run the form vendor gate, six checks. Build the form. Wire the hidden `src` field. | All six pass |
 | 3 | One test submit from each of the three tagged URLs. Confirm `source` is `hn` / `x` / `reddit`. Delete the three rows. Confirm deletion in a fresh export. | Ledger clean |
-| 4 | Publish. | **`poster live`** |
+| 4 | `python -m scripts.check_poster` exits 0. Publish. | **`poster live`** |
 | 4 | Controlled-beta preflight, no invite issued. | Infrastructure proven, roster `idle` |
 | 5 | Post on X from the personal account. | Outreach started |
 | 6–7 | Watch. Fix whatever the first real traffic breaks. | Page survived strangers |
@@ -360,4 +372,6 @@ Unchanged from the card, with the identity layer assigned.
 - The three drafted, unsent posts: [`OUTREACH_POSTS.md`](OUTREACH_POSTS.md)
 - Ledger tool that keeps the 7-day promise and refuses early codes:
   `python -m scripts.waitlist --help`
+- Publish preflight over the bundle, run before every deployment:
+  `python -m scripts.check_poster --help`
 - Phase 4 gates and `/ops/alpha`: [`ROADMAP.md`](ROADMAP.md)
