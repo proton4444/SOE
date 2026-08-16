@@ -11,7 +11,8 @@
  },
  "source": {
   "generator": "scripts/generate_world.py",
-  "seed": 1
+  "seed": 1,
+  "relief": "noise"
  },
  "coastlines": [
   [

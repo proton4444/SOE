@@ -59,6 +59,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from scripts import generate_world as gw  # noqa: E402
 from scripts.generate_world import (  # noqa: E402
     CELL_MILES,
     FIELD_HEIGHT_MILES,
@@ -305,16 +306,17 @@ def polygons_for(
 # ---------------------------------------------------------------------------
 
 
-def build_field(seed: int):
+def build_field(seed: int, relief: str = gw.DEFAULT_RELIEF):
     """The generator's own landmass and terrain, from its own calls.
 
     The call order is `generate()`'s, and it has to stay that way: the two
     functions draw from one Random, so building terrain before land, or
-    skipping either, silently produces a different continent.
+    skipping either, silently produces a different continent. `relief` has to
+    match the mode the world was generated with, for the same reason.
     """
     rng = random.Random(seed)
-    land = build_landmass(rng)
-    terrain = build_terrain(rng, land)
+    land = build_landmass(rng, relief)
+    terrain = build_terrain(rng, land, relief)
     return land, terrain
 
 
@@ -383,7 +385,7 @@ def verify_field(cities: list[dict], land, terrain) -> list[str]:
     return problems
 
 
-def verify_exact(cities: list[dict], seed: int) -> list[str]:
+def verify_exact(cities: list[dict], seed: int, relief: str = gw.DEFAULT_RELIEF) -> list[str]:
     """The strongest check there is: regenerate the world and compare.
 
     Only a full generated world can pass this -- a subsampled or renamed map
@@ -393,7 +395,7 @@ def verify_exact(cities: list[dict], seed: int) -> list[str]:
     from scripts.generate_world import generate
 
     try:
-        produced = generate(seed, towns=len(cities))["cities"]
+        produced = generate(seed, towns=len(cities), relief=relief)["cities"]
     except ValueError:
         # Fewer towns than the generator's regions: a subsample, which this
         # check cannot speak to either way.
@@ -444,8 +446,13 @@ def pinned_corners(cities: list[dict]) -> frozenset[tuple[float, float]]:
     return frozenset(corners)
 
 
-def build_geography(seed: int, cities: list[dict] | None = None, smooth: bool = True) -> dict:
-    land, terrain = build_field(seed)
+def build_geography(
+    seed: int,
+    cities: list[dict] | None = None,
+    smooth: bool = True,
+    relief: str = gw.DEFAULT_RELIEF,
+) -> dict:
+    land, terrain = build_field(seed, relief)
     pinned = pinned_corners(cities or [])
     coastlines, lakes = polygons_for(land, smooth, pinned)
     return {
@@ -456,7 +463,11 @@ def build_geography(seed: int, cities: list[dict] | None = None, smooth: bool = 
             "rows": GRID_ROWS,
             "cell_miles": FIELD_WIDTH_MILES // GRID_COLS,
         },
-        "source": {"generator": "scripts/generate_world.py", "seed": seed},
+        "source": {
+            "generator": "scripts/generate_world.py",
+            "seed": seed,
+            "relief": relief,
+        },
         "coastlines": coastlines,
         # Water the continent encloses. A separate key because the schema's
         # consumers read `coastlines` as land, and a lake in that list is an
@@ -493,6 +504,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--seed", type=int, required=True, help="the world's generator seed")
     parser.add_argument(
+        "--relief", choices=gw.RELIEF_MODES, default=gw.DEFAULT_RELIEF,
+        help="the relief the world was generated with; a mismatch is refused",
+    )
+    parser.add_argument(
         "--map",
         type=Path,
         help="world JSON to verify against; every town must belong to this field",
@@ -509,7 +524,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.out and not args.check_only:
         parser.error("give --out, or --check-only")
 
-    land, terrain = build_field(args.seed)
+    land, terrain = build_field(args.seed, args.relief)
     land_cells = sum(row.count(True) for row in land)
     print(
         f"seed {args.seed}: {land_cells} land cells of {GRID_W * GRID_H} "
@@ -529,7 +544,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  ... and {len(problems) - 20} more")
             return 1
 
-        if not verify_exact(cities, args.seed):
+        if not verify_exact(cities, args.seed, args.relief):
             print(f"{args.map}: regenerates verbatim from seed {args.seed}")
         else:
             print(
@@ -537,7 +552,7 @@ def main(argv: list[str] | None = None) -> int:
                 "(derived map: not a verbatim regeneration)"
             )
 
-    geography = build_geography(args.seed, cities, smooth=not args.raw)
+    geography = build_geography(args.seed, cities, smooth=not args.raw, relief=args.relief)
 
     if cities:
         offshore = check_containment(cities, geography["coastlines"])

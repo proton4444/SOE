@@ -756,6 +756,7 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     parts.append(_defs())
     parts.append(_background(layout))
     parts.append(_landmasses_svg(masses, dense=dense, traced=layout.has_geography))
+    parts.append(_terrain_svg(load_geography(map_file), layout))
     parts.append(_compass(w - 48, h - 48))
     parts.append(_title_block(stats, dense=dense))
     # On-map landmass roster only for small maps; dense maps use the HTML index.
@@ -1312,6 +1313,64 @@ def _poly_path(pts: list[tuple[float, float]]) -> str:
         cmds.append(f"L {x:.1f} {y:.1f}")
     cmds.append("Z")
     return " ".join(cmds)
+
+
+#: Hypsometric tinting, the relief-map convention: lowland green through
+#: upland ochre to bare rock, with arid gold and wetland grey-green off to the
+#: side. Kept dark enough that roads, sea lanes and town marks stay the
+#: brightest things on the board -- terrain is the ground the game is played
+#: on, not the subject.
+TERRAIN_FILL = {
+    "plain": "#4f5f3c",
+    "forest": "#33502f",
+    "hills": "#6d6640",
+    "mountains": "#6f6d68",
+    "desert": "#8a7b4f",
+    "swamp": "#3f5148",
+}
+
+LAKE_FILL = "#24435c"
+
+
+def _terrain_svg(geo: Optional[dict], layout: MapLayout) -> str:
+    """Terrain regions and inland water, painted over the landmass bodies.
+
+    Without this the land is one flat fill per landmass, which is the whole
+    map saying one thing: there is land here. The generator has known which
+    kind of land since it placed the towns -- the towns are biased by it --
+    and the sidecar carries the regions, so the map can finally show the
+    ground a doctrine is arguing about.
+
+    Drawn as outlines only. A hole in a terrain region is another terrain,
+    which paints its own outline over it, or a lake, which is painted last.
+    """
+    if not geo:
+        return ""
+    parts = ['<g class="map-terrain" aria-hidden="true">']
+    for kind, fill in TERRAIN_FILL.items():
+        polys = (geo.get("terrain") or {}).get(kind) or []
+        if not polys:
+            continue
+        paths = " ".join(
+            _poly_path([layout.project_miles(px, py) for px, py in poly])
+            for poly in polys
+            if len(poly) >= 3
+        )
+        if paths:
+            parts.append(
+                f'<path class="terrain-{kind}" d="{paths}" fill="{fill}" '
+                f'fill-opacity="0.85" stroke="none"/>'
+            )
+    for lake in geo.get("lakes") or []:
+        if len(lake) < 3:
+            continue
+        path = _poly_path([layout.project_miles(px, py) for px, py in lake])
+        parts.append(
+            f'<path class="terrain-lake" d="{path}" fill="{LAKE_FILL}" '
+            f'stroke="#8fb6cd" stroke-width="0.9" stroke-opacity="0.5"/>'
+        )
+    parts.append("</g>")
+    return "\n".join(parts) if len(parts) > 2 else ""
 
 
 def _landmasses_svg(

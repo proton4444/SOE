@@ -238,6 +238,124 @@ def test_raw_mode_emits_the_lattice_itself(world):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# the fbm relief, and the world chosen with it
+# ---------------------------------------------------------------------------
+
+W2_SEED = 49
+W2_RELIEF = "fbm"
+
+
+def test_the_default_relief_is_the_original_and_stays_the_default():
+    """maps/world.json was generated with it and games resolve town ids on it."""
+    assert gw.DEFAULT_RELIEF == "noise"
+    assert gw.build_landmass(random.Random(SEED)) == gw.build_landmass(
+        random.Random(SEED), "noise"
+    )
+
+
+def test_an_unknown_relief_is_refused():
+    with pytest.raises(ValueError):
+        gw.build_landmass(random.Random(SEED), "erosion")
+
+
+def test_world2_regenerates_from_its_seed_and_relief():
+    world2 = json.loads((REPO_MAPS / "world2.json").read_text(encoding="utf-8"))
+    assert gg.verify_exact(world2["cities"], W2_SEED, W2_RELIEF) == []
+
+
+def test_world2_is_not_the_legacy_relief():
+    """Belt and braces: the two modes must not have converged."""
+    world2 = json.loads((REPO_MAPS / "world2.json").read_text(encoding="utf-8"))
+    assert gg.verify_exact(world2["cities"], W2_SEED, "noise") != []
+
+
+def test_the_fbm_relief_makes_a_continent_rather_than_a_slab():
+    """The reason the mode exists, measured rather than asserted.
+
+    The legacy field is white noise box-blurred three times: nothing survives
+    larger than the kernel, so it thresholds to a frame-filling slab with a
+    fractal edge and dozens of one-cell lakes. Over 200 seeds its main outline
+    never got more compact than 0.27 or carried fewer than 21 pinholes.
+    """
+    import math
+
+    def shape(mask):
+        loops = gg.trace_mask(mask)
+        outlines = [loop for loop in loops if gg.signed_area(loop) < 0]
+        holes = [loop for loop in loops if gg.signed_area(loop) > 0]
+        main = max(outlines, key=lambda loop: abs(gg.signed_area(loop)))
+        perimeter = sum(
+            math.dist(main[i], main[(i + 1) % len(main)]) for i in range(len(main))
+        )
+        return 4 * math.pi * abs(gg.signed_area(main)) / perimeter ** 2, len(holes)
+
+    # Across seeds, not one: the claim is about the field, and a single draw
+    # can flatter either mode.
+    seeds = [W2_SEED, 7, 13, 31, 42]
+    fbm = [shape(gw.build_landmass(random.Random(s), "fbm")) for s in seeds]
+    old = [shape(gw.build_landmass(random.Random(s), "noise")) for s in seeds]
+
+    fbm_compact = sum(c for c, _ in fbm) / len(fbm)
+    old_compact = sum(c for c, _ in old) / len(old)
+    assert fbm_compact > old_compact * 1.5
+
+    assert max(h for _, h in fbm) <= 5
+    assert min(h for _, h in old) >= 15
+
+
+def test_the_fbm_relief_keeps_the_land_fraction():
+    """A different shape, not a different amount of world."""
+    fbm = gw.build_landmass(random.Random(W2_SEED), "fbm")
+    cells = sum(row.count(True) for row in fbm)
+    target = gw.TARGET_LAND_FRACTION * gw.GRID_W * gw.GRID_H
+    assert abs(cells - target) / target < 0.02
+
+
+def test_fbm_terrain_regions_are_country_sized():
+    """One region per 14 cells is a 37-mile patch: right as data, confetti as a map."""
+    land = gw.build_landmass(random.Random(W2_SEED), "fbm")
+    fine = gw.build_terrain(random.Random(W2_SEED), land, "noise")
+    coarse = gw.build_terrain(random.Random(W2_SEED), land, "fbm")
+
+    def regions(terrain):
+        mask = [[terrain[y][x] is not None for x in range(gw.GRID_W)] for y in range(gw.GRID_H)]
+        assert mask  # terrain covers exactly the land
+        kinds = {terrain[y][x] for y in range(gw.GRID_H) for x in range(gw.GRID_W)}
+        return kinds
+
+    # Same terrain vocabulary, larger pieces: the polygon count is the tell.
+    fine_polys = sum(
+        len(v) for v in gg.build_geography(W2_SEED, relief="fbm")["terrain"].values()
+    )
+    assert regions(fine) == regions(coarse)
+    assert fine_polys < 80
+
+
+def test_world2_towns_stand_on_the_fbm_field():
+    land, terrain = gg.build_field(W2_SEED, W2_RELIEF)
+    world2 = json.loads((REPO_MAPS / "world2.json").read_text(encoding="utf-8"))
+    assert gg.verify_field(world2["cities"], land, terrain) == []
+    geography = gg.build_geography(W2_SEED, world2["cities"], relief=W2_RELIEF)
+    assert gg.check_containment(world2["cities"], geography["coastlines"]) == []
+
+
+def test_world2_sidecar_records_its_relief():
+    shipped = json.loads((REPO_MAPS / "world2_geography.json").read_text(encoding="utf-8"))
+    assert shipped["source"] == {
+        "generator": "scripts/generate_world.py",
+        "seed": W2_SEED,
+        "relief": W2_RELIEF,
+    }
+
+
+def test_world2_sidecar_matches_a_fresh_build():
+    shipped = json.loads((REPO_MAPS / "world2_geography.json").read_text(encoding="utf-8"))
+    source = json.loads((REPO_MAPS / "world2.json").read_text(encoding="utf-8"))
+    fresh = gg.build_geography(W2_SEED, source["cities"], relief=W2_RELIEF)
+    assert shipped == json.loads(json.dumps(fresh))
+
+
 @pytest.mark.parametrize("name", ["world", "calib_12"])
 def test_the_shipped_sidecar_matches_a_fresh_build(name):
     """A sidecar in the tree that no longer matches its seed is a stale map."""
@@ -247,7 +365,7 @@ def test_the_shipped_sidecar_matches_a_fresh_build(name):
     assert shipped == json.loads(json.dumps(fresh))
 
 
-@pytest.mark.parametrize("name", ["world.json", "calib_12.json"])
+@pytest.mark.parametrize("name", ["world.json", "calib_12.json", "world2.json"])
 def test_mapview_reads_the_sidecar(name):
     mapview = pytest.importorskip("webapp.mapview")
     geo = mapview.load_geography(name)
@@ -265,4 +383,8 @@ def test_the_sidecar_carries_the_schema_the_consumers_expect(geography):
     assert geography["units"] == "miles"
     assert geography["field_miles"] == [gw.FIELD_WIDTH_MILES, gw.FIELD_HEIGHT_MILES]
     assert geography["grid"]["cell_miles"] * geography["grid"]["cols"] == gw.FIELD_WIDTH_MILES
-    assert geography["source"] == {"generator": "scripts/generate_world.py", "seed": SEED}
+    assert geography["source"] == {
+        "generator": "scripts/generate_world.py",
+        "seed": SEED,
+        "relief": gw.DEFAULT_RELIEF,
+    }
