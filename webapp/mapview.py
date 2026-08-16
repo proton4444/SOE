@@ -480,6 +480,27 @@ def _poly_area_miles(poly: list) -> float:
     return abs(acc) * 0.5
 
 
+def _disambiguate_names(masses: list[dict]) -> None:
+    """No two landmasses may answer to the same name.
+
+    A mass is named for the region most of its towns belong to, and a region
+    can straddle water: on world2 the mainland and a one-town islet were both
+    "Fenavale fold", so the roster listed the same place twice and a tooltip
+    could not say which was meant. The largest keeps the bare name, since it
+    is the one people mean; the rest are numbered in the order they are
+    already sorted, largest first.
+    """
+    seen: dict[str, int] = {}
+    for mass in masses:
+        name = mass["name"]
+        seen[name] = seen.get(name, 0) + 1
+        if seen[name] > 1:
+            mass["name"] = f"{name} {_ROMAN[min(seen[name], len(_ROMAN)) - 1]}"
+
+
+_ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
+
+
 def _majority_region(cities: list[dict], by_id: dict) -> Optional[str]:
     regions = [
         by_id[c].get("region") for c in cities if c in by_id and by_id[c].get("region")
@@ -563,6 +584,7 @@ def landmasses_from_geography(
         )
 
     masses.sort(key=lambda m: (-len(m["city_ids"]), m["name"]))
+    _disambiguate_names(masses)
     for i, m in enumerate(masses):
         m["index"] = i + 1
         m["fill"], m["stroke"] = _LAND_PALETTE[i % len(_LAND_PALETTE)]
@@ -644,6 +666,7 @@ def compute_landmasses(
         )
 
     masses.sort(key=lambda m: (-len(m["city_ids"]), m["name"]))
+    _disambiguate_names(masses)
     for i, m in enumerate(masses):
         m["index"] = i + 1
         m["fill"], m["stroke"] = _LAND_PALETTE[i % len(_LAND_PALETTE)]
@@ -765,7 +788,11 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     parts.append(_defs())
     parts.append(_background(layout))
     geo = load_geography(map_file)
-    parts.append(_landmasses_svg(masses, dense=dense, traced=layout.has_geography))
+    parts.append(
+        _landmasses_svg(
+            masses, dense=dense, traced=layout.has_geography, frame_w=layout.width
+        )
+    )
     parts.append(_terrain_svg(geo, layout))
     parts.append(_compass(w - 48, h - 48))
     parts.append(_scale_bar(layout))
@@ -1471,10 +1498,33 @@ def _terrain_svg(geo: Optional[dict], layout: MapLayout) -> str:
     return "\n".join(parts) if len(parts) > 2 else ""
 
 
+def _polygon_centroid(pts: list[tuple[float, float]]) -> tuple[float, float]:
+    """Area centroid, which for a landmass is a point on the landmass.
+
+    The mean of the vertices is not: it is pulled wherever the outline has the
+    most detail, which on a traced coast is the fiddliest stretch of shore.
+    """
+    area = 0.0
+    cx = 0.0
+    cy = 0.0
+    for i, (x1, y1) in enumerate(pts):
+        x2, y2 = pts[(i + 1) % len(pts)]
+        cross = x1 * y2 - x2 * y1
+        area += cross
+        cx += (x1 + x2) * cross
+        cy += (y1 + y2) * cross
+    if abs(area) < 1e-9:
+        n = len(pts) or 1
+        return sum(p[0] for p in pts) / n, sum(p[1] for p in pts) / n
+    area *= 0.5
+    return cx / (6 * area), cy / (6 * area)
+
+
 def _landmasses_svg(
     masses: list[dict],
     dense: bool = False,
     traced: bool = False,
+    frame_w: float = 1e9,
 ) -> str:
     if not masses:
         return ""
@@ -1485,7 +1535,7 @@ def _landmasses_svg(
         if len(hull) < 3:
             continue
         path = _poly_path(hull)
-        cx = sum(p[0] for p in hull) / len(hull)
+        cx, cy_mass = _polygon_centroid(hull)
         n = len(m["city_ids"])
         name_list = list(m["city_names"])
         if dense and n > 12:
@@ -1516,19 +1566,50 @@ def _landmasses_svg(
                 f'<path class="land-confine" d="{path}" fill="none" stroke="{m["stroke"]}" '
                 f'stroke-width="1" stroke-dasharray="6 5" opacity="0.45"/>'
             )
-        label_y = min(p[1] for p in hull) + (14 if traced else 18)
-        parts.append(
-            f'<text class="map-label land-label" x="{cx:.1f}" y="{label_y:.1f}" '
-            f'text-anchor="middle" fill="{m["stroke"]}" font-size="{name_size}" '
-            f'letter-spacing="1.6" font-weight="bold">'
-            f"{_esc(m['name'].upper())}</text>"
-        )
-        if not dense:
-            parts.append(
-                f'<text class="map-meta land-label-meta" x="{cx:.1f}" y="{label_y + 15:.1f}" '
-                f'text-anchor="middle" fill="#7f8794" font-size="10">'
-                f"{m['kind']} · {n} cit{'ies' if n != 1 else 'y'}</text>"
+        # A landmass caption is set across the body of the land it names, so
+        # it only works when the land is wide enough to seat it. Drawn
+        # regardless, it ran off the frame -- ZELANSTEAD HINTERLAND was
+        # clipped mid-word -- and lay across open sea on the small masses.
+        caption = m["name"].upper()
+        hull_left = min(p[0] for p in hull)
+        hull_right = max(p[0] for p in hull)
+        # Set as large as the land allows, down to a floor, then give up: a
+        # caption smaller than this is unreadable anyway, and an islet does
+        # not need its name written across it.
+        per_char = 0.96  # glyph width plus tracking, in ems
+        room = (hull_right - hull_left) * 0.86
+        caption_size = min(name_size * 1.25, room / max(1, len(caption)) / per_char)
+        text_w = len(caption) * caption_size * per_char
+        if caption_size >= 7.5:
+            # Set across the body of the land, not along its northern edge:
+            # the top of a hull is the sea above the widest point, and the
+            # caption floated there with half of it over open water.
+            label_y = cy_mass + caption_size * 0.35
+            # Keep it over its own land, and inside the frame whatever the
+            # centroid says.
+            label_x = min(
+                max(cx, hull_left + text_w / 2, text_w / 2 + 8),
+                hull_right - text_w / 2,
+                frame_w - text_w / 2 - 8,
             )
+            # Quiet engraved type, the same on every terrain. Inheriting the
+            # shore colour left it a smudge on green and a shout on grey.
+            parts.append(
+                f'<text class="map-label land-label" x="{label_x:.1f}" y="{label_y:.1f}" '
+                f'text-anchor="middle" fill="#f4ecda" fill-opacity="0.42" '
+                f'stroke="#10140e" stroke-opacity="0.38" '
+                f'stroke-width="{caption_size * 0.16:.2f}" paint-order="stroke" '
+                f'font-size="{caption_size:.1f}" '
+                f'letter-spacing="{caption_size * 0.34:.1f}" font-weight="bold">'
+                f"{_esc(caption)}</text>"
+            )
+            if not dense:
+                parts.append(
+                    f'<text class="map-meta land-label-meta" x="{label_x:.1f}" '
+                    f'y="{label_y + 15:.1f}" '
+                    f'text-anchor="middle" fill="#7f8794" font-size="10">'
+                    f"{m['kind']} · {n} cit{'ies' if n != 1 else 'y'}</text>"
+                )
         parts.append("</g>")
     parts.append("</g>")
     return "\n".join(parts)
