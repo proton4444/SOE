@@ -2903,14 +2903,6 @@
       "bidirectional": true
     },
     {
-      "id": "ulmagate__coromere__sea",
-      "from": "ulmagate",
-      "to": "coromere",
-      "quality": "sea",
-      "distance_miles": 420,
-      "bidirectional": true
-    },
-    {
       "id": "ulmagate__bariport__good",
       "from": "ulmagate",
       "to": "bariport",
@@ -2927,19 +2919,19 @@
       "bidirectional": true
     },
     {
-      "id": "fenunvale__braeildale__sea",
-      "from": "fenunvale",
-      "to": "braeildale",
-      "quality": "sea",
-      "distance_miles": 373,
-      "bidirectional": true
-    },
-    {
       "id": "fenunvale__fenaththorpe__fair",
       "from": "fenunvale",
       "to": "fenaththorpe",
       "quality": "fair",
       "distance_miles": 100,
+      "bidirectional": true
+    },
+    {
+      "id": "fenunvale__ossostead__sea",
+      "from": "fenunvale",
+      "to": "ossostead",
+      "quality": "sea",
+      "distance_miles": 233,
       "bidirectional": true
     },
     {
@@ -2959,11 +2951,11 @@
       "bidirectional": true
     },
     {
-      "id": "fenunvale__ossunhaven__sea",
+      "id": "fenunvale__calothstead__sea",
       "from": "fenunvale",
-      "to": "ossunhaven",
+      "to": "calothstead",
       "quality": "sea",
-      "distance_miles": 282,
+      "distance_miles": 281,
       "bidirectional": true
     },
     {
@@ -3031,11 +3023,19 @@
       "bidirectional": true
     },
     {
-      "id": "braeildale__fenervale__sea",
+      "id": "braeildale__barungate__sea",
       "from": "braeildale",
-      "to": "fenervale",
+      "to": "barungate",
       "quality": "sea",
-      "distance_miles": 414,
+      "distance_miles": 365,
+      "bidirectional": true
+    },
+    {
+      "id": "braeildale__ulmaport__sea",
+      "from": "braeildale",
+      "to": "ulmaport",
+      "quality": "sea",
+      "distance_miles": 341,
       "bidirectional": true
     },
     {
@@ -3135,30 +3135,6 @@
       "bidirectional": true
     },
     {
-      "id": "vasathwold__dununwold__sea",
-      "from": "vasathwold",
-      "to": "dununwold",
-      "quality": "sea",
-      "distance_miles": 133,
-      "bidirectional": true
-    },
-    {
-      "id": "vasathwold__falorford__sea",
-      "from": "vasathwold",
-      "to": "falorford",
-      "quality": "sea",
-      "distance_miles": 128,
-      "bidirectional": true
-    },
-    {
-      "id": "vasathwold__halerhold__sea",
-      "from": "vasathwold",
-      "to": "halerhold",
-      "quality": "sea",
-      "distance_miles": 143,
-      "bidirectional": true
-    },
-    {
       "id": "rhaaen__fenunvale__fair",
       "from": "rhaaen",
       "to": "fenunvale",
@@ -3223,14 +3199,6 @@
       "bidirectional": true
     },
     {
-      "id": "dununwold__halerhold__sea",
-      "from": "dununwold",
-      "to": "halerhold",
-      "quality": "sea",
-      "distance_miles": 156,
-      "bidirectional": true
-    },
-    {
       "id": "dununwold__halerwold__sea",
       "from": "dununwold",
       "to": "halerwold",
@@ -3263,19 +3231,19 @@
       "bidirectional": true
     },
     {
-      "id": "garustead__barunport__sea",
-      "from": "garustead",
-      "to": "barunport",
-      "quality": "sea",
-      "distance_miles": 259,
-      "bidirectional": true
-    },
-    {
       "id": "garustead__barungate__sea",
       "from": "garustead",
       "to": "barungate",
       "quality": "sea",
       "distance_miles": 162,
+      "bidirectional": true
+    },
+    {
+      "id": "garustead__calothstead__sea",
+      "from": "garustead",
+      "to": "calothstead",
+      "quality": "sea",
+      "distance_miles": 232,
       "bidirectional": true
     },
     {
@@ -3292,22 +3260,6 @@
       "to": "eshathon",
       "quality": "fair",
       "distance_miles": 65,
-      "bidirectional": true
-    },
-    {
-      "id": "haluon__halerwold__sea",
-      "from": "haluon",
-      "to": "halerwold",
-      "quality": "sea",
-      "distance_miles": 303,
-      "bidirectional": true
-    },
-    {
-      "id": "haluon__ossunhaven__sea",
-      "from": "haluon",
-      "to": "ossunhaven",
-      "quality": "sea",
-      "distance_miles": 275,
       "bidirectional": true
     },
     {
@@ -3375,27 +3327,11 @@
       "bidirectional": true
     },
     {
-      "id": "falorford__halerhold__sea",
-      "from": "falorford",
-      "to": "halerhold",
-      "quality": "sea",
-      "distance_miles": 177,
-      "bidirectional": true
-    },
-    {
       "id": "falorford__dunewold__excellent",
       "from": "falorford",
       "to": "dunewold",
       "quality": "excellent",
       "distance_miles": 59,
-      "bidirectional": true
-    },
-    {
-      "id": "falorford__halerwold__sea",
-      "from": "falorford",
-      "to": "halerwold",
-      "quality": "sea",
-      "distance_miles": 136,
       "bidirectional": true
     },
     {
@@ -3455,50 +3391,42 @@
       "bidirectional": true
     },
     {
-      "id": "ossostead__barungate__sea",
-      "from": "ossostead",
-      "to": "barungate",
-      "quality": "sea",
-      "distance_miles": 213,
-      "bidirectional": true
-    },
-    {
-      "id": "ossostead__calothstead__sea",
+      "id": "ossostead__calothstead__fair",
       "from": "ossostead",
       "to": "calothstead",
-      "quality": "sea",
-      "distance_miles": 84,
+      "quality": "fair",
+      "distance_miles": 97,
       "bidirectional": true
     },
     {
-      "id": "ossostead__ithehaven__good",
+      "id": "ossostead__ephovale__sea",
+      "from": "ossostead",
+      "to": "ephovale",
+      "quality": "sea",
+      "distance_miles": 322,
+      "bidirectional": true
+    },
+    {
+      "id": "ossostead__ithehaven__poor",
       "from": "ossostead",
       "to": "ithehaven",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 34,
       "bidirectional": true
     },
     {
-      "id": "ossostead__ossunhaven__sea",
-      "from": "ossostead",
-      "to": "ossunhaven",
-      "quality": "sea",
-      "distance_miles": 99,
-      "bidirectional": true
-    },
-    {
-      "id": "torothis__quenois__poor",
+      "id": "torothis__quenois__good",
       "from": "torothis",
       "to": "quenois",
-      "quality": "poor",
+      "quality": "good",
       "distance_miles": 68,
       "bidirectional": true
     },
     {
-      "id": "torothis__dunewold__good",
+      "id": "torothis__dunewold__fair",
       "from": "torothis",
       "to": "dunewold",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 84,
       "bidirectional": true
     },
@@ -3511,10 +3439,10 @@
       "bidirectional": true
     },
     {
-      "id": "ulmiport__kelothgate__fair",
+      "id": "ulmiport__kelothgate__good",
       "from": "ulmiport",
       "to": "kelothgate",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 35,
       "bidirectional": true
     },
@@ -3535,18 +3463,18 @@
       "bidirectional": true
     },
     {
-      "id": "barunport__ulmagate__fair",
+      "id": "barunport__ulmagate__poor",
       "from": "barunport",
       "to": "ulmagate",
-      "quality": "fair",
+      "quality": "poor",
       "distance_miles": 44,
       "bidirectional": true
     },
     {
-      "id": "barunport__barergate__fair",
+      "id": "barunport__barergate__good",
       "from": "barunport",
       "to": "barergate",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 39,
       "bidirectional": true
     },
@@ -3583,34 +3511,34 @@
       "bidirectional": true
     },
     {
-      "id": "drelethwold__braeilvale__good",
+      "id": "drelethwold__braeilvale__fair",
       "from": "drelethwold",
       "to": "braeilvale",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 39,
       "bidirectional": true
     },
     {
-      "id": "ithuhaven__calothstead__poor",
+      "id": "ithuhaven__calothstead__excellent",
       "from": "ithuhaven",
       "to": "calothstead",
-      "quality": "poor",
+      "quality": "excellent",
       "distance_miles": 37,
       "bidirectional": true
     },
     {
-      "id": "ithuhaven__ithon__excellent",
+      "id": "ithuhaven__ithon__fair",
       "from": "ithuhaven",
       "to": "ithon",
-      "quality": "excellent",
+      "quality": "fair",
       "distance_miles": 36,
       "bidirectional": true
     },
     {
-      "id": "joroford__pelanridge__fair",
+      "id": "joroford__pelanridge__good",
       "from": "joroford",
       "to": "pelanridge",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 43,
       "bidirectional": true
     },
@@ -3631,34 +3559,42 @@
       "bidirectional": true
     },
     {
-      "id": "ithestead__ithanon__good",
+      "id": "ithestead__ithanon__poor",
       "from": "ithestead",
       "to": "ithanon",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 62,
       "bidirectional": true
     },
     {
-      "id": "ithestead__ithon__poor",
+      "id": "ithestead__ithon__fair",
       "from": "ithestead",
       "to": "ithon",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 81,
       "bidirectional": true
     },
     {
-      "id": "coromere__ephovale__sea",
+      "id": "coromere__barungate__sea",
       "from": "coromere",
-      "to": "ephovale",
+      "to": "barungate",
       "quality": "sea",
-      "distance_miles": 379,
+      "distance_miles": 340,
       "bidirectional": true
     },
     {
-      "id": "coromere__braeihold__fair",
+      "id": "coromere__ulmaport__sea",
+      "from": "coromere",
+      "to": "ulmaport",
+      "quality": "sea",
+      "distance_miles": 306,
+      "bidirectional": true
+    },
+    {
+      "id": "coromere__braeihold__good",
       "from": "coromere",
       "to": "braeihold",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 38,
       "bidirectional": true
     },
@@ -3671,10 +3607,10 @@
       "bidirectional": true
     },
     {
-      "id": "kelunport__kelothgate__good",
+      "id": "kelunport__kelothgate__fair",
       "from": "kelunport",
       "to": "kelothgate",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 63,
       "bidirectional": true
     },
@@ -3687,18 +3623,18 @@
       "bidirectional": true
     },
     {
-      "id": "kelunport__barungate__poor",
+      "id": "kelunport__barungate__excellent",
       "from": "kelunport",
       "to": "barungate",
-      "quality": "poor",
+      "quality": "excellent",
       "distance_miles": 66,
       "bidirectional": true
     },
     {
-      "id": "joriwick__joroyn__excellent",
+      "id": "joriwick__joroyn__good",
       "from": "joriwick",
       "to": "joroyn",
-      "quality": "excellent",
+      "quality": "good",
       "distance_miles": 38,
       "bidirectional": true
     },
@@ -3719,42 +3655,34 @@
       "bidirectional": true
     },
     {
-      "id": "barungate__calothstead__sea",
-      "from": "barungate",
-      "to": "calothstead",
-      "quality": "sea",
-      "distance_miles": 133,
-      "bidirectional": true
-    },
-    {
-      "id": "halerhold__pelanridge__good",
+      "id": "halerhold__pelanridge__excellent",
       "from": "halerhold",
       "to": "pelanridge",
-      "quality": "good",
+      "quality": "excellent",
       "distance_miles": 39,
       "bidirectional": true
     },
     {
-      "id": "narothyn__pelilath__excellent",
+      "id": "narothyn__pelilath__poor",
       "from": "narothyn",
       "to": "pelilath",
-      "quality": "excellent",
+      "quality": "poor",
       "distance_miles": 32,
       "bidirectional": true
     },
     {
-      "id": "dunfell__dunanthorpe__poor",
+      "id": "dunfell__dunanthorpe__fair",
       "from": "dunfell",
       "to": "dunanthorpe",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 52,
       "bidirectional": true
     },
     {
-      "id": "dunfell__drelethen__fair",
+      "id": "dunfell__drelethen__good",
       "from": "dunfell",
       "to": "drelethen",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 66,
       "bidirectional": true
     },
@@ -3791,18 +3719,18 @@
       "bidirectional": true
     },
     {
-      "id": "fenervale__fenaththorpe__good",
+      "id": "fenervale__fenaththorpe__fair",
       "from": "fenervale",
       "to": "fenaththorpe",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 70,
       "bidirectional": true
     },
     {
-      "id": "fenervale__ephathen__fair",
+      "id": "fenervale__ephathen__good",
       "from": "fenervale",
       "to": "ephathen",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 38,
       "bidirectional": true
     },
@@ -3823,66 +3751,66 @@
       "bidirectional": true
     },
     {
-      "id": "fenthorpe__fenaen__good",
+      "id": "fenthorpe__fenaen__fair",
       "from": "fenthorpe",
       "to": "fenaen",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 52,
       "bidirectional": true
     },
     {
-      "id": "zeliyn__zeludale__fair",
+      "id": "zeliyn__zeludale__good",
       "from": "zeliyn",
       "to": "zeludale",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 38,
       "bidirectional": true
     },
     {
-      "id": "zeliyn__xanandale__fair",
+      "id": "zeliyn__xanandale__good",
       "from": "zeliyn",
       "to": "xanandale",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 72,
       "bidirectional": true
     },
     {
-      "id": "nariyn__narothyn__poor",
+      "id": "nariyn__narothyn__good",
       "from": "nariyn",
       "to": "narothyn",
-      "quality": "poor",
+      "quality": "good",
       "distance_miles": 41,
       "bidirectional": true
     },
     {
-      "id": "nariyn__pelilath__good",
+      "id": "nariyn__pelilath__poor",
       "from": "nariyn",
       "to": "pelilath",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 72,
       "bidirectional": true
     },
     {
-      "id": "nariyn__pelorath__poor",
+      "id": "nariyn__pelorath__good",
       "from": "nariyn",
       "to": "pelorath",
-      "quality": "poor",
+      "quality": "good",
       "distance_miles": 80,
       "bidirectional": true
     },
     {
-      "id": "quenuur__quenois__good",
+      "id": "quenuur__quenois__excellent",
       "from": "quenuur",
       "to": "quenois",
-      "quality": "good",
+      "quality": "excellent",
       "distance_miles": 35,
       "bidirectional": true
     },
     {
-      "id": "yrerur__drelien__excellent",
+      "id": "yrerur__drelien__fair",
       "from": "yrerur",
       "to": "drelien",
-      "quality": "excellent",
+      "quality": "fair",
       "distance_miles": 74,
       "bidirectional": true
     },
@@ -3895,50 +3823,42 @@
       "bidirectional": true
     },
     {
-      "id": "rhaivale__rhaathorpe__fair",
+      "id": "rhaivale__rhaathorpe__excellent",
       "from": "rhaivale",
       "to": "rhaathorpe",
-      "quality": "fair",
+      "quality": "excellent",
       "distance_miles": 67,
       "bidirectional": true
     },
     {
-      "id": "vason__vasorburn__excellent",
+      "id": "vason__vasorburn__poor",
       "from": "vason",
       "to": "vasorburn",
-      "quality": "excellent",
+      "quality": "poor",
       "distance_miles": 59,
       "bidirectional": true
     },
     {
-      "id": "selewick__garorhaven__poor",
+      "id": "selewick__garorhaven__fair",
       "from": "selewick",
       "to": "garorhaven",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 43,
       "bidirectional": true
     },
     {
-      "id": "calothstead__ulmaport__sea",
-      "from": "calothstead",
-      "to": "ulmaport",
-      "quality": "sea",
-      "distance_miles": 206,
-      "bidirectional": true
-    },
-    {
-      "id": "calothstead__calion__fair",
+      "id": "calothstead__calion__poor",
       "from": "calothstead",
       "to": "calion",
-      "quality": "fair",
+      "quality": "poor",
       "distance_miles": 33,
       "bidirectional": true
     },
     {
-      "id": "ulmaport__barorport__poor",
+      "id": "ulmaport__barorport__good",
       "from": "ulmaport",
       "to": "barorport",
-      "quality": "poor",
+      "quality": "good",
       "distance_miles": 46,
       "bidirectional": true
     },
@@ -3959,42 +3879,42 @@
       "bidirectional": true
     },
     {
-      "id": "zelethyn__xanilath__good",
+      "id": "zelethyn__xanilath__excellent",
       "from": "zelethyn",
       "to": "xanilath",
-      "quality": "good",
+      "quality": "excellent",
       "distance_miles": 43,
       "bidirectional": true
     },
     {
-      "id": "yrathreach__quenuur__excellent",
+      "id": "yrathreach__quenuur__fair",
       "from": "yrathreach",
       "to": "quenuur",
-      "quality": "excellent",
+      "quality": "fair",
       "distance_miles": 48,
       "bidirectional": true
     },
     {
-      "id": "torothur__quenuur__fair",
+      "id": "torothur__quenuur__good",
       "from": "torothur",
       "to": "quenuur",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 45,
       "bidirectional": true
     },
     {
-      "id": "torothur__yrathreach__good",
+      "id": "torothur__yrathreach__poor",
       "from": "torothur",
       "to": "yrathreach",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 67,
       "bidirectional": true
     },
     {
-      "id": "narathford__narethford__poor",
+      "id": "narathford__narethford__fair",
       "from": "narathford",
       "to": "narethford",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 51,
       "bidirectional": true
     },
@@ -4007,10 +3927,10 @@
       "bidirectional": true
     },
     {
-      "id": "narathford__joreford__fair",
+      "id": "narathford__joreford__good",
       "from": "narathford",
       "to": "joreford",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 81,
       "bidirectional": true
     },
@@ -4023,10 +3943,10 @@
       "bidirectional": true
     },
     {
-      "id": "calion__ithuhaven__good",
+      "id": "calion__ithuhaven__fair",
       "from": "calion",
       "to": "ithuhaven",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 44,
       "bidirectional": true
     },
@@ -4039,10 +3959,10 @@
       "bidirectional": true
     },
     {
-      "id": "xaneryn__zeludale__fair",
+      "id": "xaneryn__zeludale__good",
       "from": "xaneryn",
       "to": "zeludale",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 57,
       "bidirectional": true
     },
@@ -4071,18 +3991,18 @@
       "bidirectional": true
     },
     {
-      "id": "drelilfell__dunithorpe__good",
+      "id": "drelilfell__dunithorpe__fair",
       "from": "drelilfell",
       "to": "dunithorpe",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 70,
       "bidirectional": true
     },
     {
-      "id": "jorereach__jorilford__fair",
+      "id": "jorereach__jorilford__good",
       "from": "jorereach",
       "to": "jorilford",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 42,
       "bidirectional": true
     },
@@ -4103,18 +4023,18 @@
       "bidirectional": true
     },
     {
-      "id": "jorerford__pelilford__good",
+      "id": "jorerford__pelilford__fair",
       "from": "jorerford",
       "to": "pelilford",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 68,
       "bidirectional": true
     },
     {
-      "id": "dunewold__dreleford__fair",
+      "id": "dunewold__dreleford__good",
       "from": "dunewold",
       "to": "dreleford",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 57,
       "bidirectional": true
     },
@@ -4127,18 +4047,18 @@
       "bidirectional": true
     },
     {
-      "id": "dunithorpe__drelien__good",
+      "id": "dunithorpe__drelien__fair",
       "from": "dunithorpe",
       "to": "drelien",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 65,
       "bidirectional": true
     },
     {
-      "id": "zelostead__selewick__fair",
+      "id": "zelostead__selewick__good",
       "from": "zelostead",
       "to": "selewick",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 42,
       "bidirectional": true
     },
@@ -4159,42 +4079,42 @@
       "bidirectional": true
     },
     {
-      "id": "ithoron__faluen__good",
+      "id": "ithoron__faluen__excellent",
       "from": "ithoron",
       "to": "faluen",
-      "quality": "good",
+      "quality": "excellent",
       "distance_miles": 44,
       "bidirectional": true
     },
     {
-      "id": "ithon__calilhaven__excellent",
+      "id": "ithon__calilhaven__fair",
       "from": "ithon",
       "to": "calilhaven",
-      "quality": "excellent",
+      "quality": "fair",
       "distance_miles": 49,
       "bidirectional": true
     },
     {
-      "id": "jorilath__pelorath__fair",
+      "id": "jorilath__pelorath__good",
       "from": "jorilath",
       "to": "pelorath",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 80,
       "bidirectional": true
     },
     {
-      "id": "ephethen__fenoen__good",
+      "id": "ephethen__fenoen__fair",
       "from": "ephethen",
       "to": "fenoen",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 63,
       "bidirectional": true
     },
     {
-      "id": "ephethen__vasemoor__fair",
+      "id": "ephethen__vasemoor__good",
       "from": "ephethen",
       "to": "vasemoor",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 57,
       "bidirectional": true
     },
@@ -4215,18 +4135,18 @@
       "bidirectional": true
     },
     {
-      "id": "eshanhold__narethridge__good",
+      "id": "eshanhold__narethridge__poor",
       "from": "eshanhold",
       "to": "narethridge",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 61,
       "bidirectional": true
     },
     {
-      "id": "pelaath__drelothridge__poor",
+      "id": "pelaath__drelothridge__fair",
       "from": "pelaath",
       "to": "drelothridge",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 84,
       "bidirectional": true
     },
@@ -4239,10 +4159,10 @@
       "bidirectional": true
     },
     {
-      "id": "pelaath__jorilath__fair",
+      "id": "pelaath__jorilath__good",
       "from": "pelaath",
       "to": "jorilath",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 90,
       "bidirectional": true
     },
@@ -4255,18 +4175,18 @@
       "bidirectional": true
     },
     {
-      "id": "calilhaven__calstead__good",
+      "id": "calilhaven__calstead__fair",
       "from": "calilhaven",
       "to": "calstead",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 34,
       "bidirectional": true
     },
     {
-      "id": "calilhaven__ossothstead__fair",
+      "id": "calilhaven__ossothstead__good",
       "from": "calilhaven",
       "to": "ossothstead",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 37,
       "bidirectional": true
     },
@@ -4295,26 +4215,26 @@
       "bidirectional": true
     },
     {
-      "id": "fenoen__ephilthorpe__good",
+      "id": "fenoen__ephilthorpe__fair",
       "from": "fenoen",
       "to": "ephilthorpe",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 36,
       "bidirectional": true
     },
     {
-      "id": "pelilford__narareach__fair",
+      "id": "pelilford__narareach__poor",
       "from": "pelilford",
       "to": "narareach",
-      "quality": "fair",
+      "quality": "poor",
       "distance_miles": 52,
       "bidirectional": true
     },
     {
-      "id": "barergate__baragate__poor",
+      "id": "barergate__baragate__good",
       "from": "barergate",
       "to": "baragate",
-      "quality": "poor",
+      "quality": "good",
       "distance_miles": 38,
       "bidirectional": true
     },
@@ -4335,10 +4255,10 @@
       "bidirectional": true
     },
     {
-      "id": "falaridge__dunathwold__good",
+      "id": "falaridge__dunathwold__fair",
       "from": "falaridge",
       "to": "dunathwold",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 65,
       "bidirectional": true
     },
@@ -4351,18 +4271,18 @@
       "bidirectional": true
     },
     {
-      "id": "halethon__halemoor__fair",
+      "id": "halethon__halemoor__good",
       "from": "halethon",
       "to": "halemoor",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 48,
       "bidirectional": true
     },
     {
-      "id": "halethon__jorereach__good",
+      "id": "halethon__jorereach__poor",
       "from": "halethon",
       "to": "jorereach",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 39,
       "bidirectional": true
     },
@@ -4375,50 +4295,50 @@
       "bidirectional": true
     },
     {
-      "id": "garathstead__zelathgate__poor",
+      "id": "garathstead__zelathgate__fair",
       "from": "garathstead",
       "to": "zelathgate",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 66,
       "bidirectional": true
     },
     {
-      "id": "garathstead__xanethgate__fair",
+      "id": "garathstead__xanethgate__good",
       "from": "garathstead",
       "to": "xanethgate",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 34,
       "bidirectional": true
     },
     {
-      "id": "rhaathorpe__rhaunvale__good",
+      "id": "rhaathorpe__rhaunvale__excellent",
       "from": "rhaathorpe",
       "to": "rhaunvale",
-      "quality": "good",
+      "quality": "excellent",
       "distance_miles": 36,
       "bidirectional": true
     },
     {
-      "id": "eshormere__vasiwold__excellent",
+      "id": "eshormere__vasiwold__fair",
       "from": "eshormere",
       "to": "vasiwold",
-      "quality": "excellent",
+      "quality": "fair",
       "distance_miles": 60,
       "bidirectional": true
     },
     {
-      "id": "eshormere__ithohaven__fair",
+      "id": "eshormere__ithohaven__good",
       "from": "eshormere",
       "to": "ithohaven",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 76,
       "bidirectional": true
     },
     {
-      "id": "eshormere__vasermere__good",
+      "id": "eshormere__vasermere__fair",
       "from": "eshormere",
       "to": "vasermere",
-      "quality": "good",
+      "quality": "fair",
       "distance_miles": 44,
       "bidirectional": true
     },
@@ -4431,26 +4351,26 @@
       "bidirectional": true
     },
     {
-      "id": "vasemoor__halothmoor__fair",
+      "id": "vasemoor__halothmoor__good",
       "from": "vasemoor",
       "to": "halothmoor",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 45,
       "bidirectional": true
     },
     {
-      "id": "joreford__narareach__good",
+      "id": "joreford__narareach__poor",
       "from": "joreford",
       "to": "narareach",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 67,
       "bidirectional": true
     },
     {
-      "id": "drelien__vasathwold__good",
+      "id": "drelien__vasathwold__poor",
       "from": "drelien",
       "to": "vasathwold",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 64,
       "bidirectional": true
     },
@@ -4463,26 +4383,26 @@
       "bidirectional": true
     },
     {
-      "id": "wenilis__naroath__fair",
+      "id": "wenilis__naroath__good",
       "from": "wenilis",
       "to": "naroath",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 72,
       "bidirectional": true
     },
     {
-      "id": "wenilis__weneur__good",
+      "id": "wenilis__weneur__poor",
       "from": "wenilis",
       "to": "weneur",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 103,
       "bidirectional": true
     },
     {
-      "id": "halerwold__vasathwold__good",
+      "id": "halerwold__vasathwold__poor",
       "from": "halerwold",
       "to": "vasathwold",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 81,
       "bidirectional": true
     },
@@ -4495,10 +4415,10 @@
       "bidirectional": true
     },
     {
-      "id": "ossunhaven__eshormere__fair",
+      "id": "ossunhaven__eshormere__good",
       "from": "ossunhaven",
       "to": "eshormere",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 83,
       "bidirectional": true
     },
@@ -4511,98 +4431,98 @@
       "bidirectional": true
     },
     {
-      "id": "vasorburn__halothon__fair",
+      "id": "vasorburn__halothon__good",
       "from": "vasorburn",
       "to": "halothon",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 47,
       "bidirectional": true
     },
     {
-      "id": "pelorath__jorunyn__poor",
+      "id": "pelorath__jorunyn__fair",
       "from": "pelorath",
       "to": "jorunyn",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 55,
       "bidirectional": true
     },
     {
-      "id": "pelorath__zelethyn__fair",
+      "id": "pelorath__zelethyn__good",
       "from": "pelorath",
       "to": "zelethyn",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 58,
       "bidirectional": true
     },
     {
-      "id": "pelorath__xanilath__good",
+      "id": "pelorath__xanilath__poor",
       "from": "pelorath",
       "to": "xanilath",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 66,
       "bidirectional": true
     },
     {
-      "id": "quenanur__queniis__poor",
+      "id": "quenanur__queniis__fair",
       "from": "quenanur",
       "to": "queniis",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 50,
       "bidirectional": true
     },
     {
-      "id": "jorilford__narethford__fair",
+      "id": "jorilford__narethford__poor",
       "from": "jorilford",
       "to": "narethford",
-      "quality": "fair",
+      "quality": "poor",
       "distance_miles": 32,
       "bidirectional": true
     },
     {
-      "id": "halothmoor__vasathburn__poor",
+      "id": "halothmoor__vasathburn__fair",
       "from": "halothmoor",
       "to": "vasathburn",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 38,
       "bidirectional": true
     },
     {
-      "id": "dreleford__drelethwold__fair",
+      "id": "dreleford__drelethwold__good",
       "from": "dreleford",
       "to": "drelethwold",
-      "quality": "fair",
+      "quality": "good",
       "distance_miles": 39,
       "bidirectional": true
     },
     {
-      "id": "wenudale__braeihold__good",
+      "id": "wenudale__braeihold__poor",
       "from": "wenudale",
       "to": "braeihold",
-      "quality": "good",
+      "quality": "poor",
       "distance_miles": 48,
       "bidirectional": true
     },
     {
-      "id": "xanilath__jorunyn__poor",
+      "id": "xanilath__jorunyn__fair",
       "from": "xanilath",
       "to": "jorunyn",
-      "quality": "poor",
+      "quality": "fair",
       "distance_miles": 38,
       "bidirectional": true
     },
     {
-      "id": "ephathen__fenaththorpe__fair",
+      "id": "ephathen__fenaththorpe__poor",
       "from": "ephathen",
       "to": "fenaththorpe",
-      "quality": "fair",
+      "quality": "poor",
       "distance_miles": 41,
       "bidirectional": true
     },
     {
-      "id": "ephathen__rhaivale__poor",
+      "id": "ephathen__rhaivale__good",
       "from": "ephathen",
       "to": "rhaivale",
-      "quality": "poor",
+      "quality": "good",
       "distance_miles": 37,
       "bidirectional": true
     }

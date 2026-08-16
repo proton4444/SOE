@@ -352,8 +352,40 @@ def test_world2_sidecar_records_its_relief():
 def test_world2_sidecar_matches_a_fresh_build():
     shipped = json.loads((REPO_MAPS / "world2_geography.json").read_text(encoding="utf-8"))
     source = json.loads((REPO_MAPS / "world2.json").read_text(encoding="utf-8"))
-    fresh = gg.build_geography(W2_SEED, source["cities"], relief=W2_RELIEF)
+    fresh = gg.build_geography(
+        W2_SEED, source["cities"], relief=W2_RELIEF, roads=source["roads"]
+    )
     assert shipped == json.loads(json.dumps(fresh))
+
+
+def test_every_sea_lane_sails_through_water():
+    """The lane is drawn where a ship could actually be.
+
+    Straight from town to town, an island-to-mainland lane crosses most of
+    both: thirteen of world2's nineteen were drawn mostly over land, one of
+    them 78% ashore. Only the two endpoints may be dry -- they are the ports.
+    """
+    land, _ = gg.build_field(W2_SEED, W2_RELIEF)
+    world2 = json.loads((REPO_MAPS / "world2.json").read_text(encoding="utf-8"))
+    paths = gg.sea_route_paths(land, world2["cities"], world2["roads"])
+
+    lanes = [r for r in world2["roads"] if r["quality"] == "sea"]
+    assert len(paths) == len(lanes)
+
+    for road_id, path in paths.items():
+        ashore = 0
+        for x, y in path[1:-1]:
+            cx = min(gw.GRID_W - 1, max(0, int(x // gw.CELL_MILES)))
+            cy = min(gw.GRID_H - 1, max(0, int(y // gw.CELL_MILES)))
+            if land[cy][cx]:
+                ashore += 1
+        # Smoothing can shave a corner across a headland by under a cell.
+        assert ashore <= 1, f"{road_id} crosses land at {ashore} points"
+
+
+def test_a_map_without_roads_gets_no_sea_routes():
+    """The sidecar never invents a lane the map does not have."""
+    assert gg.build_geography(W2_SEED, relief=W2_RELIEF)["sea_routes"] == {}
 
 
 @pytest.mark.parametrize("name", ["world", "calib_12"])
@@ -361,7 +393,7 @@ def test_the_shipped_sidecar_matches_a_fresh_build(name):
     """A sidecar in the tree that no longer matches its seed is a stale map."""
     shipped = json.loads((REPO_MAPS / f"{name}_geography.json").read_text(encoding="utf-8"))
     source = json.loads((REPO_MAPS / f"{name}.json").read_text(encoding="utf-8"))
-    fresh = gg.build_geography(SEED, source["cities"])
+    fresh = gg.build_geography(SEED, source["cities"], roads=source.get("roads"))
     assert shipped == json.loads(json.dumps(fresh))
 
 

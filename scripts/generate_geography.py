@@ -38,10 +38,11 @@ the invented geography this project does not ship. When the map is a whole
 generated world it is checked far harder than that -- regenerated from the
 seed and compared outright.
 
-The port check runs one way only. `build_routes` promotes both ends of a
-water-crossing connectivity link to `is_port` wherever they happen to be, and
-records nothing about having done it, so an inland port is the generator's
-doing and not evidence against the field.
+The port check is asymmetric but not blind. A coastal cell must be a port. An
+inland one may be, because `build_routes` promotes both ends of a
+water-crossing link -- but it records that link as a route of quality `sea`,
+so the promotion is checkable: an inland port with no sea route is a
+mismatch, not a generator quirk.
 
 Rivers are emitted empty. The generator does not model them; an empty list
 says so, and a drawn one would be the invention.
@@ -53,9 +54,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
 from pathlib import Path
+from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -179,6 +182,49 @@ def _segment_distance(p, a, b) -> float:
     return ((px - (ax + t * dx)) ** 2 + (py - (ay + t * dy)) ** 2) ** 0.5
 
 
+def _rdp(points: list[tuple[float, float]], tolerance: float) -> list[tuple[float, float]]:
+    """Ramer-Douglas-Peucker over an open run of points."""
+    if len(points) < 3:
+        return points
+    first, last = points[0], points[-1]
+    worst, index = 0.0, 0
+    for i in range(1, len(points) - 1):
+        d = _segment_distance(points[i], first, last)
+        if d > worst:
+            worst, index = d, i
+    if worst <= tolerance:
+        return [first, last]
+    return _rdp(points[: index + 1], tolerance)[:-1] + _rdp(points[index:], tolerance)
+
+
+def simplify_open(
+    path: list[tuple[float, float]], tolerance: float
+) -> list[tuple[float, float]]:
+    return _rdp(path, tolerance) if len(path) > 2 else path
+
+
+def smooth_open(
+    path: list[tuple[float, float]], passes: int
+) -> list[tuple[float, float]]:
+    """Chaikin on an open run: the two ends stay put, the corners round off.
+
+    The closed-loop version wraps, which on a sea lane joins its destination
+    back to its origin and rounds the join -- a ship sailing in a circle.
+    """
+    points = path
+    for _ in range(passes):
+        if len(points) < 3:
+            break
+        out = [points[0]]
+        for i in range(len(points) - 1):
+            (x1, y1), (x2, y2) = points[i], points[i + 1]
+            out.append((x1 * 0.75 + x2 * 0.25, y1 * 0.75 + y2 * 0.25))
+            out.append((x1 * 0.25 + x2 * 0.75, y1 * 0.25 + y2 * 0.75))
+        out.append(points[-1])
+        points = out
+    return points
+
+
 def simplify(
     loop: list[tuple[float, float]],
     tolerance: float,
@@ -257,12 +303,14 @@ def chaikin(
     return points
 
 
-def point_in_polygon(point: tuple[float, float], loop: list[tuple[float, float]]) -> bool:
+def point_in_polygon(point: tuple[float, float], loop: Sequence[Sequence[float]]) -> bool:
     """Ray casting, in whatever units the loop is in."""
     px, py = point
     inside = False
-    for i, (x1, y1) in enumerate(loop):
-        x2, y2 = loop[(i + 1) % len(loop)]
+    for i, corner in enumerate(loop):
+        x1, y1 = corner[0], corner[1]
+        following = loop[(i + 1) % len(loop)]
+        x2, y2 = following[0], following[1]
         if (y1 > py) != (y2 > py):
             cross = x1 + (py - y1) / (y2 - y1) * (x2 - x1)
             if cross > px:
@@ -347,21 +395,34 @@ def candidate_cells(city: dict) -> list[tuple[int, int]]:
     return [(cx, cy) for cx in axis(x_miles, GRID_W) for cy in axis(y_miles, GRID_H)]
 
 
-def verify_field(cities: list[dict], land, terrain) -> list[str]:
+def sea_route_towns(roads: list[dict] | None) -> set[str]:
+    """Towns with a sea route. `build_routes` records those as quality `sea`."""
+    towns: set[str] = set()
+    for road in roads or []:
+        if road.get("quality") != "sea":
+            continue
+        for end in (road.get("from"), road.get("to")):
+            if isinstance(end, str):
+                towns.add(end)
+    return towns
+
+
+def verify_field(cities: list[dict], land, terrain, roads: list[dict] | None = None) -> list[str]:
     """Whether every town in a map stands where this field allows.
 
-    Two checks, and deliberately not a third. A town must be on land, and its
-    terrain label must match the cell it stands in.
+    A town must be on land, and its terrain label must match the cell it
+    stands in.
 
-    `is_port` is checked in one direction only. A coastal cell is always a
-    port, so a coastal town that is not one fails. The reverse does not hold:
-    `build_routes` promotes both ends of a connectivity link that has to cross
-    water to `is_port`, wherever they are, and it does not record that it did
-    -- `world.json` carries no sea lanes and its roads carry no sea flag. An
-    inland port is therefore explained by the generator and not visible in the
-    map, so it is not evidence of a different field and is not treated as one.
+    The port check is asymmetric. A coastal cell is always a port, so a
+    coastal town that is not one fails. An inland port does not fail on its
+    own, because `build_routes` promotes both ends of a connectivity link that
+    has to cross water wherever they are -- but it records that link as a
+    route of quality `sea`, so when the map's roads are supplied the promotion
+    is checked rather than waved through: an inland port with no sea route
+    touching it is a mismatch.
     """
     problems = []
+    sailing = sea_route_towns(roads)
     for city in cities:
         name = city.get("id", "?")
         labels = city.get("terrain") or []
@@ -380,8 +441,13 @@ def verify_field(cities: list[dict], land, terrain) -> list[str]:
             problems.append(f"{name}: map says {label!r}, the field says {found}")
             continue
 
+        coastal = any(is_coastal(land, cx, cy) for cx, cy in matching)
         if not city.get("is_port") and all(is_coastal(land, cx, cy) for cx, cy in matching):
             problems.append(f"{name}: the cell touches water but the map says it is no port")
+        elif city.get("is_port") and not coastal and roads is not None and name not in sailing:
+            problems.append(
+                f"{name}: an inland port with no sea route to explain it"
+            )
     return problems
 
 
@@ -430,6 +496,108 @@ def check_containment(cities: list[dict], coastlines: list[list[list[float]]]) -
     return problems
 
 
+def _nearest_water(land, cx: int, cy: int) -> tuple[int, int] | None:
+    """The cell itself if it is water, else the closest water within a few."""
+    if not land[cy][cx]:
+        return cx, cy
+    for radius in (1, 2, 3, 4):
+        best = None
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                nx, ny = cx + dx, cy + dy
+                if 0 <= nx < GRID_W and 0 <= ny < GRID_H and not land[ny][nx]:
+                    d = dx * dx + dy * dy
+                    if best is None or d < best[0]:
+                        best = (d, (nx, ny))
+        if best:
+            return best[1]
+    return None
+
+
+def water_path(land, start: tuple[int, int], goal: tuple[int, int]) -> list[tuple[int, int]]:
+    """Shortest run of water cells from one to the other, or [] if there is none."""
+    import heapq
+
+    if start == goal:
+        return [start]
+    diagonal = math.sqrt(2)
+    best = {start: 0.0}
+    came: dict[tuple[int, int], tuple[int, int]] = {}
+    queue = [(0.0, start)]
+    while queue:
+        cost, cell = heapq.heappop(queue)
+        if cell == goal:
+            break
+        if cost > best.get(cell, math.inf):
+            continue
+        x, y = cell
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < GRID_W and 0 <= ny < GRID_H) or land[ny][nx]:
+                    continue
+                step = diagonal if dx and dy else 1.0
+                if cost + step < best.get((nx, ny), math.inf):
+                    best[(nx, ny)] = cost + step
+                    came[(nx, ny)] = cell
+                    heapq.heappush(queue, (cost + step, (nx, ny)))
+
+    if goal not in came and goal != start:
+        return []
+    path = [goal]
+    while path[-1] != start:
+        path.append(came[path[-1]])
+    path.reverse()
+    return path
+
+
+def sea_route_paths(land, cities: list[dict], roads: list[dict] | None) -> dict:
+    """Where each sea lane actually sails, as mile coordinates.
+
+    A lane drawn straight from town to town crosses whatever lies between,
+    which for an island-to-mainland run is most of both: on the chosen world
+    thirteen of nineteen lanes were drawn mostly over land, one of them 78%
+    ashore. The classification was right and the line was a lie.
+
+    So the lane is routed through water and only its two ends touch the shore.
+    The path is the shortest run of water cells between the towns' nearest
+    water, simplified and rounded the same way the coast is, with the towns
+    themselves as endpoints so the lane still visibly starts and finishes at a
+    port.
+    """
+    if not roads:
+        return {}
+    by_id = {c.get("id"): c for c in cities}
+    paths: dict[str, list[list[float]]] = {}
+    for road in roads:
+        if road.get("quality") != "sea":
+            continue
+        a, b = by_id.get(road.get("from")), by_id.get(road.get("to"))
+        if not a or not b:
+            continue
+        start = _nearest_water(land, *candidate_cells(a)[0])
+        goal = _nearest_water(land, *candidate_cells(b)[0])
+        if start is None or goal is None:
+            continue
+        cells = water_path(land, start, goal)
+        if not cells:
+            continue
+        middle = [(x + 0.5, y + 0.5) for x, y in cells]
+        if len(middle) > 3:
+            middle = smooth_open(simplify_open(middle, SIMPLIFY_TOLERANCE), SMOOTH_PASSES)
+        points = (
+            [(a["x_miles"] / CELL_MILES, a["y_miles"] / CELL_MILES)]
+            + middle
+            + [(b["x_miles"] / CELL_MILES, b["y_miles"] / CELL_MILES)]
+        )
+        paths[road["id"]] = [
+            [round(x * CELL_MILES, 2), round(y * CELL_MILES, 2)] for x, y in points
+        ]
+    return paths
+
+
 def pinned_corners(cities: list[dict]) -> frozenset[tuple[float, float]]:
     """The lattice corners of every cell a town could stand in.
 
@@ -451,6 +619,7 @@ def build_geography(
     cities: list[dict] | None = None,
     smooth: bool = True,
     relief: str = gw.DEFAULT_RELIEF,
+    roads: list[dict] | None = None,
 ) -> dict:
     land, terrain = build_field(seed, relief)
     pinned = pinned_corners(cities or [])
@@ -469,6 +638,9 @@ def build_geography(
             "relief": relief,
         },
         "coastlines": coastlines,
+        # Where each sea lane sails. Empty when the map has no sea lanes, or
+        # when it was built without its roads.
+        "sea_routes": sea_route_paths(land, cities or [], roads),
         # Water the continent encloses. A separate key because the schema's
         # consumers read `coastlines` as land, and a lake in that list is an
         # island. Nothing in the tree reads this yet; dropping it instead
@@ -535,7 +707,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.map:
         world = json.loads(args.map.read_text(encoding="utf-8"))
         cities = world.get("cities", [])
-        problems = verify_field(cities, land, terrain)
+        problems = verify_field(cities, land, terrain, world.get("roads"))
         if problems:
             print(f"\nrefusing: {args.map} does not belong to seed {args.seed}")
             for problem in problems[:20]:
@@ -552,7 +724,10 @@ def main(argv: list[str] | None = None) -> int:
                 "(derived map: not a verbatim regeneration)"
             )
 
-    geography = build_geography(args.seed, cities, smooth=not args.raw, relief=args.relief)
+    geography = build_geography(
+        args.seed, cities, smooth=not args.raw, relief=args.relief,
+        roads=(world.get("roads") if args.map else None),
+    )
 
     if cities:
         offshore = check_containment(cities, geography["coastlines"])

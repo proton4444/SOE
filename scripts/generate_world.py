@@ -166,6 +166,22 @@ FBM_MIN_ISLAND = 4               # cells; smaller land is a speck
 #: drawn from the same weighted pool.
 TERRAIN_CELLS_PER_REGION = {"noise": 14, "fbm": 70}
 
+#: How a route is judged to be a sea crossing.
+#:
+#: `touches` is the original and the default: sample the straight line and
+#: call it a crossing when more than a quarter of the samples are water. It
+#: cannot tell a crossing from a route that clips one bay, so on the chosen
+#: world 16 of its 30 "sea lanes" joined towns on the same landmass, and the
+#: map drew them as ships sailing over mountains.
+#:
+#: `detour` asks the question that matters: can you walk it, and is walking
+#: sane? A route is a crossing when there is no land path at all, or when the
+#: shortest one is more than SEA_DETOUR_FACTOR times the straight line -- a
+#: gulf you would rather sail across than march around.
+SEA_RULES = ("touches", "detour")
+DEFAULT_SEA_RULE = "touches"
+SEA_DETOUR_FACTOR = 2.2
+
 
 def _smootherstep(t: float) -> float:
     return t * t * t * (t * (t * 6 - 15) + 10)
@@ -534,13 +550,95 @@ def _distance(a: dict, b: dict) -> float:
     return math.hypot(a["x_miles"] - b["x_miles"], a["y_miles"] - b["y_miles"])
 
 
-def build_routes(rng: random.Random, cities: list[dict], land) -> list[dict]:
+def _cell_of_town(town: dict) -> tuple[int, int]:
+    return (
+        min(GRID_W - 1, max(0, int(town["x_miles"] / CELL_MILES))),
+        min(GRID_H - 1, max(0, int(town["y_miles"] / CELL_MILES))),
+    )
+
+
+def _nearest_land(land, cx: int, cy: int) -> tuple[int, int] | None:
+    """The town's own cell, or the closest land to it within a few cells."""
+    if land[cy][cx]:
+        return cx, cy
+    for radius in (1, 2, 3):
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                nx, ny = cx + dx, cy + dy
+                if 0 <= nx < GRID_W and 0 <= ny < GRID_H and land[ny][nx]:
+                    return nx, ny
+    return None
+
+
+def _land_distances(land, start: tuple[int, int]) -> dict[tuple[int, int], float]:
+    """Shortest overland distance in miles from one cell to every reachable one.
+
+    Eight-connected with true step costs, so a diagonal is not priced as a
+    detour through two orthogonal moves.
+    """
+    import heapq
+
+    best: dict[tuple[int, int], float] = {start: 0.0}
+    queue = [(0.0, start)]
+    diagonal = math.sqrt(2) * CELL_MILES
+    while queue:
+        cost, (x, y) = heapq.heappop(queue)
+        if cost > best.get((x, y), math.inf):
+            continue
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < GRID_W and 0 <= ny < GRID_H) or not land[ny][nx]:
+                    continue
+                step = diagonal if dx and dy else CELL_MILES
+                if cost + step < best.get((nx, ny), math.inf):
+                    best[(nx, ny)] = cost + step
+                    heapq.heappush(queue, (cost + step, (nx, ny)))
+    return best
+
+
+def build_routes(
+    rng: random.Random,
+    cities: list[dict],
+    land,
+    sea_rule: str = DEFAULT_SEA_RULE,
+) -> list[dict]:
     """Nearest-neighbour candidates, pruned, then forced into one component.
 
     A land route needs land under it; anything crossing open water is a sea
     lane, and sea lanes need a port at both ends.
+
+    What counts as "crossing open water" is `sea_rule`; see SEA_RULES.
     """
+    if sea_rule not in SEA_RULES:
+        raise ValueError(f"unknown sea rule {sea_rule!r}, expected one of {SEA_RULES}")
+
+    land_reach: dict[tuple[int, int], dict[tuple[int, int], float]] = {}
+
+    def overland_miles(a: dict, b: dict) -> float:
+        """Shortest walk from a to b, or infinity when there is no walk."""
+        start = _nearest_land(land, *_cell_of_town(a))
+        end = _nearest_land(land, *_cell_of_town(b))
+        if start is None or end is None:
+            return math.inf
+        if start not in land_reach:
+            land_reach[start] = _land_distances(land, start)
+        return land_reach[start].get(end, math.inf)
+
     def crosses_water(a: dict, b: dict) -> bool:
+        if sea_rule == "detour":
+            # A route is a crossing when walking is impossible, or so much
+            # longer than the crossing that nobody would walk it. Sampling the
+            # straight line instead calls a route that clips one bay a sea
+            # lane -- on the chosen world that was 16 of 30 "lanes", drawn as
+            # ships sailing over mountains.
+            walk = overland_miles(a, b)
+            if walk == math.inf:
+                return True
+            return walk > _distance(a, b) * SEA_DETOUR_FACTOR
+
         steps = max(2, int(_distance(a, b) / CELL_MILES))
         water = 0
         for i in range(steps + 1):
@@ -682,14 +780,15 @@ def build_routes(rng: random.Random, cities: list[dict], land) -> list[dict]:
 
 def generate(seed: int, towns: int = DEFAULT_TOWNS,
              regions: int = DEFAULT_REGIONS,
-             relief: str = DEFAULT_RELIEF) -> dict:
+             relief: str = DEFAULT_RELIEF,
+             sea_rule: str = DEFAULT_SEA_RULE) -> dict:
     rng = random.Random(seed)
     land = build_landmass(rng, relief)
     terrain = build_terrain(rng, land, relief)
     raw = place_towns(rng, land, terrain, towns)
     assign_regions(rng, raw, regions)
     cities = finish_towns(rng, raw, regions)
-    roads = build_routes(rng, cities, land)
+    roads = build_routes(rng, cities, land, sea_rule)
     return {"cities": cities, "roads": roads}
 
 
@@ -728,9 +827,13 @@ def main() -> None:
         "--relief", choices=RELIEF_MODES, default=DEFAULT_RELIEF,
         help="how the landmass is shaped; 'noise' is the original and the default",
     )
+    ap.add_argument(
+        "--sea-rule", choices=SEA_RULES, default=DEFAULT_SEA_RULE,
+        help="what counts as a sea crossing; 'touches' is the original and the default",
+    )
     args = ap.parse_args()
 
-    world = generate(args.seed, args.towns, args.regions, args.relief)
+    world = generate(args.seed, args.towns, args.regions, args.relief, args.sea_rule)
     if args.stats or args.out is None:
         print(summarise(world))
         return

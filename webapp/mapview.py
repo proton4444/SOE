@@ -755,8 +755,9 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     )
     parts.append(_defs())
     parts.append(_background(layout))
+    geo = load_geography(map_file)
     parts.append(_landmasses_svg(masses, dense=dense, traced=layout.has_geography))
-    parts.append(_terrain_svg(load_geography(map_file), layout))
+    parts.append(_terrain_svg(geo, layout))
     parts.append(_compass(w - 48, h - 48))
     parts.append(_title_block(stats, dense=dense))
     # On-map landmass roster only for small maps; dense maps use the HTML index.
@@ -766,11 +767,21 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
         parts.append(_overlay_key_svg(overlay))
 
     parts.append('<g class="map-routes">')
+    sea_routes = (geo or {}).get("sea_routes") or {}
     for r in roads:
         a, b = pos.get(r.get("from")), pos.get(r.get("to"))
         if not a or not b:
             continue
-        parts.append(_route_svg(r, a, b, dense=dense))
+        sailed = sea_routes.get(r.get("id"))
+        parts.append(
+            _route_svg(
+                r, a, b, dense=dense,
+                sailed=(
+                    [layout.project_miles(px, py) for px, py in sailed]
+                    if sailed else None
+                ),
+            )
+        )
     parts.append("</g>")
 
     parts.append('<g class="map-cities">')
@@ -1495,11 +1506,43 @@ def _format_hop(cost: Optional[float]) -> str:
     return f"{cost:.1f} mv"
 
 
+def _sailed_route_svg(
+    road: dict,
+    points: list[tuple[float, float]],
+    color: str,
+    width: float,
+    dash: str,
+) -> str:
+    """One sea lane drawn along the water it actually sails through."""
+    d = " ".join(
+        ("M" if i == 0 else "L") + f" {x:.1f} {y:.1f}" for i, (x, y) in enumerate(points)
+    )
+    rid = _esc(str(road.get("id", "")))
+    miles = road.get("distance_miles")
+    title_bits = ["sea lane"]
+    if miles is not None and miles != "":
+        # The crossing is priced on the straight line; the drawn path is the
+        # water it has to keep to, so the two are not the same length and the
+        # tooltip says which number is which.
+        title_bits.append(f"{miles} mi as the crow flies")
+    return (
+        f'<g class="map-route map-route-sea" data-road="{rid}">'
+        f"<title>{_esc(' · '.join(title_bits))}</title>"
+        f'<path d="{d}" fill="none" stroke="#1e3a4a" stroke-width="{width + 4}" '
+        f'stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>'
+        f'<path d="{d}" fill="none" stroke="{color}" stroke-width="{width}" '
+        f'stroke-dasharray="{dash}" stroke-linecap="round" stroke-linejoin="round" '
+        f'opacity="0.92"/>'
+        f"</g>"
+    )
+
+
 def _route_svg(
     road: dict,
     a: tuple[float, float],
     b: tuple[float, float],
     dense: bool = False,
+    sailed: Optional[list[tuple[float, float]]] = None,
 ) -> str:
     quality = road.get("quality")
     try:
@@ -1510,6 +1553,13 @@ def _route_svg(
     # Slightly thinner strokes when the graph is a hairball.
     if dense:
         width = max(1.6, width * 0.72)
+
+    if sailed and len(sailed) >= 2:
+        # A sea lane sails where the water is. Straight from town to town it
+        # crosses whatever lies between, which island-to-mainland means most
+        # of both -- thirteen of nineteen lanes on world2 were drawn mostly
+        # over land before this, one of them 78% ashore.
+        return _sailed_route_svg(road, sailed, color, width, dash)
 
     mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
     # Gentle bow so parallel routes / dense maps read as paths, not a grid.
