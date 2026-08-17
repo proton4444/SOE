@@ -172,9 +172,12 @@ falls back to a padded convex hull of the road-connected cities.
 
 **Render what the app renders.**
 
-- Place the twelve cities at their exact `x`/`y`, carrying the
-  population, grid reference, terrain, port and magic-free flags the map
-  gives them.
+- Place the twelve cities at their exact `x`/`y`, **on mapview’s own
+  frame** — the app draws a 1300×1000 mile field into 1180×680 units, and
+  that anisotropy is the map’s proportions. One scale on both axes renders
+  the world 23% too narrow for its height, which is what made the board
+  and the app read as two different places. Carry the population, grid
+  reference, terrain, port and magic-free flags the map gives them.
 - Draw the roads exactly as listed, with their mileage and movement
   cost. The movement cost is the engine’s own number, not a second
   formula.
@@ -186,7 +189,12 @@ falls back to a padded convex hull of the road-connected cities.
   names. The landmass must be **the polygon `webapp/mapview.py` computes
   for this map**, carried across by `scripts/build_public_board.py` —
   not a shore invented for the poster, and not a second computation of
-  the same idea that can drift from the app’s.
+  the same idea that can drift from the app’s. It is drawn as a **solid
+  standing out of the water**, not a fill printed on a plate: a coast is
+  an edge, and giving it a real one is what makes this a relief of a
+  world rather than a picture of a map. The water is ruled; the land is
+  not. The whole object is framed, so the sea is never cut off
+  mid-picture — the board scales down to hold it.
 - Because that polygon is a road-connectivity confine and not a survey,
   **the page says so where it is drawn.** The legend carries
   “road-connected extent, not a surveyed coast”.
@@ -610,11 +618,12 @@ The board is a tilted 3D relief board rendered with three.js
 tilt the board." Twelve cities at their exact `x`/`y`, the fourteen
 roads as listed and weighted by quality, and a terrain-textured
 **mound** per city whose height and tint come from that city's own
-`terrain` label and nothing else. Since Amendment 2 the sheet is a
-printed map rather than blank stock: mapview's landmass for this map is
-printed on it with its coast, the sea outside it, and the three region
-names, all under the graticule the way a printed plate rules over its
-own water and land. City names, their data rows, the region titles and
+`terrain` label and nothing else. Since Amendment 2 the board is a relief
+of a world rather than a printed sheet: mapview's landmass stands 30
+units out of ruled water with a cut cliff at the coast, the cities sit on
+its surface, and the three region names are lettered across it. They are
+placed on mapview's own 1180x680 frame, so the arrangement is the one a
+coach already knows rather than a square approximation of it. City names, their data rows, the region titles and
 the road mileages are HTML labels projected over the canvas, planned
 against each other in screen space so a rotation cannot pile them up.
 

@@ -190,7 +190,13 @@ main > section + section { border-top: 1px solid var(--rule-soft); }
 /* The board is a tilted 3D scene now, so the frame owns the aspect and the
    canvas fills it. Wider than the old flat plate, because a tilted board
    spends height on perspective. */
-.board-frame { aspect-ratio: 16 / 11; }
+/* Wider than it was (16/11), because the board it holds got wider. The map is
+   drawn on mapview's 1180x680 frame now instead of a square, and a 1.7-wide
+   object fitted into a 1.45-wide window is fitted by its width -- leaving a
+   band of empty table above and below, and shrinking the board to buy it. At
+   16/9 the object fills the frame it is given and the labels get the room
+   back. */
+.board-frame { aspect-ratio: 16 / 9; }
 
 #atlas {
   display: block;

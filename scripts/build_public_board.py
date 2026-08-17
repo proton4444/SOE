@@ -108,6 +108,12 @@ def build_board(map_path: Path) -> dict:
     return {
         "map": map_file,
         "field_miles": [layout.field_w_mi, layout.field_h_mi],
+        # The extents mapview lays this field out across. Not the same shape as
+        # the field in miles -- a 1300x1000 mi world is drawn into 1180x680 --
+        # and that difference IS the map's proportions. Shipping it lets the
+        # board place its cities on exactly the arrangement the app draws
+        # rather than on a square approximation of it.
+        "frame_units": [layout.map_w, layout.map_h],
         "landmasses": _landmasses_in_fractions(source, pos, layout),
         "regions": _region_anchors(source["cities"]),
         "cities": cities,

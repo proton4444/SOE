@@ -28,21 +28,20 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h4";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h8";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
 const SU = 1000;
-/* Margin around the city bounding box. Was 105, which framed the cities with
-   room for their tokens and labels and nothing else. The coast runs wider than
-   the cities do — the hull is padded outward from them — and at 105 the
-   shoreline crossed the neatline on the far side, i.e. land printed outside
-   the map's own frame. 150 puts the whole coast inside the ruling. The framing
-   RULE is unchanged (bounding box plus one margin) and so is the camera, which
-   still fits the city box: the arrangement keeps the exact proportions it had,
-   the sheet under it is simply cut large enough for what is now printed on
-   it. */
-const PAD = 150;
+/* Water margin: how much sea is drawn outside the coast before the sheet
+   ends. It was briefly 150, when the frame was measured from the CITIES and
+   the margin had to be wide enough to cover a coastline that ran past them.
+   The frame is measured from the coast itself now, so this is no longer
+   holding anything in -- it only decides how much open water frames the land.
+   The neatline sits REVEAL + SHEET_INSET = 39 units inside the sheet edge, so
+   anything above that keeps the shore inside the ruling; 90 leaves the vale
+   sitting in water without half the picture being empty sea. */
+const PAD = 90;
 /* Mound footprint, before the merge guard. The game draws a city as a 6-15px
    marker on a 1400px map — about 1% of the width — and everything between the
    cities is road network. Inflated to 72 the mounds swallowed the roads
@@ -122,9 +121,17 @@ const SHEET_INSET = 30;        // board units from sheet edge to the neatline
    puts its water and its land under its grid. The sea is a pale plate blue
    rather than the game's near-black navy — the board is cream stock seen on a
    table, and a navy field on cream reads as a hole cut in the paper. */
+/* How far the land stands out of the water. Everything else in the scene --
+   mounds, roads, rings, tokens, labels -- is placed against y = 0, so y = 0 is
+   the LAND surface and the water goes below it rather than the land being
+   lifted above it. That keeps every existing height in the file meaning what
+   it meant, and makes the coast a real edge with a real drop instead of a
+   colour change painted on a flat plate. */
+const LAND_H = 30;
 const SEA_TINT = 0x9fc4d8;
 const LAND_TINT = 0xc7d3a4;
 const COAST_INK = 0x4a6070;
+const LAND_CLIFF = 0x8f9670;   // the cut edge of the same ground, stepped down
 const SHEET_EDGE = 0x3a3125;   // binder board under the print, seen at this tilt
 
 /* Roads carry their quality in colour and dash, exactly as the game draws
@@ -623,20 +630,52 @@ export function createBoard(options) {
   const cityById = {};
   cities.forEach(function (c) { cityById[c.id] = c; });
 
-  /* --- frame: cropped to the city bounding box plus one margin, so there is
-         no dead space and no room to imply a coastline. */
-  const xs = cities.map(function (c) { return c.x * SU; });
-  const ys = cities.map(function (c) { return c.y * SU; });
-  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-  const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+  /* --- frame.
+
+     The scale is mapview's, not a square. A 0..1 fraction means a different
+     number of miles on each axis (the field is 1300x1000) AND the app draws
+     that field into a 1180x680 frame, so the arrangement a coach knows is
+     wider than it is tall by more than either ratio alone. Multiplying both
+     fractions by one constant -- which is what this did -- rendered the world
+     23% too narrow for its height and made the board and the app read as two
+     different places. `frame_units` carries the app's extents across and the
+     cities land on the app's own arrangement.
+
+     Normalised on the geometric mean so the frame's AREA stays what it was.
+     Every tuned constant below -- mound footprints, the merge guard, road
+     widths, token sizes, camera margins -- was fitted against a board about
+     1000 units across, and rescaling the shape should not silently rescale
+     all of them too. */
+  const frameUnits = options.frameUnits || [SU, SU];
+  const NORM = SU / Math.sqrt(frameUnits[0] * frameUnits[1]);
+  const FX = frameUnits[0] * NORM;
+  const FY = frameUnits[1] * NORM;
+
+  /* The extent now includes the coast, not just the cities. The land is the
+     subject of the picture; framing to the cities alone would run the
+     shoreline off every edge, and the camera fits these same bounds. */
+  const hullMasses = (options.landmasses || []).filter(function (mass) {
+    return mass.hull && mass.hull.length >= 3;
+  });
+  const extentX = cities.map(function (c) { return c.x * FX; });
+  const extentY = cities.map(function (c) { return c.y * FY; });
+  hullMasses.forEach(function (mass) {
+    mass.hull.forEach(function (point) {
+      extentX.push(point[0] * FX);
+      extentY.push(point[1] * FY);
+    });
+  });
+
+  const minX = Math.min.apply(null, extentX), maxX = Math.max.apply(null, extentX);
+  const minY = Math.min.apply(null, extentY), maxY = Math.max.apply(null, extentY);
   const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
   const sheetW = (maxX - minX) + 2 * PAD;
   const sheetD = (maxY - minY) + 2 * PAD;
   const span = Math.max(sheetW, sheetD);
 
-  // Map coordinates are y-down; the scene is z-in. One uniform scale, centred.
-  function worldX(fx) { return fx * SU - midX; }
-  function worldZ(fy) { return fy * SU - midY; }
+  // Map coordinates are y-down; the scene is z-in.
+  function worldX(fx) { return fx * FX - midX; }
+  function worldZ(fy) { return fy * FY - midY; }
 
   /* The merge guard. "Local relief only. No interpolated continent between
      cities" is a property of the footprint, not of good intentions: two mounds
@@ -661,7 +700,7 @@ export function createBoard(options) {
     cities.forEach(function (o) {
       if (o === c) { return; }
       nearest = Math.min(nearest,
-        Math.hypot((c.x - o.x) * SU, (c.y - o.y) * SU));
+        Math.hypot((c.x - o.x) * FX, (c.y - o.y) * FY));
     });
     radiusById[c.id] = Math.min(DISK_R_MAX, nearest * 0.46);
   });
@@ -849,7 +888,7 @@ export function createBoard(options) {
      occupies one place twice. */
   const board = new THREE.Mesh(
     new THREE.BoxGeometry(sheetW, SHEET_T, sheetD), edgeMat);
-  board.position.y = -PLATE_T - SHEET_T / 2;
+  board.position.y = -LAND_H - PLATE_T - SHEET_T / 2;
   board.receiveShadow = true;
   board.castShadow = true;              // onto the table, below
   scene.add(board);
@@ -875,7 +914,10 @@ export function createBoard(options) {
     [plateSideMat, plateSideMat, plateTopMat,
      plateSideMat, plateSideMat, plateSideMat]
   );
-  plate.position.y = -PLATE_T / 2;          // its printed face stays at y = 0
+  /* Dropped by LAND_H with the water. y = 0 is the land surface now, and a
+     plate still at 0 would be a sheet of paper lying across the sea at
+     exactly the height of the cliff tops. */
+  plate.position.y = -LAND_H - PLATE_T / 2;
   plate.receiveShadow = true;
   scene.add(plate);
 
@@ -922,7 +964,7 @@ export function createBoard(options) {
       })
     );
     sea.rotation.x = -Math.PI / 2;
-    sea.position.y = 0.10;
+    sea.position.y = -LAND_H + 1.2;
     sea.renderOrder = -3;
     sea.receiveShadow = true;
     scene.add(sea);
@@ -941,24 +983,43 @@ export function createBoard(options) {
       });
       shape.closePath();
 
+      /* Extruded, not a printed fill. A flat polygon tinted green is a map OF
+         land; a solid with a wall down to the seabed is land. The extrusion
+         runs along local +z, which this mesh's -90deg rotation about X carries
+         to world +y, so the body comes out spanning 0..LAND_H and is dropped
+         by LAND_H to put its top face at 0 -- where every mound, road and
+         token in the scene already stands. */
       const landTex = terrainMap("plain");
-      const geo = new THREE.ShapeGeometry(shape);
-      /* ShapeGeometry lays the polygon out in XY and its UVs come out in
-         model units, so the grain would stretch across a 700-unit body
-         without this. Same tile size as the mounds' ground. */
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: LAND_H, bevelEnabled: false, curveSegments: 1
+      });
+      /* Extrude UVs come out in model units, so the grain would stretch across
+         a 700-unit body without this. Same tile size as the mounds' ground.
+         The wall gets it too: at this scale a smeared cliff face is more
+         obvious than a tiled one. */
       const uv = geo.attributes.uv;
       for (let i = 0; i < uv.count; i++) {
         uv.setXY(i, uv.getX(i) / 300, uv.getY(i) / 300);
       }
       uv.needsUpdate = true;
 
-      const land = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-        color: LAND_TINT, map: landTex, roughness: 0.95, metalness: 0,
-        envMapIntensity: 0.28
-      }));
+      /* Two materials: ExtrudeGeometry emits group 0 for the caps and group 1
+         for the wall. The cliff is the cut edge of the same ground, so it is
+         the same tint stepped down -- a shore reads as a shore because it is
+         darker under its own overhang, not because it is a different colour. */
+      const land = new THREE.Mesh(geo, [
+        new THREE.MeshStandardMaterial({
+          color: LAND_TINT, map: landTex, roughness: 0.95, metalness: 0,
+          envMapIntensity: 0.28
+        }),
+        new THREE.MeshStandardMaterial({
+          color: LAND_CLIFF, map: landTex, roughness: 0.98, metalness: 0,
+          envMapIntensity: 0.18
+        })
+      ]);
       land.rotation.x = -Math.PI / 2;
-      land.position.y = 0.18;
-      land.renderOrder = -2;
+      land.position.y = -LAND_H;
+      land.castShadow = true;
       land.receiveShadow = true;
       scene.add(land);
 
@@ -966,7 +1027,7 @@ export function createBoard(options) {
          own at this size -- the same reason the roads carry a casing. */
       const ring = [];
       mass.hull.forEach(function (point) {
-        ring.push(new THREE.Vector3(worldX(point[0]), 0.24, worldZ(point[1])));
+        ring.push(new THREE.Vector3(worldX(point[0]), 0.30, worldZ(point[1])));
       });
       const coast = new THREE.LineLoop(
         new THREE.BufferGeometry().setFromPoints(ring),
@@ -980,11 +1041,16 @@ export function createBoard(options) {
     });
   }
 
-  // The ruling stops at the neatline, as it does on a printed plate.
+  /* The ruling stops at the neatline, as it does on a printed plate -- and it
+     now rules the WATER. When the land was a printed fill the grid crossed
+     both, which is what a flat map does. The land is a solid standing 30 units
+     proud of the sea, so a grid at sea level would disappear under it and a
+     grid at land level would hang in the air over open water. Ruled water and
+     clean relief is the older convention anyway: a chart grids its sea. */
   const ruled = graticuleGeometry(
     (sheetW - REVEAL * 2) / 2 - SHEET_INSET,
     (sheetD - REVEAL * 2) / 2 - SHEET_INSET,
-    0.3);
+    -LAND_H + 1.6);
   [[ruled.minor, GRID_MINOR], [ruled.major, GRID_MAJOR],
    [ruled.neat, NEATLINE]].forEach(function (pair) {
     const rgba = pair[1].match(/[\d.]+/g);
@@ -1008,7 +1074,7 @@ export function createBoard(options) {
     new THREE.ShadowMaterial({ opacity: 0.34 })
   );
   table.rotation.x = -Math.PI / 2;
-  table.position.y = -SHEET_T - PLATE_T - 1;
+  table.position.y = -LAND_H - SHEET_T - PLATE_T - 1;
   table.receiveShadow = true;
   scene.add(table);
 
@@ -1266,6 +1332,12 @@ export function createBoard(options) {
     labelHost.appendChild(label);
     labelByCity[city.id] = {
       node: label,
+      /* A little vertical room, which cities did not have. They were placed at
+         their anchor or not at all, so on a board scaled down to hold the
+         whole coast a name lost to a neighbour's data row was simply gone.
+         Vertical only, and small: a name that slid sideways would sit over the
+         wrong mound, while one lifted a line still points down at its own. */
+      candidates: [[0, 0], [0, -19], [0, 19], [0, -38]],
       anchor: new THREE.Vector3(x, height + 12, z)
     };
   });
@@ -1482,10 +1554,21 @@ export function createBoard(options) {
     return MOUND_H[t] !== undefined ? MOUND_H[t] : MOUND_H.plain;
   })) + 34;
 
+  /* Fit the OBJECT, not the land inside it. While the board was a printed
+     plate the sheet was allowed to run off the edges -- it was backdrop, and
+     cropping it cost nothing. It is a body of water with a landmass standing
+     in it now, and a sea cut off mid-frame reads as a rendering that did not
+     fit rather than as a map. So the box is the sheet's own extent, which is
+     wider than the land box by PAD, and the picture scales down to hold it. */
+  const fitHalfW = Math.max((maxX - minX) / 2 + FIT_M, (sheetW - REVEAL * 2) / 2);
+  const fitHalfD = Math.max((maxY - minY) / 2 + FIT_M, (sheetD - REVEAL * 2) / 2);
   const sheetCorners = [];
-  [minX - midX - FIT_M, maxX - midX + FIT_M].forEach(function (x) {
-    [minY - midY - FIT_M, maxY - midY + FIT_M].forEach(function (z) {
-      [0, topY].forEach(function (y) {
+  [-fitHalfW, fitHalfW].forEach(function (x) {
+    [-fitHalfD, fitHalfD].forEach(function (z) {
+      // Down to the waterline as well as up to the tallest mound: the land is
+      // a solid now and its cliff and the sea around it are part of the
+      // picture, so a box that starts at the land surface crops them off.
+      [-LAND_H, 0, topY].forEach(function (y) {
         sheetCorners.push(new THREE.Vector3(x, y, z));
       });
     });

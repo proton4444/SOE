@@ -14,6 +14,10 @@ const ATLAS_BOARD = {
     1300.0,
     1000.0
   ],
+  "frame_units": [
+    1180.0,
+    680.0
+  ],
   "landmasses": [
     {
       "index": 1,

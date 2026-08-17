@@ -19,7 +19,7 @@
  * their road between turns rather than jumping, and the road they take lights
  * up as they use it. That motion is the whole show.
  */
-import { createBoard } from "./board3d.js?v=h4";
+import { createBoard } from "./board3d.js?v=h8";
 
 (function () {
   "use strict";
@@ -69,6 +69,8 @@ import { createBoard } from "./board3d.js?v=h4";
       roads: ATLAS_BOARD.roads,
       // Amendment 2: the land the app draws, and the region names on it.
       landmasses: ATLAS_BOARD.landmasses,
+      // The app's own frame extents, so the board is not a square guess at it.
+      frameUnits: ATLAS_BOARD.frame_units,
       regions: ATLAS_BOARD.regions,
       seatColors: SEAT_COLORS,
       activeCities: activeCities,
