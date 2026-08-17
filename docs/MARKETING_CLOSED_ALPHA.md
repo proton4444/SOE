@@ -181,10 +181,15 @@ falls back to a padded convex hull of the road-connected cities.
 - Draw the roads exactly as listed, with their mileage and movement
   cost. The movement cost is the engine’s own number, not a second
   formula.
-- Around each city, a small terrain-textured disk or mound from
-  `maps/textures/` matching that city’s `terrain` label. Local relief
-  only. No interpolated continent between cities — elevation still comes
-  from the twelve terrain labels and nowhere else.
+- Give the landmass **a surface**: elevation interpolated from the twelve
+  cities’ `terrain` labels, with fractal detail, falling to sea level at
+  the shore. A city on hills stands on high ground because the ground is
+  high, not because it wears a cone. Vertical is exaggerated, as a relief
+  map’s always is.
+- Because that surface is interpolated and the map has no elevation at
+  all, **the page says so where it is drawn**, exactly as it does for the
+  coast. The legend carries “relief interpolated from city terrain — high
+  ground is data, contours are not”.
 - Draw the landmass, its coast, the sea outside it, and the region
   names. The landmass must be **the polygon `webapp/mapview.py` computes
   for this map**, carried across by `scripts/build_public_board.py` —
@@ -230,6 +235,31 @@ The page may rotate or tilt the board.
 > Applied in `scripts/build_public_board.py`, `board.js`, `board3d.js`,
 > `atlas.js`, `atlas.css`, and guarded by `tests/test_public_board.py`.
 > See **Amendments** in `LAUNCH_OPERATIONS.md`.
+
+> **Amendment 3, accepted 2026-08-17.** Amendment 2 kept one line from the
+> original rule: “elevation still comes from the twelve terrain labels and
+> nowhere else”, which in practice meant a flat slab with twelve cones
+> standing on it. That is what the board looked like — pins pushed into a
+> plane — and it is not what the game’s world is.
+>
+> The landmass now carries an interpolated surface. Be exact about what
+> that is: `calib_12.json` has twelve terrain **labels** and no elevation
+> whatsoever — no mesh, no heightfield, not one spot height. Which cities
+> stand on hills is data. The shape of the ground between them is a
+> plausible invention, deterministic from position so it is at least the
+> same invention on every machine and every reload.
+>
+> Same resolution as the coast: draw it, and say on the page that it is
+> implied. The legend line above is part of the contract. **Vertical is
+> exaggerated** (×2.6) — true to scale, 60 units of hill across a
+> 1300-unit vale is a 4.6% grade, which is geologically honest and
+> visually nothing.
+>
+> Note for a future map: `calib_12` has no mountains. Its twelve labels
+> are nine plain, two hills and one desert, so this board shows hill
+> country and lowland. The elevation table carries a `mountains` profile
+> so a map that has them renders them; drawing peaks on this one would be
+> fiction with no label behind it.
 
 ## Sanitized replay
 

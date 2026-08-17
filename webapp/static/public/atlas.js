@@ -19,7 +19,7 @@
  * their road between turns rather than jumping, and the road they take lights
  * up as they use it. That motion is the whole show.
  */
-import { createBoard } from "./board3d.js?v=h8";
+import { createBoard } from "./board3d.js?v=h12";
 
 (function () {
   "use strict";
@@ -394,6 +394,17 @@ import { createBoard } from "./board3d.js?v=h8";
         mass.name + " — road-connected extent, not a surveyed coast";
       host.appendChild(shore);
     }
+
+    /* And the same for the ground. The board draws a landscape now, and a
+       landscape is read as surveyed unless the map says otherwise. The map
+       has twelve terrain labels and no elevation at all: which cities stand
+       on high ground is data, the shape of the slopes between them is not.
+       Amendment 3. */
+    var relief = document.createElement("li");
+    relief.className = "legend-note";
+    relief.textContent =
+      "relief interpolated from city terrain — high ground is data, contours are not";
+    host.appendChild(relief);
   }
 
   function start(data) {

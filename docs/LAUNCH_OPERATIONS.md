@@ -188,7 +188,7 @@ vendor/OrbitControls.js camera control
 
 Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump
 it by hand whenever any of these change, or returning visitors keep the
-old file. It is currently `v=h8`.
+old file. It is currently `v=h12`.
 
 Bump it in **four files, not one**. `index.html` carries the token for
 `atlas.css`, `board.js`, `atlas.js` and three.js; `atlas.js` carries its
@@ -322,8 +322,8 @@ or a date that is not decided.
 
 ## Amendments proposed to the card
 
-Four. The first is required, the next two are corrections, and the
-fourth reopens the board's visual contract on purpose.
+Five. The first is required, the next two are corrections, and the last
+two reopen the board's visual contract on purpose.
 
 **1. Add an optional email field to the form.** **Accepted 2026-08-15
 and applied.** Offer bullet 7 becomes:
@@ -379,6 +379,33 @@ named a landmass with `max(set(regions), ...)`, and `calib_12` splits its
 twelve cities 4/4/4 across three regions — so the tie broke on set
 iteration order and the same map rendered under three different names
 depending on `PYTHONHASHSEED`. It now settles alphabetically.
+
+**5. The land has a surface.** **Accepted 2026-08-17 and applied.**
+Amendment 4 gave the board the app's landmass and drew it as a flat slab
+with twelve cones standing on it, which read as pins pushed into a plane
+rather than as a world. The landmass now carries elevation interpolated
+from the twelve cities' terrain labels, and the cones are gone -- a city
+on hills is high because the ground under it is high.
+
+Reason: the same one as Amendment 4, one step in. The poster is the first
+object a stranger sees and it was showing less of the game than the game
+implies.
+
+The honesty cost is larger here than for the coast and is paid the same
+way. `calib_12.json` has terrain LABELS and no elevation at all, so every
+slope between two cities is invented -- deterministically, from position,
+so it is the same invention everywhere, but invented. The legend says so:
+"relief interpolated from city terrain -- high ground is data, contours
+are not". Vertical is exaggerated x2.6, as a relief map's always is.
+
+Three things fell out of the work and are fixed with it. Cities now level
+the ground they stand on, because a flat marker disc on a slope is a half
+moon and twelve of them were. The terrain is clipped to the shore polygon
+per cell (Sutherland-Hodgman) rather than by dropping whole cells, which
+had left the coastline as a flight of stairs. And elevation is coloured
+against a fixed ceiling rather than against the map's own tallest point,
+which had painted this vale's hill country in summit grey and made it
+read as cloud.
 
 ## Roles
 

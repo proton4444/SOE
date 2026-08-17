@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h8";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h12";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -129,7 +129,8 @@ const SHEET_INSET = 30;        // board units from sheet edge to the neatline
    colour change painted on a flat plate. */
 const LAND_H = 30;
 const SEA_TINT = 0x9fc4d8;
-const LAND_TINT = 0xc7d3a4;
+const LAND_TINT = 0x76874f;   // matches HYPSO's shore band, so the
+                              // terrain grid's ragged edge dies into the cap
 const COAST_INK = 0x4a6070;
 const LAND_CLIFF = 0x8f9670;   // the cut edge of the same ground, stepped down
 const SHEET_EDGE = 0x3a3125;   // binder board under the print, seen at this tilt
@@ -398,7 +399,7 @@ function glowTexture() {
    min(28, length * 0.08) and picks the side from the road id's character sum,
    which keeps the choice stable across renders — same rule here, off the
    endpoint ids, since the public board has no road ids. */
-function roadRibbon(ax, az, bx, bz, width, key) {
+function roadRibbon(ax, az, bx, bz, width, key, height) {
   const dx = bx - ax, dz = bz - az;
   const len = Math.hypot(dx, dz) || 1;
   let sum = 0;
@@ -417,8 +418,15 @@ function roadRibbon(ax, az, bx, bz, width, key) {
     const tz = 2 * mt * (cz - az) + 2 * t * (bz - cz);
     const tl = Math.hypot(tx, tz) || 1;
     const nx = -tz / tl, nz = tx / tl;
-    pos.push(px + nx * width / 2, 0, pz + nz * width / 2);
-    pos.push(px - nx * width / 2, 0, pz - nz * width / 2);
+    /* Draped, not flat. A road laid at y = 0 across a landscape with 60 units
+       of relief in it disappears into the first hill it meets and floats over
+       the first valley. Each edge of the ribbon is sampled at its own point,
+       so the strip banks with the ground it crosses instead of merely rising
+       with it. */
+    const lx = px + nx * width / 2, lz = pz + nz * width / 2;
+    const rx = px - nx * width / 2, rz = pz - nz * width / 2;
+    pos.push(lx, height(lx, lz), lz);
+    pos.push(rx, height(rx, rz), rz);
     uv.push(t, 1, t, 0);
     if (i < SEG) {
       const b = i * 2;
@@ -618,6 +626,97 @@ function cityMetaParts(city) {
   return parts;
 }
 
+/* --- elevation ------------------------------------------------------------
+
+   READ THIS BEFORE TRUSTING A CONTOUR. `calib_12.json` has twelve terrain
+   LABELS and no elevation whatsoever -- no mesh, no heightfield, not a single
+   spot height. What follows interpolates a surface from those twelve labels
+   and adds fractal detail to it, which means every slope between two cities is
+   a plausible invention and not a survey. It is the same bargain the coastline
+   already struck, one step further in: draw the thing the game implies, and
+   say plainly that it is implied. Amendment 3 in docs/MARKETING_CLOSED_ALPHA.md
+   records it and the legend says it on the page.
+
+   What IS data: which of the twelve cities stands on hills, on plain, on
+   desert. A reader who sees high ground under Drelerford and Dunaen is reading
+   the map correctly. A reader who counts the ridges between them is not. */
+const TERRAIN_ELEV = {
+  plain:     { base: 13,  rough: 8 },
+  plains:    { base: 13,  rough: 8 },
+  desert:    { base: 8,   rough: 5 },
+  hills:     { base: 56,  rough: 30 },
+  forest:    { base: 27,  rough: 14 },
+  woods:     { base: 27,  rough: 14 },
+  mountains: { base: 112, rough: 54 },
+  swamp:     { base: 5,   rough: 3 },
+  coastal:   { base: 8,   rough: 4 },
+  river:     { base: 10,  rough: 5 }
+};
+const TERRAIN_FALLBACK = { base: 13, rough: 8 };
+
+/* Hypsometric tints, the relief convention: lowland green through upland
+   ochre to bare rock. Interpolated by height, so the colour is a reading of
+   the surface rather than a second opinion about it. */
+const HYPSO = [
+  [0.00, [0.37, 0.47, 0.26]],   // shore green
+  [0.20, [0.45, 0.52, 0.28]],
+  [0.42, [0.56, 0.55, 0.30]],
+  [0.64, [0.58, 0.47, 0.29]],   // upland ochre
+  [0.84, [0.50, 0.40, 0.30]],
+  [1.00, [0.45, 0.41, 0.37]]    // bare rock, and it is ROCK
+];
+
+/* Elevation is read against a fixed scale, not against this map's own tallest
+   point. Normalising by the observed peak means whatever happens to be
+   highest is always painted as a summit -- so a vale whose boldest feature is
+   hill country came out capped in pale grey, and the hills read as cloud
+   sitting on the board rather than as ground. Against a fixed ceiling, a map
+   of plains stays green, hills reach ochre, and only a map that really has
+   mountains on it ever gets bare rock. */
+const HYPSO_CEILING = 190;
+
+function hypso(t) {
+  const u = Math.min(1, Math.max(0, t));
+  for (let i = 1; i < HYPSO.length; i++) {
+    if (u <= HYPSO[i][0]) {
+      const a = HYPSO[i - 1], b = HYPSO[i];
+      const k = (u - a[0]) / (b[0] - a[0] || 1);
+      return [a[1][0] + (b[1][0] - a[1][0]) * k,
+              a[1][1] + (b[1][1] - a[1][1]) * k,
+              a[1][2] + (b[1][2] - a[1][2]) * k];
+    }
+  }
+  return HYPSO[HYPSO.length - 1][1];
+}
+
+/* Value noise on a hashed lattice. Deterministic from position alone, so the
+   same board renders the same hills on every machine and every reload -- the
+   terrain is fake, but it is not different-every-time fake. */
+function lattice(ix, iz, salt) {
+  return (hashKey(ix + ":" + iz + ":" + salt) % 65536) / 65536;
+}
+
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+function valueNoise(x, z, salt) {
+  const x0 = Math.floor(x), z0 = Math.floor(z);
+  const fx = smoothstep(x - x0), fz = smoothstep(z - z0);
+  const a = lattice(x0, z0, salt), b = lattice(x0 + 1, z0, salt);
+  const c = lattice(x0, z0 + 1, salt), d = lattice(x0 + 1, z0 + 1, salt);
+  return (a + (b - a) * fx) * (1 - fz) + (c + (d - c) * fx) * fz;
+}
+
+function fbm(x, z, salt) {
+  let amp = 1, freq = 1, sum = 0, norm = 0;
+  for (let o = 0; o < 4; o++) {
+    sum += amp * valueNoise(x * freq, z * freq, salt + o);
+    norm += amp;
+    amp *= 0.5;
+    freq *= 2.07;
+  }
+  return sum / norm;
+}
+
 export function createBoard(options) {
   const canvas = options.canvas;
   const labelHost = options.labelHost;
@@ -676,6 +775,135 @@ export function createBoard(options) {
   // Map coordinates are y-down; the scene is z-in.
   function worldX(fx) { return fx * FX - midX; }
   function worldZ(fy) { return fy * FY - midY; }
+
+  /* --- the ground.
+
+     Elevation is interpolated from the city terrain labels by inverse distance
+     -- a city on hills raises the ground around it, a city on desert keeps it
+     flat -- and fractal noise supplies the detail no label can. It is then
+     multiplied by a falloff that reaches zero at the shoreline, so the surface
+     meets the coast at sea level and the island's edge stays the hull's edge
+     rather than a cliff wherever the noise happened to be high.
+
+     See the elevation block above the module for what this is and is not. */
+  const COAST_FALL = 130;      // board units from shore to full inland height
+  const NOISE_S = 1 / 125;     // broad landform scale
+  const IDW_SOFT = 2600;       // softening, so a city is not a spike
+
+  const influence = cities.map(function (c) {
+    const spec = TERRAIN_ELEV[primaryTerrain(c)] || TERRAIN_FALLBACK;
+    return { x: worldX(c.x), z: worldZ(c.y), base: spec.base, rough: spec.rough };
+  });
+
+  // Hull in world units, for the inside test and the shore distance.
+  const shore = [];
+  hullMasses.forEach(function (mass) {
+    shore.push(mass.hull.map(function (pt) {
+      return [worldX(pt[0]), worldZ(pt[1])];
+    }));
+  });
+
+  function insideRing(ring, px, pz) {
+    let hit = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a[1] > pz) !== (b[1] > pz) &&
+          px < (b[0] - a[0]) * (pz - a[1]) / (b[1] - a[1]) + a[0]) {
+        hit = !hit;
+      }
+    }
+    return hit;
+  }
+
+  function edgeDistance(ring, px, pz) {
+    let best = Infinity;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const ax = ring[j][0], az = ring[j][1];
+      const bx = ring[i][0], bz = ring[i][1];
+      const dx = bx - ax, dz = bz - az;
+      const len2 = dx * dx + dz * dz || 1;
+      let t = ((px - ax) * dx + (pz - az) * dz) / len2;
+      t = Math.max(0, Math.min(1, t));
+      const cx = ax + dx * t, cz = az + dz * t;
+      best = Math.min(best, Math.hypot(px - cx, pz - cz));
+    }
+    return best;
+  }
+
+  /* Every settlement levels the ground it stands on. This is not decoration:
+     a city's rim, ownership ring and harbour ring are flat discs, and a flat
+     disc on a slope is half-buried -- twelve cities came out as twelve half
+     moons. Real towns sit on levelled sites for the same reason, so the
+     terrain is flattened toward the site height inside the marker's radius
+     and eased back out over twice that. Roads leaving a city start level
+     with it too, which is what stops them diving into the first slope. */
+  const SITE_R = 46;
+  let siteHeights = null;
+
+  function rawHeight(px, pz) {
+    let fall = 0;
+    for (let i = 0; i < shore.length; i++) {
+      if (insideRing(shore[i], px, pz)) {
+        fall = Math.max(fall, smoothstep(
+          Math.min(1, edgeDistance(shore[i], px, pz) / COAST_FALL)));
+      }
+    }
+    if (fall <= 0) { return 0; }
+
+    let wsum = 0, base = 0, rough = 0;
+    for (let i = 0; i < influence.length; i++) {
+      const t = influence[i];
+      const d2 = (px - t.x) * (px - t.x) + (pz - t.z) * (pz - t.z);
+      const w = 1 / (d2 + IDW_SOFT);
+      wsum += w;
+      base += w * t.base;
+      rough += w * t.rough;
+    }
+    if (!wsum) { return 0; }
+    base /= wsum;
+    rough /= wsum;
+
+    /* Ridged, not billowy. Plain fbm gives rolling blobs -- which is what
+       lowland looks like, and is why the first pass read as a soft yellow
+       cushion wherever it was meant to read as hill country. Folding the
+       noise about its midpoint (1 - |2n-1|) turns the smooth maxima into
+       creases, so high ground gets ridges and valleys instead of domes. It
+       is applied in proportion to `rough`, so the plains stay rolling and
+       only the hills crease. */
+    const broad = fbm(px * NOISE_S, pz * NOISE_S, 11);
+    const fine = fbm(px * NOISE_S * 3.1, pz * NOISE_S * 3.1, 71);
+    const ridged = 1 - Math.abs(2 * fbm(px * NOISE_S * 1.7,
+                                        pz * NOISE_S * 1.7, 33) - 1);
+    const h = base * (0.5 + 0.75 * broad + 0.55 * ridged * ridged)
+            + rough * (fine - 0.45) * 1.9;
+    /* Vertical exaggeration, the relief-map convention. True to scale, 60
+       units of hill across a 1300-unit vale is a 4.6% grade -- geologically
+       honest and visually nothing, which is exactly how the first pass of
+       this came out. Relief maps have exaggerated their vertical since the
+       first one was moulded. The ORDERING is the data; the amplitude is
+       presentation, the same bargain the mounds made before them. */
+    return Math.max(0, h) * fall * 2.6;
+  }
+
+  function groundHeight(px, pz) {
+    const raw = rawHeight(px, pz);
+    if (!siteHeights) { return raw; }
+    let out = raw;
+    for (let i = 0; i < siteHeights.length; i++) {
+      const site = siteHeights[i];
+      const d = Math.hypot(px - site.x, pz - site.z);
+      if (d >= SITE_R * 2) { continue; }
+      // Flat inside the marker, easing back to the landscape outside it.
+      const k = d <= SITE_R ? 1 : 1 - smoothstep((d - SITE_R) / SITE_R);
+      out = out + (site.h - out) * k;
+    }
+    return out;
+  }
+
+  siteHeights = cities.map(function (c) {
+    const cx = worldX(c.x), cz = worldZ(c.y);
+    return { x: cx, z: cz, h: rawHeight(cx, cz) };
+  });
 
   /* The merge guard. "Local relief only. No interpolated continent between
      cities" is a property of the footprint, not of good intentions: two mounds
@@ -936,6 +1164,7 @@ export function createBoard(options) {
   const landHull = (options.landmasses || []).filter(function (mass) {
     return mass.hull && mass.hull.length >= 3;
   });
+  let terrainPeak = 0;   // tallest ground, so the camera can frame the tops
 
   const ruledHalfW = (sheetW - REVEAL * 2) / 2 - SHEET_INSET;
   const ruledHalfD = (sheetD - REVEAL * 2) / 2 - SHEET_INSET;
@@ -1023,6 +1252,154 @@ export function createBoard(options) {
       land.receiveShadow = true;
       scene.add(land);
 
+      /* --- the ground surface itself.
+
+         The extruded body above is the island's base and its cliff; this is
+         the land ON it. A grid is laid over the mass's bounding box, every
+         vertex lifted to groundHeight, and any cell whose centre falls outside
+         the shore is dropped. Because the height falls to zero at the
+         coastline, the dropped cells leave a ragged edge sitting at exactly
+         the height of the base's flat cap underneath it -- so the raggedness
+         is buried and the visible coast stays the hull's own outline.
+
+         Coloured by height rather than by texture. Twelve terrain labels
+         cannot paint a continent, but an elevation can read itself: low ground
+         green, upland ochre, the tops bare. */
+      const bounds = mass.hull.reduce(function (acc, pt) {
+        const wx = worldX(pt[0]), wz = worldZ(pt[1]);
+        return [Math.min(acc[0], wx), Math.min(acc[1], wz),
+                Math.max(acc[2], wx), Math.max(acc[3], wz)];
+      }, [Infinity, Infinity, -Infinity, -Infinity]);
+
+      const STEP = 7;
+      const cols = Math.ceil((bounds[2] - bounds[0]) / STEP) + 1;
+      const rows = Math.ceil((bounds[3] - bounds[1]) / STEP) + 1;
+      const shoreRing = shore[hullMasses.indexOf(mass)];
+
+      const gPos = [], gCol = [], gUv = [], gIdx = [];
+      let peak = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const px = bounds[0] + c * STEP;
+          const pz = bounds[1] + r * STEP;
+          const h = groundHeight(px, pz);
+          if (h > peak) { peak = h; }
+          gPos.push(px, h + 0.15, pz);
+          gUv.push(px / 300, pz / 300);
+          gCol.push(0, 0, 0);          // filled once the peak is known
+        }
+      }
+      /* Cells are clipped to the shore, not merely dropped. Dropping whole
+         cells left the coastline as a flight of 7-unit stairs -- the grid's
+         edge, showing against the flat cap beneath it, in a place where the
+         board has already promised the reader an exact hull. Sutherland-
+         Hodgman against the shore ring gives each boundary cell its true
+         shape, and those fragments are fanned into triangles and appended as
+         loose vertices. The interior is still the cheap regular grid. */
+      function clipToShore(poly, ring) {
+        let out = poly;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          if (!out.length) { return out; }
+          const ax = ring[j][0], az = ring[j][1];
+          const bx = ring[i][0], bz = ring[i][1];
+          // Positive side of the directed edge; the ring is convex here.
+          const side = function (px, pz) {
+            return (bx - ax) * (pz - az) - (bz - az) * (px - ax);
+          };
+          const input = out;
+          out = [];
+          for (let k = 0; k < input.length; k++) {
+            const cur = input[k], prv = input[(k + input.length - 1) % input.length];
+            const dc = side(cur[0], cur[1]), dp = side(prv[0], prv[1]);
+            if (dc >= 0) {
+              if (dp < 0) {
+                const t = dp / (dp - dc);
+                out.push([prv[0] + (cur[0] - prv[0]) * t,
+                          prv[1] + (cur[1] - prv[1]) * t]);
+              }
+              out.push(cur);
+            } else if (dp >= 0) {
+              const t = dp / (dp - dc);
+              out.push([prv[0] + (cur[0] - prv[0]) * t,
+                        prv[1] + (cur[1] - prv[1]) * t]);
+            }
+          }
+        }
+        return out;
+      }
+
+      // The ring must wind consistently for the half-plane test above.
+      let area2 = 0;
+      for (let i = 0, j = shoreRing.length - 1; i < shoreRing.length; j = i++) {
+        area2 += shoreRing[j][0] * shoreRing[i][1] - shoreRing[i][0] * shoreRing[j][1];
+      }
+      const windRing = area2 < 0 ? shoreRing.slice().reverse() : shoreRing;
+
+      for (let r = 0; r < rows - 1; r++) {
+        for (let c = 0; c < cols - 1; c++) {
+          const x0 = bounds[0] + c * STEP, x1 = x0 + STEP;
+          const z0 = bounds[1] + r * STEP, z1 = z0 + STEP;
+          const corners = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+          const allIn = corners.every(function (pt) {
+            return insideRing(windRing, pt[0], pt[1]);
+          });
+
+          if (allIn) {
+            const a = r * cols + c, b = a + 1;
+            const d = (r + 1) * cols + c, e = d + 1;
+            gIdx.push(a, d, b, b, d, e);
+            continue;
+          }
+
+          const frag = clipToShore(corners, windRing);
+          if (frag.length < 3) { continue; }
+          const base = gPos.length / 3;
+          frag.forEach(function (pt) {
+            const h = groundHeight(pt[0], pt[1]);
+            if (h > peak) { peak = h; }
+            gPos.push(pt[0], h + 0.15, pt[1]);
+            gUv.push(pt[0] / 300, pt[1] / 300);
+            gCol.push(0, 0, 0);
+          });
+          for (let f = 1; f + 1 < frag.length; f++) {
+            gIdx.push(base, base + f + 1, base + f);
+          }
+        }
+      }
+
+      /* Hypsometric tint needs the full range, so colour is a second pass --
+         and it has to run after the clipped shore fragments have been added,
+         or they arrive black. */
+      for (let i = 0; i < gPos.length / 3; i++) {
+        const tint = hypso((gPos[i * 3 + 1] - 0.15) / HYPSO_CEILING);
+        gCol[i * 3] = tint[0];
+        gCol[i * 3 + 1] = tint[1];
+        gCol[i * 3 + 2] = tint[2];
+      }
+
+      if (gIdx.length) {
+        const gGeo = new THREE.BufferGeometry();
+        gGeo.setAttribute("position", new THREE.Float32BufferAttribute(gPos, 3));
+        gGeo.setAttribute("color", new THREE.Float32BufferAttribute(gCol, 3));
+        gGeo.setAttribute("uv", new THREE.Float32BufferAttribute(gUv, 2));
+        gGeo.setIndex(gIdx);
+        gGeo.computeVertexNormals();
+
+        /* No colour map. The grain jpgs are near-white greyscale, so
+           multiplying the hypsometric tint by one washed the whole landscape
+           to cream and the relief lost the only cue it had left. The tint IS
+           the surface colour; the jpg is demoted to roughness, where it gives
+           the ground a tooth without touching its hue. */
+        const ground = new THREE.Mesh(gGeo, new THREE.MeshStandardMaterial({
+          vertexColors: true, roughnessMap: landTex, roughness: 0.98,
+          metalness: 0, envMapIntensity: 0.20, flatShading: false
+        }));
+        ground.castShadow = true;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        terrainPeak = Math.max(terrainPeak, peak);
+      }
+
       /* The coastline itself, inked. A fill against a fill has no edge of its
          own at this size -- the same reason the roads carry a casing. */
       const ring = [];
@@ -1095,7 +1472,7 @@ export function createBoard(options) {
     alpha.wrapS = THREE.RepeatWrapping;
 
     const geo = roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                           style.width, key);
+                           style.width, key, groundHeight);
     alpha.repeat.set(Math.max(1, Math.round(geo.userData.length / 42)), 1);
 
     /* Unlit, deliberately. The game's roads are flat SVG strokes, and a lit
@@ -1111,7 +1488,7 @@ export function createBoard(options) {
     casingAlpha.needsUpdate = true;
     const casing = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 3.4, key),
+                 style.width + 3.4, key, groundHeight),
       new THREE.MeshBasicMaterial({
         color: ROAD_CASING, transparent: true, opacity: 0.30,
         alphaMap: casingAlpha, depthWrite: false, side: THREE.DoubleSide
@@ -1138,7 +1515,7 @@ export function createBoard(options) {
     pulseAlpha.needsUpdate = true;
     const pulse = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 4, key),
+                 style.width + 4, key, groundHeight),
       new THREE.MeshBasicMaterial({
         color: 0xffffff, transparent: true, opacity: 0,
         alphaMap: pulseAlpha, blending: THREE.AdditiveBlending,
@@ -1168,54 +1545,27 @@ export function createBoard(options) {
     return tint;
   }
 
-  const moundGeoCache = {};
   const ringByCity = {};
   const glowByCity = {};
   const labelByCity = {};
-  const moundTopY = {};
 
   cities.forEach(function (city) {
     const x = worldX(city.x), z = worldZ(city.y);
     const touched = !!activeCities[city.id];
-    const terrain = primaryTerrain(city);
-    const height = MOUND_H[terrain] !== undefined
-      ? MOUND_H[terrain] : MOUND_H.plain;
-    moundTopY[city.id] = height;
 
     const r = cityRadius(city);
-    // Seeded from the id, so each city has its own landform and keeps it.
-    const seed = hashKey(city.id + "|" + terrain);
-    const cacheKey = terrain + "|" + height + "|" + r.toFixed(2) +
-                     "|" + seed;
-    if (!moundGeoCache[cacheKey]) {
-      moundGeoCache[cacheKey] = moundGeometry(terrain, height, r, seed);
-    }
 
-    const map = terrainMap(terrain);
-    const mound = new THREE.Mesh(
-      moundGeoCache[cacheKey],
-      applyContours(new THREE.MeshStandardMaterial({
-        map: map,
-        bumpMap: map,           // the jpg doubles as its own relief
-        // Bump is a derivative-space perturbation, not a height in board
-        // units: anything above ~0.1 tips the normals past the key light and
-        // the mound falls back to ambient, which reads as flat grey.
-        bumpScale: 0.16,
-        roughness: 0.82,
-        metalness: 0,
-        envMapIntensity: 0.5,
-        color: moundTint(terrain, touched),
-        // A little self-colour, so a mound keeps its hue where the key light
-        // does not reach instead of dropping to a grey silhouette.
-        emissive: moundTint(terrain, touched).multiplyScalar(0.13)
-      // Four and a half bands to the summit: enough to survey the form,
-      // and never a whole number, which would put a contour on the plateau.
-      }), Math.max(height, 1) / 4.5)
-    );
-    mound.position.set(x, 0, z);
-    mound.castShadow = true;
-    mound.receiveShadow = true;
-    scene.add(mound);
+    /* The mound is gone, and this is the point of the change. Twelve cones
+       standing on a flat slab was the board saying "here is a city, and here
+       is what it stands on" in one object -- which read, correctly, as pins
+       pushed into a plane. The ground carries the relief now: a city on hills
+       is high because the land under it is high, and Drelerford sits on the
+       shoulder of real high ground rather than wearing a hill as a hat.
+
+       What is left here is the settlement marker -- contact pool, rim,
+       ownership ring, field, tokens -- all of it lifted to the height of the
+       ground beneath it so nothing floats or sinks. */
+    const gh = groundHeight(x, z);
 
     // Where the mound meets the paper. Everything above this is lit; this is
     // the only thing that says the two surfaces are touching.
@@ -1227,7 +1577,7 @@ export function createBoard(options) {
       })
     );
     contact.rotation.x = -Math.PI / 2;
-    contact.position.set(x, 0.45, z);
+    contact.position.set(x, gh + 0.45, z);
     contact.renderOrder = 4;
     scene.add(contact);
 
@@ -1251,7 +1601,7 @@ export function createBoard(options) {
       rim.material.transparent = true;
     }
     rim.rotation.x = -Math.PI / 2;
-    rim.position.set(x, 1.6, z);
+    rim.position.set(x, gh + 1.6, z);
     rim.renderOrder = 6;
     scene.add(rim);
 
@@ -1264,7 +1614,7 @@ export function createBoard(options) {
       })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(x, 2.1, z);
+    ring.position.set(x, gh + 2.1, z);
     ring.renderOrder = 7;
     scene.add(ring);
     ringByCity[city.id] = ring;
@@ -1280,7 +1630,7 @@ export function createBoard(options) {
       })
     );
     glow.rotation.x = -Math.PI / 2;
-    glow.position.set(x, 1.0, z);
+    glow.position.set(x, gh + 1.0, z);
     glow.renderOrder = 5;
     scene.add(glow);
     glowByCity[city.id] = glow;
@@ -1301,7 +1651,7 @@ export function createBoard(options) {
         })
       );
       harbour.rotation.x = -Math.PI / 2;
-      harbour.position.set(x, 1.6, z);
+      harbour.position.set(x, gh + 1.6, z);
       harbour.renderOrder = 4;
       scene.add(harbour);
     }
@@ -1338,7 +1688,7 @@ export function createBoard(options) {
          Vertical only, and small: a name that slid sideways would sit over the
          wrong mound, while one lifted a line still points down at its own. */
       candidates: [[0, 0], [0, -19], [0, 19], [0, -38]],
-      anchor: new THREE.Vector3(x, height + 12, z)
+      anchor: new THREE.Vector3(x, gh + 26, z)
     };
   });
 
@@ -1414,7 +1764,10 @@ export function createBoard(options) {
       rank: 0,
       candidates: [[0, 0], [0, -26], [0, 26], [0, -52], [0, 52],
                    [-70, 0], [70, 0], [-70, -30], [70, 30]],
-      anchor: new THREE.Vector3(worldX(region.x), 3, worldZ(region.y))
+      anchor: (function () {
+        const rx = worldX(region.x), rz = worldZ(region.y);
+        return new THREE.Vector3(rx, groundHeight(rx, rz) + 3, rz);
+      })()
     });
   });
 
@@ -1437,9 +1790,11 @@ export function createBoard(options) {
       node: node,
       rank: 1,
       candidates: [[0, 0], [0, -15], [0, 15], [-42, 0], [42, 0]],
-      anchor: new THREE.Vector3(
-        (worldX(a.x) + worldX(b.x)) / 2, 4,
-        (worldZ(a.y) + worldZ(b.y)) / 2)
+      anchor: (function () {
+        const mx = (worldX(a.x) + worldX(b.x)) / 2;
+        const mz = (worldZ(a.y) + worldZ(b.y)) / 2;
+        return new THREE.Vector3(mx, groundHeight(mx, mz) + 4, mz);
+      })()
     });
   });
 
@@ -1549,10 +1904,8 @@ export function createBoard(options) {
      inside the frame with it. */
   // Room for the widest mound plus its tokens, ring and label.
   const FIT_M = maxRadius + 46;
-  const topY = Math.max.apply(null, cities.map(function (c) {
-    const t = primaryTerrain(c);
-    return MOUND_H[t] !== undefined ? MOUND_H[t] : MOUND_H.plain;
-  })) + 34;
+  // The tallest ground, not the tallest mound -- there are no mounds now.
+  const topY = terrainPeak + 34;
 
   /* Fit the OBJECT, not the land inside it. While the board was a printed
      plate the sheet was allowed to run off the edges -- it was backdrop, and
@@ -1706,14 +2059,17 @@ export function createBoard(options) {
       };
     },
 
+    /* Tokens stand ON the ground, which is no longer a plane. Both of these
+       sample it: a piece walking the Dreliwick-Narunon road climbs with the
+       road, and a piece raised on high ground is raised. */
     addToken: function (kind, seatIdx, x, z) {
       const node = makeToken(kind, seatIdx);
-      node.position.set(x, 0, z);
+      node.position.set(x, groundHeight(x, z), z);
       return node;
     },
 
     moveToken: function (node, x, z, lift) {
-      node.position.set(x, lift || 0, z);
+      node.position.set(x, groundHeight(x, z) + (lift || 0), z);
     },
 
     /* Tokens fade by scale, which also reads as "raised here" / "gone". */
