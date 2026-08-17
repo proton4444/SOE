@@ -1,8 +1,9 @@
 # Closed Alpha Public Face
 
-Status: **contract locked; replay gate closed; poster page built; hosting and
-form vendor gates still open; posts not sent**  
-Date: 2026-08-14  
+Status: **contract locked; replay and model gates closed; poster page built;
+hosting and form vendor gates still open; spend ceiling undecided; posts not
+sent**  
+Date: 2026-08-14, model gate closed 2026-08-16  
 Depends on: [`ROADMAP.md`](ROADMAP.md) Phase 4, [`READINESS_AND_MARKET.md`](READINESS_AND_MARKET.md), [`../configs/alpha/closed.json`](../configs/alpha/closed.json)
 
 This is the field plan for Phase 4. Nobody outside the repo knows the
@@ -103,6 +104,17 @@ Canonical card. The landing page must carry every bullet.
 Do not invent a second offer. Channels may compress only as the table
 below allows.
 
+> **Bullet 2 has a name now, decided 2026-08-16: Claude Haiku 4.5.** The
+> bullet does not change — the card's claim is *sameness*, not the name, and
+> the name belongs in a reply rather than in copy. What changed is that the
+> claim is now enforced: the frozen regulation
+> (`configs/competition/coach_league.json`) names the model, and a doctrine
+> asking for a different one is refused entry. Asked in a thread, name it
+> plainly and stop there: no price, no prompt, no rate limits. The gate is
+> recorded in `LAUNCH_OPERATIONS.md`, **Model gate: closed**, including the
+> one thing that surprises people — a claude.ai subscription is not API
+> access, and the seats bill through the Anthropic API on its own key.
+
 > **Amendment 1, accepted 2026-08-15.** Bullet 7 previously read "Apply
 > with: name, X or Discord, one sentence of doctrine." The email is
 > optional and a blank submission stays valid, so the offer is unchanged
@@ -143,6 +155,19 @@ A second optional clause is allowed on HN and the page only:
 Do not say the doctrines are balanced. `expansionist-v1` won 80–0
 against `consolidation-v1` because the tie-break rewards territory and
 soldiers and the two never fought. That is not a ranking.
+
+**The proof line is not evidence about the alpha's model.** Those 7,200
+turns ran on `openai/gpt-4o-mini`; the alpha runs on Claude Haiku 4.5. The
+sentence stays exactly as written and stays true — it says what the gate
+completed, not what the alpha runs — but it must never appear in the same
+breath as the model's name, because together they claim a test that was
+never run. If a thread asks both questions, answer them in separate
+sentences and do not join them.
+
+Re-running the gate on Haiku is what would make it evidence about the
+alpha's model. That costs real money under a ceiling nobody has set, and
+on Anthropic it also fails the gate's own cost criterion — Anthropic bills
+tokens and declares no dollars. See `LAUNCH_OPERATIONS.md`, **Model gate**.
 
 ## Non-goals
 
@@ -644,9 +669,34 @@ Only these remain open, and only after their gates:
 
 1. Public host, after the hosting gate.
 2. Form vendor, after the form vendor gate.
+3. **The spend ceiling.** Undecided, and it is the one open choice with no
+   gate to close it — it is a number the operator picks. Nothing paid runs
+   until it exists: not a gate re-run, and not an official season. It is
+   also why two poster improvements are parked, below.
 
 Closed 2026-08-14: the source match for the replay, by the
 reconstruction audit — `AR031_ba`, competence bundle, `official-gate`.
+
+Closed 2026-08-16: the model. Claude Haiku 4.5, in the frozen regulation.
+See `LAUNCH_OPERATIONS.md`, **Model gate: closed**.
+
+### Parked, and why: the poster's map
+
+The map the project draws got a great deal better on 2026-08-16 — owned
+coastlines, terrain, sea lanes, a scale bar — and a stronger twelve-town
+scenario was screened and frozen as `calib_12_fbm.json`. **None of that is
+on the poster**, and it should not be forced there.
+
+The poster shows a real recorded match, and that match was played on
+`calib_12.json`. Its map and its replay are one object: drawing the new
+coast under the old game would be a picture of a world the game was not
+played in, and swapping in a prettier match means dropping to an
+`exhibition` label and a 17-move game in place of a 134-move one. Both
+improvements need the same thing — a paid run on the new scenario — which
+needs the ceiling above.
+
+So the poster ships as it is, honestly labelled `official-gate`, and the
+map work waits for the money rather than for more code.
 
 Everything else in this file is decided.
 

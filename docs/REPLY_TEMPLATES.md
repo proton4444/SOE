@@ -1,7 +1,7 @@
 # Reply templates
 
 Status: **drafted; nothing sent**
-Date: 2026-08-15
+Date: 2026-08-15, model reply added 2026-08-16
 Governed by: [`MARKETING_CLOSED_ALPHA.md`](MARKETING_CLOSED_ALPHA.md),
 [`LAUNCH_OPERATIONS.md`](LAUNCH_OPERATIONS.md) — "Reply playbook"
 
@@ -148,7 +148,22 @@ freeze it, and watch an agent try to rule a world you cannot touch.
 Use the tagged URL for the channel the thread is in, so attribution stays
 honest.
 
-## 8. Deletion request
+## 8. In a public thread — "which model?"
+
+Closed 2026-08-16. Name it; refusing reads worse than answering, and the
+forbidden list covers the replay file and the page, not conversation.
+
+```text
+Claude Haiku 4.5 — the same model in every seat, with the same limits.
+```
+
+That is the whole answer. Do not extend it with the price, the prompt, the
+rate limits, or the provider's plan names, and do not attach the proof line:
+the gate's 7,200 turns ran on a different model, so the two sentences
+together would claim a test nobody ran. If the same thread asks about the
+gate, answer that separately, in its own sentence.
+
+## 9. Deletion request
 
 The privacy notice promises this, so it has to be quick and complete.
 
