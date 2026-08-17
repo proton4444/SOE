@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h15";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h17";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -41,7 +41,7 @@ const SU = 1000;
    The neatline sits REVEAL + SHEET_INSET = 39 units inside the sheet edge, so
    anything above that keeps the shore inside the ruling; 90 leaves the vale
    sitting in water without half the picture being empty sea. */
-const PAD = 62;
+const PAD = 34;
 /* Mound footprint, before the merge guard. The game draws a city as a 6-15px
    marker on a 1400px map — about 1% of the width — and everything between the
    cities is road network. Inflated to 72 the mounds swallowed the roads
@@ -114,7 +114,10 @@ const GRID_MAJOR = "rgba(88, 73, 49, 0.62)";
 const NEATLINE = "rgba(74, 61, 40, 0.92)";
 const GRID_STEP = 48;          // board units per grid square, as in mapview
 const GRID_MAJOR_EVERY = 5;    // a heavier rule every fifth square
-const SHEET_INSET = 30;        // board units from sheet edge to the neatline
+// Board units from the sheet edge to the neatline. 14, down from 30: with the
+// water margin at 34 and the reveal taking 9 of it, a 30-unit inset would rule
+// the neatline across the coast itself.
+const SHEET_INSET = 14;
 
 /* Sea, land and coast. Printed colours, not lighting: these are inks on the
    same plate as the graticule, laid under the ruling the way a printed map
@@ -694,6 +697,118 @@ function hypso(t) {
 }
 
 function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+/* --- settlements -----------------------------------------------------------
+
+   A city was a ring drawn on the ground, which on a board that now has a
+   modelled landscape underneath it reads as a stain rather than a town. These
+   are built objects: a walled platform, a handful of roofed houses, and a keep
+   with a spire, so that "here is a city" is carried by a silhouette instead of
+   by a label pointing at a circle.
+
+   Stylised on purpose, and generously out of scale. At true size a town on a
+   784-mile vale is a speck; these are map furniture in the tradition of the
+   little drawn towns on an estate map, sized to be recognised at a glance and
+   from across the board.
+
+   Every arrangement is seeded from the city's own id, so a town keeps its own
+   plan between reloads and no two look alike. */
+const CITY_STONE = 0xd8cdb4;   // lime-washed wall
+const CITY_ROOF = 0xa2543a;    // terracotta
+const CITY_KEEP = 0xc3b79c;
+const CITY_SPIRE = 0x4c5560;   // slate
+const CITY_RUIN = 0x9a9180;    // bare stone, no roof left to lose
+
+function houseAt(group, x, z, w, d, h, rot, mats) {
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats.wall);
+  body.position.set(x, h / 2, z);
+  body.rotation.y = rot;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  if (!mats.roof) { return; }
+  /* A four-sided pyramid, which is a cone with four segments -- cheaper than
+     modelling a hip roof and reads as one at this size. Terracotta against
+     green ground is what makes the settlements findable on a full board. */
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(Math.max(w, d) * 0.78, h * 0.62, 4),
+    mats.roof);
+  roof.position.set(x, h + h * 0.31, z);
+  roof.rotation.y = rot + Math.PI / 4;
+  roof.castShadow = true;
+  group.add(roof);
+}
+
+function settlement(city, radius, seed, mats) {
+  const group = new THREE.Group();
+  const rnd = mulberry32(seed);
+  const ruin = !!city.is_ruin;
+  const scale = (radius / 30) * 1.3;
+
+  /* The platform the town stands on. It is also what levels the eye: the
+     ground is flattened under a city anyway, and a low stone plinth explains
+     why instead of leaving a suspiciously flat patch of hillside. */
+  const plinth = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.62, radius * 0.70, 3.4, 18),
+    ruin ? mats.ruin : mats.keep);
+  plinth.position.y = 1.7;
+  plinth.receiveShadow = true;
+  plinth.castShadow = true;
+  group.add(plinth);
+
+  const houses = ruin ? 3 : 5 + Math.floor(rnd() * 3);
+  const spin = rnd() * Math.PI * 2;
+  for (let i = 0; i < houses; i++) {
+    const a = spin + (i / houses) * Math.PI * 2 + (rnd() - 0.5) * 0.5;
+    const ring = radius * (0.30 + rnd() * 0.20);
+    const w = (7 + rnd() * 4) * scale;
+    const d = (6 + rnd() * 3) * scale;
+    const h = (ruin ? 4 + rnd() * 3 : 8 + rnd() * 5) * scale;
+    houseAt(group, Math.cos(a) * ring, Math.sin(a) * ring, w, d, h,
+            a + (rnd() - 0.5) * 0.6,
+            ruin ? { wall: mats.ruin } : { wall: mats.wall, roof: mats.roof });
+  }
+
+  /* The keep, and the reason a city reads as a city from any angle: one
+     vertical element taller than everything around it. A ruin gets a broken
+     stump of the same thing, which is the same silhouette with the top
+     knocked off -- recognisably the same kind of place, recognisably finished
+     with. */
+  const keepH = (ruin ? 11 : 21) * scale;
+  const keep = new THREE.Mesh(
+    new THREE.CylinderGeometry(7.4 * scale, 8.6 * scale, keepH, ruin ? 7 : 12),
+    ruin ? mats.ruin : mats.keep);
+  keep.position.y = 3.4 + keepH / 2;
+  keep.castShadow = true;
+  keep.receiveShadow = true;
+  if (ruin) { keep.rotation.z = 0.07; }   // leaning, because it is falling down
+  group.add(keep);
+
+  if (!ruin) {
+    const spire = new THREE.Mesh(
+      new THREE.ConeGeometry(9.6 * scale, 15 * scale, 12), mats.spire);
+    spire.position.y = 3.4 + keepH + 7.5 * scale;
+    spire.castShadow = true;
+    group.add(spire);
+  }
+
+  /* A pier for a port. Two harbours on this map and nothing on the board said
+     so except a word in a data row and a ring on the ground; a jetty running
+     off the platform says it in the silhouette. */
+  if (city.is_port) {
+    const pier = new THREE.Mesh(
+      new THREE.BoxGeometry(radius * 1.5, 2.6, 5.2 * scale), mats.keep);
+    const a = rnd() * Math.PI * 2;
+    pier.position.set(Math.cos(a) * radius * 0.95, 1.6, Math.sin(a) * radius * 0.95);
+    pier.rotation.y = a;
+    pier.castShadow = true;
+    pier.receiveShadow = true;
+    group.add(pier);
+  }
+
+  return group;
+}
 
 export function createBoard(options) {
   const canvas = options.canvas;
@@ -1548,6 +1663,27 @@ export function createBoard(options) {
     return tint;
   }
 
+  /* One set of materials for all twelve towns. Twelve settlements of eight
+     meshes each is ninety-six draw calls either way, but ninety-six materials
+     would be ninety-six shader programs. */
+  const cityMats = {
+    wall: new THREE.MeshStandardMaterial({
+      color: CITY_STONE, roughness: 0.82, metalness: 0, envMapIntensity: 0.35
+    }),
+    roof: new THREE.MeshStandardMaterial({
+      color: CITY_ROOF, roughness: 0.74, metalness: 0, envMapIntensity: 0.4
+    }),
+    keep: new THREE.MeshStandardMaterial({
+      color: CITY_KEEP, roughness: 0.8, metalness: 0, envMapIntensity: 0.35
+    }),
+    spire: new THREE.MeshStandardMaterial({
+      color: CITY_SPIRE, roughness: 0.6, metalness: 0.1, envMapIntensity: 0.6
+    }),
+    ruin: new THREE.MeshStandardMaterial({
+      color: CITY_RUIN, roughness: 0.95, metalness: 0, envMapIntensity: 0.25
+    })
+  };
+
   const ringByCity = {};
   const glowByCity = {};
   const labelByCity = {};
@@ -1569,6 +1705,10 @@ export function createBoard(options) {
        ownership ring, field, tokens -- all of it lifted to the height of the
        ground beneath it so nothing floats or sinks. */
     const gh = groundHeight(x, z);
+
+    const town = settlement(city, r, hashKey(city.id), cityMats);
+    town.position.set(x, gh, z);
+    scene.add(town);
 
     // Where the mound meets the paper. Everything above this is lit; this is
     // the only thing that says the two surfaces are touching.
@@ -1906,9 +2046,9 @@ export function createBoard(options) {
      space" asks for anyway. The margin keeps each city's tokens, ring and label
      inside the frame with it. */
   // Room for the widest mound plus its tokens, ring and label.
-  const FIT_M = maxRadius + 46;
-  // The tallest ground, not the tallest mound -- there are no mounds now.
-  const topY = terrainPeak + 34;
+  const FIT_M = maxRadius + 20;
+  // The tallest ground plus the keep and spire standing on it.
+  const topY = terrainPeak + 62;
 
   /* Fit the OBJECT, not the land inside it. While the board was a printed
      plate the sheet was allowed to run off the edges -- it was backdrop, and
@@ -1916,8 +2056,15 @@ export function createBoard(options) {
      in it now, and a sea cut off mid-frame reads as a rendering that did not
      fit rather than as a map. So the box is the sheet's own extent, which is
      wider than the land box by PAD, and the picture scales down to hold it. */
-  const fitHalfW = Math.max((maxX - minX) / 2 + FIT_M, (sheetW - REVEAL * 2) / 2);
-  const fitHalfD = Math.max((maxY - minY) / 2 + FIT_M, (sheetD - REVEAL * 2) / 2);
+  /* Frame the LAND, and let the water run off the edges again.
+
+     Fitting the whole sheet was right when the sea was a flat tint that looked
+     unfinished cut off mid-frame. It is graded now, and framing to it spent a
+     third of the picture on open water to avoid cropping something that crops
+     perfectly well. The coast plus a margin is the subject; the sea reaching
+     past the frame is what a map looks like. */
+  const fitHalfW = (maxX - minX) / 2 + FIT_M;
+  const fitHalfD = (maxY - minY) / 2 + FIT_M;
   const sheetCorners = [];
   [-fitHalfW, fitHalfW].forEach(function (x) {
     [-fitHalfD, fitHalfD].forEach(function (z) {

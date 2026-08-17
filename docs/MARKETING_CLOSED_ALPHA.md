@@ -181,6 +181,11 @@ falls back to a padded convex hull of the road-connected cities.
 - Draw the roads exactly as listed, with their mileage and movement
   cost. The movement cost is the engine’s own number, not a second
   formula.
+- Draw each city as a **settlement**: a walled platform, roofed houses and a
+  keep with a spire. A ruin loses its roofs and its spire and keeps the
+  stump; a port gains a jetty. Stylised and out of scale on purpose, in
+  the tradition of the little drawn towns on an estate map — a city has to
+  be recognisable as one from across the board, not merely labelled as one.
 - Give the landmass **a surface**: elevation interpolated from the twelve
   cities’ `terrain` labels, with fractal detail, falling to sea level at
   the shore. A city on hills stands on high ground because the ground is
