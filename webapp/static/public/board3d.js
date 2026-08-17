@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h3";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h4";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -590,16 +590,25 @@ function primaryTerrain(city) {
    webapp/mapview.py prints under a city on a sparse map. A ruin's population
    is 0 and it says so rather than hiding the number: an abandoned city is a
    real thing on this board and the zero is the point. */
-function cityMetaLine(city) {
-  const bits = [];
-  if (typeof city.population === "number") { bits.push(String(city.population)); }
-  if (city.grid_ref) { bits.push(city.grid_ref); }
-  if (city.is_ruin) { bits.push("ruin"); }
-  if (city.is_port) { bits.push("port"); }
-  if (city.is_magic_free) { bits.push("magic-free"); }
+/* Emitted as parts rather than one string, so a narrow board can drop the
+   tail of the row in CSS. mapview does the same thing by count -- past
+   _DENSE_CITY_COUNT it stops drawing per-city meta at all, because a reading
+   nobody can read is just ink. Here the board is small rather than crowded,
+   and the first two readings (who lives there, where it is on the grid) are
+   the ones worth keeping. The separator is drawn by CSS between surviving
+   parts, so hiding one cannot leave a stranded middot behind. */
+function cityMetaParts(city) {
+  const parts = [];
+  if (typeof city.population === "number") {
+    parts.push(["pop", String(city.population)]);
+  }
+  if (city.grid_ref) { parts.push(["grid", city.grid_ref]); }
+  if (city.is_ruin) { parts.push(["flag", "ruin"]); }
+  if (city.is_port) { parts.push(["flag", "port"]); }
+  if (city.is_magic_free) { parts.push(["flag", "magic-free"]); }
   const terrain = Array.isArray(city.terrain) ? city.terrain : [city.terrain];
-  terrain.forEach(function (t) { if (t) { bits.push(t); } });
-  return bits.join(" \u00b7 ");
+  terrain.forEach(function (t) { if (t) { parts.push(["terrain", t]); } });
+  return parts;
 }
 
 export function createBoard(options) {
@@ -1242,11 +1251,16 @@ export function createBoard(options) {
        whatever flags it carries, then its terrain. Same order, same separator,
        so a coach reading the poster and a coach reading the app are reading
        one thing. */
-    const meta = cityMetaLine(city);
-    if (meta) {
+    const parts = cityMetaParts(city);
+    if (parts.length) {
       const metaLine = document.createElement("span");
       metaLine.className = "atlas-label-meta";
-      metaLine.textContent = meta;
+      parts.forEach(function (part) {
+        const bit = document.createElement("span");
+        bit.className = "bit is-" + part[0];
+        bit.textContent = part[1];
+        metaLine.appendChild(bit);
+      });
       label.appendChild(metaLine);
     }
     labelHost.appendChild(label);
@@ -1398,10 +1412,26 @@ export function createBoard(options) {
        to one side, and a region title nudged 30px off a mound is still telling
        the truth about which ground it names. Cities do not move: their anchor
        IS the city. */
+    /* Held inside the frame. `.atlas-labels` clips at overflow:hidden, so a
+       label whose anchor sits near an edge does not run off the board -- it
+       gets its right-hand half sliced away and reads as a truncated word.
+       Bare city names were narrow enough never to hit it; a name over a data
+       row is three times wider and hits it on a phone constantly.
+
+       A clamp moves the label off its anchor, so it is bounded: past
+       MAX_NUDGE the label is far enough from its city to be misread as
+       naming a different one, and is dropped instead. */
+    const MAX_NUDGE = 56;
     const pad = 2;
     const candidates = entry.candidates || [[0, 0]];
     for (let c = 0; c < candidates.length; c++) {
-      const cx = x + candidates[c][0], cy = y + candidates[c][1];
+      const wantX = x + candidates[c][0], wantY = y + candidates[c][1];
+      const half = entry.w / 2;
+      const cx = Math.min(Math.max(wantX, half + pad), viewW - half - pad);
+      const cy = Math.min(Math.max(wantY, entry.h / 2 + pad),
+                          viewH - entry.h / 2 - pad);
+      if (Math.abs(cx - wantX) > MAX_NUDGE ||
+          Math.abs(cy - wantY) > MAX_NUDGE) { continue; }
       const box = [cx - entry.w / 2 - pad, cy - entry.h / 2 - pad,
                    cx + entry.w / 2 + pad, cy + entry.h / 2 + pad];
       let hit = false;
@@ -1520,6 +1550,12 @@ export function createBoard(options) {
     // Refit only while the board is still driving itself; once the reader has
     // taken the camera, a resize must not yank it back.
     if (!userDriving) { fitCamera(0.96); }
+    /* Measured widths are cached, and a resize can cross the breakpoint that
+       decides how much of each data row is shown -- so the cache has to die
+       with the old width or every label is planned against a size it no
+       longer has. */
+    Object.keys(labelByCity).forEach(function (id) { labelByCity[id].w = 0; });
+    extraLabels.forEach(function (entry) { entry.w = 0; });
     placeLabels();
   }
 

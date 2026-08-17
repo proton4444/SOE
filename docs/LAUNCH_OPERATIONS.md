@@ -188,7 +188,7 @@ vendor/OrbitControls.js camera control
 
 Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump
 it by hand whenever any of these change, or returning visitors keep the
-old file. It is currently `v=h3`.
+old file. It is currently `v=h4`.
 
 Bump it in **four files, not one**. `index.html` carries the token for
 `atlas.css`, `board.js`, `atlas.js` and three.js; `atlas.js` carries its
