@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h13";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h15";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -41,7 +41,7 @@ const SU = 1000;
    The neatline sits REVEAL + SHEET_INSET = 39 units inside the sheet edge, so
    anything above that keeps the shore inside the ruling; 90 leaves the vale
    sitting in water without half the picture being empty sea. */
-const PAD = 90;
+const PAD = 62;
 /* Mound footprint, before the merge guard. The game draws a city as a 6-15px
    marker on a 1400px map — about 1% of the width — and everything between the
    cities is road network. Inflated to 72 the mounds swallowed the roads
@@ -132,7 +132,10 @@ const SEA_TINT = 0x9fc4d8;
 const LAND_TINT = 0x76874f;   // matches HYPSO's shore band, so the
                               // terrain grid's ragged edge dies into the cap
 const COAST_INK = 0x4a6070;
-const LAND_CLIFF = 0x8f9670;   // the cut edge of the same ground, stepped down
+/* Warm, not green. This is a section through the ground -- soil and rock
+   under a skin of grass -- and a green wall read as a mossy kerb around the
+   island instead of as the edge of a landmass. */
+const LAND_CLIFF = 0x7d6647;
 const SHEET_EDGE = 0x3a3125;   // binder board under the print, seen at this tilt
 
 /* Roads carry their quality in colour and dash, exactly as the game draws
@@ -643,14 +646,29 @@ function cityMetaParts(city) {
 /* Hypsometric tints, the relief convention: lowland green through upland
    ochre to bare rock. Interpolated by height, so the colour is a reading of
    the surface rather than a second opinion about it. */
+/* The land ramp. Two changes from the flat version that did most of the work:
+   a strand at the very bottom, so the ground meets the water on sand rather
+   than by a green line stopping; and a wider spread of both value and hue
+   through the middle, because a landscape whose whole range is four steps of
+   one yellow-green reads as a painted board however well it is modelled. */
 const HYPSO = [
-  [0.00, [0.37, 0.47, 0.26]],   // shore green
-  [0.20, [0.45, 0.52, 0.28]],
-  [0.42, [0.56, 0.55, 0.30]],
-  [0.64, [0.58, 0.47, 0.29]],   // upland ochre
-  [0.84, [0.50, 0.40, 0.30]],
-  [1.00, [0.45, 0.41, 0.37]]    // bare rock, and it is ROCK
+  [0.000, [0.78, 0.71, 0.52]],  // strand
+  [0.030, [0.62, 0.62, 0.40]],
+  [0.075, [0.33, 0.46, 0.24]],  // coastal green, and the deepest green here
+  [0.230, [0.40, 0.50, 0.25]],
+  [0.420, [0.55, 0.54, 0.28]],
+  [0.620, [0.64, 0.49, 0.27]],  // upland ochre
+  [0.820, [0.53, 0.39, 0.28]],
+  [1.000, [0.52, 0.47, 0.43]]   // bare rock
 ];
+
+/* The water ramp, shallow to deep, plus the surf line where it meets land.
+   Graded from the baked `sea` channel rather than painted as one tint: an
+   even sheet of blue is the flattest thing that can be put next to a relief,
+   and it was undoing the modelling beside it. */
+const SEA_SHALLOW = [0.53, 0.76, 0.78];
+const SEA_DEEP = [0.13, 0.31, 0.49];
+const SEA_SURF = [0.86, 0.92, 0.90];
 
 /* Elevation is read against a fixed scale, not against this map's own tallest
    point. Normalising by the observed peak means whatever happens to be
@@ -750,10 +768,30 @@ export function createBoard(options) {
      happens once at build time instead of on a phone. */
   const elevation = options.elevation || null;
   let elevBytes = null;
-  if (elevation && elevation.data) {
-    const raw = atob(elevation.data);
-    elevBytes = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) { elevBytes[i] = raw.charCodeAt(i); }
+  let seaBytes = null;
+  function decodeChannel(b64) {
+    const raw = atob(b64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) { out[i] = raw.charCodeAt(i); }
+    return out;
+  }
+  if (elevation && elevation.data) { elevBytes = decodeChannel(elevation.data); }
+  if (elevation && elevation.sea) { seaBytes = decodeChannel(elevation.sea); }
+
+  // How far offshore a point is, 0 at the coast and 1 at open sea.
+  function sampleSea(fx, fy) {
+    if (!seaBytes) { return 1; }
+    const w = elevation.width, h = elevation.height;
+    const gx = Math.min(w - 1, Math.max(0, fx * (w - 1)));
+    const gy = Math.min(h - 1, Math.max(0, fy * (h - 1)));
+    const x0 = Math.floor(gx), y0 = Math.floor(gy);
+    const x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1);
+    const tx = gx - x0, ty = gy - y0;
+    const a = seaBytes[y0 * w + x0], b = seaBytes[y0 * w + x1];
+    const c = seaBytes[y1 * w + x0], d = seaBytes[y1 * w + x1];
+    const top = a + (b - a) * tx;
+    const bot = c + (d - c) * tx;
+    return (top + (bot - top) * ty) / 255;
   }
 
   /* Bilinear, not nearest. The grid is one sample every ~4.6 units and the
@@ -932,7 +970,7 @@ export function createBoard(options) {
   // Pulled back now that scene.environment carries the ambient term; at 0.85
   // on top of an environment the shaded faces filled in and the relief went
   // flat again.
-  scene.add(new THREE.HemisphereLight(0x86b6ff, 0x40301c, 0.30));
+  scene.add(new THREE.HemisphereLight(0x8fbcff, 0x453320, 0.34));
 
   /* A spot, not a directional. The board is 94% flat plane, and a directional
      light shades a flat plane to a single value everywhere — which is exactly
@@ -948,8 +986,14 @@ export function createBoard(options) {
   // terrain the same colour and is half the reason the board read as brown.
   // Tighter than the sheet, on purpose: the cone has to fall off inside the
   // frame or there is no pool, only an evenly lit rectangle.
-  const key = new THREE.SpotLight(0xfffaf0, 4.6, 0, 0.60, 0.92, 0);
-  key.position.set(-span * 0.42, span * 1.02, span * 0.36);
+  /* Lowered and swung round, so it rakes. At span*1.02 the key was almost
+     overhead, and an overhead light on gently modelled ground lights every
+     slope alike -- which is why an elevation model with 157 units of relief in
+     it kept reading as a painted flat. Dropping the lamp to 0.62 lengthens
+     every shadow on the terrain and is what makes the hills look like hills.
+     Intensity up a little to pay for the shallower angle. */
+  const key = new THREE.SpotLight(0xfff4e2, 5.4, 0, 0.62, 0.90, 0);
+  key.position.set(-span * 0.60, span * 0.62, span * 0.44);
   key.target.position.set(0, 0, 0);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -1103,18 +1147,45 @@ export function createBoard(options) {
 
     /* Sea first, over the whole ruled field. Land is then printed on top of
        it, so the water needs no hole cut in it -- one fewer polygon operation
-       to get wrong, and the coast stays exactly the hull's own edge. */
+       to get wrong, and the coast stays exactly the hull's own edge.
+
+       Subdivided, so it can be graded. A single quad can only carry one
+       colour across its whole face; 96x56 gives the ramp from surf to open
+       water enough vertices to be a gradient rather than a step. */
+    const seaGeo = new THREE.PlaneGeometry(ruledHalfW * 2, ruledHalfD * 2, 96, 56);
+    const seaPos = seaGeo.attributes.position;
+    const seaCol = [];
+    for (let i = 0; i < seaPos.count; i++) {
+      // Plane is built in XY and laid flat later, so its local y is world -z.
+      const wx = seaPos.getX(i);
+      const wz = -seaPos.getY(i);
+      const t = sampleSea((wx + midX) / FX, (wz + midY) / FY);
+      /* Surf first: a narrow pale band hugging the coast, which is what makes
+         an edge read as a shoreline rather than as two colours meeting. Then
+         shallow to deep across the rest. */
+      const surf = 1 - smoothstep(Math.min(1, t / 0.09));
+      const depth = smoothstep(Math.min(1, Math.max(0, (t - 0.06) / 0.94)));
+      for (let c = 0; c < 3; c++) {
+        const water = SEA_SHALLOW[c] + (SEA_DEEP[c] - SEA_SHALLOW[c]) * depth;
+        seaCol.push(water + (SEA_SURF[c] - water) * surf * 0.75);
+      }
+    }
+    seaGeo.setAttribute("color", new THREE.Float32BufferAttribute(seaCol, 3));
+
     const sea = new THREE.Mesh(
-      new THREE.PlaneGeometry(ruledHalfW * 2, ruledHalfD * 2),
+      seaGeo,
       /* Opaque, and it writes depth. An earlier pass had the sea transparent
          and the land not, which put them in different render queues: three.js
          draws every opaque object before any transparent one, so renderOrder
          never got a vote and the water painted over the land on every frame.
          Two opaque layers a tenth of a unit apart let the depth buffer settle
          it, which it does correctly and for free. */
+      /* Smoother than the land, and it takes the environment. Water is the one
+         surface in this scene that should carry a highlight -- it is what
+         separates a sea from a blue floor. */
       new THREE.MeshStandardMaterial({
-        color: SEA_TINT, map: seaTex, roughness: 0.86, metalness: 0,
-        envMapIntensity: 0.30
+        vertexColors: true, roughnessMap: seaTex, roughness: 0.42,
+        metalness: 0.05, envMapIntensity: 0.85
       })
     );
     sea.rotation.x = -Math.PI / 2;
@@ -1917,7 +1988,7 @@ export function createBoard(options) {
     camera.updateProjectionMatrix();
     // Refit only while the board is still driving itself; once the reader has
     // taken the camera, a resize must not yank it back.
-    if (!userDriving) { fitCamera(0.96); }
+    if (!userDriving) { fitCamera(0.995); }
     /* Measured widths are cached, and a resize can cross the breakpoint that
        decides how much of each data row is shown -- so the cache has to die
        with the old width or every label is planned against a size it no

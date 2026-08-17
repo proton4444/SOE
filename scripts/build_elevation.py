@@ -31,6 +31,13 @@ The model, in the order it is applied:
      mountains get creases and valleys instead of domes;
   5. a shelf multiply, so everything falls to sea level at the shore.
 
+A second channel goes out with it: `sea`, the distance from the shoreline
+outward, clamped and quantised the same way. It is not elevation -- the seabed
+is flat and stays flat -- it is what lets the renderer grade the water from
+shallow at the coast to deep offshore and lay a strand line where the two meet.
+Flat water in one tint is the single thing that most made this board read as a
+diagram of a map rather than a picture of a world.
+
     python -m scripts.build_elevation
 """
 
@@ -73,6 +80,10 @@ GRID_H = 148
 # 32.8 units. The shelf now does only the job it was for, which is putting the
 # ground into the water at the coastline rather than dropping a cliff there.
 COAST_SHELF = 30.0
+
+# How far offshore the water goes on being drawn as shallow. Nothing physical:
+# it is the width of the colour ramp from strand to open sea.
+SEA_RANGE = 210.0
 
 # Elevation profile per terrain label, in board units. The ordering is the
 # data -- hills stand above plain, plain above desert -- and the amplitudes are
@@ -185,6 +196,7 @@ def build_elevation(map_path: Path) -> dict:
         seeds.append((city["x"] * frame_w, city["y"] * frame_h, base, rough))
 
     heights = []
+    depths = []
     peak = 0.0
     for row in range(GRID_H):
         fy = row / (GRID_H - 1)
@@ -201,8 +213,12 @@ def build_elevation(map_path: Path) -> dict:
                         _smoothstep(min(1.0, _edge_distance(ring, px, pz) / COAST_SHELF)),
                     )
             if shelf <= 0.0:
+                # Open water. Record how far out it is, for the colour ramp.
+                offshore = min(_edge_distance(ring, px, pz) for ring in rings)
                 heights.append(0.0)
+                depths.append(min(1.0, offshore / SEA_RANGE))
                 continue
+            depths.append(0.0)
 
             wsum = base_sum = rough_sum = 0.0
             for sx, sz, base, rough in seeds:
@@ -240,6 +256,9 @@ def build_elevation(map_path: Path) -> dict:
     packed = bytes(
         max(0, min(255, int(round(h / ceiling * 255.0)))) for h in heights
     )
+    packed_sea = bytes(
+        max(0, min(255, int(round(d * 255.0)))) for d in depths
+    )
 
     return {
         "map": map_path.name,
@@ -247,7 +266,9 @@ def build_elevation(map_path: Path) -> dict:
         "height": GRID_H,
         "frame_units": [frame_w, frame_h],
         "max_height": round(ceiling, 3),
+        "sea_range": SEA_RANGE,
         "data": base64.b64encode(packed).decode("ascii"),
+        "sea": base64.b64encode(packed_sea).decode("ascii"),
     }
 
 

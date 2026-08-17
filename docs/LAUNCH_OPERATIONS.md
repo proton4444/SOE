@@ -184,12 +184,12 @@ replay.json             the exported official-gate match, unmodified
 textures/               desert hills paper plain
 vendor/three.module.js  three.js, 1.27 MB uncompressed
 vendor/OrbitControls.js camera control
-elevation.js            baked heightmap, 50 KB (13 KB gzipped)
+elevation.js            baked heightmap + sea ramp, 99 KB (27 KB gzipped)
 ```
 
 Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump
 it by hand whenever any of these change, or returning visitors keep the
-old file. It is currently `v=h13`.
+old file. It is currently `v=h15`.
 
 Bump it in **four files, not one**. `index.html` carries the token for
 `atlas.css`, `board.js`, `atlas.js` and three.js; `atlas.js` carries its
