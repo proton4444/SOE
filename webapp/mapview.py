@@ -477,7 +477,12 @@ def _majority_region(cities: list[dict], by_id: dict) -> Optional[str]:
     ]
     if not regions:
         return None
-    return max(set(regions), key=regions.count)
+    # Sorted, not set: `max` over a set breaks ties on set iteration order,
+    # which follows PYTHONHASHSEED. calib_12 is a 4/4/4 three-way tie, so the
+    # same map named its landmass differently from one process to the next.
+    # Over a sorted list `max` returns the first maximal element, so a tie
+    # settles alphabetically and the map renders the same name every run.
+    return max(sorted(set(regions)), key=regions.count)
 
 
 def landmasses_from_geography(
@@ -605,12 +610,21 @@ def compute_landmasses(
     masses: list[dict] = []
     for comp in components:
         pts = [pos[cid] for cid in comp if cid in pos]
-        regions = [by_id[cid].get("region") for cid in comp if by_id.get(cid)]
-        regions = [r for r in regions if r]
+        # Annotated, so the filter below actually narrows away the None: an
+        # unannotated comprehension keeps `Any | None` as its element type and
+        # `sorted` has nothing to order.
+        named: list[str] = [
+            str(by_id[cid].get("region"))
+            for cid in comp
+            if by_id.get(cid) and by_id[cid].get("region")
+        ]
+        regions = named
         if regions and len(set(regions)) == 1:
             name = regions[0]
         elif regions:
-            name = max(set(regions), key=regions.count)
+            # Sorted for the same reason as _majority_region: a tie must not
+            # depend on set iteration order.
+            name = max(sorted(set(regions)), key=regions.count)
         elif len(comp) == 1:
             name = by_id[comp[0]].get("name") or comp[0]
         else:

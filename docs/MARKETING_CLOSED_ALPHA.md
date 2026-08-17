@@ -163,24 +163,65 @@ soldiers and the two never fought. That is not a ranking.
 ## Visual contract: atlas board
 
 `maps/calib_12.json` is twelve cities with fractional `x`/`y`, mile
-coordinates, terrain labels, and roads. It has no coastline, no land
-polygon, and no elevation mesh. `webapp/mapview.py` draws coastlines
-only when a paired geography file exists (`soe_geography.json`). That
-file is not this map.
+coordinates, terrain labels, populations, grid references, regions, port
+and magic-free flags, and roads with distances. It has no coastline, no
+land polygon, and no elevation mesh. `webapp/mapview.py` draws traced
+coastlines only when a paired geography file exists
+(`soe_geography.json`). That file is not this map — for this one the app
+falls back to a padded convex hull of the road-connected cities.
 
-**Render the coordinate topology that exists.**
+**Render what the app renders.**
 
-- Place the twelve cities at their exact `x`/`y`.
-- Draw the roads exactly as listed.
+- Place the twelve cities at their exact `x`/`y`, carrying the
+  population, grid reference, terrain, port and magic-free flags the map
+  gives them.
+- Draw the roads exactly as listed, with their mileage and movement
+  cost. The movement cost is the engine’s own number, not a second
+  formula.
 - Around each city, a small terrain-textured disk or mound from
   `maps/textures/` matching that city’s `terrain` label. Local relief
-  only. No interpolated continent between cities.
-- Empty surrounding space stays empty. No sea, no implied landmass, no
-  invented shore.
+  only. No interpolated continent between cities — elevation still comes
+  from the twelve terrain labels and nowhere else.
+- Draw the landmass, its coast, the sea outside it, and the region
+  names. The landmass must be **the polygon `webapp/mapview.py` computes
+  for this map**, carried across by `scripts/build_public_board.py` —
+  not a shore invented for the poster, and not a second computation of
+  the same idea that can drift from the app’s.
+- Because that polygon is a road-connectivity confine and not a survey,
+  **the page says so where it is drawn.** The legend carries
+  “road-connected extent, not a surveyed coast”.
 - Call this an **atlas relief board**. That name is allowed. “Continent”
-  and “world map” are not.
+  and “world map” are not — the board shows one landmass of a world, at
+  a calibration size, and neither word is true of it.
 
-The page may rotate or tilt the board. It may not add geography.
+The page may rotate or tilt the board.
+
+> **Amendment 2, accepted 2026-08-17.** This section previously read
+> “Render the coordinate topology that exists”, and forbade the rest:
+> “Empty surrounding space stays empty. No sea, no implied landmass, no
+> invented shore… It may not add geography.” The board therefore drew
+> twelve mounds on blank paper while the map a coach opens in the app
+> drew a named landmass, ports, populations, grid references and road
+> mileages — the same twelve cities reading as two different worlds, and
+> the public one reading as the emptier.
+>
+> What the old rule was protecting is real and is kept: the coastline is
+> **not** surveyed, and a map that draws a shore is read as claiming one.
+> The resolution is to draw it and say what it is, rather than to
+> withhold it — the legend line above is part of the contract, not
+> decoration, and the board is built from mapview’s own polygon so the
+> two pictures cannot disagree about where the coast runs.
+>
+> The withheld fields (population, mile coordinates, grid references,
+> regions, port and magic-free flags, road distances) now cross to the
+> public page. They are map topology from a tracked, generated
+> calibration map — not match data, and not the traced material the
+> cleanroom excludes. Replay sanitization is untouched: see **Sanitized
+> replay** below, which this amendment does not open.
+>
+> Applied in `scripts/build_public_board.py`, `board.js`, `board3d.js`,
+> `atlas.js`, `atlas.css`, and guarded by `tests/test_public_board.py`.
+> See **Amendments** in `LAUNCH_OPERATIONS.md`.
 
 ## Sanitized replay
 
@@ -566,14 +607,16 @@ compressed formats that gzip cannot improve.
 
 The board is a tilted 3D relief board rendered with three.js
 (`board3d.js`), which the contract permits: "The page may rotate or
-tilt the board. It may not add geography." Twelve cities at their exact
-`x`/`y`, the fourteen roads as listed and weighted by quality, and a
-terrain-textured **mound** per city whose height and tint come from
-that city's own `terrain` label and nothing else. The ground is a
-printed sheet with a graticule — a print convention, not land — and it
-is deliberately not navy, because a blue ground would read as ocean and
-turn twelve cities into islands. City names are HTML labels projected
-over the canvas.
+tilt the board." Twelve cities at their exact `x`/`y`, the fourteen
+roads as listed and weighted by quality, and a terrain-textured
+**mound** per city whose height and tint come from that city's own
+`terrain` label and nothing else. Since Amendment 2 the sheet is a
+printed map rather than blank stock: mapview's landmass for this map is
+printed on it with its coast, the sea outside it, and the three region
+names, all under the graticule the way a printed plate rules over its
+own water and land. City names, their data rows, the region titles and
+the road mileages are HTML labels projected over the canvas, planned
+against each other in screen space so a rotation cannot pile them up.
 
 **The match is decided by movement, so the board animates movement.**
 `AR031_ba` records 134 piece-moves: two forces grow from one piece to

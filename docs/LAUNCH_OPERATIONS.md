@@ -186,12 +186,21 @@ vendor/three.module.js  three.js, 1.27 MB uncompressed
 vendor/OrbitControls.js camera control
 ```
 
-Asset URLs carry a `?v=` token that is **hardcoded in `index.html`, not
-generated**. Bump it by hand whenever `atlas.css` or `atlas.js` changes,
-or returning visitors keep the old file. It is currently `v=h2`.
+Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump
+it by hand whenever any of these change, or returning visitors keep the
+old file. It is currently `v=h3`.
 
-`sea.jpg` is **not** shipped. There is no sea. Shipping the texture
-invites its use.
+Bump it in **four files, not one**. `index.html` carries the token for
+`atlas.css`, `board.js`, `atlas.js` and three.js; `atlas.js` carries its
+own for `board3d.js`; and `board3d.js` carries one for `OrbitControls.js`.
+Those inner two sat at `v=h1` through the `h2` bump because neither file
+had changed that day — correct at the time and a trap afterwards, since
+the next edit to `board3d.js` would have been served from cache and
+looked like an edit that did not apply.
+
+`sea.jpg` **is** shipped, as of Amendment 2 — the board draws the app's
+landmass and the water outside it. `tests/test_texture_assets.py` holds
+it byte-identical to `maps/textures/sea.jpg`, as it does the other four.
 
 ### Board
 
@@ -313,7 +322,8 @@ or a date that is not decided.
 
 ## Amendments proposed to the card
 
-Three. The first is required; the others are corrections.
+Four. The first is required, the next two are corrections, and the
+fourth reopens the board's visual contract on purpose.
 
 **1. Add an optional email field to the form.** **Accepted 2026-08-15
 and applied.** Offer bullet 7 becomes:
@@ -343,6 +353,32 @@ gate's "one replay JSON" literally true.
 gate (closed: Cloudflare Pages) and gain a third item that was never
 listed: operator identity — domain, address, handles. It was assumed
 throughout and decided nowhere.
+
+**4. The atlas board draws the land the app draws.** **Accepted
+2026-08-17 and applied.** The visual contract forbade sea, landmass and
+shore, so the poster's board was twelve mounds on empty paper while the
+in-app map of the same twelve cities showed a named landmass with ports,
+populations, grid references and road mileages. The two read as different
+worlds.
+
+Reason: the poster is the first object a stranger sees, and it was
+showing less of the game than the game does. The rule it breaks existed
+to stop the page claiming a coastline the map has not got — `calib_12`
+has no geography file, so the app's own shore is a padded convex hull of
+the road-connected cities.
+
+That concern is answered rather than overridden. The board is built from
+`webapp/mapview.py`'s own polygon (carried across by
+`scripts/build_public_board.py`, not recomputed), so the app and the
+poster cannot disagree about where the coast runs; and the legend states
+"road-connected extent, not a surveyed coast" beside it. The withheld
+map fields now cross to the page. Replay sanitization is untouched.
+
+One bug fell out of the work and is fixed with it: `compute_landmasses`
+named a landmass with `max(set(regions), ...)`, and `calib_12` splits its
+twelve cities 4/4/4 across three regions — so the tie broke on set
+iteration order and the same map rendered under three different names
+depending on `PYTHONHASHSEED`. It now settles alphabetically.
 
 ## Roles
 
