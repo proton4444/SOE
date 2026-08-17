@@ -16,6 +16,7 @@ below.
 
 from __future__ import annotations
 
+import base64
 import json
 import sys
 from pathlib import Path
@@ -25,11 +26,13 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.build_elevation import build_elevation  # noqa: E402
 from scripts.build_public_board import build_board  # noqa: E402
 from webapp import mapview  # noqa: E402
 
 MAP_PATH = REPO_ROOT / "maps" / "calib_12.json"
 BOARD_JS = REPO_ROOT / "webapp" / "static" / "public" / "board.js"
+ELEVATION_JS = REPO_ROOT / "webapp" / "static" / "public" / "elevation.js"
 
 PARITY_CITY_FIELDS = (
     "id",
@@ -175,4 +178,82 @@ def test_landmass_name_does_not_depend_on_set_ordering():
     regions = sorted({c["region"] for c in source["cities"]})
     assert baseline[0]["name"] == regions[0], (
         "a three-way tie should settle on the alphabetically first region"
+    )
+
+
+def shipped_elevation() -> dict:
+    text = ELEVATION_JS.read_text(encoding="utf-8")
+    return json.loads(text[text.index("{") : text.rindex(";")])
+
+
+def test_elevation_js_matches_the_builder():
+    """The generator is the model. If they disagree, the model is a rumour."""
+    from scripts.build_elevation import HEADER
+
+    rebuilt = HEADER + json.dumps(build_elevation(MAP_PATH), indent=2,
+                                  ensure_ascii=False) + ";\n"
+    assert ELEVATION_JS.read_text(encoding="utf-8") == rebuilt, (
+        "elevation.js is out of date. "
+        "Regenerate with: python -m scripts.build_elevation"
+    )
+
+
+def test_elevation_covers_the_same_frame_as_the_board():
+    board, elevation = shipped_board(), shipped_elevation()
+    assert elevation["map"] == board["map"]
+    assert elevation["frame_units"] == board["frame_units"]
+    raw = base64.b64decode(elevation["data"])
+    assert len(raw) == elevation["width"] * elevation["height"]
+
+
+def test_the_sea_is_at_sea_level_and_the_land_is_not():
+    """The shelf reaches zero at the shore, and only inside the hull is it not.
+
+    A model that leaked height outside the coast would put mountains in the
+    water; one that never rose would be a flat board with a heightmap file
+    next to it, which is the failure this whole change exists to undo.
+    """
+    board, elevation = shipped_board(), shipped_elevation()
+    raw = base64.b64decode(elevation["data"])
+    w, h = elevation["width"], elevation["height"]
+    hull = board["landmasses"][0]["hull"]
+
+    # A point well outside the hull is sea.
+    assert raw[0] == 0, "the top-left corner of the field is not sea"
+
+    # Every city stands on ground above sea level.
+    for city in board["cities"]:
+        col = min(w - 1, max(0, round(city["x"] * (w - 1))))
+        row = min(h - 1, max(0, round(city["y"] * (h - 1))))
+        assert raw[row * w + col] > 0, f"{city['name']} is at sea level"
+
+    # And the hull's own vertices are at (or within a cell of) the waterline,
+    # because the shelf falls to zero there.
+    for fx, fy in hull:
+        col = min(w - 1, max(0, round(fx * (w - 1))))
+        row = min(h - 1, max(0, round(fy * (h - 1))))
+        assert raw[row * w + col] <= 8, "the shore is not at the waterline"
+
+
+def test_hill_cities_stand_above_plain_cities():
+    """The one thing in this model that is data, and it has to survive.
+
+    Terrain labels are the only real input to the elevation. If a hills city
+    did not end up higher than a plain city, the model would have stopped
+    reading the map and started decorating it.
+    """
+    board, elevation = shipped_board(), shipped_elevation()
+    raw = base64.b64decode(elevation["data"])
+    w, h = elevation["width"], elevation["height"]
+
+    def at(city):
+        col = min(w - 1, max(0, round(city["x"] * (w - 1))))
+        row = min(h - 1, max(0, round(city["y"] * (h - 1))))
+        return raw[row * w + col]
+
+    hills = [c for c in board["cities"] if "hills" in c["terrain"]]
+    plain = [c for c in board["cities"] if c["terrain"] == ["plain"]]
+    assert hills and plain
+    assert min(at(c) for c in hills) > max(at(c) for c in plain), (
+        "hill cities are not standing above plain cities"
     )

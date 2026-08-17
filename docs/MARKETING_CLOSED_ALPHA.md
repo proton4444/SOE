@@ -185,7 +185,14 @@ falls back to a padded convex hull of the road-connected cities.
   cities’ `terrain` labels, with fractal detail, falling to sea level at
   the shore. A city on hills stands on high ground because the ground is
   high, not because it wears a cone. Vertical is exaggerated, as a relief
-  map’s always is.
+  map’s always is, and the ground carries contour lines — shading alone
+  cannot tell a reader whether a slope runs up or down.
+- The heightmap is **baked**, by `scripts/build_elevation.py`, and shipped
+  as `elevation.js`. Not computed in the browser: baking it makes the
+  terrain identical on every machine, lets a test regenerate and compare
+  it, and keeps the work off the reader’s phone. It is a visual output
+  and nothing else — no order, no movement cost and no result reads a
+  value from it.
 - Because that surface is interpolated and the map has no elevation at
   all, **the page says so where it is drawn**, exactly as it does for the
   coast. The legend carries “relief interpolated from city terrain — high

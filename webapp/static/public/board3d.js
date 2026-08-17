@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h12";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h13";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -640,20 +640,6 @@ function cityMetaParts(city) {
    What IS data: which of the twelve cities stands on hills, on plain, on
    desert. A reader who sees high ground under Drelerford and Dunaen is reading
    the map correctly. A reader who counts the ridges between them is not. */
-const TERRAIN_ELEV = {
-  plain:     { base: 13,  rough: 8 },
-  plains:    { base: 13,  rough: 8 },
-  desert:    { base: 8,   rough: 5 },
-  hills:     { base: 56,  rough: 30 },
-  forest:    { base: 27,  rough: 14 },
-  woods:     { base: 27,  rough: 14 },
-  mountains: { base: 112, rough: 54 },
-  swamp:     { base: 5,   rough: 3 },
-  coastal:   { base: 8,   rough: 4 },
-  river:     { base: 10,  rough: 5 }
-};
-const TERRAIN_FALLBACK = { base: 13, rough: 8 };
-
 /* Hypsometric tints, the relief convention: lowland green through upland
    ochre to bare rock. Interpolated by height, so the colour is a reading of
    the surface rather than a second opinion about it. */
@@ -689,33 +675,7 @@ function hypso(t) {
   return HYPSO[HYPSO.length - 1][1];
 }
 
-/* Value noise on a hashed lattice. Deterministic from position alone, so the
-   same board renders the same hills on every machine and every reload -- the
-   terrain is fake, but it is not different-every-time fake. */
-function lattice(ix, iz, salt) {
-  return (hashKey(ix + ":" + iz + ":" + salt) % 65536) / 65536;
-}
-
 function smoothstep(t) { return t * t * (3 - 2 * t); }
-
-function valueNoise(x, z, salt) {
-  const x0 = Math.floor(x), z0 = Math.floor(z);
-  const fx = smoothstep(x - x0), fz = smoothstep(z - z0);
-  const a = lattice(x0, z0, salt), b = lattice(x0 + 1, z0, salt);
-  const c = lattice(x0, z0 + 1, salt), d = lattice(x0 + 1, z0 + 1, salt);
-  return (a + (b - a) * fx) * (1 - fz) + (c + (d - c) * fx) * fz;
-}
-
-function fbm(x, z, salt) {
-  let amp = 1, freq = 1, sum = 0, norm = 0;
-  for (let o = 0; o < 4; o++) {
-    sum += amp * valueNoise(x * freq, z * freq, salt + o);
-    norm += amp;
-    amp *= 0.5;
-    freq *= 2.07;
-  }
-  return sum / norm;
-}
 
 export function createBoard(options) {
   const canvas = options.canvas;
@@ -778,24 +738,44 @@ export function createBoard(options) {
 
   /* --- the ground.
 
-     Elevation is interpolated from the city terrain labels by inverse distance
-     -- a city on hills raises the ground around it, a city on desert keeps it
-     flat -- and fractal noise supplies the detail no label can. It is then
-     multiplied by a falloff that reaches zero at the shoreline, so the surface
-     meets the coast at sea level and the island's edge stays the hull's edge
-     rather than a cliff wherever the noise happened to be high.
+     Elevation is not computed here. `scripts/build_elevation.py` bakes it to a
+     grid over the map's own frame and ships it as ATLAS_ELEVATION -- one byte
+     per cell against a recorded ceiling -- and this samples it. The model, its
+     inputs, and the fact that it is invented rather than surveyed are all
+     documented there.
 
-     See the elevation block above the module for what this is and is not. */
-  const COAST_FALL = 130;      // board units from shore to full inland height
-  const NOISE_S = 1 / 125;     // broad landform scale
-  const IDW_SOFT = 2600;       // softening, so a city is not a spike
+     Baked rather than computed for three reasons: it is the same terrain on
+     every machine, which a JS implementation could promise and would
+     eventually break; it is diffable and a test regenerates it; and the work
+     happens once at build time instead of on a phone. */
+  const elevation = options.elevation || null;
+  let elevBytes = null;
+  if (elevation && elevation.data) {
+    const raw = atob(elevation.data);
+    elevBytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) { elevBytes[i] = raw.charCodeAt(i); }
+  }
 
-  const influence = cities.map(function (c) {
-    const spec = TERRAIN_ELEV[primaryTerrain(c)] || TERRAIN_FALLBACK;
-    return { x: worldX(c.x), z: worldZ(c.y), base: spec.base, rough: spec.rough };
-  });
+  /* Bilinear, not nearest. The grid is one sample every ~4.6 units and the
+     mesh built from it is finer than that, so nearest-neighbour would render
+     the board as a field of 4.6-unit plateaux -- and the contour shader,
+     which reads height directly, would draw a rectangle around every one. */
+  function sampleElevation(fx, fy) {
+    if (!elevBytes) { return 0; }
+    const w = elevation.width, h = elevation.height;
+    const gx = Math.min(w - 1, Math.max(0, fx * (w - 1)));
+    const gy = Math.min(h - 1, Math.max(0, fy * (h - 1)));
+    const x0 = Math.floor(gx), y0 = Math.floor(gy);
+    const x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1);
+    const tx = gx - x0, ty = gy - y0;
+    const a = elevBytes[y0 * w + x0], b = elevBytes[y0 * w + x1];
+    const c = elevBytes[y1 * w + x0], d = elevBytes[y1 * w + x1];
+    const top = a + (b - a) * tx;
+    const bot = c + (d - c) * tx;
+    return (top + (bot - top) * ty) / 255 * elevation.max_height;
+  }
 
-  // Hull in world units, for the inside test and the shore distance.
+  // Hull in world units, for the shore ring the terrain mesh is clipped to.
   const shore = [];
   hullMasses.forEach(function (mass) {
     shore.push(mass.hull.map(function (pt) {
@@ -815,21 +795,6 @@ export function createBoard(options) {
     return hit;
   }
 
-  function edgeDistance(ring, px, pz) {
-    let best = Infinity;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const ax = ring[j][0], az = ring[j][1];
-      const bx = ring[i][0], bz = ring[i][1];
-      const dx = bx - ax, dz = bz - az;
-      const len2 = dx * dx + dz * dz || 1;
-      let t = ((px - ax) * dx + (pz - az) * dz) / len2;
-      t = Math.max(0, Math.min(1, t));
-      const cx = ax + dx * t, cz = az + dz * t;
-      best = Math.min(best, Math.hypot(px - cx, pz - cz));
-    }
-    return best;
-  }
-
   /* Every settlement levels the ground it stands on. This is not decoration:
      a city's rim, ownership ring and harbour ring are flat discs, and a flat
      disc on a slope is half-buried -- twelve cities came out as twelve half
@@ -841,48 +806,8 @@ export function createBoard(options) {
   let siteHeights = null;
 
   function rawHeight(px, pz) {
-    let fall = 0;
-    for (let i = 0; i < shore.length; i++) {
-      if (insideRing(shore[i], px, pz)) {
-        fall = Math.max(fall, smoothstep(
-          Math.min(1, edgeDistance(shore[i], px, pz) / COAST_FALL)));
-      }
-    }
-    if (fall <= 0) { return 0; }
-
-    let wsum = 0, base = 0, rough = 0;
-    for (let i = 0; i < influence.length; i++) {
-      const t = influence[i];
-      const d2 = (px - t.x) * (px - t.x) + (pz - t.z) * (pz - t.z);
-      const w = 1 / (d2 + IDW_SOFT);
-      wsum += w;
-      base += w * t.base;
-      rough += w * t.rough;
-    }
-    if (!wsum) { return 0; }
-    base /= wsum;
-    rough /= wsum;
-
-    /* Ridged, not billowy. Plain fbm gives rolling blobs -- which is what
-       lowland looks like, and is why the first pass read as a soft yellow
-       cushion wherever it was meant to read as hill country. Folding the
-       noise about its midpoint (1 - |2n-1|) turns the smooth maxima into
-       creases, so high ground gets ridges and valleys instead of domes. It
-       is applied in proportion to `rough`, so the plains stay rolling and
-       only the hills crease. */
-    const broad = fbm(px * NOISE_S, pz * NOISE_S, 11);
-    const fine = fbm(px * NOISE_S * 3.1, pz * NOISE_S * 3.1, 71);
-    const ridged = 1 - Math.abs(2 * fbm(px * NOISE_S * 1.7,
-                                        pz * NOISE_S * 1.7, 33) - 1);
-    const h = base * (0.5 + 0.75 * broad + 0.55 * ridged * ridged)
-            + rough * (fine - 0.45) * 1.9;
-    /* Vertical exaggeration, the relief-map convention. True to scale, 60
-       units of hill across a 1300-unit vale is a 4.6% grade -- geologically
-       honest and visually nothing, which is exactly how the first pass of
-       this came out. Relief maps have exaggerated their vertical since the
-       first one was moulded. The ORDERING is the data; the amplitude is
-       presentation, the same bargain the mounds made before them. */
-    return Math.max(0, h) * fall * 2.6;
+    // World back to the 0..1 fractions the grid is indexed by.
+    return sampleElevation((px + midX) / FX, (pz + midY) / FY);
   }
 
   function groundHeight(px, pz) {
@@ -1390,10 +1315,17 @@ export function createBoard(options) {
            to cream and the relief lost the only cue it had left. The tint IS
            the surface colour; the jpg is demoted to roughness, where it gives
            the ground a tooth without touching its hue. */
-        const ground = new THREE.Mesh(gGeo, new THREE.MeshStandardMaterial({
-          vertexColors: true, roughnessMap: landTex, roughness: 0.98,
-          metalness: 0, envMapIntensity: 0.20, flatShading: false
-        }));
+        /* Contoured. The shader was written for the mounds and outlived them,
+           and it belongs here far more: a relief map draws contours because
+           shading alone cannot tell a reader whether a slope runs up or down,
+           and on a board lit by one soft key that ambiguity is most of the
+           surface. Twelve units a line, every fifth heavier, which puts eight
+           or nine lines on the tallest ground and none on the flats. */
+        const ground = new THREE.Mesh(gGeo, applyContours(
+          new THREE.MeshStandardMaterial({
+            vertexColors: true, roughnessMap: landTex, roughness: 0.98,
+            metalness: 0, envMapIntensity: 0.20, flatShading: false
+          }), 12));
         ground.castShadow = true;
         ground.receiveShadow = true;
         scene.add(ground);

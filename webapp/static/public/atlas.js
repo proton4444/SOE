@@ -19,7 +19,7 @@
  * their road between turns rather than jumping, and the road they take lights
  * up as they use it. That motion is the whole show.
  */
-import { createBoard } from "./board3d.js?v=h12";
+import { createBoard } from "./board3d.js?v=h13";
 
 (function () {
   "use strict";
@@ -71,6 +71,9 @@ import { createBoard } from "./board3d.js?v=h12";
       landmasses: ATLAS_BOARD.landmasses,
       // The app's own frame extents, so the board is not a square guess at it.
       frameUnits: ATLAS_BOARD.frame_units,
+      /* Amendment 3: the baked elevation grid. Guarded, because the board has
+         to keep rendering as a flat vale if the file is ever not there. */
+      elevation: (typeof ATLAS_ELEVATION !== "undefined") ? ATLAS_ELEVATION : null,
       regions: ATLAS_BOARD.regions,
       seatColors: SEAT_COLORS,
       activeCities: activeCities,
