@@ -1,9 +1,9 @@
 {
-  "_comment": "Frozen Coach League regulation. An operator opens a season from this file; model, budget, map, turns and seed policy are not chosen at match time. One seed pair is two games with the seats exchanged.",
+  "_comment": "Frozen Coach League regulation. An operator opens a season from this file; model, budget, map, turns and seed policy are not chosen at match time. One seed pair is two games with the seats exchanged. The model is Anthropic's own id, so SOE_LLM_BASE must point at https://api.anthropic.com/v1; through OpenRouter the same model carries a different slug.",
   "id": "coach_league",
   "name": "Coach League",
   "regulation": {
-    "model": "openai/gpt-4o-mini",
+    "model": "claude-haiku-4-5",
     "temperature": 0.0,
     "max_tokens": 1500,
     "map": "calib_12.json",

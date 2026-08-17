@@ -685,6 +685,25 @@ set SOE_LLM_KEY=<your key>                      # bots refuse to run without it
 set SOE_LLM_MODEL=openai/gpt-4o-mini            # default model
 ```
 
+The base URL decides the wire format, not the model name. Anthropic does not
+serve chat-completions, so reaching Claude from Anthropic means moving the
+base as well as the model — the key then travels as `x-api-key` and the
+system prompt moves out of the message list, which
+`webapp/ai/anthropic_chat.py` handles:
+
+```bash
+set SOE_LLM_BASE=https://api.anthropic.com/v1   # Messages API, not chat-completions
+set SOE_LLM_KEY=<your Anthropic API key>        # from console.anthropic.com; a claude.ai plan is not this
+set SOE_LLM_MODEL=claude-haiku-4-5              # what the Coach League regulation names
+```
+
+Two differences on that route: Anthropic caps temperature at 1.0 and a
+request above it is refused rather than quietly clamped, and it bills in
+tokens without ever declaring a dollar cost, so a spend ceiling is enforced
+from list price and every trace says so (`budget_cost_estimated`). Claude
+through OpenRouter needs neither change — it is an ordinary OpenAI-compatible
+call under an OpenRouter slug.
+
 The strategist reply convention is: reasoning first, then a `--- ORDERS ---`
 marker line, then one order per line. Orders are submitted verbatim from the
 marker onward. Set `SOE_BOT_VISION=1` and use a vision-capable model (e.g.

@@ -109,6 +109,47 @@ has a safe default:
   invite code decides who may start; these decide how much a leaked invite can
   cost before it is rotated.
 
+## Model gate: closed
+
+**Claude Haiku 4.5, from Anthropic.** Decided 2026-08-16. The frozen
+regulation names it (`configs/competition/coach_league.json`), and a
+blueprint naming anything else is refused entry, which is what "same
+model and limits for everyone" is enforced by.
+
+| | |
+|---|---|
+| Model id | `claude-haiku-4-5` (`claude-haiku-4-5-20251001` pins the snapshot) |
+| Context | 200K tokens |
+| List price | $1.00 per million input, $5.00 per million output |
+| Base URL | `https://api.anthropic.com/v1` — `SOE_LLM_BASE` must be moved off the OpenRouter default |
+
+Three things follow, and none of them is optional.
+
+**1. A claude.ai subscription is not API access.** The seats are played by
+`webapp/ai/brain.py` over HTTP, which bills through the Anthropic API on
+its own key from `console.anthropic.com` and its own balance. A Pro or
+Max plan buys nothing here. `SOE_LLM_KEY` holds that API key.
+
+**2. The gate's competence evidence was produced on a different model.**
+The 7,200 turns behind the proof line ran on `openai/gpt-4o-mini`
+(`docs/ROADMAP.md`, Phase 0). The proof line stays literally true — it
+says what the gate completed, not what the alpha runs — but it is no
+longer evidence about the model the alpha runs, and it must never be
+offered as if it were. Re-running the gate on Haiku is the only thing
+that would make it that, and it costs money that is not yet budgeted.
+
+**3. The spend ceiling stops working differently here.** Anthropic
+returns token counts and never a dollar figure, so `usage["cost"]` — what
+the official record and `SpendBudget` both read — is absent. The ceiling
+now falls back to list-price arithmetic (`webapp/ai/anthropic_chat.py`,
+`PRICES_PER_MTOK`), recorded in every trace as
+`budget_cost_estimated: true` and `budget_cost_known: false`. That is
+enough to stop a runaway alpha. It is **not** enough for an official gate
+run: `official-gate` requires a provider-declared cost, so a gate re-run
+on Anthropic fails that criterion by design. An official re-run therefore
+needs either OpenRouter's Claude (which declares cost) or a decision to
+change what that criterion means.
+
 ## Form vendor gate: recommended
 
 Tally passes all six criteria. Verify each one in the account before
@@ -186,9 +227,21 @@ vendor/three.module.js  three.js, 1.27 MB uncompressed
 vendor/OrbitControls.js camera control
 ```
 
-Asset URLs carry a `?v=` token that is **hardcoded in `index.html`, not
-generated**. Bump it by hand whenever `atlas.css` or `atlas.js` changes,
-or returning visitors keep the old file. It is currently `v=h2`.
+Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump it
+by hand whenever a versioned asset changes, or returning visitors keep the old
+file. It is currently `v=h2`.
+
+The token is not only in `index.html`, and that was a trap: `atlas.js` imports
+`board3d.js?v=`, and `board3d.js` imports `vendor/OrbitControls.js?v=`. Those
+two sat at `h1` while the page had moved to `h2`, so a bump made the
+documented way — by hand, on the file you edited — would have shipped a new
+`atlas.js` against a cached `board3d.js`. All six versioned assets are on one
+token now, and `scripts/check_poster.py` refuses a bundle carrying two.
+
+Staleness is not visible in the files, so `configs/poster.json` records the
+token and a digest of the assets that carried it. Change a versioned asset
+without bumping and the preflight refuses; bump it everywhere, then re-record
+with `python -m scripts.check_poster --accept-token`.
 
 `sea.jpg` is **not** shipped. There is no sea. Shipping the texture
 invites its use.
@@ -256,7 +309,7 @@ Days are relative to the first working session, not calendar dates.
 | 1–3 | Build the page. Test on a real phone, not a resized window. | Board renders, replay plays, page under 1.5 MB |
 | 3 | Run the form vendor gate, six checks. Build the form. Wire the hidden `src` field. | All six pass |
 | 3 | One test submit from each of the three tagged URLs. Confirm `source` is `hn` / `x` / `reddit`. Delete the three rows. Confirm deletion in a fresh export. | Ledger clean |
-| 4 | Publish. | **`poster live`** |
+| 4 | `python -m scripts.check_poster` exits 0. Publish. | **`poster live`** |
 | 4 | Controlled-beta preflight, no invite issued. | Infrastructure proven, roster `idle` |
 | 5 | Post on X from the personal account. | Outreach started |
 | 6–7 | Watch. Fix whatever the first real traffic breaks. | Page survived strangers |
@@ -300,7 +353,7 @@ the compression table governs what may be dropped.
 | Question | Answer |
 |---|---|
 | Can I try it now? | Not yet — invite only, 30 seats. Tagged URL for that thread. |
-| Which model? | Decide this before posting and answer it plainly. Refusing reads worse than answering. The forbidden list covers the replay file and the page, not conversation. |
+| Which model? | Claude Haiku 4.5, the same one in every seat, with the same limits. Nothing more — no price, no prompt, no rate. See **Model gate: closed**. |
 | Is it open source? | Answer honestly, one sentence, no roadmap promise. |
 | How is this different from Agent Arena / Agent Sports League? | The coach loop: you write a doctrine, freeze it, and cannot touch the match. Not a leaderboard. |
 | Why no ranking or prize? | Ranking turns a doctrine experiment into a scoring contest. Explicit non-goal. |
@@ -360,4 +413,6 @@ Unchanged from the card, with the identity layer assigned.
 - The three drafted, unsent posts: [`OUTREACH_POSTS.md`](OUTREACH_POSTS.md)
 - Ledger tool that keeps the 7-day promise and refuses early codes:
   `python -m scripts.waitlist --help`
+- Publish preflight over the bundle, run before every deployment:
+  `python -m scripts.check_poster --help`
 - Phase 4 gates and `/ops/alpha`: [`ROADMAP.md`](ROADMAP.md)

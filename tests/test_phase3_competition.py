@@ -74,6 +74,10 @@ OTHER_DOCTRINE = {
     "risk": "Never trade a stack for a town.",
     "diplomacy": "Neutral unless attacked.",
 }
+#: What the frozen catalogue names, read the way a coach has to read it: a
+#: blueprint that names a different model is refused entry, because the
+#: season is locked to one model for every seat.
+CATALOGUE_MODEL = "claude-haiku-4-5"
 FAKE_USAGE = {
     "prompt_tokens": 300,
     "completion_tokens": 40,
@@ -191,7 +195,10 @@ def test_a_season_is_created_from_the_frozen_catalogue(store):
     season = store.create_season("Coach League I")
     assert season.status == STATUS_DRAFT
     assert season.competition == "coach_league"
-    assert season.rules().model == "openai/gpt-4o-mini"
+    # Decided 2026-08-16: the alpha runs on Claude Haiku 4.5, under
+    # Anthropic's own model id. Every seat gets this one, which is what
+    # "same model and limits for everyone" means on the card.
+    assert season.rules().model == "claude-haiku-4-5"
     assert season.rules().map == "calib_12.json"
     assert season.rules().allow_vision is False
 
@@ -543,7 +550,7 @@ def test_operator_and_coach_can_walk_a_season_without_curl(desk):
     ada_key = _register(desk, "Ada")
     created = desk.post(
         "/coach/blueprints",
-        data={"name": "Fast Expansion", **DOCTRINE, "model": "openai/gpt-4o-mini"},
+        data={"name": "Fast Expansion", **DOCTRINE, "model": CATALOGUE_MODEL},
         follow_redirects=True,
     )
     ada_bp = str(created.url).rstrip("/").split("/")[-1]
@@ -553,7 +560,7 @@ def test_operator_and_coach_can_walk_a_season_without_curl(desk):
     _register(desk, "Bruno")
     created = desk.post(
         "/coach/blueprints",
-        data={"name": "Hold Fast", **OTHER_DOCTRINE, "model": "openai/gpt-4o-mini"},
+        data={"name": "Hold Fast", **OTHER_DOCTRINE, "model": CATALOGUE_MODEL},
         follow_redirects=True,
     )
     bruno_bp = str(created.url).rstrip("/").split("/")[-1]

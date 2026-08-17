@@ -1,0 +1,13 @@
+{
+  "cache_token": "h4",
+  "asset_digest": "sha256:ff4d7438a3edc52954cbb4b0b3d51f31d5052ac3698c12d6b160919dec424c24",
+  "assets": [
+    "atlas.css",
+    "atlas.js",
+    "board.js",
+    "board3d.js",
+    "vendor/OrbitControls.js",
+    "vendor/three.module.js"
+  ],
+  "recorded_at": "2026-08-16"
+}

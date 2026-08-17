@@ -121,12 +121,202 @@ def _smooth(field: list[list[float]], passes: int) -> list[list[float]]:
     return field
 
 
-def build_landmass(rng: random.Random) -> list[list[bool]]:
+# ---------------------------------------------------------------------------
+# Relief: how the landmass gets its shape
+# ---------------------------------------------------------------------------
+#
+# `noise` is the original and stays the default, because maps/world.json was
+# generated with it and games in progress resolve their town ids against it.
+#
+# It has a flaw worth naming. Box-blurring white noise gives you noise with a
+# shorter spectrum, not shape: nothing survives that is larger than the kernel.
+# Thresholding that produces a frame-filling slab with a fractal edge and
+# dozens of one-cell lakes, and no seed escapes it -- over 200 seeds the main
+# outline never gets more compact than 0.27 (a disc is 1.0) and never carries
+# fewer than 21 pinholes. The square falloff, `max(|fx|, |fy|)`, is what makes
+# the slab rectangular: at the margins you are looking at the mask, not the
+# land.
+#
+# `fbm` fixes both. Value noise on coarse lattices, interpolated smoothly and
+# summed with falling amplitude, so the lowest octave is the continent and the
+# highest is the coastline; a radial falloff whose radius is modulated by
+# low-frequency noise, so the outline is a silhouette rather than an ellipse;
+# and a cleanup pass that fills pinhole lakes and drops specks, so the lakes
+# that remain are inland seas somebody meant.
+
+RELIEF_MODES = ("noise", "fbm")
+DEFAULT_RELIEF = "noise"
+
+#: fbm relief, fixed. These are the settings the chosen world was found with,
+#: so changing them changes every fbm map, not just the next one.
+FBM_OCTAVES = (3, 6, 12, 24)     # lattice columns per octave; 3 is the continent
+FBM_GAIN = 0.55                  # amplitude falloff per octave
+FBM_LOBES = 7                    # harmonics in the silhouette modulation
+FBM_WARP = 0.34                  # how far the silhouette departs from a circle
+FBM_INNER = 0.30                 # radius held at full strength before the fade
+FBM_POWER = 1.0
+FBM_MIN_LAKE = 6                 # cells; smaller enclosed water is a pinhole
+FBM_MIN_ISLAND = 4               # cells; smaller land is a speck
+
+#: Land cells per terrain region. The original seeds one region per 14 cells,
+#: which is a 37-mile patch: correct as data, unreadable as a map, and it
+#: renders as confetti rather than as country. At 70 the regions are large
+#: enough to be somewhere -- a forest belt, a mountain range -- while the
+#: terrain mix over the whole world is unchanged, because the seeds are still
+#: drawn from the same weighted pool.
+TERRAIN_CELLS_PER_REGION = {"noise": 14, "fbm": 70}
+
+#: How a route is judged to be a sea crossing.
+#:
+#: `touches` is the original and the default: sample the straight line and
+#: call it a crossing when more than a quarter of the samples are water. It
+#: cannot tell a crossing from a route that clips one bay, so on the chosen
+#: world 16 of its 30 "sea lanes" joined towns on the same landmass, and the
+#: map drew them as ships sailing over mountains.
+#:
+#: `detour` asks the question that matters: can you walk it, and is walking
+#: sane? A route is a crossing when there is no land path at all, or when the
+#: shortest one is more than SEA_DETOUR_FACTOR times the straight line -- a
+#: gulf you would rather sail across than march around.
+SEA_RULES = ("touches", "detour")
+DEFAULT_SEA_RULE = "touches"
+SEA_DETOUR_FACTOR = 2.2
+
+
+def _smootherstep(t: float) -> float:
+    return t * t * t * (t * (t * 6 - 15) + 10)
+
+
+def _value_noise(rng: random.Random, cols: int, rows: int):
+    """One octave: random values on a coarse lattice, smoothly interpolated."""
+    grid = [[rng.random() for _ in range(cols + 1)] for _ in range(rows + 1)]
+
+    def at(fx: float, fy: float) -> float:
+        gx, gy = fx * cols, fy * rows
+        x0, y0 = int(gx), int(gy)
+        tx, ty = _smootherstep(gx - x0), _smootherstep(gy - y0)
+        x1, y1 = min(x0 + 1, cols), min(y0 + 1, rows)
+        top = grid[y0][x0] * (1 - tx) + grid[y0][x1] * tx
+        bottom = grid[y1][x0] * (1 - tx) + grid[y1][x1] * tx
+        return top * (1 - ty) + bottom * ty
+
+    return at
+
+
+def _fbm_field(rng: random.Random) -> list[list[float]]:
+    layers = []
+    amplitude = 1.0
+    total = 0.0
+    for base in FBM_OCTAVES:
+        rows = max(2, round(base * GRID_H / GRID_W))
+        layers.append((amplitude, _value_noise(rng, base, rows)))
+        total += amplitude
+        amplitude *= FBM_GAIN
+
+    field = [[0.0] * GRID_W for _ in range(GRID_H)]
+    for y in range(GRID_H):
+        for x in range(GRID_W):
+            fx, fy = (x + 0.5) / GRID_W, (y + 0.5) / GRID_H
+            field[y][x] = sum(a * f(fx, fy) for a, f in layers) / total
+    return field
+
+
+def _silhouette(rng: random.Random):
+    """Low-frequency radial modulation: the continent's outline, not a circle."""
+    amps = [rng.random() * 2 - 1 for _ in range(FBM_LOBES)]
+    phases = [rng.random() * math.tau for _ in range(FBM_LOBES)]
+
+    def at(angle: float) -> float:
+        return sum(
+            a * math.cos(k * angle + p) / k
+            for k, (a, p) in enumerate(zip(amps, phases), start=1)
+        )
+
+    return at
+
+
+def _apply_falloff(field: list[list[float]], rng: random.Random) -> list[list[float]]:
+    warp = _silhouette(rng)
+    for y in range(GRID_H):
+        for x in range(GRID_W):
+            fx = (x + 0.5) / GRID_W * 2 - 1
+            fy = (y + 0.5) / GRID_H * 2 - 1
+            edge = math.hypot(fx, fy) / math.sqrt(2) * 1.28
+            edge *= 1.0 + FBM_WARP * warp(math.atan2(fy, fx))
+            k = max(0.0, min(1.0, 1.0 - max(0.0, edge - FBM_INNER) / (1 - FBM_INNER)))
+            field[y][x] *= _smootherstep(k) ** FBM_POWER
+    return field
+
+
+def _components(mask: list[list[bool]], want: bool) -> list[list[tuple[int, int]]]:
+    """Four-connected groups of cells equal to `want`."""
+    seen = [[False] * GRID_W for _ in range(GRID_H)]
+    groups = []
+    for sy in range(GRID_H):
+        for sx in range(GRID_W):
+            if seen[sy][sx] or mask[sy][sx] != want:
+                continue
+            stack = [(sx, sy)]
+            seen[sy][sx] = True
+            group = []
+            while stack:
+                x, y = stack.pop()
+                group.append((x, y))
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if (
+                        0 <= nx < GRID_W and 0 <= ny < GRID_H
+                        and not seen[ny][nx] and mask[ny][nx] == want
+                    ):
+                        seen[ny][nx] = True
+                        stack.append((nx, ny))
+            groups.append(group)
+    return groups
+
+
+def _clean(mask: list[list[bool]]) -> list[list[bool]]:
+    """Fill pinhole lakes and drop specks.
+
+    Water that reaches the frame is the sea and is never filled, however
+    narrow the channel it arrives through.
+    """
+    for group in _components(mask, False):
+        if any(x in (0, GRID_W - 1) or y in (0, GRID_H - 1) for x, y in group):
+            continue
+        if len(group) < FBM_MIN_LAKE:
+            for x, y in group:
+                mask[y][x] = True
+    for group in _components(mask, True):
+        if len(group) < FBM_MIN_ISLAND:
+            for x, y in group:
+                mask[y][x] = False
+    return mask
+
+
+def _landmass_fbm(rng: random.Random) -> list[list[bool]]:
+    field = _apply_falloff(_fbm_field(rng), rng)
+    values = sorted(v for row in field for v in row)
+    cutoff = values[int(len(values) * (1 - TARGET_LAND_FRACTION))]
+    mask = [[field[y][x] > cutoff for x in range(GRID_W)] for y in range(GRID_H)]
+    return _clean(mask)
+
+
+def build_landmass(
+    rng: random.Random, relief: str = DEFAULT_RELIEF
+) -> list[list[bool]]:
     """A smoothed random field, thresholded so the target fraction is land.
 
     An edge falloff keeps the continent off the frame, so coastal towns are
     genuinely coastal rather than clipped by the map border.
+
+    `relief` picks how the shape is arrived at; see RELIEF_MODES above. The
+    default is the original, and its output must not move.
     """
+    if relief not in RELIEF_MODES:
+        raise ValueError(f"unknown relief {relief!r}, expected one of {RELIEF_MODES}")
+    if relief == "fbm":
+        return _landmass_fbm(rng)
+
     field = [[rng.random() for _ in range(GRID_W)] for _ in range(GRID_H)]
     field = _smooth(field, passes=3)
 
@@ -157,13 +347,18 @@ def build_landmass(rng: random.Random) -> list[list[bool]]:
     return land
 
 
-def build_terrain(rng: random.Random, land: list[list[bool]]) -> list[list[str | None]]:
+def build_terrain(
+    rng: random.Random,
+    land: list[list[bool]],
+    relief: str = DEFAULT_RELIEF,
+) -> list[list[str | None]]:
     """Grow terrain regions from seeds so like sits with like."""
     kinds = [k for k, _ in TERRAIN_WEIGHTS]
     weights = [w for _, w in TERRAIN_WEIGHTS]
     land_cells = [(x, y) for y in range(GRID_H) for x in range(GRID_W) if land[y][x]]
 
-    seed_count = max(24, len(land_cells) // 14)
+    per_region = TERRAIN_CELLS_PER_REGION.get(relief, 14)
+    seed_count = max(24, len(land_cells) // per_region)
     # Draw kinds proportionally rather than independently, so a rare terrain
     # is not lost to sampling noise across a handful of seeds.
     pool: list[str] = []
@@ -355,13 +550,95 @@ def _distance(a: dict, b: dict) -> float:
     return math.hypot(a["x_miles"] - b["x_miles"], a["y_miles"] - b["y_miles"])
 
 
-def build_routes(rng: random.Random, cities: list[dict], land) -> list[dict]:
+def _cell_of_town(town: dict) -> tuple[int, int]:
+    return (
+        min(GRID_W - 1, max(0, int(town["x_miles"] / CELL_MILES))),
+        min(GRID_H - 1, max(0, int(town["y_miles"] / CELL_MILES))),
+    )
+
+
+def _nearest_land(land, cx: int, cy: int) -> tuple[int, int] | None:
+    """The town's own cell, or the closest land to it within a few cells."""
+    if land[cy][cx]:
+        return cx, cy
+    for radius in (1, 2, 3):
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                nx, ny = cx + dx, cy + dy
+                if 0 <= nx < GRID_W and 0 <= ny < GRID_H and land[ny][nx]:
+                    return nx, ny
+    return None
+
+
+def _land_distances(land, start: tuple[int, int]) -> dict[tuple[int, int], float]:
+    """Shortest overland distance in miles from one cell to every reachable one.
+
+    Eight-connected with true step costs, so a diagonal is not priced as a
+    detour through two orthogonal moves.
+    """
+    import heapq
+
+    best: dict[tuple[int, int], float] = {start: 0.0}
+    queue = [(0.0, start)]
+    diagonal = math.sqrt(2) * CELL_MILES
+    while queue:
+        cost, (x, y) = heapq.heappop(queue)
+        if cost > best.get((x, y), math.inf):
+            continue
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < GRID_W and 0 <= ny < GRID_H) or not land[ny][nx]:
+                    continue
+                step = diagonal if dx and dy else CELL_MILES
+                if cost + step < best.get((nx, ny), math.inf):
+                    best[(nx, ny)] = cost + step
+                    heapq.heappush(queue, (cost + step, (nx, ny)))
+    return best
+
+
+def build_routes(
+    rng: random.Random,
+    cities: list[dict],
+    land,
+    sea_rule: str = DEFAULT_SEA_RULE,
+) -> list[dict]:
     """Nearest-neighbour candidates, pruned, then forced into one component.
 
     A land route needs land under it; anything crossing open water is a sea
     lane, and sea lanes need a port at both ends.
+
+    What counts as "crossing open water" is `sea_rule`; see SEA_RULES.
     """
+    if sea_rule not in SEA_RULES:
+        raise ValueError(f"unknown sea rule {sea_rule!r}, expected one of {SEA_RULES}")
+
+    land_reach: dict[tuple[int, int], dict[tuple[int, int], float]] = {}
+
+    def overland_miles(a: dict, b: dict) -> float:
+        """Shortest walk from a to b, or infinity when there is no walk."""
+        start = _nearest_land(land, *_cell_of_town(a))
+        end = _nearest_land(land, *_cell_of_town(b))
+        if start is None or end is None:
+            return math.inf
+        if start not in land_reach:
+            land_reach[start] = _land_distances(land, start)
+        return land_reach[start].get(end, math.inf)
+
     def crosses_water(a: dict, b: dict) -> bool:
+        if sea_rule == "detour":
+            # A route is a crossing when walking is impossible, or so much
+            # longer than the crossing that nobody would walk it. Sampling the
+            # straight line instead calls a route that clips one bay a sea
+            # lane -- on the chosen world that was 16 of 30 "lanes", drawn as
+            # ships sailing over mountains.
+            walk = overland_miles(a, b)
+            if walk == math.inf:
+                return True
+            return walk > _distance(a, b) * SEA_DETOUR_FACTOR
+
         steps = max(2, int(_distance(a, b) / CELL_MILES))
         water = 0
         for i in range(steps + 1):
@@ -502,14 +779,16 @@ def build_routes(rng: random.Random, cities: list[dict], land) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def generate(seed: int, towns: int = DEFAULT_TOWNS,
-             regions: int = DEFAULT_REGIONS) -> dict:
+             regions: int = DEFAULT_REGIONS,
+             relief: str = DEFAULT_RELIEF,
+             sea_rule: str = DEFAULT_SEA_RULE) -> dict:
     rng = random.Random(seed)
-    land = build_landmass(rng)
-    terrain = build_terrain(rng, land)
+    land = build_landmass(rng, relief)
+    terrain = build_terrain(rng, land, relief)
     raw = place_towns(rng, land, terrain, towns)
     assign_regions(rng, raw, regions)
     cities = finish_towns(rng, raw, regions)
-    roads = build_routes(rng, cities, land)
+    roads = build_routes(rng, cities, land, sea_rule)
     return {"cities": cities, "roads": roads}
 
 
@@ -544,9 +823,17 @@ def main() -> None:
     ap.add_argument("--regions", type=int, default=DEFAULT_REGIONS)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--stats", action="store_true", help="print a profile only")
+    ap.add_argument(
+        "--relief", choices=RELIEF_MODES, default=DEFAULT_RELIEF,
+        help="how the landmass is shaped; 'noise' is the original and the default",
+    )
+    ap.add_argument(
+        "--sea-rule", choices=SEA_RULES, default=DEFAULT_SEA_RULE,
+        help="what counts as a sea crossing; 'touches' is the original and the default",
+    )
     args = ap.parse_args()
 
-    world = generate(args.seed, args.towns, args.regions)
+    world = generate(args.seed, args.towns, args.regions, args.relief, args.sea_rule)
     if args.stats or args.out is None:
         print(summarise(world))
         return
