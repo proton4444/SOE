@@ -18,7 +18,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MAP_TEXTURES = REPO_ROOT / "maps" / "textures"
 WEB_TEXTURES = REPO_ROOT / "webapp" / "static" / "public" / "textures"
-SHARED = ("desert", "hills", "paper", "plain", "sea")
+# The tiles the poster's renderer actually loads: the ground's grain, the
+# sheet's tooth, and the water's. desert and hills went with the terrain
+# mounds -- the ground is one grain tile coloured by elevation now, so a tile
+# per terrain label was shipping bytes nothing would ever ask for.
+SHARED = ("paper", "plain", "sea")
 
 
 def _digest(path: Path) -> str:

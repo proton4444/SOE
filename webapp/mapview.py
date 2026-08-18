@@ -81,12 +81,25 @@ class MapLayout:
 
 
 # Road stroke: (color, width, dasharray)
+# Roads are ink laid on the ground, so quality is carried by weight, dash and
+# lightness within one warm family -- never by hue. The previous set was a
+# green, a blue-grey, an orange and a salmon, chosen when the land was a
+# single flat fill and nothing competed with them. With terrain painted
+# underneath, the green road disappeared into forest and the orange and salmon
+# fought the desert and the hills, so the network read as four unrelated
+# things instead of one network in four states.
+#
+# Sea keeps its blue. That one is not a hue chosen for contrast; it is water.
 _ROAD_STYLES = {
-    RoadQuality.EXCELLENT: ("#6fbf73", 3.8, "none"),
-    RoadQuality.GOOD: ("#a8b4c4", 3.2, "none"),
-    RoadQuality.FAIR: ("#d8a04b", 2.8, "9 5"),
-    RoadQuality.POOR: ("#d16b5f", 2.4, "3 4"),
-    RoadQuality.SEA: ("#4aa8d8", 3.0, "12 8"),
+    RoadQuality.EXCELLENT: ("#f4ead6", 3.6, "none"),
+    RoadQuality.GOOD: ("#d6c9ae", 3.0, "none"),
+    RoadQuality.FAIR: ("#b0a488", 2.6, "10 6"),
+    RoadQuality.POOR: ("#8d8369", 2.2, "3 5"),
+    # Thinner and more broken than it looks like it should be, because a lane
+    # is long: nineteen of them, 9% of the routes, were carrying 41% of the
+    # network's stroke ink and reading as the subject of the map. Measured
+    # again after, they sit near 22%.
+    RoadQuality.SEA: ("#5ba7d0", 2.0, "10 12"),
 }
 
 _BAND_RADIUS = {
@@ -471,6 +484,27 @@ def _poly_area_miles(poly: list) -> float:
     return abs(acc) * 0.5
 
 
+def _disambiguate_names(masses: list[dict]) -> None:
+    """No two landmasses may answer to the same name.
+
+    A mass is named for the region most of its towns belong to, and a region
+    can straddle water: on world2 the mainland and a one-town islet were both
+    "Fenavale fold", so the roster listed the same place twice and a tooltip
+    could not say which was meant. The largest keeps the bare name, since it
+    is the one people mean; the rest are numbered in the order they are
+    already sorted, largest first.
+    """
+    seen: dict[str, int] = {}
+    for mass in masses:
+        name = mass["name"]
+        seen[name] = seen.get(name, 0) + 1
+        if seen[name] > 1:
+            mass["name"] = f"{name} {_ROMAN[min(seen[name], len(_ROMAN)) - 1]}"
+
+
+_ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
+
+
 def _majority_region(cities: list[dict], by_id: dict) -> Optional[str]:
     regions = [
         by_id[c].get("region") for c in cities if c in by_id and by_id[c].get("region")
@@ -559,6 +593,7 @@ def landmasses_from_geography(
         )
 
     masses.sort(key=lambda m: (-len(m["city_ids"]), m["name"]))
+    _disambiguate_names(masses)
     for i, m in enumerate(masses):
         m["index"] = i + 1
         m["fill"], m["stroke"] = _LAND_PALETTE[i % len(_LAND_PALETTE)]
@@ -649,6 +684,7 @@ def compute_landmasses(
         )
 
     masses.sort(key=lambda m: (-len(m["city_ids"]), m["name"]))
+    _disambiguate_names(masses)
     for i, m in enumerate(masses):
         m["index"] = i + 1
         m["fill"], m["stroke"] = _LAND_PALETTE[i % len(_LAND_PALETTE)]
@@ -769,8 +805,17 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     )
     parts.append(_defs())
     parts.append(_background(layout))
-    parts.append(_landmasses_svg(masses, dense=dense, traced=layout.has_geography))
+    geo = load_geography(map_file)
+    parts.append(
+        _landmasses_svg(
+            masses, dense=dense, traced=layout.has_geography, frame_w=layout.width
+        )
+    )
+    parts.append(_terrain_svg(geo, layout))
     parts.append(_compass(w - 48, h - 48))
+    # The roster only exists on sparse maps; its panel is what the bar clears.
+    roster_h = 0.0 if dense else (len(masses) * 18 + 36 + 14)
+    parts.append(_scale_bar(layout, reserved_bottom=roster_h))
     parts.append(_title_block(stats, dense=dense))
     # On-map landmass roster only for small maps; dense maps use the HTML index.
     if not dense:
@@ -779,11 +824,21 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
         parts.append(_overlay_key_svg(overlay))
 
     parts.append('<g class="map-routes">')
+    sea_routes = (geo or {}).get("sea_routes") or {}
     for r in roads:
         a, b = pos.get(r.get("from")), pos.get(r.get("to"))
         if not a or not b:
             continue
-        parts.append(_route_svg(r, a, b, dense=dense))
+        sailed = sea_routes.get(r.get("id"))
+        parts.append(
+            _route_svg(
+                r, a, b, dense=dense,
+                sailed=(
+                    [layout.project_miles(px, py) for px, py in sailed]
+                    if sailed else None
+                ),
+            )
+        )
     parts.append("</g>")
 
     parts.append('<g class="map-cities">')
@@ -1101,13 +1156,21 @@ def islands_html(map_file: str) -> str:
 
 
 def legend_svg() -> str:
-    """Compact SVG legend (kept for callers that still embed it)."""
+    """Compact SVG legend (kept for callers that still embed it).
+
+    Read out of `_ROAD_STYLES` rather than restated. A legend is a promise
+    about the map, and the only way to keep it is to not have a second copy
+    of the palette to forget.
+    """
     items = [
-        ("#6fbf73", "none", "excellent"),
-        ("#a8b4c4", "none", "good"),
-        ("#d8a04b", "9 5", "fair"),
-        ("#d16b5f", "3 4", "poor"),
-        ("#4aa8d8", "12 8", "sea lane"),
+        (_ROAD_STYLES[quality][0], _ROAD_STYLES[quality][2], label)
+        for quality, label in (
+            (RoadQuality.EXCELLENT, "excellent"),
+            (RoadQuality.GOOD, "good"),
+            (RoadQuality.FAIR, "fair"),
+            (RoadQuality.POOR, "poor"),
+            (RoadQuality.SEA, "sea lane"),
+        )
     ]
     parts = [
         '<svg class="legend-svg" width="220" height="210" viewBox="0 0 220 210" '
@@ -1138,7 +1201,7 @@ def legend_svg() -> str:
     y_port = y_mf + 18
     parts.append(
         f'<path d="M 16 {y_port + 4} a 10 10 0 0 1 16 0" fill="none" '
-        f'stroke="#4aa8d8" stroke-width="1.5"/>'
+        f'stroke="#5ba7d0" stroke-width="1.5"/>'
     )
     parts.append(
         f'<text x="54" y="{y_port + 4}" fill="#9aa7b8" font-size="11">port</text>'
@@ -1318,6 +1381,73 @@ def _compass(cx: float, cy: float) -> str:
 """.strip()
 
 
+#: Bar lengths worth printing, in miles. A scale bar is read by its number,
+#: so the number has to be one a person holds in their head while looking
+#: somewhere else -- never 137 miles because that was 15% of the frame.
+_SCALE_STEPS = (50, 100, 200, 250, 500, 1000)
+
+
+def scale_bar_miles(layout: MapLayout, target_fraction: float = 0.16) -> int:
+    """The roundest bar length that lands near `target_fraction` of the map."""
+    want = layout.field_w_mi * target_fraction
+    return min(_SCALE_STEPS, key=lambda step: abs(step - want))
+
+
+def _scale_bar(layout: MapLayout, reserved_bottom: float = 0.0) -> str:
+    """A cartographic scale bar, in the units the engine prices travel in.
+
+    The map has always been drawn to scale -- towns carry mile coordinates and
+    routes are priced in miles -- and has never said so, which left every
+    distance on it unreadable. Alternating segments rather than a plain rule,
+    because that is what lets someone step a distance off by eye.
+
+    Only drawn with geography, where the viewBox really is the mile field.
+    Without it the frame is nominal and a bar would be a measurement invented
+    for the occasion.
+    """
+    if not layout.has_geography or not layout.field_w_mi:
+        return ""
+
+    miles = scale_bar_miles(layout)
+    units_per_mile = layout.map_w / layout.field_w_mi
+    length = miles * units_per_mile
+    segments = 4
+    seg = length / segments
+    height = 7.0
+
+    x = layout.pad_x + 18
+    # The landmass roster is drawn in this same corner on sparse maps, so the
+    # bar steps up over whatever it occupies rather than through it.
+    y = layout.pad_y + layout.map_h - 26 - reserved_bottom
+
+    parts = [
+        f'<g class="map-scale" aria-label="Scale bar: {miles} miles" '
+        f'transform="translate({x:.1f},{y:.1f})">'
+    ]
+    parts.append(
+        f'<rect x="-6" y="-19" width="{length + 12:.1f}" height="{height + 30:.1f}" '
+        f'rx="3" fill="#0e1118" fill-opacity="0.62" stroke="#2e3644" stroke-width="0.8"/>'
+    )
+    for i in range(segments):
+        fill = "#e8dcc2" if i % 2 == 0 else "#2a3140"
+        parts.append(
+            f'<rect x="{i * seg:.1f}" y="0" width="{seg:.1f}" height="{height:.1f}" '
+            f'fill="{fill}" stroke="#e8dcc2" stroke-width="0.8"/>'
+        )
+    for i in (0, segments // 2, segments):
+        label = int(miles * i / segments)
+        parts.append(
+            f'<text x="{i * seg:.1f}" y="-5" text-anchor="middle" fill="#c8cedb" '
+            f'font-size="9.5" font-family="Georgia, serif">{label}</text>'
+        )
+    parts.append(
+        f'<text x="{length / 2:.1f}" y="{height + 11:.1f}" text-anchor="middle" '
+        f'fill="#8d97a8" font-size="8.5" letter-spacing="1.1">MILES</text>'
+    )
+    parts.append("</g>")
+    return "\n".join(parts)
+
+
 def _poly_path(pts: list[tuple[float, float]]) -> str:
     if not pts:
         return ""
@@ -1328,10 +1458,95 @@ def _poly_path(pts: list[tuple[float, float]]) -> str:
     return " ".join(cmds)
 
 
+#: Hypsometric tinting, the relief-map convention: lowland green through
+#: upland ochre to bare rock, with arid gold and wetland grey-green off to the
+#: side. Kept dark enough that roads, sea lanes and town marks stay the
+#: brightest things on the board -- terrain is the ground the game is played
+#: on, not the subject.
+TERRAIN_FILL = {
+    "plain": "#4f5f3c",
+    "forest": "#33502f",
+    "hills": "#6d6640",
+    "mountains": "#6f6d68",
+    "desert": "#8a7b4f",
+    "swamp": "#3f5148",
+}
+
+LAKE_FILL = "#24435c"
+
+
+def _terrain_svg(geo: Optional[dict], layout: MapLayout) -> str:
+    """Terrain regions and inland water, painted over the landmass bodies.
+
+    Without this the land is one flat fill per landmass, which is the whole
+    map saying one thing: there is land here. The generator has known which
+    kind of land since it placed the towns -- the towns are biased by it --
+    and the sidecar carries the regions, so the map can finally show the
+    ground a doctrine is arguing about.
+
+    Drawn as outlines only. A hole in a terrain region is another terrain,
+    which paints its own outline over it, or a lake, which is painted last.
+    """
+    if not geo:
+        return ""
+    parts = ['<g class="map-terrain" aria-hidden="true">']
+    for kind, fill in TERRAIN_FILL.items():
+        polys = (geo.get("terrain") or {}).get(kind) or []
+        if not polys:
+            continue
+        paths = " ".join(
+            _poly_path([layout.project_miles(px, py) for px, py in poly])
+            for poly in polys
+            if len(poly) >= 3
+        )
+        if paths:
+            # A hairline edge in the region's own shadow. Without it two
+            # adjacent greens meet on a colour change alone and the map reads
+            # as camouflage; with it each region is a place with a border.
+            parts.append(
+                f'<path class="terrain-{kind}" d="{paths}" fill="{fill}" '
+                f'fill-opacity="0.88" stroke="#161a12" stroke-width="0.7" '
+                f'stroke-opacity="0.35" stroke-linejoin="round"/>'
+            )
+    for lake in geo.get("lakes") or []:
+        if len(lake) < 3:
+            continue
+        path = _poly_path([layout.project_miles(px, py) for px, py in lake])
+        parts.append(
+            f'<path class="terrain-lake" d="{path}" fill="{LAKE_FILL}" '
+            f'stroke="#8fb6cd" stroke-width="0.9" stroke-opacity="0.5"/>'
+        )
+    parts.append("</g>")
+    return "\n".join(parts) if len(parts) > 2 else ""
+
+
+def _polygon_centroid(pts: list[tuple[float, float]]) -> tuple[float, float]:
+    """Area centroid, which for a landmass is a point on the landmass.
+
+    The mean of the vertices is not: it is pulled wherever the outline has the
+    most detail, which on a traced coast is the fiddliest stretch of shore.
+    """
+    area = 0.0
+    cx = 0.0
+    cy = 0.0
+    for i, (x1, y1) in enumerate(pts):
+        x2, y2 = pts[(i + 1) % len(pts)]
+        cross = x1 * y2 - x2 * y1
+        area += cross
+        cx += (x1 + x2) * cross
+        cy += (y1 + y2) * cross
+    if abs(area) < 1e-9:
+        n = len(pts) or 1
+        return sum(p[0] for p in pts) / n, sum(p[1] for p in pts) / n
+    area *= 0.5
+    return cx / (6 * area), cy / (6 * area)
+
+
 def _landmasses_svg(
     masses: list[dict],
     dense: bool = False,
     traced: bool = False,
+    frame_w: float = 1e9,
 ) -> str:
     if not masses:
         return ""
@@ -1342,7 +1557,7 @@ def _landmasses_svg(
         if len(hull) < 3:
             continue
         path = _poly_path(hull)
-        cx = sum(p[0] for p in hull) / len(hull)
+        cx, cy_mass = _polygon_centroid(hull)
         n = len(m["city_ids"])
         name_list = list(m["city_names"])
         if dense and n > 12:
@@ -1373,19 +1588,50 @@ def _landmasses_svg(
                 f'<path class="land-confine" d="{path}" fill="none" stroke="{m["stroke"]}" '
                 f'stroke-width="1" stroke-dasharray="6 5" opacity="0.45"/>'
             )
-        label_y = min(p[1] for p in hull) + (14 if traced else 18)
-        parts.append(
-            f'<text class="map-label land-label" x="{cx:.1f}" y="{label_y:.1f}" '
-            f'text-anchor="middle" fill="{m["stroke"]}" font-size="{name_size}" '
-            f'letter-spacing="1.6" font-weight="bold">'
-            f"{_esc(m['name'].upper())}</text>"
-        )
-        if not dense:
-            parts.append(
-                f'<text class="map-meta land-label-meta" x="{cx:.1f}" y="{label_y + 15:.1f}" '
-                f'text-anchor="middle" fill="#7f8794" font-size="10">'
-                f"{m['kind']} · {n} cit{'ies' if n != 1 else 'y'}</text>"
+        # A landmass caption is set across the body of the land it names, so
+        # it only works when the land is wide enough to seat it. Drawn
+        # regardless, it ran off the frame -- ZELANSTEAD HINTERLAND was
+        # clipped mid-word -- and lay across open sea on the small masses.
+        caption = m["name"].upper()
+        hull_left = min(p[0] for p in hull)
+        hull_right = max(p[0] for p in hull)
+        # Set as large as the land allows, down to a floor, then give up: a
+        # caption smaller than this is unreadable anyway, and an islet does
+        # not need its name written across it.
+        per_char = 0.96  # glyph width plus tracking, in ems
+        room = (hull_right - hull_left) * 0.86
+        caption_size = min(name_size * 1.25, room / max(1, len(caption)) / per_char)
+        text_w = len(caption) * caption_size * per_char
+        if caption_size >= 7.5:
+            # Set across the body of the land, not along its northern edge:
+            # the top of a hull is the sea above the widest point, and the
+            # caption floated there with half of it over open water.
+            label_y = cy_mass + caption_size * 0.35
+            # Keep it over its own land, and inside the frame whatever the
+            # centroid says.
+            label_x = min(
+                max(cx, hull_left + text_w / 2, text_w / 2 + 8),
+                hull_right - text_w / 2,
+                frame_w - text_w / 2 - 8,
             )
+            # Quiet engraved type, the same on every terrain. Inheriting the
+            # shore colour left it a smudge on green and a shout on grey.
+            parts.append(
+                f'<text class="map-label land-label" x="{label_x:.1f}" y="{label_y:.1f}" '
+                f'text-anchor="middle" fill="#f4ecda" fill-opacity="0.42" '
+                f'stroke="#10140e" stroke-opacity="0.38" '
+                f'stroke-width="{caption_size * 0.16:.2f}" paint-order="stroke" '
+                f'font-size="{caption_size:.1f}" '
+                f'letter-spacing="{caption_size * 0.34:.1f}" font-weight="bold">'
+                f"{_esc(caption)}</text>"
+            )
+            if not dense:
+                parts.append(
+                    f'<text class="map-meta land-label-meta" x="{label_x:.1f}" '
+                    f'y="{label_y + 15:.1f}" '
+                    f'text-anchor="middle" fill="#7f8794" font-size="10">'
+                    f"{m['kind']} · {n} cit{'ies' if n != 1 else 'y'}</text>"
+                )
         parts.append("</g>")
     parts.append("</g>")
     return "\n".join(parts)
@@ -1450,11 +1696,43 @@ def _format_hop(cost: Optional[float]) -> str:
     return f"{cost:.1f} mv"
 
 
+def _sailed_route_svg(
+    road: dict,
+    points: list[tuple[float, float]],
+    color: str,
+    width: float,
+    dash: str,
+) -> str:
+    """One sea lane drawn along the water it actually sails through."""
+    d = " ".join(
+        ("M" if i == 0 else "L") + f" {x:.1f} {y:.1f}" for i, (x, y) in enumerate(points)
+    )
+    rid = _esc(str(road.get("id", "")))
+    miles = road.get("distance_miles")
+    title_bits = ["sea lane"]
+    if miles is not None and miles != "":
+        # The crossing is priced on the straight line; the drawn path is the
+        # water it has to keep to, so the two are not the same length and the
+        # tooltip says which number is which.
+        title_bits.append(f"{miles} mi as the crow flies")
+    return (
+        f'<g class="map-route map-route-sea" data-road="{rid}">'
+        f"<title>{_esc(' · '.join(title_bits))}</title>"
+        f'<path d="{d}" fill="none" stroke="#1e3a4a" stroke-width="{width + 2.5}" '
+        f'stroke-linecap="round" stroke-linejoin="round" opacity="0.38"/>'
+        f'<path d="{d}" fill="none" stroke="{color}" stroke-width="{width}" '
+        f'stroke-dasharray="{dash}" stroke-linecap="round" stroke-linejoin="round" '
+        f'opacity="0.82"/>'
+        f"</g>"
+    )
+
+
 def _route_svg(
     road: dict,
     a: tuple[float, float],
     b: tuple[float, float],
     dense: bool = False,
+    sailed: Optional[list[tuple[float, float]]] = None,
 ) -> str:
     quality = road.get("quality")
     try:
@@ -1465,6 +1743,13 @@ def _route_svg(
     # Slightly thinner strokes when the graph is a hairball.
     if dense:
         width = max(1.6, width * 0.72)
+
+    if sailed and len(sailed) >= 2:
+        # A sea lane sails where the water is. Straight from town to town it
+        # crosses whatever lies between, which island-to-mainland means most
+        # of both -- thirteen of nineteen lanes on world2 were drawn mostly
+        # over land before this, one of them 78% ashore.
+        return _sailed_route_svg(road, sailed, color, width, dash)
 
     mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
     # Gentle bow so parallel routes / dense maps read as paths, not a grid.
@@ -1835,7 +2120,7 @@ def _city_svg(
         chunks.append(
             f'<path d="M {x - pr:.1f} {y + radius + 2:.1f} '
             f'a {pr:.1f} {pr:.1f} 0 0 1 {2 * pr:.1f} 0" '
-            f'fill="none" stroke="#4aa8d8" stroke-width="1.5" opacity="0.95"/>'
+            f'fill="none" stroke="#5ba7d0" stroke-width="1.5" opacity="0.95"/>'
         )
 
     if resources and plan.radius_scale >= 0.7:

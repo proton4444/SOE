@@ -261,18 +261,18 @@ pre.report {
   height: 0.55rem;
   border-radius: 2px;
 }
-.swatch.road.excellent { background: #6fbf73; height: 3px; }
-.swatch.road.good { background: #a8b4c4; height: 3px; }
+.swatch.road.excellent { background: #f4ead6; height: 3px; }
+.swatch.road.good { background: #d6c9ae; height: 3px; }
 .swatch.road.fair {
-  background: repeating-linear-gradient(90deg, #d8a04b 0 7px, transparent 7px 11px);
+  background: repeating-linear-gradient(90deg, #b0a488 0 7px, transparent 7px 11px);
   height: 3px;
 }
 .swatch.road.poor {
-  background: repeating-linear-gradient(90deg, #d16b5f 0 3px, transparent 3px 6px);
+  background: repeating-linear-gradient(90deg, #8d8369 0 3px, transparent 3px 6px);
   height: 3px;
 }
 .swatch.road.sea {
-  background: repeating-linear-gradient(90deg, #4aa8d8 0 8px, transparent 8px 14px);
+  background: repeating-linear-gradient(90deg, #5ba7d0 0 8px, transparent 8px 14px);
   height: 3px;
 }
 .swatch.city {
@@ -296,7 +296,7 @@ pre.report {
   width: 0.9rem;
   height: 0.45rem;
   border: none;
-  border-bottom: 2px solid #4aa8d8;
+  border-bottom: 2px solid #5ba7d0;
   border-radius: 0 0 50% 50%;
   background: transparent;
 }

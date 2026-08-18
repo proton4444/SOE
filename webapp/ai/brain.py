@@ -1,5 +1,6 @@
 """
-LLM client for managed bots — OpenAI-compatible, targeted at OpenRouter.
+LLM client for managed bots — OpenAI-compatible, targeted at OpenRouter, and
+speaking Anthropic's Messages API when pointed at it.
 
 Config comes from the environment and is never logged:
 
@@ -8,9 +9,17 @@ Config comes from the environment and is never logged:
     SOE_LLM_MODEL   default model (default openai/gpt-4o-mini)
     SOE_LLM_TIMEOUT request timeout in seconds (default 120)
 
-The interface is deliberately thin (``chat`` + ``is_configured``) so an
-Anthropic or Gemini client can be added later without touching the
-orchestrator.
+The wire format follows the base URL, not the model name: an Anthropic host
+gets ``/messages`` and ``x-api-key``, everything else gets
+``/chat/completions`` and a bearer token. So Claude reached through
+OpenRouter is an ordinary OpenAI-compatible call under its OpenRouter slug,
+while Claude reached from Anthropic needs ``SOE_LLM_BASE`` moved to
+``https://api.anthropic.com/v1`` and its own key. The translation lives in
+``webapp.ai.anthropic_chat``; retries and error policy stay here so the two
+providers cannot drift apart on what counts as a failure.
+
+The interface is deliberately thin (``chat`` + ``is_configured``) so a
+further provider can be added without touching the orchestrator.
 """
 
 from __future__ import annotations
@@ -22,6 +31,7 @@ from typing import Any
 
 import httpx
 
+from webapp.ai import anthropic_chat
 from webapp.observability import logger
 
 LLM_BASE_URL = os.environ.get("SOE_LLM_BASE", "https://openrouter.ai/api/v1").rstrip(
@@ -272,9 +282,9 @@ def _with_images(messages: list[dict], images: tuple[str, ...]) -> list[dict]:
     return [*messages[:-1], {"role": messages[-1]["role"], "content": parts}]
 
 
-def _post_once(
+def _openai_request(
     model: str, messages: list[dict], temperature: float, max_tokens: int
-) -> tuple[str, dict, str]:
+) -> tuple[str, dict, dict]:
     payload = {
         "model": model,
         "messages": messages,
@@ -294,13 +304,59 @@ def _post_once(
         "HTTP-Referer": "https://github.com/anomalyco/opencode",
         "X-Title": "SOE",
     }
+    return "/chat/completions", headers, payload
+
+
+def _parse_openai(data: dict) -> tuple[str, dict, str]:
+    try:
+        text = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ValueError("LLM returned an unexpected payload.") from exc
+    usage = data.get("usage", {})
+    if not isinstance(usage, dict):
+        usage = {}
+    return str(text or ""), usage, str(data.get("id", "") or "")
+
+
+def _post_once(
+    model: str, messages: list[dict], temperature: float, max_tokens: int
+) -> tuple[str, dict, str]:
+    """One call over whichever wire format the configured base URL speaks.
+
+    Both transports share this function's error policy on purpose: what
+    counts as retryable, what counts as a refusal, and what an empty answer
+    means should not depend on the provider.
+    """
+    base = _api_base()
+    anthropic = anthropic_chat.is_anthropic_base(base)
+    try:
+        if anthropic:
+            effort = _reasoning_effort()
+            if effort:
+                # Anthropic's thinking controls are per model family and the
+                # alpha does not use them; say so rather than send a knob the
+                # Messages API would reject.
+                logger.warning(
+                    "llm_reasoning_ignored transport=anthropic effort=%s", effort
+                )
+            path, headers, payload = anthropic_chat.build_request(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_key=_api_key(),
+            )
+        else:
+            path, headers, payload = _openai_request(
+                model, messages, temperature, max_tokens
+            )
+    except ValueError as exc:
+        # A request the provider would reject on its face: a configuration
+        # problem, not a transport one, so it must not be retried.
+        raise LLMError(f"LLM request cannot be built: {exc}") from exc
     try:
         with httpx.Client(timeout=_timeout_seconds()) as client:
-            response = client.post(
-                f"{_api_base()}/chat/completions",
-                headers=headers,
-                json=payload,
-            )
+            response = client.post(f"{base}{path}", headers=headers, json=payload)
     except httpx.HTTPError as exc:
         raise _RetryableError(0, type(exc).__name__) from exc
     if response.status_code == 429 or response.status_code >= 500:
@@ -316,16 +372,15 @@ def _post_once(
         )
     data = response.json()
     try:
-        text = data["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise LLMError("LLM returned an unexpected payload.") from exc
-    if text is None or not str(text).strip():
+        if anthropic:
+            text, usage, request_id = anthropic_chat.parse_response(model, data)
+        else:
+            text, usage, request_id = _parse_openai(data)
+    except ValueError as exc:
+        raise LLMError(str(exc)) from exc
+    if not text.strip():
         raise LLMError("LLM returned an empty completion.")
-    usage = data.get("usage", {})
-    if not isinstance(usage, dict):
-        usage = {}
-    request_id = str(data.get("id", "") or "")
-    return str(text), usage, request_id
+    return text, usage, request_id
 
 
 def _provider_error(response) -> str:
