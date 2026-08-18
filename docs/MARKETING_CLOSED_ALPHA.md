@@ -619,7 +619,13 @@ ranking.
 
 Playback starts only when the board is actually on screen, pauses when
 it scrolls away, and honours `prefers-reduced-motion` by not animating
-at all.
+at all. A board that will never move opens on the **last** turn rather
+than the first: turn 0 is two lone commanders on an otherwise empty
+board, which is the one picture of this match that argues against
+showing it, while turn 30 carries twenty-five pieces, three cities held,
+the readouts at their final counts and the outcome line. The scrubber
+still walks it back. `scripts/smoke_poster.py` checks this in the
+browser now — "the board drew" was true of the empty frame too.
 
 Board topology is baked into `board.js` by
 `scripts/build_public_board.py`, which copies only id, name, `x`, `y`,

@@ -128,6 +128,22 @@ def check_page(browser, url: str, reduced: bool, out_dir: Path | None) -> list[s
     if not meta:
         problems.append(f"{label}: the replay meta line is empty, so no replay was read")
 
+    # A still board is the whole of what a reduce-motion reader sees, and it
+    # opened on turn 0 -- two lone commanders, the emptiest frame of a match
+    # whose argument is movement. "It drew" was true and not enough.
+    if reduced:
+        turn = page.eval_on_selector("#turn-label", "e => e.textContent.trim()")
+        outcome = page.eval_on_selector("#replay-outcome", "e => e.textContent.trim()")
+        if turn in ("", "00"):
+            problems.append(
+                f"{label}: the board that will not move opened on turn "
+                f"{turn or '(none)'} — the frame with the least on it"
+            )
+        if not outcome:
+            problems.append(
+                f"{label}: the still board does not say how the match ended"
+            )
+
     canvas = page.query_selector("#atlas")
     if canvas is None:
         problems.append(f"{label}: there is no board canvas on the page")
@@ -183,7 +199,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n{len(problems)} problem(s). The board does not draw. Do not publish.")
         return 1
 
-    print("ok    the board drew, animated and reduced-motion, with no console error")
+    print(
+        "ok    the board drew, animated and reduced-motion, with no console "
+        "error, and the still one opened on the finished match"
+    )
     return 0
 
 

@@ -16,7 +16,7 @@
  * their road between turns rather than jumping, and the road they take lights
  * up as they use it. That motion is the whole show.
  */
-import { createBoard } from "./board3d.js?v=h4";
+import { createBoard } from "./board3d.js?v=h5";
 
 (function () {
   "use strict";
@@ -417,7 +417,15 @@ import { createBoard } from "./board3d.js?v=h4";
     });
     byId("play").addEventListener("click", function () { setPlaying(!playing); });
 
-    applyFrame(0, false);
+    // A board that will never move should open on the frame that says the
+    // most, and turn 0 says the least: two lone commanders on an otherwise
+    // empty board, which is the one picture of this match that argues
+    // against showing it. The last turn carries twenty-five pieces, three
+    // cities held, the readouts at their final counts and the outcome line.
+    // The scrubber is still there, so the reader who turned motion off can
+    // walk it back to the opening; they just do not start there.
+    frameIndex = reducedMotion ? replay.frames.length - 1 : 0;
+    applyFrame(frameIndex, false);
 
     // Do not animate an unseen board: start when it is actually on screen.
     if (reducedMotion) { setPlaying(false); return; }

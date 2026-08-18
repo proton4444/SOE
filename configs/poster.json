@@ -1,6 +1,6 @@
 {
-  "cache_token": "h4",
-  "asset_digest": "sha256:ff4d7438a3edc52954cbb4b0b3d51f31d5052ac3698c12d6b160919dec424c24",
+  "cache_token": "h5",
+  "asset_digest": "sha256:2272d720873422ea92ec7fddcf5dc331a890b3e7aa0c60d51fce2042cc2a10f4",
   "assets": [
     "atlas.css",
     "atlas.js",
@@ -9,5 +9,5 @@
     "vendor/OrbitControls.js",
     "vendor/three.module.js"
   ],
-  "recorded_at": "2026-08-16"
+  "recorded_at": "2026-08-18"
 }
