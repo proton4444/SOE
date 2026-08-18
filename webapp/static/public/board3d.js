@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h20";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h21";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -2108,15 +2108,18 @@ export function createBoard(options) {
      in it now, and a sea cut off mid-frame reads as a rendering that did not
      fit rather than as a map. So the box is the sheet's own extent, which is
      wider than the land box by PAD, and the picture scales down to hold it. */
-  /* Frame the LAND, and let the water run off the edges again.
+  /* Frame the whole object: the coast plus its margin, or the mounted sheet,
+     whichever is wider.
 
-     Fitting the whole sheet was right when the sea was a flat tint that looked
-     unfinished cut off mid-frame. It is graded now, and framing to it spent a
-     third of the picture on open water to avoid cropping something that crops
-     perfectly well. The coast plus a margin is the subject; the sea reaching
-     past the frame is what a map looks like. */
-  const fitHalfW = (maxX - minX) / 2 + FIT_M;
-  const fitHalfD = (maxY - minY) / 2 + FIT_M;
+     This has been both ways. Framing the land alone is what the picture wants
+     while the margins are wide; it also means the sheet crops the moment
+     anyone changes a margin, and the board is a printed plate on a table --
+     an object with edges, which look like an accident when they run off the
+     frame rather than like a crop. Taking the max costs nothing today (with
+     the water margin at 34 the sheet is already inside the land box) and
+     makes the framing hold whatever the margins become. */
+  const fitHalfW = Math.max((maxX - minX) / 2 + FIT_M, sheetW / 2);
+  const fitHalfD = Math.max((maxY - minY) / 2 + FIT_M, sheetD / 2);
   const sheetCorners = [];
   [-fitHalfW, fitHalfW].forEach(function (x) {
     [-fitHalfD, fitHalfD].forEach(function (z) {
@@ -2187,7 +2190,11 @@ export function createBoard(options) {
     camera.updateProjectionMatrix();
     // Refit only while the board is still driving itself; once the reader has
     // taken the camera, a resize must not yank it back.
-    if (!userDriving) { fitCamera(0.995); }
+    /* 0.88, not 0.995. Filling the frame to within half a percent leaves the
+       board touching all four edges, which reads as a picture that only just
+       fitted rather than as one composed. The margin is the difference
+       between a specimen and an object on a table. */
+    if (!userDriving) { fitCamera(0.88); }
     /* Measured widths are cached, and a resize can cross the breakpoint that
        decides how much of each data row is shown -- so the cache has to die
        with the old width or every label is planned against a size it no
