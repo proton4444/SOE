@@ -4,11 +4,14 @@
  * board (board3d.js), built from ATLAS_BOARD (board.js). Fetches nothing else.
  * Never contacts the live server.
  *
- * Visual contract (docs/MARKETING_CLOSED_ALPHA.md): twelve cities at their
- * exact x/y under one uniform scale, the roads exactly as listed, a terrain
- * mound around each city — local relief only — and empty space left empty. The
- * page may tilt and rotate the board; it may not add geography. Every height in
- * the scene comes from a city's own terrain label. See board3d.js.
+ * Visual contract (docs/MARKETING_CLOSED_ALPHA.md, Amendment 2): twelve cities
+ * at their exact x/y under one uniform scale with the populations, grid
+ * references, terrain and flags the map gives them; the roads exactly as
+ * listed with their mileage and cost; a terrain mound around each city; and
+ * the landmass, coast and region names the app draws for this map. The page
+ * may tilt and rotate the board. Every height in the scene still comes from a
+ * city's own terrain label, and the coast is mapview's road-connectivity hull
+ * carried across rather than a surveyed shore. See board3d.js.
  *
  * The match this file was built against is decided by movement, not battle:
  * two forces grow from one piece to fifteen and march back and forth along the
@@ -16,7 +19,7 @@
  * their road between turns rather than jumping, and the road they take lights
  * up as they use it. That motion is the whole show.
  */
-import { createBoard } from "./board3d.js?v=h5";
+import { createBoard } from "./board3d.js?v=h28";
 
 (function () {
   "use strict";
@@ -64,6 +67,14 @@ import { createBoard } from "./board3d.js?v=h5";
       labelHost: byId("atlas-labels"),
       cities: ATLAS_BOARD.cities,
       roads: ATLAS_BOARD.roads,
+      // Amendment 2: the land the app draws, and the region names on it.
+      landmasses: ATLAS_BOARD.landmasses,
+      // The app's own frame extents, so the board is not a square guess at it.
+      frameUnits: ATLAS_BOARD.frame_units,
+      /* Amendment 3: the baked elevation grid. Guarded, because the board has
+         to keep rendering as a flat vale if the file is ever not there. */
+      elevation: (typeof ATLAS_ELEVATION !== "undefined") ? ATLAS_ELEVATION : null,
+      regions: ATLAS_BOARD.regions,
       seatColors: SEAT_COLORS,
       activeCities: activeCities,
       reducedMotion: reducedMotion
@@ -372,6 +383,31 @@ import { createBoard } from "./board3d.js?v=h5";
     var note = document.createElement("li");
     note.textContent = "large token = commander";
     host.appendChild(note);
+
+    /* The board now prints a coast, and a coast on a map is read as surveyed
+       unless the map says otherwise. This one is a convex hull around the
+       road-connected cities -- the same confine the game draws, because
+       calib_12.json carries no coastline at all. Saying so on the page is the
+       cost of drawing it. */
+    var mass = (ATLAS_BOARD.landmasses || [])[0];
+    if (mass) {
+      var shore = document.createElement("li");
+      shore.className = "legend-note";
+      shore.textContent =
+        mass.name + " — road-connected extent, not a surveyed coast";
+      host.appendChild(shore);
+    }
+
+    /* And the same for the ground. The board draws a landscape now, and a
+       landscape is read as surveyed unless the map says otherwise. The map
+       has twelve terrain labels and no elevation at all: which cities stand
+       on high ground is data, the shape of the slopes between them is not.
+       Amendment 3. */
+    var relief = document.createElement("li");
+    relief.className = "legend-note";
+    relief.textContent =
+      "relief interpolated from city terrain — high ground is data, contours are not";
+    host.appendChild(relief);
   }
 
   function start(data) {
@@ -420,10 +456,10 @@ import { createBoard } from "./board3d.js?v=h5";
     // A board that will never move should open on the frame that says the
     // most, and turn 0 says the least: two lone commanders on an otherwise
     // empty board, which is the one picture of this match that argues
-    // against showing it. The last turn carries twenty-five pieces, three
-    // cities held, the readouts at their final counts and the outcome line.
-    // The scrubber is still there, so the reader who turned motion off can
-    // walk it back to the opening; they just do not start there.
+    // against showing it. The last turn carries the forces at their final
+    // counts, the cities they hold, and the outcome line. The scrubber is
+    // still there, so the reader who turned motion off can walk it back to
+    // the opening; they just do not start there.
     frameIndex = reducedMotion ? replay.frames.length - 1 : 0;
     applyFrame(frameIndex, false);
 

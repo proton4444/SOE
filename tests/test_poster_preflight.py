@@ -126,9 +126,18 @@ def test_a_personal_inbox_as_operator_contact_is_a_note_not_a_blocker(bundle, ma
 # ---------------------------------------------------------------------------
 
 
-def test_a_sea_texture_is_refused(bundle, manifest):
-    (bundle / "textures" / "sea.jpg").write_bytes(b"\xff\xd8\xff")
-    assert any("no sea" in m for m in blockers(run(bundle, manifest), "inventory"))
+def test_the_sea_texture_is_required_now(bundle, manifest):
+    """It used to be refused, and the reversal is the point.
+
+    The original visual contract allowed the board no sea at all, so shipping
+    `textures/sea.jpg` was evidence someone was about to grow an ocean the map
+    did not have, and this test asserted the refusal. Amendments 2 and 3 opened
+    that deliberately: the board draws the app's landmass, the water outside
+    it, and the relief between, and states in its legend what is surveyed and
+    what is implied. The tile is required, and its absence is the blocker.
+    """
+    (bundle / "textures" / "sea.jpg").unlink()
+    assert any("sea.jpg" in m for m in blockers(run(bundle, manifest), "inventory"))
 
 
 def test_a_missing_required_file_is_refused(bundle, manifest):
@@ -136,10 +145,17 @@ def test_a_missing_required_file_is_refused(bundle, manifest):
     assert any("board3d.js" in m for m in blockers(run(bundle, manifest), "inventory"))
 
 
-def test_a_missing_terrain_texture_is_refused(bundle, manifest):
-    """The board names three terrains. A texture for one of them is not optional."""
-    (bundle / "textures" / "hills.jpg").unlink()
-    assert any("hills" in m for m in blockers(run(bundle, manifest), "inventory"))
+def test_a_missing_renderer_texture_is_refused(bundle, manifest):
+    """The tiles the renderer loads, not one per terrain label.
+
+    This named `hills.jpg` because every city wore a terrain-textured mound and
+    the required tiles were the board's terrain labels. The mounds are gone:
+    the ground is one grain tile coloured by elevation, so a map naming
+    `coastal` or `river` needs no such tile and never asks for one. What is not
+    optional is what board3d.js actually loads.
+    """
+    (bundle / "textures" / "plain.jpg").unlink()
+    assert any("plain.jpg" in m for m in blockers(run(bundle, manifest), "inventory"))
 
 
 def test_a_stray_file_is_a_note_because_it_would_be_published(bundle, manifest):
@@ -226,7 +242,9 @@ def test_a_replay_on_a_different_map_is_refused(bundle, manifest):
 
 
 def test_a_board_drifted_from_the_map_is_refused(bundle, manifest):
-    edit(bundle / "board.js", '"x": 0.4665', '"x": 0.5000')
+    # Any city's x will do; this used to name a calib_12 coordinate, and the
+    # poster's map has moved since.
+    edit(bundle / "board.js", '"x": 0.12', '"x": 0.5000')
     assert any("drifted" in m for m in blockers(run(bundle, manifest), "board"))
 
 

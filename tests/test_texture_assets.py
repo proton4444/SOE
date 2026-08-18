@@ -18,7 +18,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MAP_TEXTURES = REPO_ROOT / "maps" / "textures"
 WEB_TEXTURES = REPO_ROOT / "webapp" / "static" / "public" / "textures"
-SHARED = ("desert", "hills", "paper", "plain")
+# The tiles the poster's renderer actually loads: the ground's grain, the
+# sheet's tooth, and the water's. desert and hills went with the terrain
+# mounds -- the ground is one grain tile coloured by elevation now, so a tile
+# per terrain label was shipping bytes nothing would ever ask for.
+SHARED = ("paper", "plain", "sea")
 
 
 def _digest(path: Path) -> str:
@@ -40,9 +44,9 @@ def test_shared_texture_tiles_match(name):
 def test_the_poster_ships_exactly_the_shared_tiles():
     """SHARED is the whole list, so the check above cannot miss a tile.
 
-    A fifth tile dropped into the poster's directory without being added here
-    would be unguarded: it could drift from the renderer's copy indefinitely
-    and nothing would say so.
+    A further tile dropped into the poster's directory without being added
+    here would be unguarded: it could drift from the renderer's copy
+    indefinitely and nothing would say so.
     """
     present = sorted(path.stem for path in WEB_TEXTURES.glob("*.jpg"))
     assert present == sorted(SHARED)

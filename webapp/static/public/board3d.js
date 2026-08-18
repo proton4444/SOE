@@ -1,33 +1,47 @@
 /* The Living Atlas — atlas relief board, rendered in three.js.
  *
- * WHAT THIS IS ALLOWED TO DRAW (docs/MARKETING_CLOSED_ALPHA.md, "Visual
- * contract: atlas board"):
+ * WHAT THIS DRAWS (docs/MARKETING_CLOSED_ALPHA.md, "Visual contract: atlas
+ * board", as opened by Amendment 2):
  *
- *   - the twelve cities at their exact x/y under one uniform scale;
- *   - the fourteen roads exactly as listed, weighted by quality;
- *   - around each city a terrain-textured *mound* from its terrain label —
- *     "local relief only";
- *   - empty surrounding space left empty;
+ *   - the twelve cities at their exact x/y under one uniform scale, carrying
+ *     their populations, grid references, terrain, port and magic-free flags;
+ *   - the fourteen roads exactly as listed, weighted by quality, labelled with
+ *     their mileage and movement cost;
+ *   - around each city a terrain-textured *mound* from its terrain label;
+ *   - the landmass the 2D map draws for this map, with its coast and the sea
+ *     outside it, and the three region names;
  *   - and: "The page may rotate or tilt the board."
  *
- * WHAT IT MUST NEVER DRAW: "Inventing coastlines, continents, or elevation the
- * map does not have." So there is no heightfield, no interpolated ground
- * between cities, no shore and no sea. The sheet is a printed board on a table,
- * not a landmass, and it stops at the frame. Every millimetre of elevation in
- * this scene comes from one of twelve `terrain` labels; nothing is invented
- * between them.
+ * THE ONE THING TO KEEP STRAIGHT ABOUT THE COAST. Before Amendment 2 this file
+ * drew twelve mounds on empty paper, because the contract forbade a shoreline
+ * the map does not have. The shoreline is still not surveyed: calib_12.json has
+ * no geography file, so webapp/mapview.py falls back to a padded convex hull of
+ * the road-connected cities and that hull is what both the app and this board
+ * now draw. It is a confine, not a coast. The page says so in the legend, and
+ * scripts/build_public_board.py carries mapview's own polygon across rather
+ * than recomputing a lookalike — so if the app's land ever changes shape, this
+ * board changes with it instead of quietly disagreeing.
  *
- * The mound heights are the terrain labels and nothing else:
+ * Elevation is still only the terrain labels; nothing is interpolated between
+ * cities. The mound heights are the labels and nothing else:
  *   hills -> tall, plain -> low, desert -> lowest and flattest.
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h5";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h28";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
 const SU = 1000;
-const PAD = 105;          // empty margin around the city bounding box
+/* Water margin: how much sea is drawn outside the coast before the sheet
+   ends. It was briefly 150, when the frame was measured from the CITIES and
+   the margin had to be wide enough to cover a coastline that ran past them.
+   The frame is measured from the coast itself now, so this is no longer
+   holding anything in -- it only decides how much open water frames the land.
+   The neatline sits REVEAL + SHEET_INSET = 39 units inside the sheet edge, so
+   anything above that keeps the shore inside the ruling; 90 leaves the vale
+   sitting in water without half the picture being empty sea. */
+const PAD = 54;
 /* Mound footprint, before the merge guard. The game draws a city as a 6-15px
    marker on a 1400px map — about 1% of the width — and everything between the
    cities is road network. Inflated to 72 the mounds swallowed the roads
@@ -73,18 +87,18 @@ const TERRAIN_TINT = {
    becomes one enormous flat mass — 86% of the frame inside a single 32-value
    band — and the mounds have nothing to stand against. Dropping it lets the
    relief be the subject. */
-/* The ground is a printed board, and it must not be water.
+/* The stock the map is printed ON, which is not the same thing as the water.
    An earlier pass copied mapview._background wholesale, which brought the
-   game's `#mapSea` gradient with it — and the contract is explicit: "Empty
-   surrounding space stays empty. No sea, no implied landmass, no invented
-   shore." Navy ground reads as ocean and turns twelve cities into islands, so
-   this is board stock instead. The 48-unit grid stays: a ruled grid is a map
+   game's `#mapSea` gradient with it and made the entire board read as open
+   ocean with twelve islands in it. The sheet is board stock; the sea is a
+   printed layer on top of it, bounded by the coast, and it stops where the
+   land starts. The 48-unit grid rules over both: a graticule is a map
    convention, not a claim about geography.
 
-   calib_12.json contains `cities` and `roads` and nothing else — no coastline,
-   no land polygon, no elevation. The game gets its land for this map from
-   compute_landmasses(), which invents hulls around city clusters. The poster
-   is not allowed to do that, so there is no land here by design. */
+   Amendment 2 brought the land itself. It comes from compute_landmasses(),
+   which hulls the road-connected cities — the same polygon the app draws for
+   this map, carried across rather than recomputed. It is a confine and the
+   legend says so. */
 /* Paper, not mud. The sheet was a mid-tan (#9c9074) barely a step from the
    mound tints sitting on it, so relief and ground shared one value band and
    nothing had an edge. Cream reads as the printed stock it is meant to be and
@@ -100,7 +114,22 @@ const GRID_MAJOR = "rgba(88, 73, 49, 0.62)";
 const NEATLINE = "rgba(74, 61, 40, 0.92)";
 const GRID_STEP = 48;          // board units per grid square, as in mapview
 const GRID_MAJOR_EVERY = 5;    // a heavier rule every fifth square
-const SHEET_INSET = 30;        // board units from sheet edge to the neatline
+// Board units from the sheet edge to the neatline. 14, down from 30: with the
+// water margin at 34 and the reveal taking 9 of it, a 30-unit inset would rule
+// the neatline across the coast itself.
+const SHEET_INSET = 14;
+
+/* Sea, land and coast. Printed colours, not lighting: these are inks on the
+   same plate as the graticule, laid under the ruling the way a printed map
+   puts its water and its land under its grid. The sea is a pale plate blue
+   rather than the game's near-black navy — the board is cream stock seen on a
+   table, and a navy field on cream reads as a hole cut in the paper. */
+const SEA_TINT = 0x9fc4d8;
+const COAST_INK = 0x4a6070;
+/* Warm, not green. This is a section through the ground -- soil and rock
+   under a skin of grass -- and a green wall read as a mossy kerb around the
+   island instead of as the edge of a landmass. */
+const LAND_CLIFF = 0x7d6647;
 const SHEET_EDGE = 0x3a3125;   // binder board under the print, seen at this tilt
 
 /* Roads carry their quality exactly as the game map does, which is the whole
@@ -376,16 +405,27 @@ function glowTexture() {
    min(28, length * 0.08) and picks the side from the road id's character sum,
    which keeps the choice stable across renders — same rule here, off the
    endpoint ids, since the public board has no road ids. */
-function roadRibbon(ax, az, bx, bz, width, key) {
+function roadRibbon(ax, az, bx, bz, width, key, height) {
   const dx = bx - ax, dz = bz - az;
   const len = Math.hypot(dx, dz) || 1;
   let sum = 0;
   for (let i = 0; i < key.length; i++) { sum += key.charCodeAt(i); }
-  const bow = Math.min(28, len * 0.08) * (sum % 2 === 0 ? 1 : -1);
+  /* The bow, much reduced. It was up to 28 units of lateral swing, which on a
+     flat board was pleasant variety -- roads on a map are not drawn ruler
+     straight. Over modelled ground it fights the landscape instead of
+     following it: the curve throws the ribbon across a slope it has no reason
+     to cross, and the result reads as a road that has gone wrong rather than
+     as a road that meanders. 11 units keeps the hand-drawn quality without
+     arguing with the terrain. */
+  const bow = Math.min(11, len * 0.03) * (sum % 2 === 0 ? 1 : -1);
   const cx = (ax + bx) / 2 + (-dz / len) * bow;
   const cz = (az + bz) / 2 + (dx / len) * bow;
 
-  const SEG = 28;
+  /* Sixty-four, up from twenty-eight. The ribbon samples the ground at every
+     vertex, so its segment count is the resolution at which it can follow a
+     hill -- at 28 a long road chorded straight across the valleys between its
+     samples and surfaced through the high ground in between. */
+  const SEG = 64;
   const pos = [], uv = [], idx = [];
   for (let i = 0; i <= SEG; i++) {
     const t = i / SEG, mt = 1 - t;
@@ -395,8 +435,15 @@ function roadRibbon(ax, az, bx, bz, width, key) {
     const tz = 2 * mt * (cz - az) + 2 * t * (bz - cz);
     const tl = Math.hypot(tx, tz) || 1;
     const nx = -tz / tl, nz = tx / tl;
-    pos.push(px + nx * width / 2, 0, pz + nz * width / 2);
-    pos.push(px - nx * width / 2, 0, pz - nz * width / 2);
+    /* Draped, not flat. A road laid at y = 0 across a landscape with 60 units
+       of relief in it disappears into the first hill it meets and floats over
+       the first valley. Each edge of the ribbon is sampled at its own point,
+       so the strip banks with the ground it crosses instead of merely rising
+       with it. */
+    const lx = px + nx * width / 2, lz = pz + nz * width / 2;
+    const rx = px - nx * width / 2, rz = pz - nz * width / 2;
+    pos.push(lx, height(lx, lz), lz);
+    pos.push(rx, height(rx, rz), rz);
     uv.push(t, 1, t, 0);
     if (i < SEG) {
       const b = i * 2;
@@ -560,6 +607,250 @@ function studioEnvironment(renderer) {
 
 /* -------------------------------------------------------------------- board */
 
+/* `terrain` is a list on the map and always has been -- a city may sit on more
+   than one. The board used to receive it flattened to its first entry, so
+   indexing MOUND_H with it worked. It now arrives whole, and `MOUND_H[["plain"]]`
+   still resolves because JS stringifies a one-element array to its element --
+   but `["plain","hills"]` would become the key "plain,hills" and silently miss.
+   The first label is the one the mound is built from; the rest are the city's
+   to report, not the relief's. */
+function primaryTerrain(city) {
+  return Array.isArray(city.terrain) ? city.terrain[0] : city.terrain;
+}
+
+/* "182 · G11 · port · hills" — the same row, in the same order, that
+   webapp/mapview.py prints under a city on a sparse map. A ruin's population
+   is 0 and it says so rather than hiding the number: an abandoned city is a
+   real thing on this board and the zero is the point. */
+/* Emitted as parts rather than one string, so a narrow board can drop the
+   tail of the row in CSS. mapview does the same thing by count -- past
+   _DENSE_CITY_COUNT it stops drawing per-city meta at all, because a reading
+   nobody can read is just ink. Here the board is small rather than crowded,
+   and the first two readings (who lives there, where it is on the grid) are
+   the ones worth keeping. The separator is drawn by CSS between surviving
+   parts, so hiding one cannot leave a stranded middot behind. */
+function cityMetaParts(city) {
+  const parts = [];
+  if (typeof city.population === "number") {
+    parts.push(["pop", String(city.population)]);
+  }
+  if (city.grid_ref) { parts.push(["grid", city.grid_ref]); }
+  if (city.is_ruin) { parts.push(["flag", "ruin"]); }
+  if (city.is_port) { parts.push(["flag", "port"]); }
+  if (city.is_magic_free) { parts.push(["flag", "magic-free"]); }
+  const terrain = Array.isArray(city.terrain) ? city.terrain : [city.terrain];
+  terrain.forEach(function (t) { if (t) { parts.push(["terrain", t]); } });
+  return parts;
+}
+
+/* --- elevation ------------------------------------------------------------
+
+   READ THIS BEFORE TRUSTING A CONTOUR. `calib_12.json` has twelve terrain
+   LABELS and no elevation whatsoever -- no mesh, no heightfield, not a single
+   spot height. What follows interpolates a surface from those twelve labels
+   and adds fractal detail to it, which means every slope between two cities is
+   a plausible invention and not a survey. It is the same bargain the coastline
+   already struck, one step further in: draw the thing the game implies, and
+   say plainly that it is implied. Amendment 3 in docs/MARKETING_CLOSED_ALPHA.md
+   records it and the legend says it on the page.
+
+   What IS data: which of the twelve cities stands on hills, on plain, on
+   desert. A reader who sees high ground under Drelerford and Dunaen is reading
+   the map correctly. A reader who counts the ridges between them is not. */
+/* Hypsometric tints, the relief convention: lowland green through upland
+   ochre to bare rock. Interpolated by height, so the colour is a reading of
+   the surface rather than a second opinion about it. */
+/* The land ramp. Two changes from the flat version that did most of the work:
+   a strand at the very bottom, so the ground meets the water on sand rather
+   than by a green line stopping; and a wider spread of both value and hue
+   through the middle, because a landscape whose whole range is four steps of
+   one yellow-green reads as a painted board however well it is modelled. */
+const HYPSO = [
+  [0.000, [0.78, 0.71, 0.52]],  // strand
+  [0.030, [0.62, 0.62, 0.40]],
+  [0.075, [0.33, 0.46, 0.24]],  // coastal green, and the deepest green here
+  [0.230, [0.40, 0.50, 0.25]],
+  [0.420, [0.55, 0.54, 0.28]],
+  [0.620, [0.64, 0.49, 0.27]],  // upland ochre
+  [0.820, [0.53, 0.39, 0.28]],
+  [1.000, [0.52, 0.47, 0.43]]   // bare rock
+];
+
+/* The water ramp, shallow to deep, plus the surf line where it meets land.
+   Graded from the baked `sea` channel rather than painted as one tint: an
+   even sheet of blue is the flattest thing that can be put next to a relief,
+   and it was undoing the modelling beside it. */
+const SEA_SHALLOW = [0.53, 0.76, 0.78];
+const SEA_DEEP = [0.13, 0.31, 0.49];
+const SEA_SURF = [0.86, 0.92, 0.90];
+/* The ground below the waterline. It is never seen -- the water above it is
+   opaque -- but it is what the shore fades into at the very edge, so it is a
+   wet sand rather than a colour that would fringe the beach if it showed. */
+const SEABED_TINT = [0.55, 0.53, 0.42];
+
+/* Elevation is read against a fixed scale, not against this map's own tallest
+   point. Normalising by the observed peak means whatever happens to be
+   highest is always painted as a summit -- so a vale whose boldest feature is
+   hill country came out capped in pale grey, and the hills read as cloud
+   sitting on the board rather than as ground. Against a fixed ceiling, a map
+   of plains stays green, hills reach ochre, and only a map that really has
+   mountains on it ever gets bare rock. */
+/* Read against the elevation's own recorded ceiling rather than a number
+   pinned here. The generator now normalises every map to the same fraction of
+   its frame, so max_height IS the top of the ramp by construction -- and a
+   constant in this file would only be a second opinion about it, wrong the
+   moment a map or the target changes. */
+
+function hypso(t) {
+  const u = Math.min(1, Math.max(0, t));
+  for (let i = 1; i < HYPSO.length; i++) {
+    if (u <= HYPSO[i][0]) {
+      const a = HYPSO[i - 1], b = HYPSO[i];
+      const k = (u - a[0]) / (b[0] - a[0] || 1);
+      return [a[1][0] + (b[1][0] - a[1][0]) * k,
+              a[1][1] + (b[1][1] - a[1][1]) * k,
+              a[1][2] + (b[1][2] - a[1][2]) * k];
+    }
+  }
+  return HYPSO[HYPSO.length - 1][1];
+}
+
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+/* --- settlements -----------------------------------------------------------
+
+   A city was a ring drawn on the ground, which on a board that now has a
+   modelled landscape underneath it reads as a stain rather than a town. These
+   are built objects: a walled platform, a handful of roofed houses, and a keep
+   with a spire, so that "here is a city" is carried by a silhouette instead of
+   by a label pointing at a circle.
+
+   Stylised on purpose, and generously out of scale. At true size a town on a
+   784-mile vale is a speck; these are map furniture in the tradition of the
+   little drawn towns on an estate map, sized to be recognised at a glance and
+   from across the board.
+
+   Every arrangement is seeded from the city's own id, so a town keeps its own
+   plan between reloads and no two look alike. */
+const CITY_STONE = 0xd8cdb4;   // lime-washed wall
+const CITY_ROOF = 0xa2543a;    // terracotta
+const CITY_KEEP = 0xc3b79c;
+const CITY_SPIRE = 0x4c5560;   // slate
+const CITY_RUIN = 0x9a9180;    // bare stone, no roof left to lose
+
+function houseAt(group, x, z, w, d, h, rot, mats) {
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats.wall);
+  body.position.set(x, h / 2, z);
+  body.rotation.y = rot;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  if (!mats.roof) { return; }
+  /* A four-sided pyramid, which is a cone with four segments -- cheaper than
+     modelling a hip roof and reads as one at this size. Terracotta against
+     green ground is what makes the settlements findable on a full board. */
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(Math.max(w, d) * 0.78, h * 0.62, 4),
+    mats.roof);
+  roof.position.set(x, h + h * 0.31, z);
+  roof.rotation.y = rot + Math.PI / 4;
+  roof.castShadow = true;
+  group.add(roof);
+}
+
+/* Settlement size by population band, the way mapview sizes its city dots.
+   This was dead weight while the board was pinned to a map whose twelve cities
+   were all "< 1k" -- one tier, so every town came out the same and the reader
+   learned nothing from the size. On a map with all four bands it is the
+   cheapest information on the board: a capital of a million looks like one
+   next to a hamlet, without either needing to be read. */
+const BAND_SCALE = {
+  "100k+": 1.55,
+  "10k-99k": 1.24,
+  "1k-9k": 1.02,
+  "< 1k": 0.84
+};
+const BAND_HOUSES = {
+  "100k+": 9,
+  "10k-99k": 7,
+  "1k-9k": 5,
+  "< 1k": 4
+};
+
+function settlement(city, radius, seed, mats) {
+  const group = new THREE.Group();
+  const rnd = mulberry32(seed);
+  const ruin = !!city.is_ruin;
+  const band = BAND_SCALE[city.population_band] || 1;
+  const scale = (radius / 30) * 1.3 * band;
+
+  /* The platform the town stands on. It is also what levels the eye: the
+     ground is flattened under a city anyway, and a low stone plinth explains
+     why instead of leaving a suspiciously flat patch of hillside. */
+  const plinth = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.62 * band, radius * 0.70 * band, 3.4, 18),
+    ruin ? mats.ruin : mats.keep);
+  plinth.position.y = 1.7;
+  plinth.receiveShadow = true;
+  plinth.castShadow = true;
+  group.add(plinth);
+
+  const houses = ruin
+    ? 3
+    : (BAND_HOUSES[city.population_band] || 5) + Math.floor(rnd() * 3) - 1;
+  const spin = rnd() * Math.PI * 2;
+  for (let i = 0; i < houses; i++) {
+    const a = spin + (i / houses) * Math.PI * 2 + (rnd() - 0.5) * 0.5;
+    const ring = radius * band * (0.30 + rnd() * 0.20);
+    const w = (7 + rnd() * 4) * scale;
+    const d = (6 + rnd() * 3) * scale;
+    const h = (ruin ? 4 + rnd() * 3 : 8 + rnd() * 5) * scale;
+    houseAt(group, Math.cos(a) * ring, Math.sin(a) * ring, w, d, h,
+            a + (rnd() - 0.5) * 0.6,
+            ruin ? { wall: mats.ruin } : { wall: mats.wall, roof: mats.roof });
+  }
+
+  /* The keep, and the reason a city reads as a city from any angle: one
+     vertical element taller than everything around it. A ruin gets a broken
+     stump of the same thing, which is the same silhouette with the top
+     knocked off -- recognisably the same kind of place, recognisably finished
+     with. */
+  const keepH = (ruin ? 11 : 21) * scale;
+  const keep = new THREE.Mesh(
+    new THREE.CylinderGeometry(7.4 * scale, 8.6 * scale, keepH, ruin ? 7 : 12),
+    ruin ? mats.ruin : mats.keep);
+  keep.position.y = 3.4 + keepH / 2;
+  keep.castShadow = true;
+  keep.receiveShadow = true;
+  if (ruin) { keep.rotation.z = 0.07; }   // leaning, because it is falling down
+  group.add(keep);
+
+  if (!ruin) {
+    const spire = new THREE.Mesh(
+      new THREE.ConeGeometry(9.6 * scale, 15 * scale, 12), mats.spire);
+    spire.position.y = 3.4 + keepH + 7.5 * scale;
+    spire.castShadow = true;
+    group.add(spire);
+  }
+
+  /* A pier for a port. Two harbours on this map and nothing on the board said
+     so except a word in a data row and a ring on the ground; a jetty running
+     off the platform says it in the silhouette. */
+  if (city.is_port) {
+    const pier = new THREE.Mesh(
+      new THREE.BoxGeometry(radius * 1.5, 2.6, 5.2 * scale), mats.keep);
+    const a = rnd() * Math.PI * 2;
+    pier.position.set(Math.cos(a) * radius * 0.95, 1.6, Math.sin(a) * radius * 0.95);
+    pier.rotation.y = a;
+    pier.castShadow = true;
+    pier.receiveShadow = true;
+    group.add(pier);
+  }
+
+  return group;
+}
+
 export function createBoard(options) {
   const canvas = options.canvas;
   const labelHost = options.labelHost;
@@ -572,20 +863,198 @@ export function createBoard(options) {
   const cityById = {};
   cities.forEach(function (c) { cityById[c.id] = c; });
 
-  /* --- frame: cropped to the city bounding box plus one margin, so there is
-         no dead space and no room to imply a coastline. */
-  const xs = cities.map(function (c) { return c.x * SU; });
-  const ys = cities.map(function (c) { return c.y * SU; });
-  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-  const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+  /* --- frame.
+
+     The scale is mapview's, not a square. A 0..1 fraction means a different
+     number of miles on each axis (the field is 1300x1000) AND the app draws
+     that field into a 1180x680 frame, so the arrangement a coach knows is
+     wider than it is tall by more than either ratio alone. Multiplying both
+     fractions by one constant -- which is what this did -- rendered the world
+     23% too narrow for its height and made the board and the app read as two
+     different places. `frame_units` carries the app's extents across and the
+     cities land on the app's own arrangement.
+
+     Normalised on the geometric mean so the frame's AREA stays what it was.
+     Every tuned constant below -- mound footprints, the merge guard, road
+     widths, token sizes, camera margins -- was fitted against a board about
+     1000 units across, and rescaling the shape should not silently rescale
+     all of them too. */
+  const frameUnits = options.frameUnits || [SU, SU];
+  const NORM = SU / Math.sqrt(frameUnits[0] * frameUnits[1]);
+  const FX = frameUnits[0] * NORM;
+  const FY = frameUnits[1] * NORM;
+
+  /* The extent now includes the coast, not just the cities. The land is the
+     subject of the picture; framing to the cities alone would run the
+     shoreline off every edge, and the camera fits these same bounds. */
+  const hullMasses = (options.landmasses || []).filter(function (mass) {
+    return mass.hull && mass.hull.length >= 3;
+  });
+  const extentX = cities.map(function (c) { return c.x * FX; });
+  const extentY = cities.map(function (c) { return c.y * FY; });
+  hullMasses.forEach(function (mass) {
+    mass.hull.forEach(function (point) {
+      extentX.push(point[0] * FX);
+      extentY.push(point[1] * FY);
+    });
+  });
+
+  const minX = Math.min.apply(null, extentX), maxX = Math.max.apply(null, extentX);
+  const minY = Math.min.apply(null, extentY), maxY = Math.max.apply(null, extentY);
   const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
   const sheetW = (maxX - minX) + 2 * PAD;
   const sheetD = (maxY - minY) + 2 * PAD;
   const span = Math.max(sheetW, sheetD);
 
-  // Map coordinates are y-down; the scene is z-in. One uniform scale, centred.
-  function worldX(fx) { return fx * SU - midX; }
-  function worldZ(fy) { return fy * SU - midY; }
+  // Map coordinates are y-down; the scene is z-in.
+  function worldX(fx) { return fx * FX - midX; }
+  function worldZ(fy) { return fy * FY - midY; }
+
+  /* --- the ground.
+
+     Elevation is not computed here. `scripts/build_elevation.py` bakes it to a
+     grid over the map's own frame and ships it as ATLAS_ELEVATION -- one byte
+     per cell against a recorded ceiling -- and this samples it. The model, its
+     inputs, and the fact that it is invented rather than surveyed are all
+     documented there.
+
+     Baked rather than computed for three reasons: it is the same terrain on
+     every machine, which a JS implementation could promise and would
+     eventually break; it is diffable and a test regenerates it; and the work
+     happens once at build time instead of on a phone. */
+  const elevation = options.elevation || null;
+  let elevBytes = null;
+  let seaBytes = null;
+  function decodeChannel(b64) {
+    const raw = atob(b64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) { out[i] = raw.charCodeAt(i); }
+    return out;
+  }
+  if (elevation && elevation.data) { elevBytes = decodeChannel(elevation.data); }
+  if (elevation && elevation.sea) { seaBytes = decodeChannel(elevation.sea); }
+
+  // How far offshore a point is, 0 at the coast and 1 at open sea.
+  function sampleSea(fx, fy) {
+    if (!seaBytes) { return 1; }
+    const w = elevation.width, h = elevation.height;
+    const gx = Math.min(w - 1, Math.max(0, fx * (w - 1)));
+    const gy = Math.min(h - 1, Math.max(0, fy * (h - 1)));
+    const x0 = Math.floor(gx), y0 = Math.floor(gy);
+    const x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1);
+    const tx = gx - x0, ty = gy - y0;
+    const a = seaBytes[y0 * w + x0], b = seaBytes[y0 * w + x1];
+    const c = seaBytes[y1 * w + x0], d = seaBytes[y1 * w + x1];
+    const top = a + (b - a) * tx;
+    const bot = c + (d - c) * tx;
+    return (top + (bot - top) * ty) / 255;
+  }
+
+  /* Bilinear, not nearest. The grid is one sample every ~4.6 units and the
+     mesh built from it is finer than that, so nearest-neighbour would render
+     the board as a field of 4.6-unit plateaux -- and the contour shader,
+     which reads height directly, would draw a rectangle around every one. */
+  function sampleElevation(fx, fy) {
+    if (!elevBytes) { return 0; }
+    const w = elevation.width, h = elevation.height;
+    const gx = Math.min(w - 1, Math.max(0, fx * (w - 1)));
+    const gy = Math.min(h - 1, Math.max(0, fy * (h - 1)));
+    const x0 = Math.floor(gx), y0 = Math.floor(gy);
+    const x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1);
+    const tx = gx - x0, ty = gy - y0;
+    const a = elevBytes[y0 * w + x0], b = elevBytes[y0 * w + x1];
+    const c = elevBytes[y1 * w + x0], d = elevBytes[y1 * w + x1];
+    const top = a + (b - a) * tx;
+    const bot = c + (d - c) * tx;
+    /* Above the waterline, which is this scene's y = 0. The grid carries the
+       seabed as well as the land now -- the coast is where the surface crosses
+       sea level, not a polygon -- so a sample offshore is legitimately
+       negative and the callers want it that way: the terrain mesh needs it to
+       put its own edge underwater. */
+    const raw = (top + (bot - top) * ty) / 255 * elevation.scale;
+    return raw - elevation.sea_level;
+  }
+
+  // Hull in world units, for the shore ring the terrain mesh is clipped to.
+  /* The hull, pushed outward, used only to bound the mesh.
+
+     It is not the coastline any more -- the coastline is where the ground
+     crosses sea level, and the generator perturbs it by up to COAST_WOBBLE so
+     it can wander outside the hull as readily as inside. Clipping the mesh to
+     the hull itself would cut the wandering shore back to a straight line
+     exactly where it is meant to meander. Expanded, the clip lands well under
+     water, where opaque sea hides the one straight edge left in the scene. */
+  /* How far the ground descends below the waterline, from the generator's own
+     figure rather than a constant here. */
+  const seabedFloor = (elevation && elevation.sea_level) || 30;
+
+  /* Enough for the outward half of the coast wobble and the shelf behind it,
+     and no more. It is paired with PAD: the sheet's margin must exceed this or
+     the mesh runs off the print, which is a containment the rect clip below
+     should never actually be called on to enforce. */
+  const CLIP_MARGIN = 40;
+  const shore = [];
+  hullMasses.forEach(function (mass) {
+    const pts = mass.hull.map(function (pt) {
+      return [worldX(pt[0]), worldZ(pt[1])];
+    });
+    let cx = 0, cz = 0;
+    pts.forEach(function (pt) { cx += pt[0]; cz += pt[1]; });
+    cx /= pts.length; cz /= pts.length;
+    shore.push(pts.map(function (pt) {
+      const dx = pt[0] - cx, dz = pt[1] - cz;
+      const len = Math.hypot(dx, dz) || 1;
+      return [pt[0] + dx / len * CLIP_MARGIN, pt[1] + dz / len * CLIP_MARGIN];
+    }));
+  });
+
+  function insideRing(ring, px, pz) {
+    let hit = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a[1] > pz) !== (b[1] > pz) &&
+          px < (b[0] - a[0]) * (pz - a[1]) / (b[1] - a[1]) + a[0]) {
+        hit = !hit;
+      }
+    }
+    return hit;
+  }
+
+  /* Every settlement levels the ground it stands on. This is not decoration:
+     a city's rim, ownership ring and harbour ring are flat discs, and a flat
+     disc on a slope is half-buried -- twelve cities came out as twelve half
+     moons. Real towns sit on levelled sites for the same reason, so the
+     terrain is flattened toward the site height inside the marker's radius
+     and eased back out over twice that. Roads leaving a city start level
+     with it too, which is what stops them diving into the first slope. */
+  /* Site radius per city, not one number for all of them. A constant 46 was
+     tuned when every town on the board was the same size; on a map with four
+     population bands it levels the same broad platter under a capital and
+     under a dead hamlet, and beside a hillside the small ones read as machined
+     discs lying on the ground. It scales with the settlement that stands on
+     it, which is the thing it exists to seat. */
+  let siteHeights = null;
+
+  function rawHeight(px, pz) {
+    // World back to the 0..1 fractions the grid is indexed by.
+    return sampleElevation((px + midX) / FX, (pz + midY) / FY);
+  }
+
+  function groundHeight(px, pz) {
+    const raw = rawHeight(px, pz);
+    if (!siteHeights) { return raw; }
+    let out = raw;
+    for (let i = 0; i < siteHeights.length; i++) {
+      const site = siteHeights[i];
+      const d = Math.hypot(px - site.x, pz - site.z);
+      if (d >= site.r * 2) { continue; }
+      // Flat inside the marker, easing back to the landscape outside it.
+      const k = d <= site.r ? 1 : 1 - smoothstep((d - site.r) / site.r);
+      out = out + (site.h - out) * k;
+    }
+    return out;
+  }
+
 
   /* The merge guard. "Local relief only. No interpolated continent between
      cities" is a property of the footprint, not of good intentions: two mounds
@@ -610,11 +1079,27 @@ export function createBoard(options) {
     cities.forEach(function (o) {
       if (o === c) { return; }
       nearest = Math.min(nearest,
-        Math.hypot((c.x - o.x) * SU, (c.y - o.y) * SU));
+        Math.hypot((c.x - o.x) * FX, (c.y - o.y) * FY));
     });
     radiusById[c.id] = Math.min(DISK_R_MAX, nearest * 0.46);
   });
   function cityRadius(city) { return radiusById[city.id] || 30; }
+
+  /* Sited here, not where groundHeight is defined, and the ordering matters:
+     the levelling radius is derived from cityRadius, which reads radiusById --
+     a const declared just above. Computing the sites earlier put that read
+     inside the temporal dead zone, which is a ReferenceError at load and a
+     blank board, not a subtle wrong number. */
+  siteHeights = cities.map(function (c) {
+    const cx = worldX(c.x), cz = worldZ(c.y);
+    const band = BAND_SCALE[c.population_band] || 1;
+    return {
+      x: cx, z: cz, h: rawHeight(cx, cz),
+      // Just past the plinth the town stands on, floored so the smallest
+      // settlement still gets level ground under its markers.
+      r: Math.max(20, cityRadius(c) * band * 0.78)
+    };
+  });
   const maxRadius = Math.max.apply(null, cities.map(cityRadius));
 
   /* --- renderer */
@@ -689,7 +1174,7 @@ export function createBoard(options) {
   // Pulled back now that scene.environment carries the ambient term; at 0.85
   // on top of an environment the shaded faces filled in and the relief went
   // flat again.
-  scene.add(new THREE.HemisphereLight(0x86b6ff, 0x40301c, 0.30));
+  scene.add(new THREE.HemisphereLight(0x8fbcff, 0x453320, 0.34));
 
   /* A spot, not a directional. The board is 94% flat plane, and a directional
      light shades a flat plane to a single value everywhere — which is exactly
@@ -705,8 +1190,14 @@ export function createBoard(options) {
   // terrain the same colour and is half the reason the board read as brown.
   // Tighter than the sheet, on purpose: the cone has to fall off inside the
   // frame or there is no pool, only an evenly lit rectangle.
-  const key = new THREE.SpotLight(0xfffaf0, 4.6, 0, 0.60, 0.92, 0);
-  key.position.set(-span * 0.42, span * 1.02, span * 0.36);
+  /* Lowered and swung round, so it rakes. At span*1.02 the key was almost
+     overhead, and an overhead light on gently modelled ground lights every
+     slope alike -- which is why an elevation model with 157 units of relief in
+     it kept reading as a painted flat. Dropping the lamp to 0.62 lengthens
+     every shadow on the terrain and is what makes the hills look like hills.
+     Intensity up a little to pay for the shallower angle. */
+  const key = new THREE.SpotLight(0xfff4e2, 5.4, 0, 0.62, 0.90, 0);
+  key.position.set(-span * 0.60, span * 0.62, span * 0.44);
   key.target.position.set(0, 0, 0);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -812,7 +1303,7 @@ export function createBoard(options) {
      occupies one place twice. */
   const board = new THREE.Mesh(
     new THREE.BoxGeometry(sheetW, SHEET_T, sheetD), edgeMat);
-  board.position.y = -PLATE_T - SHEET_T / 2;
+  board.position.y = -seabedFloor - PLATE_T - SHEET_T / 2;
   board.receiveShadow = true;
   board.castShadow = true;              // onto the table, below
   scene.add(board);
@@ -838,15 +1329,318 @@ export function createBoard(options) {
     [plateSideMat, plateSideMat, plateTopMat,
      plateSideMat, plateSideMat, plateSideMat]
   );
-  plate.position.y = -PLATE_T / 2;          // its printed face stays at y = 0
+  /* Below the seabed, not below the land. y = 0 is the waterline now and the
+     ground descends past it; a plate at the old depth would surface through
+     the sea floor. */
+  plate.position.y = -seabedFloor - PLATE_T / 2;
   plate.receiveShadow = true;
   scene.add(plate);
 
-  // The ruling stops at the neatline, as it does on a printed plate.
+  /* --- sea, land and coast, printed on the plate under the ruling.
+
+     Layering here is by renderOrder and a fraction of a unit of height, the
+     same scheme the roads use: the plate's printed face is y = 0, the
+     graticule rules at 0.3, road casing at 0.7, road ink at 0.9. Sea and land
+     go below all of it so the grid crosses them, which is what a printed map
+     does. depthWrite stays off so nothing in this stack z-fights with the
+     coplanar layer above it.
+
+     The hull arrives in the same 0..1 fractions the cities use, already
+     mapped out of mapview's SVG frame by scripts/build_public_board.py. It is
+     a road-connectivity confine and not a survey; see the file header. */
+  const landHull = (options.landmasses || []).filter(function (mass) {
+    return mass.hull && mass.hull.length >= 3;
+  });
+  let terrainPeak = 0;   // tallest ground, so the camera can frame the tops
+
+  const ruledHalfW = (sheetW - REVEAL * 2) / 2 - SHEET_INSET;
+  const ruledHalfD = (sheetD - REVEAL * 2) / 2 - SHEET_INSET;
+
+  if (landHull.length) {
+    const seaTex = loader.load("textures/sea.jpg");
+    seaTex.colorSpace = THREE.SRGBColorSpace;
+    seaTex.wrapS = seaTex.wrapT = THREE.RepeatWrapping;
+    seaTex.repeat.set((sheetW - REVEAL * 2) / 300, (sheetD - REVEAL * 2) / 300);
+    seaTex.anisotropy = ANISO;
+
+    /* Sea first, over the whole ruled field. Land is then printed on top of
+       it, so the water needs no hole cut in it -- one fewer polygon operation
+       to get wrong, and the coast stays exactly the hull's own edge.
+
+       Subdivided, so it can be graded. A single quad can only carry one
+       colour across its whole face; 96x56 gives the ramp from surf to open
+       water enough vertices to be a gradient rather than a step. */
+    /* Sized to the PLATE, not to the neatline. With the water margin cut to 34
+       the ruled field ends about 11 units past the coast, so a sea drawn only
+       inside the neatline was a thin blue ribbon with a wide band of bright
+       cream plate outside it -- and the brightest thing in the frame was the
+       mount rather than the map. The water now runs to the edge of the print
+       and the neatline is ruled across it, which is what a chart does. */
+    const seaHalfW = (sheetW - REVEAL * 2) / 2;
+    const seaHalfD = (sheetD - REVEAL * 2) / 2;
+    const seaGeo = new THREE.PlaneGeometry(seaHalfW * 2, seaHalfD * 2, 96, 56);
+    const seaPos = seaGeo.attributes.position;
+    const seaCol = [];
+    for (let i = 0; i < seaPos.count; i++) {
+      // Plane is built in XY and laid flat later, so its local y is world -z.
+      const wx = seaPos.getX(i);
+      const wz = -seaPos.getY(i);
+      const t = sampleSea((wx + midX) / FX, (wz + midY) / FY);
+      /* Surf first: a narrow pale band hugging the coast, which is what makes
+         an edge read as a shoreline rather than as two colours meeting. Then
+         shallow to deep across the rest. */
+      const surf = 1 - smoothstep(Math.min(1, t / 0.09));
+      const depth = smoothstep(Math.min(1, Math.max(0, (t - 0.06) / 0.94)));
+      for (let c = 0; c < 3; c++) {
+        const water = SEA_SHALLOW[c] + (SEA_DEEP[c] - SEA_SHALLOW[c]) * depth;
+        seaCol.push(water + (SEA_SURF[c] - water) * surf * 0.75);
+      }
+    }
+    seaGeo.setAttribute("color", new THREE.Float32BufferAttribute(seaCol, 3));
+
+    const sea = new THREE.Mesh(
+      seaGeo,
+      /* Opaque, and it writes depth. An earlier pass had the sea transparent
+         and the land not, which put them in different render queues: three.js
+         draws every opaque object before any transparent one, so renderOrder
+         never got a vote and the water painted over the land on every frame.
+         Two opaque layers a tenth of a unit apart let the depth buffer settle
+         it, which it does correctly and for free. */
+      /* Smoother than the land, and it takes the environment. Water is the one
+         surface in this scene that should carry a highlight -- it is what
+         separates a sea from a blue floor. */
+      new THREE.MeshStandardMaterial({
+        vertexColors: true, roughnessMap: seaTex, roughness: 0.42,
+        metalness: 0.05, envMapIntensity: 0.85
+      })
+    );
+    sea.rotation.x = -Math.PI / 2;
+    /* At the waterline, which is y = 0 -- the elevation grid is shipped
+       relative to it. A hair above, so a beach flat to within a rounding
+       error resolves as sand rather than as z-fighting. */
+    sea.position.y = 0.15;
+    sea.renderOrder = -3;
+    sea.receiveShadow = true;
+    scene.add(sea);
+
+    landHull.forEach(function (mass) {
+      /* No cliff, and no drawn coastline.
+
+         Both are gone for the same reason, and it is the whole point of this
+         change: they were polygons. The skirt hung from the hull and the ink
+         line traced it, so a four-point hull produced a four-sided island with
+         four straight cliffs, and no amount of lighting or colour was going to
+         make that read as a shore.
+
+         The coast is now where the ground crosses sea level. It is an
+         intersection, it has bays and headlands because the height field does,
+         and there is nothing to draw: the water is opaque and simply covers
+         whatever is below it. What used to be a cliff is a beach. */
+
+      /* --- the ground surface itself.
+
+         The extruded body above is the island's base and its cliff; this is
+         the land ON it. A grid is laid over the mass's bounding box, every
+         vertex lifted to groundHeight, and any cell whose centre falls outside
+         the shore is clipped to it. Because the height falls to zero at the
+         coastline and the clipped fragments put their vertices exactly on the
+         hull, this surface and the cliff skirt below it share one edge.
+
+         Coloured by height rather than by texture. Twelve terrain labels
+         cannot paint a continent, but an elevation can read itself: low ground
+         green, upland ochre, the tops bare. */
+      const landTex = terrainMap("plain");
+      const bounds = shore[hullMasses.indexOf(mass)].reduce(function (acc, pt) {
+        return [Math.min(acc[0], pt[0]), Math.min(acc[1], pt[1]),
+                Math.max(acc[2], pt[0]), Math.max(acc[3], pt[1])];
+      }, [Infinity, Infinity, -Infinity, -Infinity]);
+
+      const STEP = 7;
+      const cols = Math.ceil((bounds[2] - bounds[0]) / STEP) + 1;
+      const rows = Math.ceil((bounds[3] - bounds[1]) / STEP) + 1;
+      const shoreRing = shore[hullMasses.indexOf(mass)];
+
+      const gPos = [], gCol = [], gUv = [], gIdx = [];
+      let peak = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const px = bounds[0] + c * STEP;
+          const pz = bounds[1] + r * STEP;
+          const h = groundHeight(px, pz);
+          if (h > peak) { peak = h; }
+          gPos.push(px, h, pz);
+          gUv.push(px / 300, pz / 300);
+          gCol.push(0, 0, 0);          // filled once the peak is known
+        }
+      }
+      /* Cells are clipped to the shore, not merely dropped. Dropping whole
+         cells left the coastline as a flight of 7-unit stairs -- the grid's
+         edge, showing against the flat cap beneath it, in a place where the
+         board has already promised the reader an exact hull. Sutherland-
+         Hodgman against the shore ring gives each boundary cell its true
+         shape, and those fragments are fanned into triangles and appended as
+         loose vertices. The interior is still the cheap regular grid. */
+      function clipToShore(poly, ring) {
+        let out = poly;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          if (!out.length) { return out; }
+          const ax = ring[j][0], az = ring[j][1];
+          const bx = ring[i][0], bz = ring[i][1];
+          // Positive side of the directed edge; the ring is convex here.
+          const side = function (px, pz) {
+            return (bx - ax) * (pz - az) - (bz - az) * (px - ax);
+          };
+          const input = out;
+          out = [];
+          for (let k = 0; k < input.length; k++) {
+            const cur = input[k], prv = input[(k + input.length - 1) % input.length];
+            const dc = side(cur[0], cur[1]), dp = side(prv[0], prv[1]);
+            if (dc >= 0) {
+              if (dp < 0) {
+                const t = dp / (dp - dc);
+                out.push([prv[0] + (cur[0] - prv[0]) * t,
+                          prv[1] + (cur[1] - prv[1]) * t]);
+              }
+              out.push(cur);
+            } else if (dp >= 0) {
+              const t = dp / (dp - dc);
+              out.push([prv[0] + (cur[0] - prv[0]) * t,
+                        prv[1] + (cur[1] - prv[1]) * t]);
+            }
+          }
+        }
+        return out;
+      }
+
+      // The ring must wind consistently for the half-plane test above.
+      let area2 = 0;
+      for (let i = 0, j = shoreRing.length - 1; i < shoreRing.length; j = i++) {
+        area2 += shoreRing[j][0] * shoreRing[i][1] - shoreRing[i][0] * shoreRing[j][1];
+      }
+      const windRing = area2 < 0 ? shoreRing.slice().reverse() : shoreRing;
+
+      /* Clipped to the printed sheet as well as to the shore.
+
+         The clip ring is pushed CLIP_MARGIN past the hull so the wandering
+         coast is never cut back to a straight line -- but the sheet's own
+         margin is smaller than that, so the seabed ran off the edge of the
+         board and hung in the air beyond it, in full view, because the water
+         that is supposed to hide it stops at the print. Cells outside the
+         plate are dropped. The straight edge that leaves is deep offshore and
+         under opaque water, which is the one place a straight edge does no
+         harm. */
+      const plateHalfW = (sheetW - REVEAL * 2) / 2;
+      const plateHalfD = (sheetD - REVEAL * 2) / 2;
+
+      for (let r = 0; r < rows - 1; r++) {
+        for (let c = 0; c < cols - 1; c++) {
+          const x0 = bounds[0] + c * STEP, x1 = x0 + STEP;
+          const z0 = bounds[1] + r * STEP, z1 = z0 + STEP;
+          if (x1 < -plateHalfW || x0 > plateHalfW ||
+              z1 < -plateHalfD || z0 > plateHalfD) { continue; }
+          const corners = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+          const allIn = corners.every(function (pt) {
+            return insideRing(windRing, pt[0], pt[1]);
+          });
+
+          if (allIn) {
+            const a = r * cols + c, b = a + 1;
+            const d = (r + 1) * cols + c, e = d + 1;
+            gIdx.push(a, d, b, b, d, e);
+            continue;
+          }
+
+          const frag = clipToShore(corners, windRing);
+          if (frag.length < 3) { continue; }
+          const base = gPos.length / 3;
+          frag.forEach(function (pt) {
+            const h = groundHeight(pt[0], pt[1]);
+            if (h > peak) { peak = h; }
+            gPos.push(pt[0], h, pt[1]);
+            gUv.push(pt[0] / 300, pt[1] / 300);
+            gCol.push(0, 0, 0);
+          });
+          for (let f = 1; f + 1 < frag.length; f++) {
+            gIdx.push(base, base + f + 1, base + f);
+          }
+        }
+      }
+
+      /* Hypsometric tint needs the full range, so colour is a second pass --
+         and it has to run after the clipped shore fragments have been added,
+         or they arrive black. */
+      for (let i = 0; i < gPos.length / 3; i++) {
+        /* Colour by height above the waterline. Below it the ramp has nothing
+           to say, so the seabed takes its own tone instead of being painted
+           with the bottom of the land ramp, which would put a green fringe in
+           the surf. */
+        const y = gPos[i * 3 + 1];
+        const tint = y <= 0
+          ? SEABED_TINT
+          : hypso(y / (elevation ? elevation.max_height : 1));
+        gCol[i * 3] = tint[0];
+        gCol[i * 3 + 1] = tint[1];
+        gCol[i * 3 + 2] = tint[2];
+      }
+
+      if (gIdx.length) {
+        const gGeo = new THREE.BufferGeometry();
+        gGeo.setAttribute("position", new THREE.Float32BufferAttribute(gPos, 3));
+        gGeo.setAttribute("color", new THREE.Float32BufferAttribute(gCol, 3));
+        gGeo.setAttribute("uv", new THREE.Float32BufferAttribute(gUv, 2));
+        gGeo.setIndex(gIdx);
+        gGeo.computeVertexNormals();
+
+        /* No colour map. The grain jpgs are near-white greyscale, so
+           multiplying the hypsometric tint by one washed the whole landscape
+           to cream and the relief lost the only cue it had left. The tint IS
+           the surface colour; the jpg is demoted to roughness, where it gives
+           the ground a tooth without touching its hue. */
+        /* Contoured. The shader was written for the mounds and outlived them,
+           and it belongs here far more: a relief map draws contours because
+           shading alone cannot tell a reader whether a slope runs up or down,
+           and on a board lit by one soft key that ambiguity is most of the
+           surface. Twelve units a line, every fifth heavier, which puts eight
+           or nine lines on the tallest ground and none on the flats. */
+        const ground = new THREE.Mesh(gGeo, applyContours(
+          new THREE.MeshStandardMaterial({
+            vertexColors: true, roughnessMap: landTex, roughness: 0.98,
+            metalness: 0, envMapIntensity: 0.20, flatShading: false
+          }), 12));
+        ground.castShadow = true;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        terrainPeak = Math.max(terrainPeak, peak);
+      }
+
+      /* The coastline itself, inked. A fill against a fill has no edge of its
+         own at this size -- the same reason the roads carry a casing. */
+      const ring = [];
+      mass.hull.forEach(function (point) {
+        ring.push(new THREE.Vector3(worldX(point[0]), 0.30, worldZ(point[1])));
+      });
+      const coast = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(ring),
+        new THREE.LineBasicMaterial({
+          color: COAST_INK, transparent: true, opacity: 0.75,
+          depthWrite: false
+        })
+      );
+      coast.renderOrder = -1;
+      scene.add(coast);
+    });
+  }
+
+  /* The ruling stops at the neatline, as it does on a printed plate -- and it
+     now rules the WATER. When the land was a printed fill the grid crossed
+     both, which is what a flat map does. The land is a solid standing 30 units
+     proud of the sea, so a grid at sea level would disappear under it and a
+     grid at land level would hang in the air over open water. Ruled water and
+     clean relief is the older convention anyway: a chart grids its sea. */
   const ruled = graticuleGeometry(
     (sheetW - REVEAL * 2) / 2 - SHEET_INSET,
     (sheetD - REVEAL * 2) / 2 - SHEET_INSET,
-    0.3);
+    0.35);
   [[ruled.minor, GRID_MINOR], [ruled.major, GRID_MAJOR],
    [ruled.neat, NEATLINE]].forEach(function (pair) {
     const rgba = pair[1].match(/[\d.]+/g);
@@ -870,7 +1664,7 @@ export function createBoard(options) {
     new THREE.ShadowMaterial({ opacity: 0.34 })
   );
   table.rotation.x = -Math.PI / 2;
-  table.position.y = -SHEET_T - PLATE_T - 1;
+  table.position.y = -seabedFloor - SHEET_T - PLATE_T - 1;
   table.receiveShadow = true;
   scene.add(table);
 
@@ -891,7 +1685,7 @@ export function createBoard(options) {
     alpha.wrapS = THREE.RepeatWrapping;
 
     const geo = roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                           style.width, key);
+                           style.width, key, groundHeight);
     alpha.repeat.set(Math.max(1, Math.round(geo.userData.length / 42)), 1);
 
     /* Unlit, deliberately. The game's roads are flat SVG strokes, and a lit
@@ -907,7 +1701,7 @@ export function createBoard(options) {
     casingAlpha.needsUpdate = true;
     const casing = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 3.4, key),
+                 style.width + 3.4, key, groundHeight),
       new THREE.MeshBasicMaterial({
         color: ROAD_CASING, transparent: true, opacity: 0.30,
         alphaMap: casingAlpha, depthWrite: false, side: THREE.DoubleSide
@@ -934,7 +1728,7 @@ export function createBoard(options) {
     pulseAlpha.needsUpdate = true;
     const pulse = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 4, key),
+                 style.width + 4, key, groundHeight),
       new THREE.MeshBasicMaterial({
         color: 0xffffff, transparent: true, opacity: 0,
         alphaMap: pulseAlpha, blending: THREE.AdditiveBlending,
@@ -964,53 +1758,52 @@ export function createBoard(options) {
     return tint;
   }
 
-  const moundGeoCache = {};
+  /* One set of materials for all twelve towns. Twelve settlements of eight
+     meshes each is ninety-six draw calls either way, but ninety-six materials
+     would be ninety-six shader programs. */
+  const cityMats = {
+    wall: new THREE.MeshStandardMaterial({
+      color: CITY_STONE, roughness: 0.82, metalness: 0, envMapIntensity: 0.35
+    }),
+    roof: new THREE.MeshStandardMaterial({
+      color: CITY_ROOF, roughness: 0.74, metalness: 0, envMapIntensity: 0.4
+    }),
+    keep: new THREE.MeshStandardMaterial({
+      color: CITY_KEEP, roughness: 0.8, metalness: 0, envMapIntensity: 0.35
+    }),
+    spire: new THREE.MeshStandardMaterial({
+      color: CITY_SPIRE, roughness: 0.6, metalness: 0.1, envMapIntensity: 0.6
+    }),
+    ruin: new THREE.MeshStandardMaterial({
+      color: CITY_RUIN, roughness: 0.95, metalness: 0, envMapIntensity: 0.25
+    })
+  };
+
   const ringByCity = {};
   const glowByCity = {};
   const labelByCity = {};
-  const moundTopY = {};
 
   cities.forEach(function (city) {
     const x = worldX(city.x), z = worldZ(city.y);
     const touched = !!activeCities[city.id];
-    const height = MOUND_H[city.terrain] !== undefined
-      ? MOUND_H[city.terrain] : MOUND_H.plain;
-    moundTopY[city.id] = height;
 
     const r = cityRadius(city);
-    // Seeded from the id, so each city has its own landform and keeps it.
-    const seed = hashKey(city.id + "|" + city.terrain);
-    const cacheKey = city.terrain + "|" + height + "|" + r.toFixed(2) +
-                     "|" + seed;
-    if (!moundGeoCache[cacheKey]) {
-      moundGeoCache[cacheKey] = moundGeometry(city.terrain, height, r, seed);
-    }
 
-    const map = terrainMap(city.terrain);
-    const mound = new THREE.Mesh(
-      moundGeoCache[cacheKey],
-      applyContours(new THREE.MeshStandardMaterial({
-        map: map,
-        bumpMap: map,           // the jpg doubles as its own relief
-        // Bump is a derivative-space perturbation, not a height in board
-        // units: anything above ~0.1 tips the normals past the key light and
-        // the mound falls back to ambient, which reads as flat grey.
-        bumpScale: 0.16,
-        roughness: 0.82,
-        metalness: 0,
-        envMapIntensity: 0.5,
-        color: moundTint(city.terrain, touched),
-        // A little self-colour, so a mound keeps its hue where the key light
-        // does not reach instead of dropping to a grey silhouette.
-        emissive: moundTint(city.terrain, touched).multiplyScalar(0.13)
-      // Four and a half bands to the summit: enough to survey the form,
-      // and never a whole number, which would put a contour on the plateau.
-      }), Math.max(height, 1) / 4.5)
-    );
-    mound.position.set(x, 0, z);
-    mound.castShadow = true;
-    mound.receiveShadow = true;
-    scene.add(mound);
+    /* The mound is gone, and this is the point of the change. Twelve cones
+       standing on a flat slab was the board saying "here is a city, and here
+       is what it stands on" in one object -- which read, correctly, as pins
+       pushed into a plane. The ground carries the relief now: a city on hills
+       is high because the land under it is high, and Drelerford sits on the
+       shoulder of real high ground rather than wearing a hill as a hat.
+
+       What is left here is the settlement marker -- contact pool, rim,
+       ownership ring, field, tokens -- all of it lifted to the height of the
+       ground beneath it so nothing floats or sinks. */
+    const gh = groundHeight(x, z);
+
+    const town = settlement(city, r, hashKey(city.id), cityMats);
+    town.position.set(x, gh, z);
+    scene.add(town);
 
     // Where the mound meets the paper. Everything above this is lit; this is
     // the only thing that says the two surfaces are touching.
@@ -1022,7 +1815,7 @@ export function createBoard(options) {
       })
     );
     contact.rotation.x = -Math.PI / 2;
-    contact.position.set(x, 0.45, z);
+    contact.position.set(x, gh + 0.45, z);
     contact.renderOrder = 4;
     scene.add(contact);
 
@@ -1046,7 +1839,7 @@ export function createBoard(options) {
       rim.material.transparent = true;
     }
     rim.rotation.x = -Math.PI / 2;
-    rim.position.set(x, 1.6, z);
+    rim.position.set(x, gh + 1.6, z);
     rim.renderOrder = 6;
     scene.add(rim);
 
@@ -1059,7 +1852,7 @@ export function createBoard(options) {
       })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(x, 2.1, z);
+    ring.position.set(x, gh + 2.1, z);
     ring.renderOrder = 7;
     scene.add(ring);
     ringByCity[city.id] = ring;
@@ -1075,19 +1868,74 @@ export function createBoard(options) {
       })
     );
     glow.rotation.x = -Math.PI / 2;
-    glow.position.set(x, 1.0, z);
+    glow.position.set(x, gh + 1.0, z);
     glow.renderOrder = 5;
     scene.add(glow);
     glowByCity[city.id] = glow;
 
+    /* A port gets a ring of its own at the mound's foot, in the coast's ink
+       rather than a seat colour, so it cannot be mistaken for ownership. The
+       flag is on the map and the game reads it; a board that drops it is
+       telling a coach the two harbours are ordinary inland towns. */
+    if (city.is_port) {
+      /* Outside the mound's skirt, not on it. At 0.72r the ring sat inside the
+         footprint and the mound simply stood on top of it -- drawn every frame
+         and never once visible. */
+      const harbour = new THREE.Mesh(
+        new THREE.TorusGeometry(r + 7, 1.5, 8, 44),
+        new THREE.MeshBasicMaterial({
+          color: COAST_INK, transparent: true, opacity: 0.85,
+          depthWrite: false
+        })
+      );
+      harbour.rotation.x = -Math.PI / 2;
+      harbour.position.set(x, gh + 1.6, z);
+      harbour.renderOrder = 4;
+      scene.add(harbour);
+    }
+
     // Labels ride the DOM, so they stay crisp and keep the page's type.
     const label = document.createElement("span");
     label.className = "atlas-label" + (touched ? "" : " is-quiet");
-    label.textContent = city.name;
+    const nameLine = document.createElement("span");
+    nameLine.className = "atlas-label-name";
+    nameLine.textContent = city.name;
+    label.appendChild(nameLine);
+    /* The row the 2D map prints under every city: population, grid reference,
+       whatever flags it carries, then its terrain. Same order, same separator,
+       so a coach reading the poster and a coach reading the app are reading
+       one thing. */
+    const parts = cityMetaParts(city);
+    if (parts.length) {
+      const metaLine = document.createElement("span");
+      metaLine.className = "atlas-label-meta";
+      parts.forEach(function (part) {
+        const bit = document.createElement("span");
+        bit.className = "bit is-" + part[0];
+        bit.textContent = part[1];
+        metaLine.appendChild(bit);
+      });
+      label.appendChild(metaLine);
+    }
     labelHost.appendChild(label);
     labelByCity[city.id] = {
       node: label,
-      anchor: new THREE.Vector3(x, height + 12, z)
+      /* A little vertical room, which cities did not have. They were placed at
+         their anchor or not at all, so on a board scaled down to hold the
+         whole coast a name lost to a neighbour's data row was simply gone.
+         Vertical only, and small: a name that slid sideways would sit over the
+         wrong mound, while one lifted a line still points down at its own. */
+      /* Vertical first, then out to the side, then further out. It was four
+         vertical nudges, which is enough room on a crowded board where a
+         dropped name costs little and a misplaced one costs a lot. On a
+         six-city board every name should be readable, and a neighbour 20
+         miles away cannot be cleared by 38px of lift -- so the ladder runs
+         wider before it gives up. Lateral offsets are last because a name
+         beside a mound is likelier to be misread than one above it. */
+      candidates: [[0, 0], [0, -19], [0, 19], [0, -38], [0, 38],
+                   [-62, -16], [62, -16], [-62, 16], [62, 16],
+                   [0, -58], [0, 58]],
+      anchor: new THREE.Vector3(x, gh + 26, z)
     };
   });
 
@@ -1144,23 +1992,163 @@ export function createBoard(options) {
     return group;
   }
 
+  /* --- region names and road mileages, on the same overlay as the city names.
+
+     The region names are the one thing here the 2D map does NOT draw: it names
+     the landmass instead, from a majority vote among its cities' regions. On
+     this map that vote is a 4/4/4 tie, so a single name would describe a third
+     of the board and imply it covered all of it. Three anchors, one per
+     region, say what is actually true. */
+  const extraLabels = [];
+
+  (options.regions || []).forEach(function (region) {
+    const node = document.createElement("span");
+    node.className = "atlas-region";
+    node.textContent = region.name;
+    labelHost.appendChild(node);
+    extraLabels.push({
+      node: node,
+      rank: 0,
+      candidates: [[0, 0], [0, -26], [0, 26], [0, -52], [0, 52],
+                   [-70, 0], [70, 0], [-70, -30], [70, 30]],
+      anchor: (function () {
+        const rx = worldX(region.x), rz = worldZ(region.y);
+        return new THREE.Vector3(rx, groundHeight(rx, rz) + 3, rz);
+      })()
+    });
+  });
+
+  /* Mileage and movement cost at each road's midpoint, as the 2D map labels
+     them on a sparse board. Both numbers or neither: a distance without its
+     cost is trivia, and the cost is what a coach's orders are actually spent
+     in. */
+  roads.forEach(function (road) {
+    const a = cityById[road.from], b = cityById[road.to];
+    if (!a || !b) { return; }
+    if (road.distance_miles == null && road.move_cost == null) { return; }
+    const bits = [];
+    if (road.distance_miles != null) { bits.push(road.distance_miles + " mi"); }
+    if (road.move_cost != null) { bits.push(road.move_cost + " mv"); }
+    const node = document.createElement("span");
+    node.className = "atlas-road-label";
+    node.textContent = bits.join(" \u00b7 ");
+    labelHost.appendChild(node);
+    extraLabels.push({
+      node: node,
+      rank: 1,
+      candidates: [[0, 0], [0, -15], [0, 15], [-42, 0], [42, 0]],
+      anchor: (function () {
+        const mx = (worldX(a.x) + worldX(b.x)) / 2;
+        const mz = (worldZ(a.y) + worldZ(b.y)) / 2;
+        return new THREE.Vector3(mx, groundHeight(mx, mz) + 4, mz);
+      })()
+    });
+  });
+
   /* --- projection for the DOM labels */
   const projected = new THREE.Vector3();
   let viewW = 1, viewH = 1;
 
-  function placeLabels() {
-    Object.keys(labelByCity).forEach(function (id) {
-      const entry = labelByCity[id];
-      projected.copy(entry.anchor).project(camera);
-      const x = (projected.x * 0.5 + 0.5) * viewW;
-      const y = (-projected.y * 0.5 + 0.5) * viewH;
-      const node = entry.node;
+  /* Label planning, which the 2D map has and this board did not.
+
+     Twelve names was a set no arrangement could collide; twelve names each
+     with a data row, three region titles and fourteen road readings is
+     forty-one boxes on a board the reader can spin, and at some angles most of
+     them land on each other. webapp/mapview.py solves the same problem with
+     `_plan_city_labels` and `_boxes_overlap` -- it ranks its labels and drops
+     the ones that will not fit. This is the same idea in screen space, where
+     it has to be, because which labels collide depends on where the camera is
+     and that changes every frame.
+
+     Rank: a city's name outranks everything, then the region it stands in,
+     then the road readings. Dropping a mileage costs a reader a number they
+     can get by turning the board; dropping a city name costs them the city. */
+  const placed = [];
+
+  function place(entry) {
+    const node = entry.node;
+    projected.copy(entry.anchor).project(camera);
+    // Behind the camera, or outside the frustum: hide rather than smear.
+    if (projected.z > 1) { node.style.opacity = "0"; return; }
+
+    const x = (projected.x * 0.5 + 0.5) * viewW;
+    const y = (-projected.y * 0.5 + 0.5) * viewH;
+
+    /* Measured once. The text never changes after it is built, and reading
+       offsetWidth per label per frame would force a layout flush inside the
+       render loop -- forty-one of them, sixty times a second. */
+    if (!entry.w) {
+      entry.w = node.offsetWidth || 1;
+      entry.h = node.offsetHeight || 1;
+    }
+    /* Several boxes before giving up, as mapview's `_label_candidates` does.
+       A name that will not fit where its anchor points may fit a line above or
+       to one side, and a region title nudged 30px off a mound is still telling
+       the truth about which ground it names. Cities do not move: their anchor
+       IS the city. */
+    /* Held inside the frame. `.atlas-labels` clips at overflow:hidden, so a
+       label whose anchor sits near an edge does not run off the board -- it
+       gets its right-hand half sliced away and reads as a truncated word.
+       Bare city names were narrow enough never to hit it; a name over a data
+       row is three times wider and hits it on a phone constantly.
+
+       A clamp moves the label off its anchor, so it is bounded: past
+       MAX_NUDGE the label is far enough from its city to be misread as
+       naming a different one, and is dropped instead. */
+    const MAX_NUDGE = 56;
+    const pad = 2;
+    const candidates = entry.candidates || [[0, 0]];
+    for (let c = 0; c < candidates.length; c++) {
+      const wantX = x + candidates[c][0], wantY = y + candidates[c][1];
+      const half = entry.w / 2;
+      const cx = Math.min(Math.max(wantX, half + pad), viewW - half - pad);
+      const cy = Math.min(Math.max(wantY, entry.h / 2 + pad),
+                          viewH - entry.h / 2 - pad);
+      if (Math.abs(cx - wantX) > MAX_NUDGE ||
+          Math.abs(cy - wantY) > MAX_NUDGE) { continue; }
+      const box = [cx - entry.w / 2 - pad, cy - entry.h / 2 - pad,
+                   cx + entry.w / 2 + pad, cy + entry.h / 2 + pad];
+      let hit = false;
+      for (let i = 0; i < placed.length; i++) {
+        const other = placed[i];
+        if (box[0] < other[2] && box[2] > other[0] &&
+            box[1] < other[3] && box[3] > other[1]) { hit = true; break; }
+      }
+      if (hit) { continue; }
+      placed.push(box);
       node.style.transform =
-        "translate(-50%,-50%) translate(" + x.toFixed(1) + "px," +
-        y.toFixed(1) + "px)";
-      // Behind the camera, or outside the frustum: hide rather than smear.
-      node.style.opacity = projected.z > 1 ? "0" : "";
+        "translate(-50%,-50%) translate(" + cx.toFixed(1) + "px," +
+        cy.toFixed(1) + "px)";
+      node.style.opacity = "";
+      return;
+    }
+    node.style.opacity = "0";
+  }
+
+  /* Cities compete by size, not by their order in the map file.
+
+     Two cities close enough for their labels to collide -- Oldbarrow sits 20
+     miles from Redport -- were resolved by whichever the map happened to list
+     first, which is an accident standing in for a decision. Population band is
+     the decision: a city of 420,000 keeps its anchor and the dead hamlet next
+     door takes an offset. mapview ranks its own labels the same way and for
+     the same reason. */
+  const BAND_RANK = { "100k+": 4, "10k-99k": 3, "1k-9k": 2, "< 1k": 1 };
+  const cityPlacementOrder = cities.slice().sort(function (a, b) {
+    return (BAND_RANK[b.population_band] || 0) - (BAND_RANK[a.population_band] || 0);
+  });
+
+  function placeLabels() {
+    placed.length = 0;
+    // Highest rank first: whoever is placed owns the space.
+    cityPlacementOrder.forEach(function (city) {
+      const entry = labelByCity[city.id];
+      if (entry) { place(entry); }
     });
+    extraLabels
+      .slice()
+      .sort(function (a, b) { return a.rank - b.rank; })
+      .forEach(place);
   }
 
   /* --- framing: pull the camera in until the printed sheet just fills the
@@ -1176,15 +2164,35 @@ export function createBoard(options) {
      space" asks for anyway. The margin keeps each city's tokens, ring and label
      inside the frame with it. */
   // Room for the widest mound plus its tokens, ring and label.
-  const FIT_M = maxRadius + 46;
-  const topY = Math.max.apply(null, cities.map(function (c) {
-    return MOUND_H[c.terrain] !== undefined ? MOUND_H[c.terrain] : MOUND_H.plain;
-  })) + 34;
+  const FIT_M = maxRadius + 20;
+  // The tallest ground plus the keep and spire standing on it.
+  const topY = terrainPeak + 62;
 
+  /* Fit the OBJECT, not the land inside it. While the board was a printed
+     plate the sheet was allowed to run off the edges -- it was backdrop, and
+     cropping it cost nothing. It is a body of water with a landmass standing
+     in it now, and a sea cut off mid-frame reads as a rendering that did not
+     fit rather than as a map. So the box is the sheet's own extent, which is
+     wider than the land box by PAD, and the picture scales down to hold it. */
+  /* Frame the whole object: the coast plus its margin, or the mounted sheet,
+     whichever is wider.
+
+     This has been both ways. Framing the land alone is what the picture wants
+     while the margins are wide; it also means the sheet crops the moment
+     anyone changes a margin, and the board is a printed plate on a table --
+     an object with edges, which look like an accident when they run off the
+     frame rather than like a crop. Taking the max costs nothing today (with
+     the water margin at 34 the sheet is already inside the land box) and
+     makes the framing hold whatever the margins become. */
+  const fitHalfW = Math.max((maxX - minX) / 2 + FIT_M, sheetW / 2);
+  const fitHalfD = Math.max((maxY - minY) / 2 + FIT_M, sheetD / 2);
   const sheetCorners = [];
-  [minX - midX - FIT_M, maxX - midX + FIT_M].forEach(function (x) {
-    [minY - midY - FIT_M, maxY - midY + FIT_M].forEach(function (z) {
-      [0, topY].forEach(function (y) {
+  [-fitHalfW, fitHalfW].forEach(function (x) {
+    [-fitHalfD, fitHalfD].forEach(function (z) {
+      // Down to the waterline as well as up to the tallest mound: the land is
+      // a solid now and its cliff and the sea around it are part of the
+      // picture, so a box that starts at the land surface crops them off.
+      [-seabedFloor, 0, topY].forEach(function (y) {
         sheetCorners.push(new THREE.Vector3(x, y, z));
       });
     });
@@ -1248,7 +2256,17 @@ export function createBoard(options) {
     camera.updateProjectionMatrix();
     // Refit only while the board is still driving itself; once the reader has
     // taken the camera, a resize must not yank it back.
-    if (!userDriving) { fitCamera(0.96); }
+    /* 0.88, not 0.995. Filling the frame to within half a percent leaves the
+       board touching all four edges, which reads as a picture that only just
+       fitted rather than as one composed. The margin is the difference
+       between a specimen and an object on a table. */
+    if (!userDriving) { fitCamera(0.88); }
+    /* Measured widths are cached, and a resize can cross the breakpoint that
+       decides how much of each data row is shown -- so the cache has to die
+       with the old width or every label is planned against a size it no
+       longer has. */
+    Object.keys(labelByCity).forEach(function (id) { labelByCity[id].w = 0; });
+    extraLabels.forEach(function (entry) { entry.w = 0; });
     placeLabels();
   }
 
@@ -1316,14 +2334,17 @@ export function createBoard(options) {
       };
     },
 
+    /* Tokens stand ON the ground, which is no longer a plane. Both of these
+       sample it: a piece walking the Dreliwick-Narunon road climbs with the
+       road, and a piece raised on high ground is raised. */
     addToken: function (kind, seatIdx, x, z) {
       const node = makeToken(kind, seatIdx);
-      node.position.set(x, 0, z);
+      node.position.set(x, groundHeight(x, z), z);
       return node;
     },
 
     moveToken: function (node, x, z, lift) {
-      node.position.set(x, lift || 0, z);
+      node.position.set(x, groundHeight(x, z) + (lift || 0), z);
     },
 
     /* Tokens fade by scale, which also reads as "raised here" / "gone". */

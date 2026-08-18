@@ -70,7 +70,7 @@ from soe.public_replay import LeakageError, validate_file, visual_bar  # noqa: E
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = REPO_ROOT / "webapp" / "static" / "public"
-MAP_SOURCE = REPO_ROOT / "maps" / "calib_12.json"
+MAP_SOURCE = REPO_ROOT / "maps" / "starter_map.json"
 MANIFEST = REPO_ROOT / "configs" / "poster.json"
 
 #: The deployable, file by file, from LAUNCH_OPERATIONS.md "The page". The
@@ -82,13 +82,27 @@ REQUIRED_FILES = [
     "atlas.js",
     "board.js",
     "board3d.js",
+    "elevation.js",
     "replay.json",
     "vendor/three.module.js",
     "vendor/OrbitControls.js",
 ]
 
-#: Shipping this is how the atlas board grows an ocean it does not have.
-FORBIDDEN_FILES = {"textures/sea.jpg", "sea.jpg"}
+#: Nothing is forbidden here any more, and the entry that used to be says
+#: something about how far the board has moved. `textures/sea.jpg` was banned
+#: on the grounds that "shipping this is how the atlas board grows an ocean it
+#: does not have" -- correct under the original visual contract, which allowed
+#: no sea at all. Amendments 2 and 3 opened that deliberately: the board draws
+#: the app's landmass, the water outside it, and a relief in between, and the
+#: page states in its legend what is surveyed and what is implied. The tile is
+#: required now, and `tests/test_texture_assets.py` holds it byte-identical to
+#: the renderer's copy.
+FORBIDDEN_FILES: set[str] = set()
+
+#: The texture tiles board3d.js actually asks for: the ground's grain, the
+#: sheet's tooth, and the water's. Everything else about a surface is geometry
+#: and colour now.
+RENDERER_TEXTURES = ("textures/plain.jpg", "textures/paper.jpg", "textures/sea.jpg")
 
 #: Wire weight, not disk weight. A phone opening the poster from a link
 #: downloads the compressed size, and Pages serves text assets compressed.
@@ -281,20 +295,24 @@ def check_inventory(bundle: Path, board: dict | None) -> list[Finding]:
 
     expected = set(REQUIRED_FILES) | {"vendor/three-LICENSE.txt"}
     if board:
-        terrains = sorted({city["terrain"] for city in board.get("cities", [])})
-        for terrain in terrains:
-            name = f"textures/{terrain}.jpg"
+        # The tiles the RENDERER loads, not one per terrain label.
+        #
+        # This used to derive the required textures from the board's terrain
+        # labels, because every city wore a terrain-textured mound and the two
+        # sets were the same set. Amendments 2 and 3 replaced the mounds with a
+        # heightfield: the ground is one grain tile coloured by elevation, so a
+        # map with `coastal` or `river` on it needs no coastal or river tile
+        # and never asks for one. Deriving from labels demanded five tiles that
+        # do not exist and that nothing would have loaded.
+        for name in RENDERER_TEXTURES:
             expected.add(name)
             if name not in present:
                 out.append(
                     blocker(
                         "inventory",
-                        f"{name} is missing and {terrain} is a terrain on the board",
+                        f"{name} is missing and the board loads it",
                     )
                 )
-        expected.add("textures/paper.jpg")
-        if "textures/paper.jpg" not in present:
-            out.append(blocker("inventory", "textures/paper.jpg is missing (the ground sheet)"))
 
     for name in sorted(present - expected - FORBIDDEN_FILES):
         out.append(
@@ -480,7 +498,7 @@ def check_board(bundle: Path, board: dict | None) -> list[Finding]:
     return [
         blocker(
             "board",
-            "board.js has drifted from maps/calib_12.json. The poster would draw "
+            f"board.js has drifted from maps/{MAP_SOURCE.name}. The poster would draw "
             "a world the engine no longer has. Regenerate: "
             "python -m scripts.build_public_board",
         )
