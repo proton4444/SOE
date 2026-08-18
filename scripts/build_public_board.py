@@ -33,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from webapp.mapview import (  # noqa: E402
+    city_miles,
     compute_landmasses,
     layout_for_map,
     positions,
@@ -43,19 +44,20 @@ from webapp.mapview import (  # noqa: E402
 # implementation of the same formula that can drift away from it.
 from webapp.mapview import _hop_cost_for_raw_road  # noqa: E402
 
-DEFAULT_MAP = REPO_ROOT / "maps" / "calib_12.json"
+DEFAULT_MAP = REPO_ROOT / "maps" / "starter_map.json"
 DEFAULT_OUT = REPO_ROOT / "webapp" / "static" / "public" / "board.js"
 
 HEADER = """\
-// Atlas relief board, generated from maps/calib_12.json by
+// Atlas relief board, generated from maps/starter_map.json by
 // scripts/build_public_board.py. Do not hand-edit.
 //
-// Twelve cities at their exact x/y with their populations, grid references,
-// terrain, port and magic-free flags and regions; the roads with quality,
-// mileage and movement cost; and the landmass hull that webapp/mapview.py
-// draws for this map, mapped from its SVG frame into the same 0..1 fractions
-// the cities use. The hull is a road-connectivity confine, not a surveyed
-// coast -- calib_12.json has no geography file. See Amendment 2 in
+// Every city at its exact x/y with its population, grid reference, terrain,
+// port and magic-free flags and region; the roads with quality, mileage and
+// movement cost; and the landmass hulls that webapp/mapview.py draws for this
+// map, mapped from its SVG frame into the same 0..1 fractions the cities use.
+// A hull is a road-connectivity confine, not a surveyed coast -- these maps
+// have no geography file. Sea lanes do not join land, so a city reachable only
+// by sea comes out as its own island. See Amendment 2 in
 // docs/MARKETING_CLOSED_ALPHA.md.
 const ATLAS_BOARD = """
 
@@ -78,8 +80,13 @@ def build_board(map_path: Path) -> dict:
             "name": city["name"],
             "x": city["x"],
             "y": city["y"],
-            "x_miles": _round(city["x_miles"], 1),
-            "y_miles": _round(city["y_miles"], 1),
+            # Via mapview, not read off the city. A map is allowed to carry
+            # fractions and no mile coordinates -- starter_map does -- and
+            # mapview's own accessor falls back to fraction x field width for
+            # exactly that case. Reading the field directly worked only for as
+            # long as the poster was pinned to one map that happened to have it.
+            "x_miles": _round(city_miles(city, layout)[0], 1),
+            "y_miles": _round(city_miles(city, layout)[1], 1),
             "terrain": list(city["terrain"]),
             "population": city["population"],
             "population_band": city["population_band"],

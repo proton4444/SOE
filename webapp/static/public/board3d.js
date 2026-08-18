@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h21";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h24";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -689,7 +689,11 @@ const SEA_SURF = [0.86, 0.92, 0.90];
    sitting on the board rather than as ground. Against a fixed ceiling, a map
    of plains stays green, hills reach ochre, and only a map that really has
    mountains on it ever gets bare rock. */
-const HYPSO_CEILING = 190;
+/* Read against the elevation's own recorded ceiling rather than a number
+   pinned here. The generator now normalises every map to the same fraction of
+   its frame, so max_height IS the top of the ramp by construction -- and a
+   constant in this file would only be a second opinion about it, wrong the
+   moment a map or the target changes. */
 
 function hypso(t) {
   const u = Math.min(1, Math.max(0, t));
@@ -749,28 +753,50 @@ function houseAt(group, x, z, w, d, h, rot, mats) {
   group.add(roof);
 }
 
+/* Settlement size by population band, the way mapview sizes its city dots.
+   This was dead weight while the board was pinned to a map whose twelve cities
+   were all "< 1k" -- one tier, so every town came out the same and the reader
+   learned nothing from the size. On a map with all four bands it is the
+   cheapest information on the board: a capital of a million looks like one
+   next to a hamlet, without either needing to be read. */
+const BAND_SCALE = {
+  "100k+": 1.55,
+  "10k-99k": 1.24,
+  "1k-9k": 1.02,
+  "< 1k": 0.84
+};
+const BAND_HOUSES = {
+  "100k+": 9,
+  "10k-99k": 7,
+  "1k-9k": 5,
+  "< 1k": 4
+};
+
 function settlement(city, radius, seed, mats) {
   const group = new THREE.Group();
   const rnd = mulberry32(seed);
   const ruin = !!city.is_ruin;
-  const scale = (radius / 30) * 1.3;
+  const band = BAND_SCALE[city.population_band] || 1;
+  const scale = (radius / 30) * 1.3 * band;
 
   /* The platform the town stands on. It is also what levels the eye: the
      ground is flattened under a city anyway, and a low stone plinth explains
      why instead of leaving a suspiciously flat patch of hillside. */
   const plinth = new THREE.Mesh(
-    new THREE.CylinderGeometry(radius * 0.62, radius * 0.70, 3.4, 18),
+    new THREE.CylinderGeometry(radius * 0.62 * band, radius * 0.70 * band, 3.4, 18),
     ruin ? mats.ruin : mats.keep);
   plinth.position.y = 1.7;
   plinth.receiveShadow = true;
   plinth.castShadow = true;
   group.add(plinth);
 
-  const houses = ruin ? 3 : 5 + Math.floor(rnd() * 3);
+  const houses = ruin
+    ? 3
+    : (BAND_HOUSES[city.population_band] || 5) + Math.floor(rnd() * 3) - 1;
   const spin = rnd() * Math.PI * 2;
   for (let i = 0; i < houses; i++) {
     const a = spin + (i / houses) * Math.PI * 2 + (rnd() - 0.5) * 0.5;
-    const ring = radius * (0.30 + rnd() * 0.20);
+    const ring = radius * band * (0.30 + rnd() * 0.20);
     const w = (7 + rnd() * 4) * scale;
     const d = (6 + rnd() * 3) * scale;
     const h = (ruin ? 4 + rnd() * 3 : 8 + rnd() * 5) * scale;
@@ -964,7 +990,12 @@ export function createBoard(options) {
      terrain is flattened toward the site height inside the marker's radius
      and eased back out over twice that. Roads leaving a city start level
      with it too, which is what stops them diving into the first slope. */
-  const SITE_R = 46;
+  /* Site radius per city, not one number for all of them. A constant 46 was
+     tuned when every town on the board was the same size; on a map with four
+     population bands it levels the same broad platter under a capital and
+     under a dead hamlet, and beside a hillside the small ones read as machined
+     discs lying on the ground. It scales with the settlement that stands on
+     it, which is the thing it exists to seat. */
   let siteHeights = null;
 
   function rawHeight(px, pz) {
@@ -979,18 +1010,14 @@ export function createBoard(options) {
     for (let i = 0; i < siteHeights.length; i++) {
       const site = siteHeights[i];
       const d = Math.hypot(px - site.x, pz - site.z);
-      if (d >= SITE_R * 2) { continue; }
+      if (d >= site.r * 2) { continue; }
       // Flat inside the marker, easing back to the landscape outside it.
-      const k = d <= SITE_R ? 1 : 1 - smoothstep((d - SITE_R) / SITE_R);
+      const k = d <= site.r ? 1 : 1 - smoothstep((d - site.r) / site.r);
       out = out + (site.h - out) * k;
     }
     return out;
   }
 
-  siteHeights = cities.map(function (c) {
-    const cx = worldX(c.x), cz = worldZ(c.y);
-    return { x: cx, z: cz, h: rawHeight(cx, cz) };
-  });
 
   /* The merge guard. "Local relief only. No interpolated continent between
      cities" is a property of the footprint, not of good intentions: two mounds
@@ -1020,6 +1047,22 @@ export function createBoard(options) {
     radiusById[c.id] = Math.min(DISK_R_MAX, nearest * 0.46);
   });
   function cityRadius(city) { return radiusById[city.id] || 30; }
+
+  /* Sited here, not where groundHeight is defined, and the ordering matters:
+     the levelling radius is derived from cityRadius, which reads radiusById --
+     a const declared just above. Computing the sites earlier put that read
+     inside the temporal dead zone, which is a ReferenceError at load and a
+     blank board, not a subtle wrong number. */
+  siteHeights = cities.map(function (c) {
+    const cx = worldX(c.x), cz = worldZ(c.y);
+    const band = BAND_SCALE[c.population_band] || 1;
+    return {
+      x: cx, z: cz, h: rawHeight(cx, cz),
+      // Just past the plinth the town stands on, floored so the smallest
+      // settlement still gets level ground under its markers.
+      r: Math.max(20, cityRadius(c) * band * 0.78)
+    };
+  });
   const maxRadius = Math.max.apply(null, cities.map(cityRadius));
 
   /* --- renderer */
@@ -1534,7 +1577,7 @@ export function createBoard(options) {
          and it has to run after the clipped shore fragments have been added,
          or they arrive black. */
       for (let i = 0; i < gPos.length / 3; i++) {
-        const tint = hypso(gPos[i * 3 + 1] / HYPSO_CEILING);
+        const tint = hypso(gPos[i * 3 + 1] / (elevation ? elevation.max_height : 1));
         gCol[i * 3] = tint[0];
         gCol[i * 3 + 1] = tint[1];
         gCol[i * 3 + 2] = tint[2];

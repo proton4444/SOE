@@ -1,15 +1,16 @@
-// Atlas relief board, generated from maps/calib_12.json by
+// Atlas relief board, generated from maps/starter_map.json by
 // scripts/build_public_board.py. Do not hand-edit.
 //
-// Twelve cities at their exact x/y with their populations, grid references,
-// terrain, port and magic-free flags and regions; the roads with quality,
-// mileage and movement cost; and the landmass hull that webapp/mapview.py
-// draws for this map, mapped from its SVG frame into the same 0..1 fractions
-// the cities use. The hull is a road-connectivity confine, not a surveyed
-// coast -- calib_12.json has no geography file. See Amendment 2 in
+// Every city at its exact x/y with its population, grid reference, terrain,
+// port and magic-free flags and region; the roads with quality, mileage and
+// movement cost; and the landmass hulls that webapp/mapview.py draws for this
+// map, mapped from its SVG frame into the same 0..1 fractions the cities use.
+// A hull is a road-connectivity confine, not a surveyed coast -- these maps
+// have no geography file. Sea lanes do not join land, so a city reachable only
+// by sea comes out as its own island. See Amendment 2 in
 // docs/MARKETING_CLOSED_ALPHA.md.
 const ATLAS_BOARD = {
-  "map": "calib_12.json",
+  "map": "starter_map.json",
   "field_miles": [
     1300.0,
     1000.0
@@ -21,390 +22,279 @@ const ATLAS_BOARD = {
   "landmasses": [
     {
       "index": 1,
-      "name": "Barathfell vale",
+      "name": "Main Continent",
       "kind": "continent",
       "city_ids": [
-        "barunburn",
-        "drelerford",
-        "dreliwick",
-        "dunaen",
-        "ephunyn",
-        "garmere",
-        "garoath",
-        "joreththorpe",
-        "narunon",
-        "rhaethdale",
-        "zelahold",
-        "zelothvale"
+        "ashford",
+        "highfell",
+        "oldbarrow",
+        "redport",
+        "sarnvale"
       ],
       "hull": [
         [
-          0.13975,
-          0.500067
+          0.06919,
+          0.838627
         ],
         [
-          0.345077,
-          0.330857
+          0.241483,
+          0.077879
         ],
         [
-          0.783811,
-          0.228183
+          0.758017,
+          0.247208
         ],
         [
-          0.863593,
-          0.41286
+          0.605631,
+          0.593494
+        ]
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Northern Island",
+      "kind": "island",
+      "city_ids": [
+        "gullhaven"
+      ],
+      "hull": [
+        [
+          0.941017,
+          0.12
         ],
         [
-          0.852457,
-          0.617344
+          0.936372,
+          0.151605
         ],
         [
-          0.685246,
-          0.882125
+          0.923145,
+          0.178399
         ],
         [
-          0.171775,
-          0.765744
+          0.90335,
+          0.196302
+        ],
+        [
+          0.88,
+          0.202588
+        ],
+        [
+          0.85665,
+          0.196302
+        ],
+        [
+          0.836855,
+          0.178399
+        ],
+        [
+          0.823628,
+          0.151605
+        ],
+        [
+          0.818983,
+          0.12
+        ],
+        [
+          0.823628,
+          0.088395
+        ],
+        [
+          0.836855,
+          0.061601
+        ],
+        [
+          0.85665,
+          0.043698
+        ],
+        [
+          0.88,
+          0.037412
+        ],
+        [
+          0.90335,
+          0.043698
+        ],
+        [
+          0.923145,
+          0.061601
+        ],
+        [
+          0.936372,
+          0.088395
         ]
       ]
     }
   ],
   "regions": [
     {
-      "name": "Barathfell vale",
-      "x": 0.7674,
-      "y": 0.4611,
-      "cities": 4
+      "name": "Main Continent",
+      "x": 0.426,
+      "y": 0.45,
+      "cities": 5
     },
     {
-      "name": "Eshormere march",
-      "x": 0.5876,
-      "y": 0.7087,
-      "cities": 4
-    },
-    {
-      "name": "Lunistead reach",
-      "x": 0.3162,
-      "y": 0.5151,
-      "cities": 4
+      "name": "Northern Island",
+      "x": 0.88,
+      "y": 0.12,
+      "cities": 1
     }
   ],
   "cities": [
     {
-      "id": "zelothvale",
-      "name": "Zelothvale",
-      "x": 0.4665,
-      "y": 0.7424,
-      "x_miles": 606.4,
-      "y_miles": 742.4,
+      "id": "highfell",
+      "name": "Highfell",
+      "x": 0.12,
+      "y": 0.78,
+      "x_miles": 156.0,
+      "y_miles": 780.0,
       "terrain": [
-        "plain"
+        "coastal",
+        "plains"
       ],
-      "population": 352,
-      "population_band": "< 1k",
-      "grid_ref": "H7",
-      "region": "Eshormere march",
+      "population": 1200000,
+      "population_band": "100k+",
+      "grid_ref": "B8",
+      "region": "Main Continent",
+      "is_ruin": false,
+      "is_port": true,
+      "is_magic_free": false
+    },
+    {
+      "id": "redport",
+      "name": "Redport",
+      "x": 0.48,
+      "y": 0.48,
+      "x_miles": 624.0,
+      "y_miles": 480.0,
+      "terrain": [
+        "river",
+        "plains"
+      ],
+      "population": 420000,
+      "population_band": "100k+",
+      "grid_ref": "F5",
+      "region": "Main Continent",
       "is_ruin": false,
       "is_port": false,
       "is_magic_free": false
     },
     {
-      "id": "garmere",
-      "name": "Garmere",
-      "x": 0.6501,
-      "y": 0.7956,
-      "x_miles": 845.1,
-      "y_miles": 795.6,
+      "id": "ashford",
+      "name": "Ashford",
+      "x": 0.7,
+      "y": 0.28,
+      "x_miles": 910.0,
+      "y_miles": 280.0,
+      "terrain": [
+        "forest",
+        "river"
+      ],
+      "population": 45000,
+      "population_band": "10k-99k",
+      "grid_ref": "H3",
+      "region": "Main Continent",
+      "is_ruin": false,
+      "is_port": false,
+      "is_magic_free": false
+    },
+    {
+      "id": "gullhaven",
+      "name": "Gullhaven",
+      "x": 0.88,
+      "y": 0.12,
+      "x_miles": 1144.0,
+      "y_miles": 120.0,
+      "terrain": [
+        "coastal",
+        "mountains"
+      ],
+      "population": 280000,
+      "population_band": "100k+",
+      "grid_ref": "K2",
+      "region": "Northern Island",
+      "is_ruin": false,
+      "is_port": true,
+      "is_magic_free": false
+    },
+    {
+      "id": "sarnvale",
+      "name": "Sarnvale",
+      "x": 0.28,
+      "y": 0.16,
+      "x_miles": 364.0,
+      "y_miles": 160.0,
       "terrain": [
         "desert"
       ],
-      "population": 0,
-      "population_band": "< 1k",
-      "grid_ref": "H9",
-      "region": "Eshormere march",
-      "is_ruin": true,
-      "is_port": false,
-      "is_magic_free": false
-    },
-    {
-      "id": "drelerford",
-      "name": "Drelerford",
-      "x": 0.2292,
-      "y": 0.7301,
-      "x_miles": 298.0,
-      "y_miles": 730.1,
-      "terrain": [
-        "hills"
-      ],
-      "population": 782,
-      "population_band": "< 1k",
-      "grid_ref": "H3",
-      "region": "Lunistead reach",
-      "is_ruin": false,
-      "is_port": true,
-      "is_magic_free": false
-    },
-    {
-      "id": "rhaethdale",
-      "name": "Rhaethdale",
-      "x": 0.2007,
-      "y": 0.5053,
-      "x_miles": 260.9,
-      "y_miles": 505.3,
-      "terrain": [
-        "plain"
-      ],
-      "population": 681,
-      "population_band": "< 1k",
-      "grid_ref": "F3",
-      "region": "Lunistead reach",
-      "is_ruin": false,
-      "is_port": false,
-      "is_magic_free": false
-    },
-    {
-      "id": "dreliwick",
-      "name": "Dreliwick",
-      "x": 0.3976,
-      "y": 0.3847,
-      "x_miles": 516.9,
-      "y_miles": 384.7,
-      "terrain": [
-        "plain"
-      ],
-      "population": 559,
-      "population_band": "< 1k",
-      "grid_ref": "D6",
-      "region": "Lunistead reach",
-      "is_ruin": false,
-      "is_port": false,
-      "is_magic_free": false
-    },
-    {
-      "id": "zelahold",
-      "name": "Zelahold",
-      "x": 0.566,
-      "y": 0.613,
-      "x_miles": 735.8,
-      "y_miles": 613.0,
-      "terrain": [
-        "plain"
-      ],
-      "population": 0,
-      "population_band": "< 1k",
-      "grid_ref": "G8",
-      "region": "Eshormere march",
-      "is_ruin": true,
-      "is_port": false,
-      "is_magic_free": false
-    },
-    {
-      "id": "garoath",
-      "name": "Garoath",
-      "x": 0.6677,
-      "y": 0.684,
-      "x_miles": 868.0,
-      "y_miles": 684.0,
-      "terrain": [
-        "plain"
-      ],
-      "population": 796,
-      "population_band": "< 1k",
-      "grid_ref": "G9",
-      "region": "Eshormere march",
+      "population": 6800,
+      "population_band": "1k-9k",
+      "grid_ref": "D2",
+      "region": "Main Continent",
       "is_ruin": false,
       "is_port": false,
       "is_magic_free": true
     },
     {
-      "id": "dunaen",
-      "name": "Dunaen",
-      "x": 0.7922,
-      "y": 0.6012,
-      "x_miles": 1029.8,
-      "y_miles": 601.2,
+      "id": "oldbarrow",
+      "name": "Oldbarrow",
+      "x": 0.55,
+      "y": 0.55,
+      "x_miles": 715.0,
+      "y_miles": 550.0,
       "terrain": [
-        "hills"
+        "mountains"
       ],
-      "population": 182,
+      "population": 0,
       "population_band": "< 1k",
-      "grid_ref": "G11",
-      "region": "Barathfell vale",
-      "is_ruin": false,
-      "is_port": true,
-      "is_magic_free": false
-    },
-    {
-      "id": "narunon",
-      "name": "Narunon",
-      "x": 0.4373,
-      "y": 0.4405,
-      "x_miles": 568.5,
-      "y_miles": 440.5,
-      "terrain": [
-        "plain"
-      ],
-      "population": 837,
-      "population_band": "< 1k",
-      "grid_ref": "E6",
-      "region": "Lunistead reach",
-      "is_ruin": false,
+      "grid_ref": "G6",
+      "region": "Main Continent",
+      "is_ruin": true,
       "is_port": false,
       "is_magic_free": false
-    },
-    {
-      "id": "ephunyn",
-      "name": "Ephunyn",
-      "x": 0.7388,
-      "y": 0.5165,
-      "x_miles": 960.4,
-      "y_miles": 516.5,
-      "terrain": [
-        "plain"
-      ],
-      "population": 397,
-      "population_band": "< 1k",
-      "grid_ref": "F10",
-      "region": "Barathfell vale",
-      "is_ruin": false,
-      "is_port": false,
-      "is_magic_free": false
-    },
-    {
-      "id": "joreththorpe",
-      "name": "Joreththorpe",
-      "x": 0.804,
-      "y": 0.4356,
-      "x_miles": 1045.2,
-      "y_miles": 435.6,
-      "terrain": [
-        "plain"
-      ],
-      "population": 398,
-      "population_band": "< 1k",
-      "grid_ref": "E11",
-      "region": "Barathfell vale",
-      "is_ruin": false,
-      "is_port": false,
-      "is_magic_free": false
-    },
-    {
-      "id": "barunburn",
-      "name": "Barunburn",
-      "x": 0.7347,
-      "y": 0.291,
-      "x_miles": 955.1,
-      "y_miles": 291.0,
-      "terrain": [
-        "plain"
-      ],
-      "population": 601,
-      "population_band": "< 1k",
-      "grid_ref": "C10",
-      "region": "Barathfell vale",
-      "is_ruin": false,
-      "is_port": false,
-      "is_magic_free": true
     }
   ],
   "roads": [
     {
-      "from": "zelothvale",
-      "to": "zelahold",
-      "quality": "fair",
-      "distance_miles": 210,
-      "move_cost": 31.5
+      "from": "highfell",
+      "to": "redport",
+      "quality": "excellent",
+      "distance_miles": 94,
+      "move_cost": 4.7
     },
     {
-      "from": "garmere",
-      "to": "garoath",
+      "from": "redport",
+      "to": "ashford",
+      "quality": "fair",
+      "distance_miles": 59,
+      "move_cost": 8.9
+    },
+    {
+      "from": "ashford",
+      "to": "sarnvale",
       "quality": "poor",
-      "distance_miles": 131,
-      "move_cost": 26.2
+      "distance_miles": 102,
+      "move_cost": 20.4
     },
     {
-      "from": "rhaethdale",
-      "to": "drelerford",
-      "quality": "good",
-      "distance_miles": 262,
-      "move_cost": 26.2
-    },
-    {
-      "from": "dreliwick",
-      "to": "rhaethdale",
+      "from": "sarnvale",
+      "to": "highfell",
       "quality": "fair",
-      "distance_miles": 325,
-      "move_cost": 48.8
+      "distance_miles": 92,
+      "move_cost": 13.8
     },
     {
-      "from": "dreliwick",
-      "to": "narunon",
-      "quality": "good",
-      "distance_miles": 87,
-      "move_cost": 8.7
+      "from": "redport",
+      "to": "oldbarrow",
+      "quality": "poor",
+      "distance_miles": 20,
+      "move_cost": 4.0
     },
     {
-      "from": "zelahold",
-      "to": "garoath",
-      "quality": "good",
-      "distance_miles": 173,
-      "move_cost": 17.3
-    },
-    {
-      "from": "narunon",
-      "to": "zelothvale",
-      "quality": "fair",
-      "distance_miles": 350,
-      "move_cost": 52.5
-    },
-    {
-      "from": "narunon",
-      "to": "zelahold",
-      "quality": "fair",
-      "distance_miles": 276,
-      "move_cost": 41.4
-    },
-    {
-      "from": "ephunyn",
-      "to": "garoath",
-      "quality": "good",
-      "distance_miles": 220,
-      "move_cost": 22.0
-    },
-    {
-      "from": "ephunyn",
-      "to": "dunaen",
-      "quality": "good",
-      "distance_miles": 126,
-      "move_cost": 12.6
-    },
-    {
-      "from": "ephunyn",
-      "to": "joreththorpe",
-      "quality": "good",
-      "distance_miles": 135,
-      "move_cost": 13.5
-    },
-    {
-      "from": "barunburn",
-      "to": "dunaen",
-      "quality": "good",
-      "distance_miles": 367,
-      "move_cost": 36.7
-    },
-    {
-      "from": "barunburn",
-      "to": "ephunyn",
-      "quality": "fair",
-      "distance_miles": 259,
-      "move_cost": 38.8
-    },
-    {
-      "from": "barunburn",
-      "to": "joreththorpe",
-      "quality": "good",
-      "distance_miles": 196,
-      "move_cost": 19.6
+      "from": "highfell",
+      "to": "gullhaven",
+      "quality": "sea",
+      "distance_miles": 201,
+      "move_cost": 20.1
     }
   ]
 };

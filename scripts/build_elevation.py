@@ -29,7 +29,10 @@ The model, in the order it is applied:
      than sitting in concentric rings around each city;
   4. ridged noise for high ground, folded about its midpoint so that hills and
      mountains get creases and valleys instead of domes;
-  5. a shelf multiply, so everything falls to sea level at the shore.
+  5. a shelf multiply, so everything falls to sea level at the shore;
+  6. a normalise, so the tallest ground on any map lands at the same fraction
+     of the frame -- a hills map and a mountains map both read as themselves
+     rather than one of them reading as flat and the other as absurd.
 
 A second channel goes out with it: `sea`, the distance from the shoreline
 outward, clamped and quantised the same way. It is not elevation -- the seabed
@@ -55,7 +58,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.build_public_board import build_board  # noqa: E402
 
-DEFAULT_MAP = REPO_ROOT / "maps" / "calib_12.json"
+DEFAULT_MAP = REPO_ROOT / "maps" / "starter_map.json"
 DEFAULT_OUT = REPO_ROOT / "webapp" / "static" / "public" / "elevation.js"
 
 # Grid resolution. 256 across a 1180-unit frame is one sample every 4.6 units,
@@ -104,9 +107,25 @@ TERRAIN_FALLBACK = (13.0, 8.0)
 
 # Softening on the inverse-distance weights, so a city is a region of high
 # ground rather than a spike with a city on the point of it.
-IDW_SOFT = 2600.0
+#
+# 2600 is a ~51-unit influence radius, which was survivable while the tallest
+# thing on the map was a 56-unit hill. Put a mountains city (base 112) into it
+# and the model raises 290 units of ground inside 50 units of radius: a
+# flat-topped tower with vertical sides, standing in the middle of the board
+# like a cooling stack. 12000 is a ~110-unit radius and high ground spreads
+# into a massif with flanks, which is what a mountain is.
+IDW_SOFT = 12000.0
 
-VERTICAL_EXAGGERATION = 2.6
+# Vertical exaggeration, chosen per map rather than fixed.
+#
+# It used to be a constant 2.6, tuned on a map whose boldest feature was a
+# hill. The constant is the wrong shape of knob: on calib_12 it produced 157
+# units of relief and on a map with mountains in it, 368 -- the same setting
+# reading as "subtle" on one board and "absurd" on the next. Instead the model
+# scales its own output so the tallest ground on ANY map lands at this
+# fraction of the frame width. Relief maps have always chosen their vertical
+# to suit the sheet; this just says so out loud.
+TARGET_RELIEF = 0.17
 NOISE_SCALE = 1.0 / 125.0
 
 
@@ -248,11 +267,16 @@ def build_elevation(map_path: Path) -> dict:
                 base * (0.5 + 0.75 * broad + 0.55 * ridged * ridged)
                 + rough * (fine - 0.45) * 1.9
             )
-            height = max(0.0, height) * shelf * VERTICAL_EXAGGERATION
+            height = max(0.0, height) * shelf
             peak = max(peak, height)
             heights.append(height)
 
-    ceiling = peak or 1.0
+    # Normalise the whole field so its tallest point is TARGET_RELIEF of the
+    # frame. Every height below scales with it, so the ORDERING the terrain
+    # labels set is untouched -- only the amplitude is chosen here.
+    ceiling = frame_w * TARGET_RELIEF
+    if peak > 0:
+        heights = [h / peak * ceiling for h in heights]
     packed = bytes(
         max(0, min(255, int(round(h / ceiling * 255.0)))) for h in heights
     )
@@ -273,7 +297,7 @@ def build_elevation(map_path: Path) -> dict:
 
 
 HEADER = """\
-// Atlas board elevation, generated from maps/calib_12.json by
+// Atlas board elevation, generated from maps/starter_map.json by
 // scripts/build_elevation.py. Do not hand-edit.
 //
 // One byte per cell over the map's own frame, scaled by max_height into board

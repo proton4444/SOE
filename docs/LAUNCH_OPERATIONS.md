@@ -189,7 +189,7 @@ elevation.js            baked heightmap + sea ramp, 99 KB (27 KB gzipped)
 
 Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump
 it by hand whenever any of these change, or returning visitors keep the
-old file. It is currently `v=h21`.
+old file. It is currently `v=h24`.
 
 Bump it in **four files, not one**. `index.html` carries the token for
 `atlas.css`, `board.js`, `atlas.js` and three.js; `atlas.js` carries its

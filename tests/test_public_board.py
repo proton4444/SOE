@@ -1,6 +1,7 @@
 """The poster's board is the 2D map's board, and stays that way.
 
-`webapp/static/public/board.js` is generated from `maps/calib_12.json` by
+`webapp/static/public/board.js` is generated from the map the poster shows
+(`MAP_PATH` below) by
 `scripts/build_public_board.py`. Amendment 2 (docs/MARKETING_CLOSED_ALPHA.md)
 widened what crosses to the public page from coordinate topology to everything
 the app's own map draws -- populations, grid references, ports, regions, road
@@ -30,7 +31,7 @@ from scripts.build_elevation import build_elevation  # noqa: E402
 from scripts.build_public_board import build_board  # noqa: E402
 from webapp import mapview  # noqa: E402
 
-MAP_PATH = REPO_ROOT / "maps" / "calib_12.json"
+MAP_PATH = REPO_ROOT / "maps" / "starter_map.json"
 BOARD_JS = REPO_ROOT / "webapp" / "static" / "public" / "board.js"
 ELEVATION_JS = REPO_ROOT / "webapp" / "static" / "public" / "elevation.js"
 
@@ -65,7 +66,7 @@ def test_board_js_matches_the_builder():
     rebuilt = HEADER + json.dumps(build_board(MAP_PATH), indent=2,
                                   ensure_ascii=False) + ";\n"
     assert BOARD_JS.read_text(encoding="utf-8") == rebuilt, (
-        "board.js is out of date with maps/calib_12.json. "
+        f"board.js is out of date with maps/{MAP_PATH.name}. "
         "Regenerate with: python -m scripts.build_public_board"
     )
 
@@ -77,12 +78,23 @@ def test_every_city_carries_the_parity_field(field):
 
 
 def test_city_values_are_the_map_values():
-    source = {c["id"]: c for c in json.loads(MAP_PATH.read_text("utf-8"))["cities"]}
+    """Every shipped field is the map's own value, mile coordinates included.
+
+    Miles are compared against `mapview.city_miles` rather than a raw field: a
+    map may carry fractions and no miles at all -- starter_map does -- and the
+    board is supposed to derive them the same way the app does.
+    """
+    raw = json.loads(MAP_PATH.read_text("utf-8"))
+    layout = mapview.layout_for_map(MAP_PATH.name, raw)
+    source = {c["id"]: c for c in raw["cities"]}
     for city in shipped_board()["cities"]:
         origin = source[city["id"]]
+        want_miles = mapview.city_miles(origin, layout)
         for field in PARITY_CITY_FIELDS:
-            if field in ("x_miles", "y_miles"):
-                assert city[field] == pytest.approx(origin[field], abs=0.05)
+            if field == "x_miles":
+                assert city[field] == pytest.approx(want_miles[0], abs=0.05)
+            elif field == "y_miles":
+                assert city[field] == pytest.approx(want_miles[1], abs=0.05)
             else:
                 assert city[field] == origin[field], f"{city['id']}.{field}"
 
@@ -112,9 +124,9 @@ def test_the_hull_is_the_2d_map_s_own_polygon():
     frame's own coordinates back, to well under a pixel.
     """
     source = json.loads(MAP_PATH.read_text("utf-8"))
-    layout = mapview.layout_for_map("calib_12.json", source)
+    layout = mapview.layout_for_map(MAP_PATH.name, source)
     expected = mapview.compute_landmasses(
-        source["cities"], source["roads"], mapview.positions("calib_12.json")
+        source["cities"], source["roads"], mapview.positions(MAP_PATH.name)
     )
     shipped = shipped_board()["landmasses"]
     assert len(shipped) == len(expected)
@@ -143,9 +155,15 @@ def test_every_city_stands_on_the_land():
     looking at the board can.
     """
     board = shipped_board()
-    hull = board["landmasses"][0]["hull"]
+    # Each city against ITS OWN mass. Checking every city against the first
+    # hull holds only while a map has one landmass; on an archipelago it
+    # reports the islanders as drowned.
+    hull_of = {}
+    for mass in board["landmasses"]:
+        for cid in mass["city_ids"]:
+            hull_of[cid] = mass["hull"]
     for city in board["cities"]:
-        assert mapview._point_in_poly(city["x"], city["y"], hull), (
+        assert mapview._point_in_poly(city["x"], city["y"], hull_of[city["id"]]), (
             f"{city['name']} is outside its own landmass"
         )
 
@@ -158,27 +176,47 @@ def test_region_anchors_cover_every_region():
 
 
 def test_landmass_name_does_not_depend_on_set_ordering():
-    """calib_12 splits 4/4/4, and a tie must not be broken by hash order.
+    """A region tie must not be broken by hash order.
 
     `max(set(regions), key=regions.count)` picked whichever tied region set
-    iteration happened to yield first, so the same map named its landmass
-    differently between processes -- in the map title and in the legend.
-    Shuffling the input here stands in for the hash seed changing.
+    iteration happened to yield first, so a map whose cities split evenly
+    across regions named its landmass differently between processes -- in the
+    map title and in the legend. calib_12 splits 4/4/4 and was where this was
+    found; it is checked here on whatever map the poster ships, by shuffling
+    the input, which stands in for the hash seed changing.
     """
     source = json.loads(MAP_PATH.read_text("utf-8"))
-    pos = mapview.positions("calib_12.json")
+    pos = mapview.positions(MAP_PATH.name)
     baseline = mapview.compute_landmasses(source["cities"], source["roads"], pos)
+    names = [mass["name"] for mass in baseline]
 
-    names = {mass["name"] for mass in baseline}
     for rotation in range(1, len(source["cities"])):
         rotated = source["cities"][rotation:] + source["cities"][:rotation]
         masses = mapview.compute_landmasses(rotated, source["roads"], pos)
-        assert {m["name"] for m in masses} == names
+        assert [m["name"] for m in masses] == names
 
-    regions = sorted({c["region"] for c in source["cities"]})
-    assert baseline[0]["name"] == regions[0], (
-        "a three-way tie should settle on the alphabetically first region"
-    )
+
+def test_a_sea_lane_does_not_join_land():
+    """starter_map reaches Gullhaven only by sea, so it is its own island.
+
+    This is the property that makes the board an archipelago rather than one
+    blob, and it is easy to lose: give `compute_landmasses` a sea road it
+    treats like a highway and the two masses silently merge into one hull with
+    a bay where the water should be.
+    """
+    board = shipped_board()
+    sea_roads = [r for r in board["roads"] if r["quality"] == "sea"]
+    assert sea_roads, "this map is meant to have a sea lane on it"
+
+    by_mass = {}
+    for mass in board["landmasses"]:
+        for cid in mass["city_ids"]:
+            by_mass[cid] = mass["index"]
+    for road in sea_roads:
+        assert by_mass[road["from"]] != by_mass[road["to"]], (
+            f"{road['from']} and {road['to']} are joined by sea and still "
+            "landed on the same landmass"
+        )
 
 
 def shipped_elevation() -> dict:
@@ -235,13 +273,15 @@ def test_the_sea_is_at_sea_level_and_the_land_is_not():
         assert raw[row * w + col] <= 8, "the shore is not at the waterline"
 
 
-def test_hill_cities_stand_above_plain_cities():
+def test_high_terrain_cities_stand_above_low_ones():
     """The one thing in this model that is data, and it has to survive.
 
-    Terrain labels are the only real input to the elevation. If a hills city
-    did not end up higher than a plain city, the model would have stopped
-    reading the map and started decorating it.
+    Terrain labels are the only real input to the elevation. If a city on
+    mountains did not end up above a city on plains, the model would have
+    stopped reading the map and started decorating it.
     """
+    from scripts.build_elevation import TERRAIN_ELEV, TERRAIN_FALLBACK
+
     board, elevation = shipped_board(), shipped_elevation()
     raw = base64.b64decode(elevation["data"])
     w, h = elevation["width"], elevation["height"]
@@ -251,9 +291,14 @@ def test_hill_cities_stand_above_plain_cities():
         row = min(h - 1, max(0, round(city["y"] * (h - 1))))
         return raw[row * w + col]
 
-    hills = [c for c in board["cities"] if "hills" in c["terrain"]]
-    plain = [c for c in board["cities"] if c["terrain"] == ["plain"]]
-    assert hills and plain
-    assert min(at(c) for c in hills) > max(at(c) for c in plain), (
-        "hill cities are not standing above plain cities"
+    def profile(city):
+        label = city["terrain"][0] if city["terrain"] else None
+        return TERRAIN_ELEV.get(label, TERRAIN_FALLBACK)[0]
+
+    ranked = sorted(board["cities"], key=profile)
+    lowest, highest = ranked[0], ranked[-1]
+    assert profile(highest) > profile(lowest), "map has no terrain variety to check"
+    assert at(highest) > at(lowest), (
+        f"{highest['name']} ({highest['terrain']}) is not standing above "
+        f"{lowest['name']} ({lowest['terrain']})"
     )
