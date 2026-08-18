@@ -213,6 +213,18 @@ falls back to a padded convex hull of the road-connected cities.
   world rather than a picture of a map. The water is ruled; the land is
   not. The whole object is framed, so the sea is never cut off
   mid-picture — the board scales down to hold it.
+- The hull is a **confine, not a coastline**. It is convex — for
+  starter_map’s mainland, four points and four straight edges — and drawn
+  as a shore it looks like the survey boundary it is. The shoreline is an
+  **isoline of the heightfield** instead: the distance to the hull is
+  perturbed by fractal noise before the coastal shelf is taken from it,
+  and the ground goes on descending past it to a seabed. Where that
+  surface crosses sea level is the coast, bays and headlands included.
+  Nothing draws it; it is an intersection.
+- The wobble is **biased inward**. A hull is the smallest convex shape
+  containing its cities, so a real coast inside one mostly bites into it
+  and only occasionally pushes a headland out — and a symmetric wobble
+  puts land past the sheet it is printed on.
 - Because that polygon is a road-connectivity confine and not a survey,
   **the page says so where it is drawn.** The legend carries
   “road-connected extent, not a surveyed coast”.

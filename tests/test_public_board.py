@@ -244,33 +244,93 @@ def test_elevation_covers_the_same_frame_as_the_board():
     assert len(raw) == elevation["width"] * elevation["height"]
 
 
-def test_the_sea_is_at_sea_level_and_the_land_is_not():
-    """The shelf reaches zero at the shore, and only inside the hull is it not.
+def test_cities_are_above_water_and_the_open_field_is_not():
+    """Where the waterline falls, now that it is an isoline and not a polygon.
 
-    A model that leaked height outside the coast would put mountains in the
-    water; one that never rose would be a flat board with a heightmap file
-    next to it, which is the failure this whole change exists to undo.
+    The shore used to be the hull, so the hull's own vertices sat exactly at
+    sea level and this test said so. They do not any more: the generator
+    perturbs the distance-to-hull with noise before taking the shelf from it,
+    which is the whole point -- the coast bites into the hull in places and
+    pushes past it in others. What still has to be true is the part that
+    matters: every city stands on dry land, and the far field is sea.
     """
     board, elevation = shipped_board(), shipped_elevation()
     raw = base64.b64decode(elevation["data"])
     w, h = elevation["width"], elevation["height"]
-    hull = board["landmasses"][0]["hull"]
+    waterline = elevation["sea_level"] / elevation["scale"] * 255
 
-    # A point well outside the hull is sea.
-    assert raw[0] == 0, "the top-left corner of the field is not sea"
-
-    # Every city stands on ground above sea level.
-    for city in board["cities"]:
-        col = min(w - 1, max(0, round(city["x"] * (w - 1))))
-        row = min(h - 1, max(0, round(city["y"] * (h - 1))))
-        assert raw[row * w + col] > 0, f"{city['name']} is at sea level"
-
-    # And the hull's own vertices are at (or within a cell of) the waterline,
-    # because the shelf falls to zero there.
-    for fx, fy in hull:
+    def at(fx, fy):
         col = min(w - 1, max(0, round(fx * (w - 1))))
         row = min(h - 1, max(0, round(fy * (h - 1))))
-        assert raw[row * w + col] <= 8, "the shore is not at the waterline"
+        return raw[row * w + col]
+
+    for city in board["cities"]:
+        assert at(city["x"], city["y"]) > waterline, (
+            f"{city['name']} is under water"
+        )
+
+    # The corners of the field are far from any hull and must be open sea.
+    for fx, fy in ((0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)):
+        assert at(fx, fy) < waterline, "the corner of the field is not sea"
+
+
+def test_the_coast_does_not_wander_off_the_map():
+    """The wobble is bounded, and two margins downstream depend on it.
+
+    board3d.js bounds the terrain mesh CLIP_MARGIN outside the hull and sizes
+    the printed sheet wider than that again. If the shoreline could wander
+    arbitrarily far it would run past both -- seabed hanging off the edge of
+    the board, which is exactly what happened at the first attempt. This pins
+    the invariant those constants are chosen against.
+    """
+    from scripts.build_elevation import COAST_WOBBLE
+
+    board, elevation = shipped_board(), shipped_elevation()
+    raw = base64.b64decode(elevation["data"])
+    w, h = elevation["width"], elevation["height"]
+    waterline = elevation["sea_level"] / elevation["scale"] * 255
+    frame_w, frame_h = elevation["frame_units"]
+
+    rings = [
+        [(px * frame_w, py * frame_h) for px, py in mass["hull"]]
+        for mass in board["landmasses"]
+    ]
+
+    # Generous: the shelf is taken from the perturbed distance, so land may sit
+    # a shelf-width beyond where the wobble alone would put it.
+    allowed = COAST_WOBBLE + 40.0
+
+    worst = 0.0
+    for row in range(h):
+        pz = row / (h - 1) * frame_h
+        for col in range(w):
+            if raw[row * w + col] <= waterline:
+                continue
+            px = col / (w - 1) * frame_w
+            if any(mapview._point_in_poly(px, pz, r) for r in rings):
+                continue
+            worst = max(worst, min(_ring_distance(r, px, pz) for r in rings))
+
+    assert worst <= allowed, (
+        f"land stands {worst:.0f} units outside the hull, past the {allowed:.0f} "
+        "the renderer's clip margin and sheet are sized for"
+    )
+
+
+def _ring_distance(ring, px, pz):
+    import math
+
+    best = float("inf")
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        ax, az = ring[j]
+        bx, bz = ring[i]
+        dx, dz = bx - ax, bz - az
+        length2 = dx * dx + dz * dz or 1.0
+        t = max(0.0, min(1.0, ((px - ax) * dx + (pz - az) * dz) / length2))
+        best = min(best, math.hypot(px - (ax + dx * t), pz - (az + dz * t)))
+        j = i
+    return best
 
 
 def test_high_terrain_cities_stand_above_low_ones():

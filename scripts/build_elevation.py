@@ -84,6 +84,31 @@ GRID_H = 148
 # ground into the water at the coastline rather than dropping a cliff there.
 COAST_SHELF = 30.0
 
+# The shoreline is not the hull.
+#
+# mapview's landmass is a CONVEX HULL -- for starter_map's mainland, literally
+# four points and four straight edges. Drawn as the coast it looks like what it
+# is: a survey boundary, not a shore. Nothing in nature is convex.
+#
+# So the hull stops being the coastline and goes back to being what it always
+# was, a confine. The shoreline is now an isoline of the heightfield: the
+# distance to the hull is perturbed by fractal noise before the shelf is taken
+# from it, and the ground goes on descending past it to a seabed. Where that
+# surface crosses sea level IS the coast -- bays, headlands and all -- and it
+# is a real intersection rather than a polygon anyone has to draw.
+#
+# WOBBLE is how far the shore may wander from the hull, in board units. It is
+# bounded on purpose: the hull sits ~72 units outside the cities it was built
+# around, so a shore that wandered further inland than that would start
+# drowning towns.
+COAST_WOBBLE = 46.0
+COAST_NOISE = 1.0 / 210.0
+
+# Below the waterline. The seabed exists so the coast can be an intersection
+# instead of an edge; it is never seen, because the water above it is opaque.
+SEA_DEPTH_FRAC = 0.28
+SEA_SLOPE = 190.0
+
 # How far offshore the water goes on being drawn as shallow. Nothing physical:
 # it is the width of the colour ramp from strand to open sea.
 SEA_RANGE = 210.0
@@ -224,20 +249,35 @@ def build_elevation(map_path: Path) -> dict:
             fx = col / (GRID_W - 1)
             px = fx * frame_w
 
-            shelf = 0.0
-            for ring in rings:
-                if _inside(ring, px, pz):
-                    shelf = max(
-                        shelf,
-                        _smoothstep(min(1.0, _edge_distance(ring, px, pz) / COAST_SHELF)),
-                    )
+            # Signed distance to the nearest hull: positive inside, negative out.
+            near = min(_edge_distance(ring, px, pz) for ring in rings)
+            signed = near if any(_inside(ring, px, pz) for ring in rings) else -near
+
+            # Perturb it, and the shoreline moves with it. Two octaves: a slow
+            # one for bays and headlands, a quick one for the ragged detail
+            # that stops the slow one reading as a wave.
+            # Biased inward (0.68, not 0.5). A hull is the smallest convex
+            # shape containing its cities, so a real coast inside one is
+            # mostly BITING INTO it -- bays, inlets, a river mouth -- and only
+            # occasionally pushing a headland out. A symmetric wobble instead
+            # bulges as far out as it cuts in, which puts land past the hull
+            # the board is framed around and off the edge of the printed sheet.
+            coast = signed + COAST_WOBBLE * (
+                (_fbm(px * COAST_NOISE, pz * COAST_NOISE, 401) - 0.68) * 1.5
+                + (_fbm(px * COAST_NOISE * 3.9, pz * COAST_NOISE * 3.9, 907) - 0.55) * 0.6
+            )
+
+            shelf = _smoothstep(min(1.0, max(0.0, coast / COAST_SHELF)))
+            # Below the waterline, running out to the seabed floor.
+            submerged = max(-1.0, min(0.0, coast / SEA_SLOPE))
+            depths.append(min(1.0, max(0.0, -coast / SEA_RANGE)))
+
             if shelf <= 0.0:
-                # Open water. Record how far out it is, for the colour ramp.
-                offshore = min(_edge_distance(ring, px, pz) for ring in rings)
-                heights.append(0.0)
-                depths.append(min(1.0, offshore / SEA_RANGE))
+                # Seabed. Recorded, not skipped: the waterline is where this
+                # surface crosses sea level, so the surface has to exist on
+                # both sides of it.
+                heights.append(submerged)
                 continue
-            depths.append(0.0)
 
             wsum = base_sum = rough_sum = 0.0
             for sx, sz, base, rough in seeds:
@@ -269,16 +309,26 @@ def build_elevation(map_path: Path) -> dict:
             )
             height = max(0.0, height) * shelf
             peak = max(peak, height)
-            heights.append(height)
+            heights.append(height + submerged)
 
-    # Normalise the whole field so its tallest point is TARGET_RELIEF of the
-    # frame. Every height below scales with it, so the ORDERING the terrain
-    # labels set is untouched -- only the amplitude is chosen here.
+    # Normalise the land so its tallest point is TARGET_RELIEF of the frame.
+    # Every height scales with it, so the ORDERING the terrain labels set is
+    # untouched -- only the amplitude is chosen here.
     ceiling = frame_w * TARGET_RELIEF
-    if peak > 0:
-        heights = [h / peak * ceiling for h in heights]
+    depth = ceiling * SEA_DEPTH_FRAC
+    scale = ceiling + depth
+
+    # Land was accumulated in raw units and the seabed in [-1, 0]; put both on
+    # the same scale, then lift the whole field so the seabed floor is zero and
+    # a byte can carry it. `sea_level` is where the water sits in that field.
+    out = []
+    for h in heights:
+        if h < 0:
+            out.append(depth + h * depth)
+        else:
+            out.append(depth + (h / peak * ceiling if peak > 0 else 0.0))
     packed = bytes(
-        max(0, min(255, int(round(h / ceiling * 255.0)))) for h in heights
+        max(0, min(255, int(round(h / scale * 255.0)))) for h in out
     )
     packed_sea = bytes(
         max(0, min(255, int(round(d * 255.0)))) for d in depths
@@ -289,6 +339,11 @@ def build_elevation(map_path: Path) -> dict:
         "width": GRID_W,
         "height": GRID_H,
         "frame_units": [frame_w, frame_h],
+        # Board units a full byte is worth, where the water sits in that
+        # range, and how much of it is land. The renderer subtracts sea_level
+        # so its own y = 0 is the waterline.
+        "scale": round(scale, 3),
+        "sea_level": round(depth, 3),
         "max_height": round(ceiling, 3),
         "sea_range": SEA_RANGE,
         "data": base64.b64encode(packed).decode("ascii"),
@@ -319,7 +374,10 @@ def main() -> int:
     args.out.write_text(HEADER + body + ";\n", encoding="utf-8")
 
     raw = base64.b64decode(elevation["data"])
-    land = sum(1 for b in raw if b > 0)
+    # Above the waterline, not merely above zero: every cell carries a value
+    # now, because the seabed is part of the field.
+    waterline = elevation["sea_level"] / elevation["scale"] * 255
+    land = sum(1 for b in raw if b > waterline)
     print(
         f"{args.out}: {elevation['width']}x{elevation['height']} cells, "
         f"peak {elevation['max_height']} board units, "
