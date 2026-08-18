@@ -99,12 +99,105 @@ def distinct_colours(png: bytes) -> int:
     return len(seen)
 
 
-def check_page(browser, url: str, reduced: bool, out_dir: Path | None) -> list[str]:
+#: Every visible label on the board, with the box it actually occupies.
+#: Read from the page because the board places them by projecting each anchor
+#: through the live camera -- there is no static answer to check against.
+LABEL_JS = """() => {
+  const host = document.querySelector('.atlas-labels');
+  if (!host) { return null; }
+  const hb = host.getBoundingClientRect();
+  const labels = [];
+  Array.from(host.children).forEach(function (n) {
+    const cs = getComputedStyle(n);
+    if (cs.display === 'none' || cs.visibility === 'hidden') { return; }
+    if (parseFloat(cs.opacity || '1') < 0.05) { return; }
+    const b = n.getBoundingClientRect();
+    if (b.width <= 0 || b.height <= 0) { return; }
+    labels.push({text: n.textContent.trim(), cls: n.className || '',
+                 left: b.left, top: b.top, right: b.right, bottom: b.bottom});
+  });
+  return {frame: {left: hb.left, top: hb.top, right: hb.right, bottom: hb.bottom},
+          labels: labels};
+}"""
+
+#: A label narrower than this never had its width measured. `place()` caches
+#: `offsetWidth || 1` once, so a label measured while it was hidden keeps a
+#: one-pixel box -- which collides with nothing and is therefore always
+#: "placed". The collision pass would look like it works and do nothing.
+MIN_LABEL_WIDTH = 8.0
+
+
+def check_labels(page, label: str) -> list[str]:
+    """The board's own label planner, checked against what it drew.
+
+    board3d.js ranks the labels, tries several boxes each, clamps them into
+    the frame and drops what will not fit. None of that is tested anywhere:
+    the data behind the board has fifteen tests and the placement has none,
+    because it only exists once a browser has run the projection.
+    """
+    problems: list[str] = []
+    data = page.evaluate(LABEL_JS)
+    if data is None:
+        return [f"{label}: the board has no label layer"]
+
+    labels = data["labels"]
+    frame = data["frame"]
+    if not any("atlas-label" in one["cls"] for one in labels):
+        return [f"{label}: the board is drawn but not one city is named"]
+
+    for one in labels:
+        if one["right"] - one["left"] < MIN_LABEL_WIDTH:
+            problems.append(
+                f"{label}: {one['text']!r} is "
+                f"{one['right'] - one['left']:.0f}px wide — it was measured "
+                f"while it was hidden, so it collides with nothing"
+            )
+
+    for i, a in enumerate(labels):
+        for b in labels[i + 1 :]:
+            if (
+                a["right"] <= b["left"]
+                or b["right"] <= a["left"]
+                or a["bottom"] <= b["top"]
+                or b["bottom"] <= a["top"]
+            ):
+                continue
+            problems.append(
+                f"{label}: {a['text']!r} prints over {b['text']!r}"
+            )
+
+    # `.atlas-labels` clips at overflow:hidden, so a label the clamp did not
+    # bring inside is not merely close to the edge: it is cut in half and
+    # reads as a different, shorter word.
+    for one in labels:
+        if (
+            one["left"] < frame["left"] - 0.5
+            or one["right"] > frame["right"] + 0.5
+            or one["top"] < frame["top"] - 0.5
+            or one["bottom"] > frame["bottom"] + 0.5
+        ):
+            problems.append(
+                f"{label}: {one['text']!r} runs outside the board frame and "
+                f"is clipped mid-word"
+            )
+    return problems
+
+
+def check_page(
+    browser,
+    url: str,
+    reduced: bool,
+    out_dir: Path | None,
+    viewport: tuple[int, int] = (1440, 900),
+    tag: str = "",
+) -> list[str]:
     problems: list[str] = []
     label = "reduced-motion" if reduced else "animated"
+    if tag:
+        label = f"{label} {tag}"
 
     page = browser.new_page(
-        viewport={"width": 1440, "height": 900},
+        viewport={"width": viewport[0], "height": viewport[1]},
         device_scale_factor=1,
         reduced_motion="reduce" if reduced else "no-preference",
     )
@@ -157,7 +250,10 @@ def check_page(browser, url: str, reduced: bool, out_dir: Path | None) -> list[s
             )
         if out_dir:
             out_dir.mkdir(parents=True, exist_ok=True)
-            (out_dir / f"board-{label}.png").write_bytes(png)
+            safe = label.replace(" ", "-")
+            (out_dir / f"board-{safe}.png").write_bytes(png)
+
+    problems += check_labels(page, label)
 
     page.close()
     return problems
@@ -188,6 +284,13 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             for reduced in (False, True):
                 problems += check_page(browser, url, reduced, args.out)
+            # The phone is a different board, not a smaller one: the CSS
+            # drops the road readings and half of every data row at 640px,
+            # and the frame changes aspect, which moves every projected
+            # label. Checking only the desktop checks one of two layouts.
+            problems += check_page(
+                browser, url, False, args.out, viewport=(390, 844), tag="phone"
+            )
             browser.close()
     finally:
         server.shutdown()
@@ -200,8 +303,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(
-        "ok    the board drew, animated and reduced-motion, with no console "
-        "error, and the still one opened on the finished match"
+        "ok    the board drew on desktop and phone, animated and "
+        "reduced-motion, with no console error, no label printing over "
+        "another or clipped by the frame, and the still one opened on the "
+        "finished match"
     )
     return 0
 
