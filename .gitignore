@@ -116,6 +116,10 @@ maps/compare_web_vs_poster.png
 maps/_web_preview.svg
 
 
+# SVGs check_map_labels --browser writes to load in Chromium. Rendered on
+# demand from the maps, never edited, never evidence.
+.map-label-audit/
+
 # Live room game data: runtime state, not source. Stays on disk.
 games/room_*/
 

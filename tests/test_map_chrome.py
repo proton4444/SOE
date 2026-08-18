@@ -466,3 +466,28 @@ def test_a_force_badge_may_sit_against_a_town_name():
         )
 
     assert names(live) == names(mapview.render_svg("calib_12_fbm.json"))
+
+
+def test_the_box_model_is_measured_against_the_faces_the_map_sets():
+    """The constants are measurements, and a measurement names its subject.
+
+    Change the font stack and the numbers stop describing anything, silently
+    -- which is exactly how a caption box came to be 15% short. If this
+    fails, re-measure with `python -m scripts.check_map_labels --browser`
+    before touching the constants.
+    """
+    defs = mapview._defs()
+    assert '.map-meta { font-family: ui-monospace, Consolas, monospace; }' in defs
+    assert '.map-label { font-family: Georgia, "Times New Roman", serif; }' in defs
+
+
+def test_the_label_audit_runs_and_passes_over_the_maps_we_ship():
+    """The report an operator reads is the invariant this file holds.
+
+    Without the browser: this is the renderer's own box model checking
+    itself, which is worth having and is not proof. `--browser` is the
+    proof, and needs Playwright and a Chromium this machine may not have.
+    """
+    from scripts import check_map_labels
+
+    assert check_map_labels.main([]) == 0
