@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h24";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h25";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -1925,7 +1925,16 @@ export function createBoard(options) {
          whole coast a name lost to a neighbour's data row was simply gone.
          Vertical only, and small: a name that slid sideways would sit over the
          wrong mound, while one lifted a line still points down at its own. */
-      candidates: [[0, 0], [0, -19], [0, 19], [0, -38]],
+      /* Vertical first, then out to the side, then further out. It was four
+         vertical nudges, which is enough room on a crowded board where a
+         dropped name costs little and a misplaced one costs a lot. On a
+         six-city board every name should be readable, and a neighbour 20
+         miles away cannot be cleared by 38px of lift -- so the ladder runs
+         wider before it gives up. Lateral offsets are last because a name
+         beside a mound is likelier to be misread than one above it. */
+      candidates: [[0, 0], [0, -19], [0, 19], [0, -38], [0, 38],
+                   [-62, -16], [62, -16], [-62, 16], [62, 16],
+                   [0, -58], [0, 58]],
       anchor: new THREE.Vector3(x, gh + 26, z)
     };
   });
@@ -2116,11 +2125,25 @@ export function createBoard(options) {
     node.style.opacity = "0";
   }
 
+  /* Cities compete by size, not by their order in the map file.
+
+     Two cities close enough for their labels to collide -- Oldbarrow sits 20
+     miles from Redport -- were resolved by whichever the map happened to list
+     first, which is an accident standing in for a decision. Population band is
+     the decision: a city of 420,000 keeps its anchor and the dead hamlet next
+     door takes an offset. mapview ranks its own labels the same way and for
+     the same reason. */
+  const BAND_RANK = { "100k+": 4, "10k-99k": 3, "1k-9k": 2, "< 1k": 1 };
+  const cityPlacementOrder = cities.slice().sort(function (a, b) {
+    return (BAND_RANK[b.population_band] || 0) - (BAND_RANK[a.population_band] || 0);
+  });
+
   function placeLabels() {
     placed.length = 0;
     // Highest rank first: whoever is placed owns the space.
-    Object.keys(labelByCity).forEach(function (id) {
-      place(labelByCity[id]);
+    cityPlacementOrder.forEach(function (city) {
+      const entry = labelByCity[city.id];
+      if (entry) { place(entry); }
     });
     extraLabels
       .slice()
