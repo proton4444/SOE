@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h17";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h20";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -132,8 +132,6 @@ const SHEET_INSET = 14;
    colour change painted on a flat plate. */
 const LAND_H = 30;
 const SEA_TINT = 0x9fc4d8;
-const LAND_TINT = 0x76874f;   // matches HYPSO's shore band, so the
-                              // terrain grid's ragged edge dies into the cap
 const COAST_INK = 0x4a6070;
 /* Warm, not green. This is a section through the ground -- soil and rock
    under a skin of grass -- and a green wall read as a mossy kerb around the
@@ -410,11 +408,22 @@ function roadRibbon(ax, az, bx, bz, width, key, height) {
   const len = Math.hypot(dx, dz) || 1;
   let sum = 0;
   for (let i = 0; i < key.length; i++) { sum += key.charCodeAt(i); }
-  const bow = Math.min(28, len * 0.08) * (sum % 2 === 0 ? 1 : -1);
+  /* The bow, much reduced. It was up to 28 units of lateral swing, which on a
+     flat board was pleasant variety -- roads on a map are not drawn ruler
+     straight. Over modelled ground it fights the landscape instead of
+     following it: the curve throws the ribbon across a slope it has no reason
+     to cross, and the result reads as a road that has gone wrong rather than
+     as a road that meanders. 11 units keeps the hand-drawn quality without
+     arguing with the terrain. */
+  const bow = Math.min(11, len * 0.03) * (sum % 2 === 0 ? 1 : -1);
   const cx = (ax + bx) / 2 + (-dz / len) * bow;
   const cz = (az + bz) / 2 + (dx / len) * bow;
 
-  const SEG = 28;
+  /* Sixty-four, up from twenty-eight. The ribbon samples the ground at every
+     vertex, so its segment count is the resolution at which it can follow a
+     hill -- at 28 a long road chorded straight across the valleys between its
+     samples and surfaced through the high ground in between. */
+  const SEG = 64;
   const pos = [], uv = [], idx = [];
   for (let i = 0; i <= SEG; i++) {
     const t = i / SEG, mt = 1 - t;
@@ -1257,7 +1266,7 @@ export function createBoard(options) {
     const seaTex = loader.load("textures/sea.jpg");
     seaTex.colorSpace = THREE.SRGBColorSpace;
     seaTex.wrapS = seaTex.wrapT = THREE.RepeatWrapping;
-    seaTex.repeat.set(ruledHalfW * 2 / 300, ruledHalfD * 2 / 300);
+    seaTex.repeat.set((sheetW - REVEAL * 2) / 300, (sheetD - REVEAL * 2) / 300);
     seaTex.anisotropy = ANISO;
 
     /* Sea first, over the whole ruled field. Land is then printed on top of
@@ -1267,7 +1276,15 @@ export function createBoard(options) {
        Subdivided, so it can be graded. A single quad can only carry one
        colour across its whole face; 96x56 gives the ramp from surf to open
        water enough vertices to be a gradient rather than a step. */
-    const seaGeo = new THREE.PlaneGeometry(ruledHalfW * 2, ruledHalfD * 2, 96, 56);
+    /* Sized to the PLATE, not to the neatline. With the water margin cut to 34
+       the ruled field ends about 11 units past the coast, so a sea drawn only
+       inside the neatline was a thin blue ribbon with a wide band of bright
+       cream plate outside it -- and the brightest thing in the frame was the
+       mount rather than the map. The water now runs to the edge of the print
+       and the neatline is ruled across it, which is what a chart does. */
+    const seaHalfW = (sheetW - REVEAL * 2) / 2;
+    const seaHalfD = (sheetD - REVEAL * 2) / 2;
+    const seaGeo = new THREE.PlaneGeometry(seaHalfW * 2, seaHalfD * 2, 96, 56);
     const seaPos = seaGeo.attributes.position;
     const seaCol = [];
     for (let i = 0; i < seaPos.count; i++) {
@@ -1323,55 +1340,90 @@ export function createBoard(options) {
       });
       shape.closePath();
 
-      /* Extruded, not a printed fill. A flat polygon tinted green is a map OF
-         land; a solid with a wall down to the seabed is land. The extrusion
-         runs along local +z, which this mesh's -90deg rotation about X carries
-         to world +y, so the body comes out spanning 0..LAND_H and is dropped
-         by LAND_H to put its top face at 0 -- where every mound, road and
-         token in the scene already stands. */
-      const landTex = terrainMap("plain");
-      const geo = new THREE.ExtrudeGeometry(shape, {
-        depth: LAND_H, bevelEnabled: false, curveSegments: 1
-      });
-      /* Extrude UVs come out in model units, so the grain would stretch across
-         a 700-unit body without this. Same tile size as the mounds' ground.
-         The wall gets it too: at this scale a smeared cliff face is more
-         obvious than a tiled one. */
-      const uv = geo.attributes.uv;
-      for (let i = 0; i < uv.count; i++) {
-        uv.setXY(i, uv.getX(i) / 300, uv.getY(i) / 300);
-      }
-      uv.needsUpdate = true;
+      /* The cliff, and ONLY the cliff.
 
-      /* Two materials: ExtrudeGeometry emits group 0 for the caps and group 1
-         for the wall. The cliff is the cut edge of the same ground, so it is
-         the same tint stepped down -- a shore reads as a shore because it is
-         darker under its own overhang, not because it is a different colour. */
-      const land = new THREE.Mesh(geo, [
-        new THREE.MeshStandardMaterial({
-          color: LAND_TINT, map: landTex, roughness: 0.95, metalness: 0,
-          envMapIntensity: 0.28
-        }),
-        new THREE.MeshStandardMaterial({
-          color: LAND_CLIFF, map: landTex, roughness: 0.98, metalness: 0,
-          envMapIntensity: 0.18
-        })
-      ]);
-      land.rotation.x = -Math.PI / 2;
-      land.position.y = -LAND_H;
-      land.castShadow = true;
-      land.receiveShadow = true;
-      scene.add(land);
+         This was an ExtrudeGeometry: a solid with a flat cap on top and a wall
+         down to the seabed. The cap made sense while the land was flat. It
+         stopped making sense the moment the terrain mesh started covering the
+         hull exactly, and then it actively hurt -- the terrain sat 0.15 units
+         proud of a cap of a different colour, so every clipped cell along the
+         coast showed a sliver of the cap beside it and the shoreline came out
+         as a fine sawtooth. Two surfaces claiming the same ground, one of them
+         redundant.
+
+         So the cap is gone and what is left is a skirt: a quad strip hung from
+         the shore ring down to the seabed. The terrain's own shelf falls to
+         exactly zero at the hull edge and the skirt starts at exactly zero, so
+         they meet along one line with nothing to show through between them. */
+      const landTex = terrainMap("plain");
+      const skirtPos = [], skirtUv = [], skirtIdx = [];
+      const ringPts = mass.hull.map(function (pt) {
+        return [worldX(pt[0]), worldZ(pt[1])];
+      });
+      /* Normals by hand, pointing out to sea.
+
+         computeVertexNormals() derives them from triangle winding, and the
+         winding of this strip follows whichever way the hull happens to be
+         wound -- which put every normal on the cliff face inward, into the
+         island. The face was then lit by whatever the inside of the landmass
+         is lit by, which is nothing, and a warm brown cliff rendered as a
+         black band round the whole coast. The hull is convex, so "outward" is
+         exactly "away from the centroid" and there is no reason to infer it
+         from winding at all. */
+      let cx = 0, cz = 0;
+      ringPts.forEach(function (pt) { cx += pt[0]; cz += pt[1]; });
+      cx /= ringPts.length;
+      cz /= ringPts.length;
+
+      const skirtNrm = [];
+      let run = 0;
+      for (let i = 0; i < ringPts.length; i++) {
+        const cur = ringPts[i];
+        const nxt = ringPts[(i + 1) % ringPts.length];
+        const seg = Math.hypot(nxt[0] - cur[0], nxt[1] - cur[1]);
+        skirtPos.push(cur[0], 0, cur[1]);
+        skirtPos.push(cur[0], -LAND_H, cur[1]);
+        skirtUv.push(run / 300, 0, run / 300, LAND_H / 300);
+
+        const ox = cur[0] - cx, oz = cur[1] - cz;
+        const olen = Math.hypot(ox, oz) || 1;
+        // Tipped slightly downward, the way a real cut bank leans away.
+        skirtNrm.push(ox / olen, -0.18, oz / olen);
+        skirtNrm.push(ox / olen, -0.18, oz / olen);
+
+        run += seg;
+        const b = i * 2;
+        const n = ((i + 1) % ringPts.length) * 2;
+        skirtIdx.push(b, b + 1, n, n, b + 1, n + 1);
+      }
+      const skirtGeo = new THREE.BufferGeometry();
+      skirtGeo.setAttribute("position",
+        new THREE.Float32BufferAttribute(skirtPos, 3));
+      skirtGeo.setAttribute("normal",
+        new THREE.Float32BufferAttribute(skirtNrm, 3));
+      skirtGeo.setAttribute("uv", new THREE.Float32BufferAttribute(skirtUv, 2));
+      skirtGeo.setIndex(skirtIdx);
+      skirtGeo.normalizeNormals();
+
+      const cliff = new THREE.Mesh(skirtGeo, new THREE.MeshStandardMaterial({
+        color: LAND_CLIFF, map: landTex, roughness: 0.98, metalness: 0,
+        envMapIntensity: 0.18,
+        // A strip has no inside; which face the winding calls front depends on
+        // where the reader has spun the board to.
+        side: THREE.DoubleSide
+      }));
+      cliff.castShadow = true;
+      cliff.receiveShadow = true;
+      scene.add(cliff);
 
       /* --- the ground surface itself.
 
          The extruded body above is the island's base and its cliff; this is
          the land ON it. A grid is laid over the mass's bounding box, every
          vertex lifted to groundHeight, and any cell whose centre falls outside
-         the shore is dropped. Because the height falls to zero at the
-         coastline, the dropped cells leave a ragged edge sitting at exactly
-         the height of the base's flat cap underneath it -- so the raggedness
-         is buried and the visible coast stays the hull's own outline.
+         the shore is clipped to it. Because the height falls to zero at the
+         coastline and the clipped fragments put their vertices exactly on the
+         hull, this surface and the cliff skirt below it share one edge.
 
          Coloured by height rather than by texture. Twelve terrain labels
          cannot paint a continent, but an elevation can read itself: low ground
@@ -1395,7 +1447,7 @@ export function createBoard(options) {
           const pz = bounds[1] + r * STEP;
           const h = groundHeight(px, pz);
           if (h > peak) { peak = h; }
-          gPos.push(px, h + 0.15, pz);
+          gPos.push(px, h, pz);
           gUv.push(px / 300, pz / 300);
           gCol.push(0, 0, 0);          // filled once the peak is known
         }
@@ -1468,7 +1520,7 @@ export function createBoard(options) {
           frag.forEach(function (pt) {
             const h = groundHeight(pt[0], pt[1]);
             if (h > peak) { peak = h; }
-            gPos.push(pt[0], h + 0.15, pt[1]);
+            gPos.push(pt[0], h, pt[1]);
             gUv.push(pt[0] / 300, pt[1] / 300);
             gCol.push(0, 0, 0);
           });
@@ -1482,7 +1534,7 @@ export function createBoard(options) {
          and it has to run after the clipped shore fragments have been added,
          or they arrive black. */
       for (let i = 0; i < gPos.length / 3; i++) {
-        const tint = hypso((gPos[i * 3 + 1] - 0.15) / HYPSO_CEILING);
+        const tint = hypso(gPos[i * 3 + 1] / HYPSO_CEILING);
         gCol[i * 3] = tint[0];
         gCol[i * 3 + 1] = tint[1];
         gCol[i * 3 + 2] = tint[2];
