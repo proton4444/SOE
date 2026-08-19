@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h33";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h34";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -694,6 +694,20 @@ const SEA_SURF = [0.86, 0.92, 0.90];
    wet sand rather than a colour that would fringe the beach if it showed. */
 const SEABED_TINT = [0.55, 0.53, 0.42];
 
+/* With no elevation grid the board still has to draw something, and what it
+   drew was an ocean. Every land vertex came back at y = 0, under an opaque sea
+   plane at 0.15, so the depth buffer removed the whole landmass: six towns and
+   their roads standing in open water, which is the one picture this fallback
+   exists to avoid. The comment in atlas.js promises "a flat vale"; the vale has
+   to be above the water for that to be true.
+
+   FALLBACK_REF is what its height is read against when the tint ramp is
+   chosen. The grid normally supplies `max_height`; without one the ratio was
+   taken against 1, which would paint a vale a few tenths of a unit high as
+   bare mountain rock. */
+const FALLBACK_LAND_Y = SEA_SURFACE_Y + 1.2;
+const FALLBACK_REF = 40.0;
+
 /* Elevation is read against a fixed scale, not against this map's own tallest
    point. Normalising by the observed peak means whatever happens to be
    highest is always painted as a summit -- so a vale whose boldest feature is
@@ -961,7 +975,8 @@ export function createBoard(options) {
      the board as a field of 4.6-unit plateaux -- and the contour shader,
      which reads height directly, would draw a rectangle around every one. */
   function sampleElevation(fx, fy) {
-    if (!elevBytes) { return 0; }
+    // A flat vale just clear of the water, not a seabed under it.
+    if (!elevBytes) { return FALLBACK_LAND_Y; }
     const w = elevation.width, h = elevation.height;
     const gx = Math.min(w - 1, Math.max(0, fx * (w - 1)));
     const gy = Math.min(h - 1, Math.max(0, fy * (h - 1)));
@@ -1583,7 +1598,7 @@ export function createBoard(options) {
         const y = gPos[i * 3 + 1];
         const tint = y <= 0
           ? SEABED_TINT
-          : hypso(y / (elevation ? elevation.max_height : 1));
+          : hypso(y / (elevation ? elevation.max_height : FALLBACK_REF));
         gCol[i * 3] = tint[0];
         gCol[i * 3 + 1] = tint[1];
         gCol[i * 3 + 2] = tint[2];

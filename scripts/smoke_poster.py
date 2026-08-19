@@ -241,6 +241,74 @@ def check_labels_on_print(labels, frame, stamp: str, label: str) -> list[str]:
     return problems
 
 
+#: A board centre this much water is a board with no land on it. Measured:
+#: the normal board reads 0.82 warm at the middle, the repaired fallback 0.96,
+#: and the fallback with its land at y = 0 reads 0.08.
+MIN_CENTRE_LAND = 0.5
+
+
+def centre_land_share(png: bytes) -> float | None:
+    """How much of the middle of the board is land rather than water.
+
+    Warm against cool, over the centre fifth: the continent is there on every
+    map the poster can carry, so a blue middle means the land is missing.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+
+    image = Image.open(io.BytesIO(png)).convert("RGB")
+    w, h = image.size
+    box = image.crop((int(w * 0.40), int(h * 0.35), int(w * 0.60), int(h * 0.55)))
+    pixels = list(box.getdata())
+    if not pixels:
+        return None
+    return sum(1 for r, _, b in pixels if r > b + 10) / len(pixels)
+
+
+def check_fallback_board(browser, url: str, out_dir: Path | None) -> list[str]:
+    """The board with no elevation grid, which is a path nothing exercised.
+
+    `atlas.js` guards the grid and passes `null` "so the board has to keep
+    rendering as a flat vale if the file is ever not there". It did not: every
+    land vertex came back at y = 0, under an opaque sea plane at 0.15, so the
+    depth buffer removed the whole landmass and the fallback drew six towns
+    standing in open water. The file ships and the preflight requires it, so
+    this only bites when it fails to load -- which is exactly when nobody is
+    watching.
+    """
+    label = "no-elevation"
+    problems: list[str] = []
+    page = browser.new_page(viewport={"width": 1280, "height": 900})
+    page.route("**/elevation.js*", lambda route: route.abort())
+    console: list[str] = []
+    page.on("pageerror", lambda e: console.append(str(e)))
+
+    page.goto(url, wait_until="domcontentloaded")
+    page.wait_for_timeout(5000)
+    for message in console:
+        problems.append(f"{label}: page error: {message.splitlines()[0]}")
+
+    canvas = page.query_selector("#atlas")
+    if canvas is None:
+        problems.append(f"{label}: there is no board canvas on the page")
+    else:
+        png = canvas.screenshot(timeout=15000)
+        share = centre_land_share(png)
+        if share is not None and share < MIN_CENTRE_LAND:
+            problems.append(
+                f"{label}: the middle of the board is {1 - share:.0%} water -- "
+                f"the flat vale is under the sea instead of on it"
+            )
+        if out_dir:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "board-no-elevation.png").write_bytes(png)
+
+    page.close()
+    return problems
+
+
 def check_page(
     browser,
     url: str,
@@ -388,6 +456,9 @@ def main(argv: list[str] | None = None) -> int:
             problems += check_page(
                 browser, url, False, args.out, viewport=(390, 844), tag="phone"
             )
+            # And the board with its elevation grid missing, which is the one
+            # state the bundle promises to survive and nothing had rendered.
+            problems += check_fallback_board(browser, url, args.out)
             browser.close()
     finally:
         server.shutdown()
@@ -402,8 +473,9 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "ok    the board drew on desktop and phone, animated and "
         "reduced-motion, with no console error, no label printing over "
-        "another or clipped by the frame, and the still one opened on the "
-        "finished match"
+        "another or clipped by the frame, the still one opened on the "
+        "finished match, and the board without its elevation grid still "
+        "drew land"
     )
     return 0
 
