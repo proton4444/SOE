@@ -35,6 +35,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from webapp.mapview import (  # noqa: E402
     city_miles,
     compute_landmasses,
+    landmasses_from_geography,
     layout_for_map,
     positions,
 )
@@ -67,11 +68,39 @@ def _round(value: float, places: int = 4) -> float:
     return round(float(value), places)
 
 
+def _geography_for(map_path: Path) -> dict | None:
+    """Traced coastlines beside the map we were handed, if there are any.
+
+    Resolved against `map_path`, not against the repository's `maps/`: the
+    sidecar belongs to the file that was supplied, and looking it up by
+    basename is how the city positions came to be read from a different map.
+    """
+    stem = map_path.stem
+    for name in (
+        f"{stem.replace('_world', '_geography')}.json",
+        f"{stem}_geography.json",
+    ):
+        candidate = map_path.with_name(name)
+        if not candidate.exists() or candidate.name == map_path.name:
+            continue
+        try:
+            data = json.loads(candidate.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if isinstance(data, dict) and data.get("coastlines"):
+            return data
+    return None
+
+
 def build_board(map_path: Path) -> dict:
     source = json.loads(map_path.read_text(encoding="utf-8"))
     map_file = map_path.name
+    # Passed on rather than resolved again inside: a traced coast changes the
+    # frame the fractions are measured against, so the layout has to see the
+    # same geography the landmasses do.
+    geo = _geography_for(map_path)
 
-    layout = layout_for_map(map_file, source)
+    layout = layout_for_map(map_file, source, geo)
     # From the map that was actually read, not from its basename. `--map` may
     # point anywhere; resolving the name again under `maps/` raised for a
     # custom filename, and for one that collided with a bundled map it built a
@@ -125,22 +154,36 @@ def build_board(map_path: Path) -> dict:
         # board place its cities on exactly the arrangement the app draws
         # rather than on a square approximation of it.
         "frame_units": [layout.map_w, layout.map_h],
-        "landmasses": _landmasses_in_fractions(source, pos, layout),
+        "landmasses": _landmasses_in_fractions(source, pos, layout, geo),
         "regions": _region_anchors(source["cities"]),
         "cities": cities,
         "roads": roads,
     }
 
 
-def _landmasses_in_fractions(source: dict, pos: dict, layout) -> list[dict]:
-    """The 2D map's own hulls, carried from its SVG frame into 0..1 fractions.
+def _landmasses_in_fractions(
+    source: dict, pos: dict, layout, geo: dict | None = None
+) -> list[dict]:
+    """The 2D map's own landmasses, carried from its SVG frame into 0..1 fractions.
 
     `project_miles` places a mile coordinate at `pad + (mi / field) * map_extent`;
     this inverts that. The hull is padded outward from the cities, so points
     outside 0..1 are expected and are not clamped -- clamping would flatten the
     shore against the field edge.
+
+    Traced coastlines win where they exist. `compute_landmasses` builds a
+    connectivity confine, which is the right answer only for a map with no
+    geography file beside it -- and it was being used unconditionally, so
+    `--map maps/world.json` exported three convex hulls under different names
+    while the app drew two traced landmasses. The whole point of building this
+    from mapview is that the board and the app cannot disagree about where the
+    coast runs, and on a geography-backed map they did.
     """
-    masses = compute_landmasses(source["cities"], source["roads"], pos)
+    masses = []
+    if geo:
+        masses = landmasses_from_geography(geo, source["cities"], layout)
+    if not masses:
+        masses = compute_landmasses(source["cities"], source["roads"], pos)
     out = []
     for mass in masses:
         # Six places, not the usual four. A fraction is multiplied by the frame

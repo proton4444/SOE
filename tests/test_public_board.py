@@ -415,3 +415,45 @@ def test_a_borrowed_basename_does_not_borrow_the_other_map_s_land(tmp_path):
             assert min(ys) - margin <= hy <= max(ys) + margin, (
                 f"{mass['name']} is drawn at y={hy:.3f}, away from its own towns"
             )
+
+
+def test_a_geography_backed_map_exports_the_coast_the_app_draws():
+    """The builder's whole claim is that the board cannot disagree with the app.
+
+    `compute_landmasses` builds a road-connectivity confine, which is the right
+    answer only for a map with no geography beside it — and it was used
+    unconditionally. `maps/world.json` came out as three convex hulls under
+    invented names while the app drew two traced landmasses, and
+    `build_elevation` inherited the same wrong coast.
+    """
+    for name in ("world.json", "world2.json"):
+        path = REPO_ROOT / "maps" / name
+        assert mapview.load_geography(name), f"{name} is meant to have geography"
+        drawn = [mass["name"] for mass in mapview.map_stats(name)["masses"]]
+        built = [mass["name"] for mass in build_board(path)["landmasses"]]
+        assert built == drawn, f"{name}: board exports {built}, app draws {drawn}"
+
+
+def test_a_map_without_geography_still_gets_its_connectivity_hulls():
+    """The fallback is not removed by preferring the traced coast.
+
+    `starter_map.json` has no geography file — the poster's own map — so the
+    padded convex hull of the road-connected towns is still what it gets.
+    """
+    assert mapview.load_geography("starter_map.json") is None
+    drawn = [mass["name"] for mass in mapview.map_stats("starter_map.json")["masses"]]
+    built = [mass["name"] for mass in build_board(MAP_PATH)["landmasses"]]
+    assert built == drawn == ["Main Continent", "Northern Island"]
+
+
+def test_the_canvas_says_how_many_cities_it_draws():
+    """The label layer is `aria-hidden`, so this is the whole board to a reader
+    who cannot see it. It said twelve after the board moved to a six-city map."""
+    index = (
+        REPO_ROOT / "webapp" / "static" / "public" / "index.html"
+    ).read_text(encoding="utf-8")
+    cities = len(json.loads(MAP_PATH.read_text(encoding="utf-8"))["cities"])
+    spelled = {6: "six", 12: "twelve"}[cities]
+    assert f"{spelled} cities, their roads" in index, (
+        f"the canvas aria-label does not say the board draws {spelled} cities"
+    )
