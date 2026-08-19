@@ -769,8 +769,12 @@ than the first: turn 0 is two lone commanders on an otherwise empty
 board, which is the one picture of this match that argues against
 showing it, while turn 30 carries twenty-five pieces, three cities held,
 the readouts at their final counts and the outcome line. The scrubber
-still walks it back. `scripts/smoke_poster.py` checks this in the
-browser now — "the board drew" was true of the empty frame too.
+still walks it back — which was written here before it was true: a parked
+board keeps the frame it last drew, so scrubbing moved the readouts and
+left the pieces where they were until `applyFrame` began asking for a
+repaint. `scripts/smoke_poster.py` checks both in the browser now, and
+fails if the canvas does not follow the scrubber. "The board drew" was
+true of the empty frame too.
 
 Board topology is baked into `board.js` by
 `scripts/build_public_board.py`, which copies only id, name, `x`, `y`,
