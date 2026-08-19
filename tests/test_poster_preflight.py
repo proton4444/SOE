@@ -418,3 +418,52 @@ def test_an_oversized_bundle_is_refused(bundle, manifest):
     # unoptimised texture or a video someone dropped in.
     (bundle / "textures" / "plain.jpg").write_bytes(random.Random(7).randbytes(2 * 1024 * 1024))
     assert any("MB gzipped" in m for m in blockers(run(bundle, manifest), "weight"))
+
+
+# ---------------------------------------------------------------------------
+# the Pages workflow
+# ---------------------------------------------------------------------------
+
+
+def test_the_pages_workflow_cannot_publish_by_itself():
+    """The whole safety of the deploy is that a human has to start it.
+
+    A push trigger here would put the poster on the public internet on every
+    commit to the branch, form placeholders and all. That is the one change to
+    this file that must never pass review, so it is the one this test holds.
+    """
+    import yaml
+
+    spec = yaml.safe_load(
+        (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+    )
+    # PyYAML reads a bare `on:` key as the boolean True.
+    triggers = spec.get("on", spec.get(True))
+    assert set(triggers) == {"workflow_dispatch"}, (
+        f"the poster deploys on {sorted(triggers)}; only a human may start it"
+    )
+
+
+def test_the_pages_workflow_runs_the_preflight_before_it_deploys():
+    """Deploying a bundle nothing checked is how a broken poster goes live."""
+    text = (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(
+        encoding="utf-8"
+    )
+    preflight = text.index("scripts.check_poster")
+    upload = text.index("upload-pages-artifact")
+    assert preflight < upload, "the bundle is uploaded before it is checked"
+
+
+def test_the_pages_workflow_publishes_only_the_poster_bundle():
+    """Not the repo, not the maps, not the game. One directory."""
+    import yaml
+
+    spec = yaml.safe_load(
+        (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+    )
+    paths = [
+        step["with"]["path"]
+        for step in spec["jobs"]["deploy"]["steps"]
+        if "upload-pages-artifact" in str(step.get("uses", ""))
+    ]
+    assert paths == ["webapp/static/public"]

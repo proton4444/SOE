@@ -1,0 +1,84 @@
+name: Poster page
+
+# Publishes `webapp/static/public/` — the poster bundle, nothing else — to
+# GitHub Pages.
+#
+# Two things keep this from putting anything on the internet by itself:
+#
+#   1. `workflow_dispatch` and nothing else. No push trigger, no schedule. A
+#      human runs it from the Actions tab, on purpose, or it never runs.
+#   2. GitHub Pages has to be switched on for the repository first, with its
+#      source set to "GitHub Actions" (Settings -> Pages). Until then this
+#      workflow fails at the deploy step rather than publishing anywhere.
+#
+# The stage is the poster's own gate, from docs/MARKETING_CLOSED_ALPHA.md:
+#
+#   build    (default) the two publish placeholders may still be empty. The
+#            page then shows its "not published yet" banner and disables the
+#            submit button, so it cannot silently swallow an application. This
+#            is a preview URL — for looking at the board on a phone, not for
+#            outreach.
+#   publish  data-endpoint and data-contact must be filled. This is the real
+#            launch, and the preflight refuses it while either is blank.
+#
+# Nothing here decides the hosting gate. A GitHub page satisfies it (the card
+# says so), but confirming domain ownership before a name goes on any post is
+# still the operator's, and is not automated.
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Poster preflight stage (build = preview, publish = launch)"
+        type: choice
+        options:
+          - build
+          - publish
+        default: build
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and never cancel one half-done: a cancelled Pages
+# deploy can leave the site on a partial upload.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,web]"
+
+      # The last repo-side gate. It refuses a bundle whose locked copy has been
+      # edited, whose replay fails the leakage test, whose board has drifted
+      # from the map, which points at the live server, whose ?v= token is stale,
+      # or which is over the weight gate. A page that fails this must not go up.
+      - name: Poster preflight
+        run: python -m scripts.check_poster --stage ${{ inputs.stage }}
+
+      - uses: actions/configure-pages@v5
+
+      # The bundle only. Not the repo, not the maps, not the game.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: webapp/static/public
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

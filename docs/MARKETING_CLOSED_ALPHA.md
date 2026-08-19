@@ -558,6 +558,26 @@ A Cloudflare or GitHub page is enough for `poster live`. A custom
 domain is preferred once ownership is confirmed. Confirm ownership
 before printing the name on posts.
 
+A GitHub page is wired but not switched on. `.github/workflows/pages.yml`
+publishes the bundle and nothing else, and two things stop it reaching
+anyone by itself: it has no trigger but `workflow_dispatch`, so a human
+starts it from the Actions tab or it never runs; and Pages must first be
+enabled for the repository with its source set to **GitHub Actions**
+(Settings -> Pages), without which the deploy step fails rather than
+publishing. `tests/test_poster_preflight.py` holds the first of those --
+adding a push trigger fails the suite, because that would put the poster
+online on every commit.
+
+It runs the poster preflight before it uploads, at a stage you choose:
+
+| Stage | Placeholders | What the URL is |
+|---|---|---|
+| `build` (default) | may be empty | A preview. The page shows its "not published yet" banner and the submit button is disabled, so it cannot swallow an application. Use it to read the board on a phone. |
+| `publish` | must be filled | The launch. The preflight refuses it while `data-endpoint` or `data-contact` is blank. |
+
+The hosting gate is still an operator decision: this makes a GitHub page
+available, it does not choose it, and it does not confirm a domain.
+
 ## Outreach
 
 Borrow three rooms, once. Post only after `poster live` and after one
