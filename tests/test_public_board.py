@@ -362,3 +362,56 @@ def test_high_terrain_cities_stand_above_low_ones():
         f"{highest['name']} ({highest['terrain']}) is not standing above "
         f"{lowest['name']} ({lowest['terrain']})"
     )
+
+
+# ---------------------------------------------------------------------------
+# --map, when it points outside the repository
+# ---------------------------------------------------------------------------
+
+
+def test_a_map_outside_the_repository_builds_from_the_file_it_was_given(tmp_path):
+    """`--map` may point anywhere, and the builder must read what it was handed.
+
+    Only the basename used to be carried across to `positions()`, which
+    resolved it again under `maps/`. A custom filename named nothing there and
+    raised; the board is built from a path, so that broke the option outright.
+    """
+    custom = tmp_path / "a_map_by_another_name.json"
+    custom.write_text(MAP_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+
+    board = build_board(custom)
+    assert len(board["cities"]) == len(json.loads(MAP_PATH.read_text())["cities"])
+
+
+def test_a_borrowed_basename_does_not_borrow_the_other_map_s_land(tmp_path):
+    """The quiet half, and the worse one.
+
+    A supplied map whose basename matches a bundled one resolved to the
+    bundled file for positions, so the towns came from the map on disk and the
+    landmass hulls from a different world: on a shifted copy of
+    `starter_map.json` the cities spanned x 0.03..0.22 and the hulls
+    0.07..0.94. The board drew land where there was no town and towns off the
+    land, and nothing failed.
+    """
+    shifted = json.loads(MAP_PATH.read_text(encoding="utf-8"))
+    for city in shifted["cities"]:
+        city["x"] *= 0.25
+        city["y"] *= 0.25
+    # The same name a bundled map already has.
+    custom = tmp_path / MAP_PATH.name
+    custom.write_text(json.dumps(shifted), encoding="utf-8")
+
+    board = build_board(custom)
+    xs = [city["x"] for city in board["cities"]]
+    ys = [city["y"] for city in board["cities"]]
+    assert max(xs) <= 0.30, "the towns are not the supplied map's"
+
+    margin = 0.2
+    for mass in board["landmasses"]:
+        for hx, hy in mass["hull"]:
+            assert min(xs) - margin <= hx <= max(xs) + margin, (
+                f"{mass['name']} is drawn at x={hx:.3f}, away from its own towns"
+            )
+            assert min(ys) - margin <= hy <= max(ys) + margin, (
+                f"{mass['name']} is drawn at y={hy:.3f}, away from its own towns"
+            )

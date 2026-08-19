@@ -72,7 +72,11 @@ def build_board(map_path: Path) -> dict:
     map_file = map_path.name
 
     layout = layout_for_map(map_file, source)
-    pos = positions(map_file)
+    # From the map that was actually read, not from its basename. `--map` may
+    # point anywhere; resolving the name again under `maps/` raised for a
+    # custom filename, and for one that collided with a bundled map it built a
+    # board whose landmass hulls belonged to a different world than its towns.
+    pos = positions(map_file, source)
 
     cities = [
         {

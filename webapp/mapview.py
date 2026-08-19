@@ -254,9 +254,19 @@ def city_miles(city: dict, layout: MapLayout) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def positions(map_file: str) -> dict[str, tuple[float, float]]:
-    """City id -> (x, y) in SVG coordinates. Hand-placed x/y (or miles) wins."""
-    data = load_raw_map(map_file)
+def positions(
+    map_file: str, data: Optional[dict] = None
+) -> dict[str, tuple[float, float]]:
+    """City id -> (x, y) in SVG coordinates. Hand-placed x/y (or miles) wins.
+
+    ``data`` mirrors ``layout_for_map``: a caller holding the map already --
+    a build script handed a path outside ``maps/`` -- passes it rather than
+    having the name resolved back to a file in the repository. Without it the
+    only thing carried across was the basename, which either named nothing
+    (and raised) or named a *different* map that happened to share it.
+    """
+    if data is None:
+        data = load_raw_map(map_file)
     layout = layout_for_map(map_file, data)
     cities = data.get("cities") or []
     roads = data.get("roads") or []
