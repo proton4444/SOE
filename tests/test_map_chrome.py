@@ -491,3 +491,25 @@ def test_the_label_audit_runs_and_passes_over_the_maps_we_ship():
     from scripts import check_map_labels
 
     assert check_map_labels.main([]) == 0
+
+
+def test_an_unanchored_label_is_measured_the_way_svg_draws_it():
+    """SVG's default `text-anchor` is `start`, not `middle`.
+
+    Four permanent labels omit the attribute — the title, the stats line and
+    the two roster lines — so modelling them as centred slid every reserved
+    box half a width left. The title really occupies x 32..384 and was
+    reserved at -162..226: the planner was free to seat a mile label over the
+    right half of it while this audit called the map clean.
+    """
+    fragment = '<text x="100" y="50" font-size="10">Reserved</text>'
+    (box,) = mapview.occupied_label_boxes(fragment)
+    assert box.left == pytest.approx(100.0), (
+        "an unanchored label is being measured as centred; SVG starts it at x"
+    )
+    assert box.right > 100.0
+
+    centred = mapview.occupied_label_boxes(
+        '<text x="100" y="50" font-size="10" text-anchor="middle">Reserved</text>'
+    )[0]
+    assert centred.left < 100.0 < centred.right, "an explicit anchor is ignored"

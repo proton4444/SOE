@@ -1938,7 +1938,14 @@ def occupied_label_boxes(svg_fragment: str) -> list[LabelBox]:
             y + oy,
             text,
             size,
-            d.get("text-anchor", "middle"),
+            # SVG's own default, which is `start` -- not `middle`. Four
+            # permanent labels omit the attribute (the title, the stats line
+            # and the two roster lines), and modelling them as centred put
+            # their reserved boxes half a width to the left: the title really
+            # occupies 32..384 and was reserved at -162..226. So the planner
+            # was free to seat a mile label over the right half of the title
+            # while this audit called the map clean.
+            d.get("text-anchor", "start"),
             em_width=LABEL_EM_MONO if "map-meta" in cls else LABEL_EM_SERIF,
             letter_spacing=spacing,
         )

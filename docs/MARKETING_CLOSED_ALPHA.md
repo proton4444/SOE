@@ -198,7 +198,7 @@ falls back to a padded convex hull of the road-connected cities.
 
 **Render what the app renders.**
 
-- Place the twelve cities at their exact `x`/`y`, **on mapview’s own
+- Place the six cities at their exact `x`/`y`, **on mapview’s own
   frame** — the app draws a 1300×1000 mile field into 1180×680 units, and
   that anisotropy is the map’s proportions. One scale on both axes renders
   the world 23% too narrow for its height, which is what made the board
@@ -212,7 +212,7 @@ falls back to a padded convex hull of the road-connected cities.
   stump; a port gains a jetty. Stylised and out of scale on purpose, in
   the tradition of the little drawn towns on an estate map — a city has to
   be recognisable as one from across the board, not merely labelled as one.
-- Give the landmass **a surface**: elevation interpolated from the twelve
+- Give the landmass **a surface**: elevation interpolated from the six
   cities’ `terrain` labels, with fractal detail, falling to sea level at
   the shore. A city on hills stands on high ground because the ground is
   high, not because it wears a cone. Vertical is exaggerated, as a relief
@@ -835,23 +835,32 @@ reconstruction audit — `AR031_ba`, competence bundle, `official-gate`.
 Closed 2026-08-16: the model. Claude Haiku 4.5, in the frozen regulation.
 See `LAUNCH_OPERATIONS.md`, **Model gate: closed**.
 
-### Parked, and why: the poster's map
+### Unparked, and what it cost: the poster's map
 
-The map the project draws got a great deal better on 2026-08-16 — owned
-coastlines, terrain, sea lanes, a scale bar — and a stronger twelve-town
-scenario was screened and frozen as `calib_12_fbm.json`. **None of that is
-on the poster**, and it should not be forced there.
+This section used to say the opposite, and it was left standing after it
+stopped being true. Recorded rather than rewritten, because the trade it
+describes is the one that was actually made.
 
-The poster shows a real recorded match, and that match was played on
-`calib_12.json`. Its map and its replay are one object: drawing the new
-coast under the old game would be a picture of a world the game was not
-played in, and swapping in a prettier match means dropping to an
-`exhibition` label and a 17-move game in place of a 134-move one. Both
-improvements need the same thing — a paid run on the new scenario — which
-needs the ceiling above.
+**What it said, on 2026-08-16.** The map had got much better — owned
+coastlines, terrain, sea lanes, a scale bar — and none of it was on the
+poster. The poster showed a real recorded match played on `calib_12.json`;
+its map and its replay are one object, so drawing the new coast under the
+old game would picture a world the game was not played in, and swapping in
+a prettier match meant dropping to an `exhibition` label and a shorter
+game. Both improvements needed a paid run on the new scenario, which needed
+a spend ceiling nobody had set. So it shipped as it was, labelled
+`official-gate`, and waited for the money rather than for more code.
 
-So the poster ships as it is, honestly labelled `official-gate`, and the
-map work waits for the money rather than for more code.
+**What happened instead.** Amendments 2 and 3 rebuilt the board against
+`maps/starter_map.json` with a real elevation surface, and the poster moved
+with it. It now ships `exh-ex017` — six cities, thirty turns, 33 piece-moves
+— and is labelled **`exhibition`**, not `official-gate`.
+
+That is the cost, and it should be named: the poster no longer shows an
+official-gate match. It shows an exhibition, honestly labelled as one, on a
+map the coach will actually meet. The spend ceiling is still unset, so the
+option the old text was holding out for — an official-gate replay on the
+better map — is still unbought. Re-recording one remains a paid run.
 
 Everything else in this file is decided.
 
