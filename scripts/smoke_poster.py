@@ -295,6 +295,33 @@ def check_page(
                 f"{label}: the still board does not say how the match ended"
             )
 
+
+        # A parked board keeps whatever frame it last drew, so scrubbing it
+        # moved the turn label and the force counts and left the pieces where
+        # they were -- the canvas said turn 30 while the readout said 00. The
+        # still replay is the only one a reduce-motion reader can walk, so it
+        # has to actually move.
+        canvas = page.query_selector("#atlas")
+        if canvas is not None:
+            before = canvas.screenshot(timeout=15000)
+            page.eval_on_selector(
+                "#scrub",
+                "e => { e.value = '0';"
+                " e.dispatchEvent(new Event('input', {bubbles: true})); }",
+            )
+            page.wait_for_timeout(1200)
+            if canvas.screenshot(timeout=15000) == before:
+                problems.append(
+                    f"{label}: scrubbing back to the opening moved the "
+                    f"readouts and left the board on the frame it had"
+                )
+            page.eval_on_selector(
+                "#scrub",
+                "e => { e.value = e.max;"
+                " e.dispatchEvent(new Event('input', {bubbles: true})); }",
+            )
+            page.wait_for_timeout(600)
+
     canvas = page.query_selector("#atlas")
     if canvas is None:
         problems.append(f"{label}: there is no board canvas on the page")

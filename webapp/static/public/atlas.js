@@ -19,7 +19,7 @@
  * their road between turns rather than jumping, and the road they take lights
  * up as they use it. That motion is the whole show.
  */
-import { createBoard } from "./board3d.js?v=h32";
+import { createBoard } from "./board3d.js?v=h33";
 
 (function () {
   "use strict";
@@ -222,6 +222,12 @@ import { createBoard } from "./board3d.js?v=h32";
     paintCities(frame);
     paintReadouts(frame);
     paintTurn(index, frame);
+    /* The canvas is not repainted by any of the above. While the loop runs
+       that is fine -- the next frame picks the change up -- but a parked
+       board keeps what it last drew, and a reduce-motion board is parked from
+       the first frame. Scrubbing one moved the turn label and the force
+       counts and left the pieces where they were. */
+    board.redrawIfParked();
   }
 
   /* Runs every rendered frame, driven by the board's own loop. */

@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h32";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h33";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -2479,6 +2479,15 @@ export function createBoard(options) {
 
   /* ------------------------------------------------------------------- api */
 
+
+  /* One painted frame, wherever it is asked for. Shared so `renderOnce` and
+     `redrawIfParked` cannot drift apart. */
+  function drawOnce() {
+    controls.update();
+    placeLabels();
+    renderer.render(scene, camera);
+  }
+
   return {
     /* Where piece k of a seat stands at a city, in world units. Deterministic,
        so a piece keeps its place in the column between turns and only moves
@@ -2599,10 +2608,23 @@ export function createBoard(options) {
     },
 
     /* One frame on demand, for a paused or reduced-motion board. */
-    renderOnce: function () {
-      controls.update();
-      placeLabels();
-      renderer.render(scene, camera);
+    renderOnce: drawOnce,
+
+    /* The same, but only when nothing else is painting.
+
+       A parked board keeps whatever frame it last drew. That is the point of
+       parking it -- and it means anything that changes what is ON the board
+       has to ask for a repaint, or the canvas and the readouts disagree.
+       Scrubbing a reduced-motion replay did exactly that: the turn label and
+       the force counts walked back to turn 0 while the canvas still showed
+       turn 30's pieces, so the promise that a still replay can be walked back
+       to its opening was not kept.
+
+       A no-op while the loop is live, so a caller does not have to know which
+       state the board is in -- which is the knowledge that went missing. */
+    redrawIfParked: function () {
+      if (running) { return; }
+      drawOnce();
     },
 
     resize: resize

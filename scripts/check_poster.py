@@ -25,6 +25,9 @@ mechanical:
     board       board.js still matches maps/calib_12.json -- a map edit that
                 never reached the poster is a poster that misrepresents the
                 world
+    elevation   elevation.js still matches that map and its generator, for the
+                same reason: the inventory only asks that it exist, and a
+                browser only proves the bytes render
     token       every ?v= in the bundle is the same token, and that token was
                 bumped after the versioned assets last changed
     isolation   nothing in the bundle points at the live server, a port, or
@@ -65,6 +68,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from scripts.build_elevation import HEADER as ELEVATION_HEADER  # noqa: E402
+from scripts.build_elevation import build_elevation  # noqa: E402
 from scripts.build_public_board import build_board  # noqa: E402
 from soe.public_replay import LeakageError, validate_file, visual_bar  # noqa: E402
 
@@ -505,6 +510,42 @@ def check_board(bundle: Path, board: dict | None) -> list[Finding]:
     ]
 
 
+def check_elevation(bundle: Path) -> list[Finding]:
+    """The terrain, against the generator that made it.
+
+    `board.js` was compared and `elevation.js` was not, so a map edit or a
+    change to the generator that never reached the bundle still published: the
+    inventory only asks that the file exist, the asset digest authenticates
+    whatever bytes are committed, and a browser only proves those bytes
+    render. The board would draw a coastline and a relief the engine no longer
+    has, which is the same failure the board check exists to stop.
+    """
+    path = bundle / "elevation.js"
+    if not path.exists():
+        return [blocker("elevation", "elevation.js is missing from the bundle")]
+    if not MAP_SOURCE.exists():
+        return [note("elevation", f"{MAP_SOURCE.name} is not in the tree; drift not checked")]
+
+    fresh = build_elevation(MAP_SOURCE)
+    rebuilt = ELEVATION_HEADER + json.dumps(fresh, indent=2, ensure_ascii=False) + ";\n"
+    if path.read_text(encoding="utf-8") == rebuilt:
+        return [
+            note(
+                "elevation",
+                f"{fresh['width']}x{fresh['height']} heightfield, sea level "
+                f"{fresh['sea_level']:.0f}, in sync with maps/{MAP_SOURCE.name}",
+            )
+        ]
+    return [
+        blocker(
+            "elevation",
+            f"elevation.js has drifted from maps/{MAP_SOURCE.name} or from its "
+            "generator. The poster would draw terrain the engine no longer has. "
+            "Regenerate: python -m scripts.build_elevation",
+        )
+    ]
+
+
 def token_scan(bundle: Path) -> tuple[set[str], set[str]]:
     """Every `?v=` token in the bundle, and every asset carrying one."""
     tokens: set[str] = set()
@@ -677,6 +718,7 @@ def run_checks(bundle: Path, stage: str, manifest_path: Path) -> list[Finding]:
 
     findings += check_replay(bundle, board)
     findings += check_board(bundle, board)
+    findings += check_elevation(bundle)
     findings += check_token(bundle, manifest_path)
     findings += check_weight(bundle)
     return findings
