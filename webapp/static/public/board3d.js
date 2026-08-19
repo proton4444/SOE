@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h31";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h32";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -125,6 +125,12 @@ const SHEET_INSET = 14;
    rather than the game's near-black navy — the board is cream stock seen on a
    table, and a navy field on cream reads as a hole cut in the paper. */
 const SEA_TINT = 0x9fc4d8;
+/* Where the water surface sits. y = 0 is the waterline -- the elevation grid
+   is shipped relative to it -- and the plane is set a hair above so a beach
+   flat to within a rounding error resolves as sand rather than z-fighting.
+   Named because the sea lanes have to ride it, not just the plane that draws
+   it. */
+const SEA_SURFACE_Y = 0.15;
 const COAST_INK = 0x4a6070;
 /* Warm, not green. This is a section through the ground -- soil and rock
    under a skin of grass -- and a green wall read as a mossy kerb around the
@@ -1418,7 +1424,7 @@ export function createBoard(options) {
     /* At the waterline, which is y = 0 -- the elevation grid is shipped
        relative to it. A hair above, so a beach flat to within a rounding
        error resolves as sand rather than as z-fighting. */
-    sea.position.y = 0.15;
+    sea.position.y = SEA_SURFACE_Y;
     sea.renderOrder = -3;
     sea.receiveShadow = true;
     scene.add(sea);
@@ -1613,21 +1619,13 @@ export function createBoard(options) {
         terrainPeak = Math.max(terrainPeak, peak);
       }
 
-      /* The coastline itself, inked. A fill against a fill has no edge of its
-         own at this size -- the same reason the roads carry a casing. */
-      const ring = [];
-      mass.hull.forEach(function (point) {
-        ring.push(new THREE.Vector3(worldX(point[0]), 0.30, worldZ(point[1])));
-      });
-      const coast = new THREE.LineLoop(
-        new THREE.BufferGeometry().setFromPoints(ring),
-        new THREE.LineBasicMaterial({
-          color: COAST_INK, transparent: true, opacity: 0.75,
-          depthWrite: false
-        })
-      );
-      coast.renderOrder = -1;
-      scene.add(coast);
+      /* No inked coastline. It used to trace `mass.hull` at y = 0.30, which
+         is above the water, so wherever the generated shore retreated inside
+         the hull -- which is most of it, a hull being convex and a coast not
+         -- straight segments stood offshore over open sea and argued with the
+         waterline they were supposed to describe. The comment at the top of
+         this block already said there was nothing to draw; the code had not
+         caught up. */
     });
   }
 
@@ -1684,8 +1682,22 @@ export function createBoard(options) {
     alpha.needsUpdate = true;
     alpha.wrapS = THREE.RepeatWrapping;
 
+    /* A sea lane sails on the water. Draped on `groundHeight` like a road, it
+       follows the seabed -- thirty units below an opaque sea plane, which the
+       depth buffer then hides completely. The only route to Northern Island
+       was drawn every frame and never once visible, so the board read as two
+       landmasses with nothing between them.
+
+       Not a flat line at sea level either: the lane has to climb out of the
+       water to reach the port at each end, or it disappears into the shore
+       just short of the town it connects. The surface it follows is whichever
+       is higher, the ground or the water. */
+    const ride = road.quality === "sea"
+      ? function (px, pz) { return Math.max(groundHeight(px, pz), SEA_SURFACE_Y); }
+      : groundHeight;
+
     const geo = roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                           style.width, key, groundHeight);
+                           style.width, key, ride);
     alpha.repeat.set(Math.max(1, Math.round(geo.userData.length / 42)), 1);
 
     /* Unlit, deliberately. The game's roads are flat SVG strokes, and a lit
@@ -1701,7 +1713,7 @@ export function createBoard(options) {
     casingAlpha.needsUpdate = true;
     const casing = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 3.4, key, groundHeight),
+                 style.width + 3.4, key, ride),
       new THREE.MeshBasicMaterial({
         color: ROAD_CASING, transparent: true, opacity: 0.30,
         alphaMap: casingAlpha, depthWrite: false, side: THREE.DoubleSide
@@ -1728,7 +1740,7 @@ export function createBoard(options) {
     pulseAlpha.needsUpdate = true;
     const pulse = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 4, key, groundHeight),
+                 style.width + 4, key, ride),
       new THREE.MeshBasicMaterial({
         color: 0xffffff, transparent: true, opacity: 0,
         alphaMap: pulseAlpha, blending: THREE.AdditiveBlending,
