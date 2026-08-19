@@ -444,14 +444,27 @@ def test_the_pages_workflow_cannot_publish_by_itself():
     )
 
 
-def test_the_pages_workflow_runs_the_preflight_before_it_deploys():
-    """Deploying a bundle nothing checked is how a broken poster goes live."""
+def test_the_pages_workflow_checks_the_bundle_before_it_deploys():
+    """Deploying a bundle nothing checked is how a broken poster goes live.
+
+    Both checks, and in order. `check_poster` reads the files; the smoke opens
+    them in a browser, which is the only thing that sees a board that throws or
+    a label printed over another. `--require-browser` is what stops a missing
+    Chromium turning the second one into a quiet pass.
+    """
     text = (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(
         encoding="utf-8"
     )
-    preflight = text.index("scripts.check_poster")
     upload = text.index("upload-pages-artifact")
-    assert preflight < upload, "the bundle is uploaded before it is checked"
+    assert text.index("scripts.check_poster") < upload, (
+        "the bundle is uploaded before the preflight reads it"
+    )
+    assert text.index("scripts.smoke_poster") < upload, (
+        "the bundle is uploaded before a browser has opened it"
+    )
+    assert "--require-browser" in text, (
+        "a missing browser would skip the board check and still deploy"
+    )
 
 
 def test_the_pages_workflow_publishes_only_the_poster_bundle():

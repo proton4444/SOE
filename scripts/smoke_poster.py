@@ -321,11 +321,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, default=BUNDLE)
     parser.add_argument("--out", type=Path, help="write the captured board frames here")
+    parser.add_argument(
+        "--require-browser",
+        action="store_true",
+        help="fail instead of skipping when there is no browser to drive. For "
+        "the publish path, where a skipped check is an unchecked bundle.",
+    )
     args = parser.parse_args(argv)
 
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
+        if args.require_browser:
+            print("FAIL  playwright is not installed and --require-browser was asked")
+            return 1
         print("skipped: playwright is not installed (pip install playwright)")
         return 0
 
@@ -338,6 +347,9 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 browser = p.chromium.launch(**launch)
             except Exception as exc:  # noqa: BLE001 - no browser is a skip, not a failure
+                if args.require_browser:
+                    print(f"FAIL  no Chromium to drive and --require-browser was asked: {exc}")
+                    return 1
                 print(f"skipped: no Chromium to drive ({exc})")
                 return 0
             for reduced in (False, True):

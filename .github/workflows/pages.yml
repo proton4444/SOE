@@ -73,6 +73,19 @@ jobs:
       - name: Poster preflight
         run: python -m scripts.check_poster --stage ${{ inputs.stage }}
 
+      # `check_poster` reads files. It cannot see a board that throws, renders
+      # black, prints one label over another, or lets a label walk off the
+      # printed sheet onto the table where its pale halo cannot be read. Only a
+      # browser sees that, and this is the one path where a skipped check is an
+      # unchecked bundle -- so `--require-browser` makes a missing browser a
+      # failure rather than a quiet pass.
+      - name: Install a browser for the board check
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Board smoke
+        run: python -m scripts.smoke_poster --require-browser
+
       - uses: actions/configure-pages@v5
 
       # The bundle only. Not the repo, not the maps, not the game.
