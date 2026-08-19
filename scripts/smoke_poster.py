@@ -23,7 +23,10 @@ the path that broke -- and fails on a console error, an error banner, or a
 canvas with nothing on it.
 
 Needs `playwright` and a Chromium; it is skipped, not failed, where there is
-none. Exit code 0 = the board drew, 1 = it did not.
+none. `--require-browser` turns that skip into a failure, for the publish
+path, where a skipped check is an unchecked bundle -- and because two of the
+checks read the canvas pixels, that flag needs Pillow too, and says so rather
+than judging blind. Exit code 0 = the board drew, 1 = it did not.
 """
 
 from __future__ import annotations
@@ -81,6 +84,15 @@ def chromium_path() -> str | None:
         if Path(hint).exists():
             return hint
     return None
+
+
+def _pillow_available() -> bool:
+    """Whether the two pixel-reading checks below can actually look."""
+    try:
+        from PIL import Image  # noqa: F401,PLC0415
+    except ImportError:
+        return False
+    return True
 
 
 def distinct_colours(png: bytes) -> int:
@@ -261,10 +273,13 @@ def centre_land_share(png: bytes) -> float | None:
     image = Image.open(io.BytesIO(png)).convert("RGB")
     w, h = image.size
     box = image.crop((int(w * 0.40), int(h * 0.35), int(w * 0.60), int(h * 0.55)))
-    pixels = list(box.getdata())
-    if not pixels:
+    # Raw RGB triples: `getdata()` is deprecated for removal in Pillow 14 and
+    # its replacement does not exist on the versions this repo pins.
+    raw = box.tobytes()
+    if not raw:
         return None
-    return sum(1 for r, _, b in pixels if r > b + 10) / len(pixels)
+    warm = sum(1 for i in range(0, len(raw), 3) if raw[i] > raw[i + 2] + 10)
+    return warm / (len(raw) // 3)
 
 
 def check_fallback_board(browser, url: str, out_dir: Path | None) -> list[str]:
@@ -432,6 +447,21 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print("skipped: playwright is not installed (pip install playwright)")
         return 0
+
+    # Two of the checks read pixels: the blank-canvas test and the flat-vale
+    # test. Without Pillow both of them answer "cannot judge" -- and they say
+    # so by returning a passing value, because on a developer's machine a
+    # missing optional library should not fail a smoke run. On the publish
+    # path that same politeness is a lie: a board that draws black, or a
+    # fallback whose land is under the sea, would report `ok`. Pillow lives in
+    # the `map` extra, so an environment installing `.[dev,web]` has none.
+    if args.require_browser and not _pillow_available():
+        print(
+            "FAIL  Pillow is not installed and --require-browser was asked: "
+            "the blank-canvas and no-elevation checks read pixels and would "
+            'pass without looking (pip install pillow, or install ".[map]")'
+        )
+        return 1
 
     chromium = chromium_path()
     url, server = serve(args.bundle)

@@ -79,9 +79,13 @@ jobs:
       # browser sees that, and this is the one path where a skipped check is an
       # unchecked bundle -- so `--require-browser` makes a missing browser a
       # failure rather than a quiet pass.
+      # Pillow too, and not incidentally: two of the smoke's checks read the
+      # canvas pixels, and without it they return a passing value rather than
+      # failing a developer's machine over an optional library. It ships in
+      # the `map` extra, which `.[dev,web]` above does not pull in.
       - name: Install a browser for the board check
         run: |
-          pip install playwright
+          pip install playwright pillow
           python -m playwright install --with-deps chromium
       - name: Board smoke
         run: python -m scripts.smoke_poster --require-browser

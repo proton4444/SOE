@@ -480,3 +480,45 @@ def test_the_pages_workflow_publishes_only_the_poster_bundle():
         if "upload-pages-artifact" in str(step.get("uses", ""))
     ]
     assert paths == ["webapp/static/public"]
+
+
+def test_the_pages_workflow_installs_what_the_board_check_looks_with():
+    """`--require-browser` buys nothing if the checks cannot see.
+
+    Two of the smoke's checks read the canvas pixels -- the blank-board test
+    and the flat-vale test -- and both need Pillow. It lives in the `map`
+    extra, and this job installs `.[dev,web]`, so it arrived here missing:
+    with the fallback bug reintroduced and Pillow hidden, the smoke printed
+    `ok`. The script now refuses that combination outright, and the workflow
+    installs Pillow so it never has to.
+    """
+    text = (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(
+        encoding="utf-8"
+    )
+    install = text.lower().index("pip install playwright")
+    assert "pillow" in text[install : text.index("scripts.smoke_poster")].lower(), (
+        "the smoke runs without Pillow, and its two pixel checks would pass "
+        "without looking at a pixel"
+    )
+
+
+def test_a_required_browser_run_refuses_to_judge_pixels_it_cannot_see():
+    """The failure this replaces was silent, which is the whole problem.
+
+    Without Pillow, `distinct_colours()` returns the passing threshold and
+    `centre_land_share()` returns `None`, so both checks stand down and the
+    run still reports `ok`. On a developer's machine that is the right
+    manners; on the publish path it is a bundle nobody checked.
+    """
+    pytest.importorskip("playwright", reason="main() checks for it first")
+    from scripts import smoke_poster
+
+    def blind():
+        return False
+
+    original = smoke_poster._pillow_available
+    smoke_poster._pillow_available = blind
+    try:
+        assert smoke_poster.main(["--require-browser"]) == 1
+    finally:
+        smoke_poster._pillow_available = original
