@@ -280,6 +280,12 @@ main > section + section { border-top: 1px solid var(--rule-soft); }
   will-change: transform;
 }
 
+/* Last resort for a town whose full row will not fit on the print: the name
+   stays, the data row goes. The name is what the board owes a town; the row is
+   detail, and the 2D map sheds it the same way for the same reason. Losing
+   Gullhaven's name to keep its population on screen is the wrong trade. */
+.atlas-label.is-name-only .atlas-label-meta { display: none; }
+
 /* Road readings. Quieter again than the city rows -- there are fourteen of
    them and they are reference, not headline. */
 .atlas-road-label {

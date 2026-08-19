@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h29";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h31";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -2065,6 +2065,108 @@ export function createBoard(options) {
      can get by turning the board; dropping a city name costs them the city. */
   const placed = [];
 
+  /* Label sizes are cached, because reading offsetWidth per label per frame
+     would force a layout flush inside the render loop. But they were cached
+     *forever*, and a label measured before the web font had loaded or while
+     the frame was still zero-sized kept that first wrong width for the life of
+     the page -- so the placement tested a box narrower than it drew, and
+     Gullhaven's data row passed the on-print test and printed off the sheet
+     anyway. Bumping this re-measures every label exactly once more. */
+  let measureGen = 1;
+
+  function remeasureLabels() {
+    measureGen += 1;
+    placeLabels();
+  }
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(remeasureLabels);
+  }
+
+  /* --- the sheet the labels have to stay on -------------------------------
+
+     A label is dark ink on a pale halo, which is the right way round for board
+     stock and the wrong way round for the table the board lies on. The frame
+     is much bigger than the sheet -- the camera fits the sheet with a margin --
+     so clamping into the frame let a coastal city's data row walk off the
+     print onto the table, where "1200000 · B8 · port · coastal · plains" and
+     "280000 · K2 · port · coastal · mountains" went dark-on-dark and stopped
+     being readable at all. Nothing was overlapping; it was simply gone.
+
+     So the bound is the printed plate itself: its face is y = 0 and it is
+     inset from the board edge by REVEAL. Projected, that is a convex quad,
+     and a label is placed only where its whole box lands inside it. */
+  const PRINT_HALF_W = (sheetW - REVEAL * 2) / 2;
+  const PRINT_HALF_D = (sheetD - REVEAL * 2) / 2;
+  const printCorners = [
+    new THREE.Vector3(-PRINT_HALF_W, 0, -PRINT_HALF_D),
+    new THREE.Vector3(PRINT_HALF_W, 0, -PRINT_HALF_D),
+    new THREE.Vector3(PRINT_HALF_W, 0, PRINT_HALF_D),
+    new THREE.Vector3(-PRINT_HALF_W, 0, PRINT_HALF_D)
+  ];
+  const sheetQuad = [[0, 0], [0, 0], [0, 0], [0, 0]];
+  const sheetCentre = [0, 0];
+  const sheetScratch = new THREE.Vector3();
+  //: Which way the projected quad winds, which depends on where the camera
+  //: stands. Normalised so one inside-test works from every angle.
+  let sheetWind = 1;
+  let sheetOnScreen = false;
+
+  //: How far, and in how many steps, a label may be pulled toward the middle
+  //: of the sheet before it is given up on. The middle is where there is
+  //: always room, so pulling that way converges.
+  const SHEET_PULL_PX = 9;
+  const SHEET_PULL_STEPS = 7;
+
+  function updateSheetQuad() {
+    let sx = 0;
+    let sy = 0;
+    let area = 0;
+    for (let i = 0; i < 4; i++) {
+      sheetScratch.copy(printCorners[i]).project(camera);
+      // A corner behind the camera makes the projection meaningless. Give up
+      // on the sheet bound for this frame rather than clamp against nonsense.
+      if (sheetScratch.z > 1) { sheetOnScreen = false; return; }
+      const px = (sheetScratch.x * 0.5 + 0.5) * viewW;
+      const py = (-sheetScratch.y * 0.5 + 0.5) * viewH;
+      sheetQuad[i][0] = px;
+      sheetQuad[i][1] = py;
+      sx += px;
+      sy += py;
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = sheetQuad[i], b = sheetQuad[(i + 1) % 4];
+      area += a[0] * b[1] - b[0] * a[1];
+    }
+    sheetCentre[0] = sx / 4;
+    sheetCentre[1] = sy / 4;
+    sheetWind = area < 0 ? -1 : 1;
+    sheetOnScreen = true;
+    /* Published on the label layer so the rule "a label sits on the print"
+       can be checked from outside. Where the print is on screen depends on
+       the camera, so a checker cannot derive it -- and an unverifiable rule
+       is one that quietly stops holding. Written only when it changes, so a
+       still board does not touch the DOM sixty times a second for nothing. */
+    const stamp = sheetQuad.map(function (pt) {
+      return pt[0].toFixed(0) + "," + pt[1].toFixed(0);
+    }).join(" ");
+    if (labelHost.dataset.print !== stamp) { labelHost.dataset.print = stamp; }
+  }
+
+  function onSheet(px, py) {
+    for (let i = 0; i < 4; i++) {
+      const a = sheetQuad[i], b = sheetQuad[(i + 1) % 4];
+      const side = (b[0] - a[0]) * (py - a[1]) - (b[1] - a[1]) * (px - a[0]);
+      if (sheetWind * side < 0) { return false; }
+    }
+    return true;
+  }
+
+  function boxOnSheet(box) {
+    return onSheet(box[0], box[1]) && onSheet(box[2], box[1]) &&
+           onSheet(box[2], box[3]) && onSheet(box[0], box[3]);
+  }
+
   function place(entry) {
     const node = entry.node;
     projected.copy(entry.anchor).project(camera);
@@ -2076,10 +2178,32 @@ export function createBoard(options) {
 
     /* Measured once. The text never changes after it is built, and reading
        offsetWidth per label per frame would force a layout flush inside the
-       render loop -- forty-one of them, sixty times a second. */
-    if (!entry.w) {
+       render loop -- forty-one of them, sixty times a second.
+
+       Both sizes are taken here: the whole label, and the name line on its
+       own. A town whose full row will not fit on the print can still be named
+       from the narrower box, and that is a better board than one where
+       Gullhaven has no name because its population would not fit. */
+    if (entry.gen !== measureGen) {
+      /* With the name-only class off, so the full size is the full size.
+         Reading it while the class was on recorded the narrow box as the wide
+         one, and the label then tested a box smaller than it draws. */
+      const wasNameOnly = node.classList.contains("is-name-only");
+      if (wasNameOnly) { node.classList.remove("is-name-only"); }
       entry.w = node.offsetWidth || 1;
       entry.h = node.offsetHeight || 1;
+      const nameNode = node.querySelector(".atlas-label-name");
+      if (nameNode) {
+        node.classList.add("is-name-only");
+        entry.nameW = node.offsetWidth || entry.w;
+        entry.nameH = node.offsetHeight || entry.h;
+        node.classList.remove("is-name-only");
+      } else {
+        entry.nameW = entry.w;
+        entry.nameH = entry.h;
+      }
+      if (wasNameOnly) { node.classList.add("is-name-only"); }
+      entry.gen = measureGen;
     }
     /* Several boxes before giving up, as mapview's `_label_candidates` does.
        A name that will not fit where its anchor points may fit a line above or
@@ -2098,16 +2222,41 @@ export function createBoard(options) {
     const MAX_NUDGE = 56;
     const pad = 2;
     const candidates = entry.candidates || [[0, 0]];
+    /* Two passes for a town: the whole label, then the name alone. Anything
+       else -- a region title, a road reading -- has one size and one pass,
+       because there is nothing in it to shed. */
+    const sizes = entry.nameW && entry.nameW < entry.w
+      ? [[entry.w, entry.h, false], [entry.nameW, entry.nameH, true]]
+      : [[entry.w, entry.h, false]];
+    for (let sz = 0; sz < sizes.length; sz++) {
+    const boxW = sizes[sz][0], boxH = sizes[sz][1], nameOnly = sizes[sz][2];
     for (let c = 0; c < candidates.length; c++) {
       const wantX = x + candidates[c][0], wantY = y + candidates[c][1];
-      const half = entry.w / 2;
-      const cx = Math.min(Math.max(wantX, half + pad), viewW - half - pad);
-      const cy = Math.min(Math.max(wantY, entry.h / 2 + pad),
-                          viewH - entry.h / 2 - pad);
+      const half = boxW / 2, halfH = boxH / 2;
+      let cx = Math.min(Math.max(wantX, half + pad), viewW - half - pad);
+      let cy = Math.min(Math.max(wantY, halfH + pad), viewH - halfH - pad);
+      let box = [cx - half - pad, cy - halfH - pad,
+                 cx + half + pad, cy + halfH + pad];
+      /* Onto the print. The anchor is always over the sheet -- it is a city or
+         a region on the land -- so it is only ever the box that hangs off, and
+         pulling toward the middle of the sheet brings it back. */
+      if (sheetOnScreen) {
+        for (let step = 0; step < SHEET_PULL_STEPS && !boxOnSheet(box); step++) {
+          const dx = sheetCentre[0] - cx, dy = sheetCentre[1] - cy;
+          const d = Math.hypot(dx, dy) || 1;
+          cx += (dx / d) * SHEET_PULL_PX;
+          cy += (dy / d) * SHEET_PULL_PX;
+          box = [cx - half - pad, cy - halfH - pad,
+                 cx + half + pad, cy + halfH + pad];
+        }
+        // Still off the print: this box will not read here, whatever else is
+        // free. Try the next one, and drop the label if none lands.
+        if (!boxOnSheet(box)) { continue; }
+      }
+      // Checked after the pull, not before: a label dragged far enough from
+      // its anchor names the wrong city, and that is worse than no label.
       if (Math.abs(cx - wantX) > MAX_NUDGE ||
           Math.abs(cy - wantY) > MAX_NUDGE) { continue; }
-      const box = [cx - entry.w / 2 - pad, cy - entry.h / 2 - pad,
-                   cx + entry.w / 2 + pad, cy + entry.h / 2 + pad];
       let hit = false;
       for (let i = 0; i < placed.length; i++) {
         const other = placed[i];
@@ -2116,11 +2265,13 @@ export function createBoard(options) {
       }
       if (hit) { continue; }
       placed.push(box);
+      node.classList.toggle("is-name-only", nameOnly);
       node.style.transform =
         "translate(-50%,-50%) translate(" + cx.toFixed(1) + "px," +
         cy.toFixed(1) + "px)";
       node.style.opacity = "";
       return;
+    }
     }
     node.style.opacity = "0";
   }
@@ -2140,6 +2291,7 @@ export function createBoard(options) {
 
   function placeLabels() {
     placed.length = 0;
+    updateSheetQuad();
     // Highest rank first: whoever is placed owns the space.
     cityPlacementOrder.forEach(function (city) {
       const entry = labelByCity[city.id];
@@ -2265,9 +2417,7 @@ export function createBoard(options) {
        decides how much of each data row is shown -- so the cache has to die
        with the old width or every label is planned against a size it no
        longer has. */
-    Object.keys(labelByCity).forEach(function (id) { labelByCity[id].w = 0; });
-    extraLabels.forEach(function (entry) { entry.w = 0; });
-    placeLabels();
+    remeasureLabels();
   }
 
   if ("ResizeObserver" in window) {

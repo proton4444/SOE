@@ -117,6 +117,7 @@ LABEL_JS = """() => {
                  left: b.left, top: b.top, right: b.right, bottom: b.bottom});
   });
   return {frame: {left: hb.left, top: hb.top, right: hb.right, bottom: hb.bottom},
+          print: host.dataset.print || '', origin: {x: hb.left, y: hb.top},
           labels: labels};
 }"""
 
@@ -166,6 +167,8 @@ def check_labels(page, label: str) -> list[str]:
                 f"{label}: {a['text']!r} prints over {b['text']!r}"
             )
 
+    problems += check_labels_on_print(labels, frame, data.get("print", ""), label)
+
     # `.atlas-labels` clips at overflow:hidden, so a label the clamp did not
     # bring inside is not merely close to the edge: it is cut in half and
     # reads as a different, shorter word.
@@ -179,6 +182,61 @@ def check_labels(page, label: str) -> list[str]:
             problems.append(
                 f"{label}: {one['text']!r} runs outside the board frame and "
                 f"is clipped mid-word"
+            )
+    return problems
+
+
+def _inside_quad(px: float, py: float, quad: list[tuple[float, float]]) -> bool:
+    """Point inside a convex quad, whichever way the projection wound it."""
+    sides = []
+    for i in range(4):
+        ax, ay = quad[i]
+        bx, by = quad[(i + 1) % 4]
+        sides.append((bx - ax) * (py - ay) - (by - ay) * (px - ax))
+    return all(v >= 0 for v in sides) or all(v <= 0 for v in sides)
+
+
+def check_labels_on_print(labels, frame, stamp: str, label: str) -> list[str]:
+    """Every label has to sit on the printed sheet, not on the table.
+
+    The labels are dark ink on a pale halo, which is right for board stock and
+    wrong for the table around it -- and the frame is much larger than the
+    sheet, because the camera fits the sheet with a margin. Clamped only into
+    the frame, a coastal city's data row walked off the print and went
+    dark-on-dark: nothing overlapped, nothing was clipped, and the text was
+    simply unreadable. Neither of the other two checks here can see that.
+
+    The board publishes where the print projected to; without it there is
+    nothing to compare against, so a missing stamp is a failure, not a skip.
+    """
+    if not stamp:
+        return [f"{label}: the board does not say where its printed sheet is"]
+    try:
+        quad = [
+            (float(pair.split(",")[0]), float(pair.split(",")[1]))
+            for pair in stamp.split()
+        ]
+    except (IndexError, ValueError):
+        return [f"{label}: the printed sheet's corners are unreadable: {stamp!r}"]
+    if len(quad) != 4:
+        return [f"{label}: the printed sheet has {len(quad)} corners, not four"]
+
+    # The stamp is in the label layer's own coordinates; the boxes are in the
+    # viewport's.
+    ox, oy = frame["left"], frame["top"]
+    problems = []
+    for one in labels:
+        corners = (
+            (one["left"] - ox, one["top"] - oy),
+            (one["right"] - ox, one["top"] - oy),
+            (one["right"] - ox, one["bottom"] - oy),
+            (one["left"] - ox, one["bottom"] - oy),
+        )
+        off = [c for c in corners if not _inside_quad(c[0], c[1], quad)]
+        if off:
+            problems.append(
+                f"{label}: {one['text']!r} hangs off the printed sheet onto "
+                f"the table, where its pale halo cannot be read"
             )
     return problems
 
