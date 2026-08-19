@@ -28,6 +28,9 @@ mechanical:
     elevation   elevation.js still matches that map and its generator, for the
                 same reason: the inventory only asks that it exist, and a
                 browser only proves the bytes render
+    runbook     LAUNCH_OPERATIONS.md still names the token and the textures the
+                bundle actually carries -- the operator assembles it from that
+                document, so a wrong inventory there is a wrong bundle here
     token       every ?v= in the bundle is the same token, and that token was
                 bumped after the versioned assets last changed
     isolation   nothing in the bundle points at the live server, a port, or
@@ -510,6 +513,57 @@ def check_board(bundle: Path, board: dict | None) -> list[Finding]:
     ]
 
 
+RUNBOOK = REPO_ROOT / "docs" / "LAUNCH_OPERATIONS.md"
+
+
+def check_runbook(bundle: Path, token: str | None) -> list[Finding]:
+    """The two facts in the runbook that go stale without anyone noticing.
+
+    The operator assembles and audits the bundle from that document, so a
+    wrong inventory there is a wrong bundle here. Both drifted: the token sat
+    at h28 through five bumps, and the texture list still named `desert` and
+    `hills` -- deleted with the mounds -- while omitting `sea`, which is
+    required. Searching for a token that does not exist leaves the real one
+    unbumped and fails this very preflight at deploy time.
+    """
+    if not RUNBOOK.exists():
+        return [note("runbook", "LAUNCH_OPERATIONS.md is not in the tree")]
+    text = RUNBOOK.read_text(encoding="utf-8")
+    findings: list[Finding] = []
+
+    stated = re.search(r"currently `v=([A-Za-z0-9]+)`", text)
+    if not stated:
+        findings.append(note("runbook", "no cache token is recorded in the runbook"))
+    elif token and stated.group(1) != token:
+        findings.append(
+            blocker(
+                "runbook",
+                f"the runbook says the token is v={stated.group(1)}; the bundle "
+                f"carries v={token}. Whoever bumps by hand will bump the wrong one.",
+            )
+        )
+
+    listed = re.search(r"^textures/\s+(.+)$", text, re.M)
+    shipped = sorted(p.stem for p in (bundle / "textures").glob("*.jpg"))
+    if not listed:
+        findings.append(note("runbook", "no texture inventory is recorded in the runbook"))
+    elif sorted(listed.group(1).split()) != shipped:
+        findings.append(
+            blocker(
+                "runbook",
+                f"the runbook lists textures {' '.join(sorted(listed.group(1).split()))}; "
+                f"the bundle ships {' '.join(shipped)}. An operator assembling it by "
+                f"hand would get the wrong files.",
+            )
+        )
+
+    if not findings:
+        findings.append(
+            note("runbook", "token and texture inventory agree with the bundle")
+        )
+    return findings
+
+
 def check_elevation(bundle: Path) -> list[Finding]:
     """The terrain, against the generator that made it.
 
@@ -719,6 +773,8 @@ def run_checks(bundle: Path, stage: str, manifest_path: Path) -> list[Finding]:
     findings += check_replay(bundle, board)
     findings += check_board(bundle, board)
     findings += check_elevation(bundle)
+    tokens, _ = token_scan(bundle)
+    findings += check_runbook(bundle, next(iter(tokens)) if len(tokens) == 1 else None)
     findings += check_token(bundle, manifest_path)
     findings += check_weight(bundle)
     return findings

@@ -222,7 +222,7 @@ atlas.js                replay playback, src capture, form + publish gate
 board.js                2D fallback board
 board3d.js              3D relief board (three.js)
 replay.json             the exported official-gate match, unmodified
-textures/               desert hills paper plain
+textures/               paper plain sea
 vendor/three.module.js  three.js, 1.27 MB uncompressed
 vendor/OrbitControls.js camera control
 elevation.js            baked heightmap + sea ramp, 99 KB (27 KB gzipped)
@@ -230,7 +230,7 @@ elevation.js            baked heightmap + sea ramp, 99 KB (27 KB gzipped)
 
 Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump it
 by hand whenever a versioned asset changes, or returning visitors keep the old
-file. It is currently `v=h28`.
+file. It is currently `v=h33`.
 
 The token is not only in `index.html`, and that was a trap: `atlas.js` imports
 `board3d.js?v=`, and `board3d.js` imports `vendor/OrbitControls.js?v=`. Those
@@ -249,8 +249,12 @@ Three files carry tokens, not one: `index.html` for `atlas.css`,
 `board3d.js`; `board3d.js` for `OrbitControls.js`.
 
 `sea.jpg` **is** shipped, as of Amendment 2 — the board draws the app's
-landmass and the water outside it. `tests/test_texture_assets.py` holds
-it byte-identical to `maps/textures/sea.jpg`, as it does the other four.
+landmass and the water outside it. Three textures ship in total, and
+`tests/test_texture_assets.py` names them: `paper`, `plain`, `sea`, each
+held byte-identical to its twin in `maps/textures/`, and the same test
+fails on a fourth. `desert.jpg` and `hills.jpg` went with the mounds —
+the relief takes its colour from the baked heightfield now, so a texture
+per terrain label was shipping bytes nothing would ever ask for.
 
 ### Board
 
