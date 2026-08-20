@@ -274,10 +274,13 @@ class _Coast:
     def __init__(self, rings: list, frame_w: float, frame_h: float) -> None:
         self.rings = rings
         edges = []
-        for ring in rings:
+        owner = []
+        for r, ring in enumerate(rings):
             for i in range(len(ring)):
                 edges.append((ring[i - 1], ring[i]))
+                owner.append(r)
         self.edges = edges
+        self.owner = owner
 
         # About one edge per bucket, and never so fine that the grid itself
         # costs more to walk than the edges it holds.
@@ -295,7 +298,9 @@ class _Coast:
                     self.buckets[row + c].append(n)
 
         # Ray casting only ever needs one row of the grid, so those are kept
-        # whole: an edge lands in every row its z-span crosses.
+        # whole: an edge lands in every row its z-span crosses. Each edge
+        # carries the ring it came from, because parity has to be counted per
+        # ring -- see `inside`.
         self.rows_index: list[list[int]] = [[] for _ in range(self.rows)]
         for n, ((_ax, az), (_bx, bz)) in enumerate(edges):
             lo_r, hi_r = self._span(min(az, bz), max(az, bz), self.rows)
@@ -308,13 +313,24 @@ class _Coast:
         return a, b
 
     def inside(self, px: float, pz: float) -> bool:
+        """Inside ANY ring -- parity counted per ring, never pooled.
+
+        Pooling it is wrong and not only in the nested case. These rings are
+        convex hulls padded outward from their cities, and padding makes
+        neighbours overlap: `calib_24.json` has 219 points and `calib_48.json`
+        932 that lie inside two hulls at once. One shared parity counter
+        cancels them to False, `build_elevation` reads that as a negative
+        signed distance, and the board gets ocean cut through land that
+        `mapview` draws as the union of those same hulls.
+        """
         r = max(0, min(self.rows - 1, int(pz / self.cell)))
-        hit = False
+        hits = [False] * len(self.rings)
         for n in self.rows_index[r]:
             (ax, az), (bx, bz) = self.edges[n]
             if (az > pz) != (bz > pz) and px < (bx - ax) * (pz - az) / (bz - az) + ax:
-                hit = not hit
-        return hit
+                ring = self.owner[n]
+                hits[ring] = not hits[ring]
+        return any(hits)
 
     def distance(self, px: float, pz: float) -> float:
         c0 = max(0, min(self.cols - 1, int(px / self.cell)))

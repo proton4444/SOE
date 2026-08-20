@@ -510,27 +510,43 @@ def test_the_coast_index_answers_what_scanning_every_edge_answers():
     """
     from scripts.build_elevation import _Coast, _edge_distance, _inside
 
-    geo = json.loads(
-        (REPO_ROOT / "maps" / "world_geography.json").read_text(encoding="utf-8")
-    )
-    rings = [[(float(x), float(y)) for x, y in ring] for ring in geo["coastlines"]]
-    frame_w, frame_h = (float(v) for v in geo["field_miles"])
-    index = _Coast(rings, frame_w, frame_h)
+    # Every multi-ring map, not just the traced one. The first version of this
+    # test swept `world.json` alone -- two rings that do not touch -- and it
+    # passed while the index was pooling parity across all rings at once. A
+    # landmass hull is padded outward from its cities, so neighbouring hulls
+    # OVERLAP: `calib_24` had 219 points inside two at once and `calib_48` had
+    # 932, and one shared counter cancelled every one of them to "sea". A test
+    # that only looks at the easy map is how that shipped.
+    checked = 0
+    for name in ("calib_24.json", "calib_48.json", "world.json", "world2.json"):
+        board = build_board(REPO_ROOT / "maps" / name)
+        frame_w, frame_h = board["frame_units"]
+        rings = [
+            [(px * frame_w, py * frame_h) for px, py in mass["hull"]]
+            for mass in board["landmasses"]
+        ]
+        if len(rings) < 2:
+            continue
+        checked += 1
+        index = _Coast(rings, frame_w, frame_h)
 
-    # A coarse sweep of the whole frame, so the sample covers open sea, deep
-    # inland, and the shore itself rather than only one of the three.
-    for i in range(37):
-        for j in range(23):
-            px = frame_w * i / 36
-            pz = frame_h * j / 22
-            want = min(_edge_distance(ring, px, pz) for ring in rings)
-            got = index.distance(px, pz)
-            assert abs(got - want) < 1e-6, (
-                f"distance at ({px:.0f}, {pz:.0f}): index {got}, scan {want}"
-            )
-            assert index.inside(px, pz) == any(
-                _inside(ring, px, pz) for ring in rings
-            ), f"inside at ({px:.0f}, {pz:.0f}) disagrees with the scan"
+        # A coarse sweep of the whole frame, so the sample covers open sea,
+        # deep inland, and the shore itself rather than only one of the three.
+        for i in range(37):
+            for j in range(23):
+                px = frame_w * i / 36
+                pz = frame_h * j / 22
+                want = min(_edge_distance(ring, px, pz) for ring in rings)
+                got = index.distance(px, pz)
+                assert abs(got - want) < 1e-6, (
+                    f"{name} distance at ({px:.0f}, {pz:.0f}): "
+                    f"index {got}, scan {want}"
+                )
+                assert index.inside(px, pz) == any(
+                    _inside(ring, px, pz) for ring in rings
+                ), f"{name}: inside at ({px:.0f}, {pz:.0f}) disagrees with the scan"
+
+    assert checked >= 3, "not enough multi-ring maps swept to mean anything"
 
 
 def test_a_town_is_not_drowned_by_the_shelf_that_reaches_it():
