@@ -921,6 +921,25 @@ hooks directory by itself:
 pwsh ./scripts/install_hooks.ps1
 ```
 
+### Auditing what the map prints
+
+The operator map lays out four families of permanent text — town names, the
+caption under a town, the mile label on a route, and the chrome — and any of
+them can land on another. `pytest -q` holds the invariant; this reports it,
+per map, with what each one had to drop:
+
+```bash
+python -m scripts.check_map_labels
+python -m scripts.check_map_labels --browser   # real text metrics, not estimates
+```
+
+The estimate is the renderer checking itself against its own box model, which
+is worth having and is not proof: that model once assumed one glyph width for
+both faces, so monospace captions measured 15% narrower than they draw and
+overlapping labels came out clean. `--browser` loads each map in Chromium and
+measures what it actually drew. Use it before changing the map's fonts or the
+`LABEL_EM_*` constants.
+
 ### Adding New Order Types
 
 1. Define order class in `soe/orders.py`

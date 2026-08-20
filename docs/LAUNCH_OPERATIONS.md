@@ -222,20 +222,21 @@ atlas.js                replay playback, src capture, form + publish gate
 board.js                2D fallback board
 board3d.js              3D relief board (three.js)
 replay.json             the exported official-gate match, unmodified
-textures/               desert hills paper plain
+textures/               paper plain sea
 vendor/three.module.js  three.js, 1.27 MB uncompressed
 vendor/OrbitControls.js camera control
+elevation.js            baked heightmap + sea ramp, 99 KB (27 KB gzipped)
 ```
 
 Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump it
 by hand whenever a versioned asset changes, or returning visitors keep the old
-file. It is currently `v=h2`.
+file. It is currently `v=h38`.
 
 The token is not only in `index.html`, and that was a trap: `atlas.js` imports
 `board3d.js?v=`, and `board3d.js` imports `vendor/OrbitControls.js?v=`. Those
 two sat at `h1` while the page had moved to `h2`, so a bump made the
 documented way — by hand, on the file you edited — would have shipped a new
-`atlas.js` against a cached `board3d.js`. All six versioned assets are on one
+`atlas.js` against a cached `board3d.js`. All versioned assets are on one
 token now, and `scripts/check_poster.py` refuses a bundle carrying two.
 
 Staleness is not visible in the files, so `configs/poster.json` records the
@@ -243,8 +244,17 @@ token and a digest of the assets that carried it. Change a versioned asset
 without bumping and the preflight refuses; bump it everywhere, then re-record
 with `python -m scripts.check_poster --accept-token`.
 
-`sea.jpg` is **not** shipped. There is no sea. Shipping the texture
-invites its use.
+Three files carry tokens, not one: `index.html` for `atlas.css`,
+`board.js`, `elevation.js`, `atlas.js` and three.js; `atlas.js` for
+`board3d.js`; `board3d.js` for `OrbitControls.js`.
+
+`sea.jpg` **is** shipped, as of Amendment 2 — the board draws the app's
+landmass and the water outside it. Three textures ship in total, and
+`tests/test_texture_assets.py` names them: `paper`, `plain`, `sea`, each
+held byte-identical to its twin in `maps/textures/`, and the same test
+fails on a fourth. `desert.jpg` and `hills.jpg` went with the mounds —
+the relief takes its colour from the baked heightfield now, so a texture
+per terrain label was shipping bytes nothing would ever ask for.
 
 ### Board
 
@@ -366,7 +376,8 @@ or a date that is not decided.
 
 ## Amendments proposed to the card
 
-Three. The first is required; the others are corrections.
+Five. The first is required, the next two are corrections, and the last
+two reopen the board's visual contract on purpose.
 
 **1. Add an optional email field to the form.** **Accepted 2026-08-15
 and applied.** Offer bullet 7 becomes:
@@ -396,6 +407,59 @@ gate's "one replay JSON" literally true.
 gate (closed: Cloudflare Pages) and gain a third item that was never
 listed: operator identity — domain, address, handles. It was assumed
 throughout and decided nowhere.
+
+**4. The atlas board draws the land the app draws.** **Accepted
+2026-08-17 and applied.** The visual contract forbade sea, landmass and
+shore, so the poster's board was twelve mounds on empty paper while the
+in-app map of the same twelve cities showed a named landmass with ports,
+populations, grid references and road mileages. The two read as different
+worlds.
+
+Reason: the poster is the first object a stranger sees, and it was
+showing less of the game than the game does. The rule it breaks existed
+to stop the page claiming a coastline the map has not got — `calib_12`
+has no geography file, so the app's own shore is a padded convex hull of
+the road-connected cities.
+
+That concern is answered rather than overridden. The board is built from
+`webapp/mapview.py`'s own polygon (carried across by
+`scripts/build_public_board.py`, not recomputed), so the app and the
+poster cannot disagree about where the coast runs; and the legend states
+"road-connected extent, not a surveyed coast" beside it. The withheld
+map fields now cross to the page. Replay sanitization is untouched.
+
+One bug fell out of the work and is fixed with it: `compute_landmasses`
+named a landmass with `max(set(regions), ...)`, and `calib_12` splits its
+twelve cities 4/4/4 across three regions — so the tie broke on set
+iteration order and the same map rendered under three different names
+depending on `PYTHONHASHSEED`. It now settles alphabetically.
+
+**5. The land has a surface.** **Accepted 2026-08-17 and applied.**
+Amendment 4 gave the board the app's landmass and drew it as a flat slab
+with twelve cones standing on it, which read as pins pushed into a plane
+rather than as a world. The landmass now carries elevation interpolated
+from the twelve cities' terrain labels, and the cones are gone -- a city
+on hills is high because the ground under it is high.
+
+Reason: the same one as Amendment 4, one step in. The poster is the first
+object a stranger sees and it was showing less of the game than the game
+implies.
+
+The honesty cost is larger here than for the coast and is paid the same
+way. `calib_12.json` has terrain LABELS and no elevation at all, so every
+slope between two cities is invented -- deterministically, from position,
+so it is the same invention everywhere, but invented. The legend says so:
+"relief interpolated from city terrain -- high ground is data, contours
+are not". Vertical is exaggerated x2.6, as a relief map's always is.
+
+Three things fell out of the work and are fixed with it. Cities now level
+the ground they stand on, because a flat marker disc on a slope is a half
+moon and twelve of them were. The terrain is clipped to the shore polygon
+per cell (Sutherland-Hodgman) rather than by dropping whole cells, which
+had left the coastline as a flight of stairs. And elevation is coloured
+against a fixed ceiling rather than against the map's own tallest point,
+which had painted this vale's hill country in summit grey and made it
+read as cloud.
 
 ## Roles
 

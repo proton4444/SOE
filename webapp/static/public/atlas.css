@@ -190,7 +190,13 @@ main > section + section { border-top: 1px solid var(--rule-soft); }
 /* The board is a tilted 3D scene now, so the frame owns the aspect and the
    canvas fills it. Wider than the old flat plate, because a tilted board
    spends height on perspective. */
-.board-frame { aspect-ratio: 16 / 11; }
+/* Wider than it was (16/11), because the board it holds got wider. The map is
+   drawn on mapview's 1180x680 frame now instead of a square, and a 1.7-wide
+   object fitted into a 1.45-wide window is fitted by its width -- leaving a
+   band of empty table above and below, and shrinking the board to buy it. At
+   16/9 the object fills the frame it is given and the labels get the room
+   back. */
+.board-frame { aspect-ratio: 16 / 9; }
 
 #atlas {
   display: block;
@@ -231,11 +237,96 @@ main > section + section { border-top: 1px solid var(--rule-soft); }
   will-change: transform;
 }
 
+.atlas-label { display: flex; flex-direction: column; align-items: center; }
+.atlas-label-name { display: block; }
+
+/* The city's data row, under its name. Monospace and small on purpose: it is
+   a set of readings, and the eye should be able to skip the whole column of
+   them while reading the names. */
+.atlas-label-meta {
+  display: block;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.01em;
+  color: #4a4030;
+  opacity: 0.9;
+}
+
+/* The middot lives between surviving parts, not inside them, so dropping a
+   part at a breakpoint cannot leave a separator hanging at the end of a row. */
+.atlas-label-meta .bit + .bit::before {
+  content: " \00b7 ";
+  opacity: 0.7;
+}
+
+.atlas-label.is-quiet .atlas-label-meta { color: #6d6552; }
+
+/* Region names sit under everything else in the reading order: they name the
+   ground rather than anything standing on it, so they are set wide, faint and
+   in caps the way a map letters a territory. */
+.atlas-region {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #55503f;
+  opacity: 0.62;
+  text-shadow: 0 0 6px rgba(252, 247, 236, 0.9);
+  transition: opacity 200ms ease-out;
+  will-change: transform;
+}
+
+/* Last resort for a town whose full row will not fit on the print: the name
+   stays, the data row goes. The name is what the board owes a town; the row is
+   detail, and the 2D map sheds it the same way for the same reason. Losing
+   Gullhaven's name to keep its population on screen is the wrong trade. */
+.atlas-label.is-name-only .atlas-label-meta { display: none; }
+
+/* Road readings. Quieter again than the city rows -- there are fourteen of
+   them and they are reference, not headline. */
+.atlas-road-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.01em;
+  color: #554c39;
+  text-shadow: 0 0 4px rgba(252, 247, 236, 0.92);
+  transition: opacity 200ms ease-out;
+  will-change: transform;
+}
+
 .atlas-label.is-quiet { color: #5d5644; }
+
+/* The shoreline caveat in the legend. Italic and dimmer than the seat entries
+   beside it: it is a qualification of the picture, not another key to it. */
+.legend .legend-note {
+  font-style: italic;
+  opacity: 0.72;
+}
 
 @media (max-width: 640px) {
   .board-frame { aspect-ratio: 4 / 3.6; }
   .atlas-label { font-size: 0.62rem; letter-spacing: 0.04em; }
+  /* Three tiers of reading on a 390px board is one too many: the names and
+     their data rows stay, the road mileages go. They are reference numbers,
+     and a phone has no room to be a reference. */
+  .atlas-label-meta { font-size: 0.5rem; }
+  /* A 390px board cannot hold twelve names each over a four-part row: the
+     rows crowd each other out and half the cities lose their name, which is a
+     worse trade than losing a terrain word. Population and grid reference
+     stay; the flags and the terrain go, and both are still on the mound --
+     terrain as the mound's own shape and tint, a port as its ring. */
+  .atlas-label-meta .bit.is-flag,
+  .atlas-label-meta .bit.is-terrain { display: none; }
+  .atlas-region { font-size: 0.56rem; letter-spacing: 0.16em; }
+  .atlas-road-label { display: none; }
 }
 
 .board-vignette {

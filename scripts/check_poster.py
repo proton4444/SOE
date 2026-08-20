@@ -25,6 +25,12 @@ mechanical:
     board       board.js still matches maps/calib_12.json -- a map edit that
                 never reached the poster is a poster that misrepresents the
                 world
+    elevation   elevation.js still matches that map and its generator, for the
+                same reason: the inventory only asks that it exist, and a
+                browser only proves the bytes render
+    runbook     LAUNCH_OPERATIONS.md still names the token and the textures the
+                bundle actually carries -- the operator assembles it from that
+                document, so a wrong inventory there is a wrong bundle here
     token       every ?v= in the bundle is the same token, and that token was
                 bumped after the versioned assets last changed
     isolation   nothing in the bundle points at the live server, a port, or
@@ -65,12 +71,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from scripts.build_elevation import HEADER as ELEVATION_HEADER  # noqa: E402
+from scripts.build_elevation import build_elevation  # noqa: E402
 from scripts.build_public_board import build_board  # noqa: E402
 from soe.public_replay import LeakageError, validate_file, visual_bar  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = REPO_ROOT / "webapp" / "static" / "public"
-MAP_SOURCE = REPO_ROOT / "maps" / "calib_12.json"
+MAP_SOURCE = REPO_ROOT / "maps" / "starter_map.json"
 MANIFEST = REPO_ROOT / "configs" / "poster.json"
 
 #: The deployable, file by file, from LAUNCH_OPERATIONS.md "The page". The
@@ -82,13 +90,27 @@ REQUIRED_FILES = [
     "atlas.js",
     "board.js",
     "board3d.js",
+    "elevation.js",
     "replay.json",
     "vendor/three.module.js",
     "vendor/OrbitControls.js",
 ]
 
-#: Shipping this is how the atlas board grows an ocean it does not have.
-FORBIDDEN_FILES = {"textures/sea.jpg", "sea.jpg"}
+#: Nothing is forbidden here any more, and the entry that used to be says
+#: something about how far the board has moved. `textures/sea.jpg` was banned
+#: on the grounds that "shipping this is how the atlas board grows an ocean it
+#: does not have" -- correct under the original visual contract, which allowed
+#: no sea at all. Amendments 2 and 3 opened that deliberately: the board draws
+#: the app's landmass, the water outside it, and a relief in between, and the
+#: page states in its legend what is surveyed and what is implied. The tile is
+#: required now, and `tests/test_texture_assets.py` holds it byte-identical to
+#: the renderer's copy.
+FORBIDDEN_FILES: set[str] = set()
+
+#: The texture tiles board3d.js actually asks for: the ground's grain, the
+#: sheet's tooth, and the water's. Everything else about a surface is geometry
+#: and colour now.
+RENDERER_TEXTURES = ("textures/plain.jpg", "textures/paper.jpg", "textures/sea.jpg")
 
 #: Wire weight, not disk weight. A phone opening the poster from a link
 #: downloads the compressed size, and Pages serves text assets compressed.
@@ -281,26 +303,32 @@ def check_inventory(bundle: Path, board: dict | None) -> list[Finding]:
 
     expected = set(REQUIRED_FILES) | {"vendor/three-LICENSE.txt"}
     if board:
-        terrains = sorted({city["terrain"] for city in board.get("cities", [])})
-        for terrain in terrains:
-            name = f"textures/{terrain}.jpg"
+        # The tiles the RENDERER loads, not one per terrain label.
+        #
+        # This used to derive the required textures from the board's terrain
+        # labels, because every city wore a terrain-textured mound and the two
+        # sets were the same set. Amendments 2 and 3 replaced the mounds with a
+        # heightfield: the ground is one grain tile coloured by elevation, so a
+        # map with `coastal` or `river` on it needs no coastal or river tile
+        # and never asks for one. Deriving from labels demanded five tiles that
+        # do not exist and that nothing would have loaded.
+        for name in RENDERER_TEXTURES:
             expected.add(name)
             if name not in present:
                 out.append(
                     blocker(
                         "inventory",
-                        f"{name} is missing and {terrain} is a terrain on the board",
+                        f"{name} is missing and the board loads it",
                     )
                 )
-        expected.add("textures/paper.jpg")
-        if "textures/paper.jpg" not in present:
-            out.append(blocker("inventory", "textures/paper.jpg is missing (the ground sheet)"))
 
     for name in sorted(present - expected - FORBIDDEN_FILES):
         out.append(
-            note(
+            blocker(
                 "inventory",
-                f"not in the plan's file list, and it will be published: {name}",
+                f"not in the plan's file list, and the deploy uploads this "
+                f"directory wholesale, so it would be published: {name}. "
+                f"Add it to the plan or take it out of the bundle.",
             )
         )
     return out
@@ -480,9 +508,96 @@ def check_board(bundle: Path, board: dict | None) -> list[Finding]:
     return [
         blocker(
             "board",
-            "board.js has drifted from maps/calib_12.json. The poster would draw "
+            f"board.js has drifted from maps/{MAP_SOURCE.name}. The poster would draw "
             "a world the engine no longer has. Regenerate: "
             "python -m scripts.build_public_board",
+        )
+    ]
+
+
+RUNBOOK = REPO_ROOT / "docs" / "LAUNCH_OPERATIONS.md"
+
+
+def check_runbook(bundle: Path, token: str | None) -> list[Finding]:
+    """The two facts in the runbook that go stale without anyone noticing.
+
+    The operator assembles and audits the bundle from that document, so a
+    wrong inventory there is a wrong bundle here. Both drifted: the token sat
+    at h28 through five bumps, and the texture list still named `desert` and
+    `hills` -- deleted with the mounds -- while omitting `sea`, which is
+    required. Searching for a token that does not exist leaves the real one
+    unbumped and fails this very preflight at deploy time.
+    """
+    if not RUNBOOK.exists():
+        return [note("runbook", "LAUNCH_OPERATIONS.md is not in the tree")]
+    text = RUNBOOK.read_text(encoding="utf-8")
+    findings: list[Finding] = []
+
+    stated = re.search(r"currently `v=([A-Za-z0-9]+)`", text)
+    if not stated:
+        findings.append(note("runbook", "no cache token is recorded in the runbook"))
+    elif token and stated.group(1) != token:
+        findings.append(
+            blocker(
+                "runbook",
+                f"the runbook says the token is v={stated.group(1)}; the bundle "
+                f"carries v={token}. Whoever bumps by hand will bump the wrong one.",
+            )
+        )
+
+    listed = re.search(r"^textures/\s+(.+)$", text, re.M)
+    shipped = sorted(p.stem for p in (bundle / "textures").glob("*.jpg"))
+    if not listed:
+        findings.append(note("runbook", "no texture inventory is recorded in the runbook"))
+    elif sorted(listed.group(1).split()) != shipped:
+        findings.append(
+            blocker(
+                "runbook",
+                f"the runbook lists textures {' '.join(sorted(listed.group(1).split()))}; "
+                f"the bundle ships {' '.join(shipped)}. An operator assembling it by "
+                f"hand would get the wrong files.",
+            )
+        )
+
+    if not findings:
+        findings.append(
+            note("runbook", "token and texture inventory agree with the bundle")
+        )
+    return findings
+
+
+def check_elevation(bundle: Path) -> list[Finding]:
+    """The terrain, against the generator that made it.
+
+    `board.js` was compared and `elevation.js` was not, so a map edit or a
+    change to the generator that never reached the bundle still published: the
+    inventory only asks that the file exist, the asset digest authenticates
+    whatever bytes are committed, and a browser only proves those bytes
+    render. The board would draw a coastline and a relief the engine no longer
+    has, which is the same failure the board check exists to stop.
+    """
+    path = bundle / "elevation.js"
+    if not path.exists():
+        return [blocker("elevation", "elevation.js is missing from the bundle")]
+    if not MAP_SOURCE.exists():
+        return [note("elevation", f"{MAP_SOURCE.name} is not in the tree; drift not checked")]
+
+    fresh = build_elevation(MAP_SOURCE)
+    rebuilt = ELEVATION_HEADER + json.dumps(fresh, indent=2, ensure_ascii=False) + ";\n"
+    if path.read_text(encoding="utf-8") == rebuilt:
+        return [
+            note(
+                "elevation",
+                f"{fresh['width']}x{fresh['height']} heightfield, sea level "
+                f"{fresh['sea_level']:.0f}, in sync with maps/{MAP_SOURCE.name}",
+            )
+        ]
+    return [
+        blocker(
+            "elevation",
+            f"elevation.js has drifted from maps/{MAP_SOURCE.name} or from its "
+            "generator. The poster would draw terrain the engine no longer has. "
+            "Regenerate: python -m scripts.build_elevation",
         )
     ]
 
@@ -659,6 +774,9 @@ def run_checks(bundle: Path, stage: str, manifest_path: Path) -> list[Finding]:
 
     findings += check_replay(bundle, board)
     findings += check_board(bundle, board)
+    findings += check_elevation(bundle)
+    tokens, _ = token_scan(bundle)
+    findings += check_runbook(bundle, next(iter(tokens)) if len(tokens) == 1 else None)
     findings += check_token(bundle, manifest_path)
     findings += check_weight(bundle)
     return findings

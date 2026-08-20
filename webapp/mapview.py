@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 from soe.config import get_hop_cost
 from soe.models import Road, RoadQuality
@@ -194,12 +195,29 @@ def load_geography(map_file: str) -> Optional[dict]:
     return data
 
 
+#: Passed as ``geo`` to say "I have already looked, and this map has none".
+#:
+#: ``None`` cannot say that. It means "resolve it from the map file's name",
+#: which is right for the app -- it only ever draws maps out of ``maps/`` --
+#: and wrong for a build script handed a path from anywhere. `--map
+#: /tmp/world.json` with no sidecar beside it returned None from the script's
+#: own check, and this function then read `maps/world_geography.json` and
+#: built the supplied map on a 1300x1000 field instead of its own 1180x680.
+#: Same file under a name that collides with nothing came out correct, which
+#: is the tell: the geometry was following the filename.
+NO_GEOGRAPHY: dict = {}
+
+
 def layout_for_map(
     map_file: str,
     data: Optional[dict] = None,
     geo: Optional[dict] = None,
 ) -> MapLayout:
-    """Canvas sized to the geography field aspect (or the sparse fallback)."""
+    """Canvas sized to the geography field aspect (or the sparse fallback).
+
+    ``geo`` is three-valued: a geography to use, ``NO_GEOGRAPHY`` for a map
+    known to have none, and ``None`` for "look one up by this map's name".
+    """
     if data is None:
         data = load_raw_map(map_file)
     if geo is None:
@@ -253,10 +271,23 @@ def city_miles(city: dict, layout: MapLayout) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def positions(map_file: str) -> dict[str, tuple[float, float]]:
-    """City id -> (x, y) in SVG coordinates. Hand-placed x/y (or miles) wins."""
-    data = load_raw_map(map_file)
-    layout = layout_for_map(map_file, data)
+def positions(
+    map_file: str, data: Optional[dict] = None, geo: Optional[dict] = None
+) -> dict[str, tuple[float, float]]:
+    """City id -> (x, y) in SVG coordinates. Hand-placed x/y (or miles) wins.
+
+    ``data`` and ``geo`` mirror ``layout_for_map``: a caller holding the map
+    already -- a build script handed a path outside ``maps/`` -- passes both
+    rather than having the name resolved back to files in the repository.
+    Without ``data`` the only thing carried across was the basename, which
+    either named nothing (and raised) or named a *different* map that happened
+    to share it. Without ``geo`` the layout these coordinates are measured in
+    was still being resolved that way, so the positions and the coastline
+    could be computed against two different fields.
+    """
+    if data is None:
+        data = load_raw_map(map_file)
+    layout = layout_for_map(map_file, data, geo)
     cities = data.get("cities") or []
     roads = data.get("roads") or []
 
@@ -505,13 +536,21 @@ def _disambiguate_names(masses: list[dict]) -> None:
 _ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
 
 
-def _majority_region(cities: list[dict], by_id: dict) -> Optional[str]:
+def _majority_region(city_ids: list[str], by_id: dict) -> Optional[str]:
+    """The region most of these cities are in, ties settled alphabetically."""
     regions = [
-        by_id[c].get("region") for c in cities if c in by_id and by_id[c].get("region")
+        by_id[c].get("region")
+        for c in city_ids
+        if c in by_id and by_id[c].get("region")
     ]
     if not regions:
         return None
-    return max(set(regions), key=regions.count)
+    # Sorted, not set: `max` over a set breaks ties on set iteration order,
+    # which follows PYTHONHASHSEED. calib_12 is a 4/4/4 three-way tie, so the
+    # same map named its landmass differently from one process to the next.
+    # Over a sorted list `max` returns the first maximal element, so a tie
+    # settles alphabetically and the map renders the same name every run.
+    return max(sorted(set(regions)), key=regions.count)
 
 
 def landmasses_from_geography(
@@ -550,14 +589,19 @@ def landmasses_from_geography(
     masses: list[dict] = []
     for i, poly in enumerate(coastlines):
         cids = sorted(cid for cid, pi in assign.items() if pi == i)
-        regions = [by_id[cid].get("region") for cid in cids if cid in by_id]
-        regions = [r for r in regions if r]
-        if regions:
-            name = max(set(regions), key=regions.count)
-        elif cids and cids[0] in by_id:
-            name = by_id[cids[0]].get("name") or cids[0]
-        else:
-            name = f"Landmass {i + 1}"
+        # Through the helper directly above, not a second copy of it. The copy
+        # that stood here was written with `max(set(regions))`, which is the
+        # exact bug that helper was added to fix: over a set, `max` breaks a
+        # tie on iteration order, which follows PYTHONHASHSEED. A two-region
+        # coastline named itself Alpha under seeds 1, 3 and 6 and Beta under
+        # 2, 4 and 5 -- so regenerating `board.js` could change a visible
+        # label, and its asset digest, with no source change at all.
+        name = _majority_region(cids, by_id)
+        if name is None:
+            if cids and cids[0] in by_id:
+                name = by_id[cids[0]].get("name") or cids[0]
+            else:
+                name = f"Landmass {i + 1}"
 
         area = _poly_area_miles(poly)
         # Small land bodies read as islands; large ones as continents.
@@ -640,16 +684,13 @@ def compute_landmasses(
     masses: list[dict] = []
     for comp in components:
         pts = [pos[cid] for cid in comp if cid in pos]
-        regions = [by_id[cid].get("region") for cid in comp if by_id.get(cid)]
-        regions = [r for r in regions if r]
-        if regions and len(set(regions)) == 1:
-            name = regions[0]
-        elif regions:
-            name = max(set(regions), key=regions.count)
-        elif len(comp) == 1:
-            name = by_id[comp[0]].get("name") or comp[0]
-        else:
-            name = f"Landmass {len(masses) + 1}"
+        name = _majority_region(comp, by_id)
+        if name is None:
+            name = (
+                by_id[comp[0]].get("name") or comp[0]
+                if len(comp) == 1
+                else f"Landmass {len(masses) + 1}"
+            )
 
         kind = "island" if len(comp) == 1 else "continent"
         if "island" in name.lower():
@@ -809,25 +850,9 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     if overlay:
         parts.append(_overlay_key_svg(overlay))
 
-    parts.append('<g class="map-routes">')
-    sea_routes = (geo or {}).get("sea_routes") or {}
-    for r in roads:
-        a, b = pos.get(r.get("from")), pos.get(r.get("to"))
-        if not a or not b:
-            continue
-        sailed = sea_routes.get(r.get("id"))
-        parts.append(
-            _route_svg(
-                r, a, b, dense=dense,
-                sailed=(
-                    [layout.project_miles(px, py) for px, py in sailed]
-                    if sailed else None
-                ),
-            )
-        )
-    parts.append("</g>")
-
-    parts.append('<g class="map-cities">')
+    # Towns are drawn over routes, so they are drawn first here and held
+    # back: the mile labels have to know where the town labels landed, and
+    # asking the drawing is steadier than keeping a second copy of it.
     label_plan = _plan_city_labels(cities, pos)
     ordered = sorted(
         pos.items(),
@@ -835,13 +860,51 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
             -_BAND_RADIUS.get(by_id.get(item[0], {}).get("population_band"), 8)
         ),
     )
+    city_parts = ['<g class="map-cities">']
     for cid, (x, y) in ordered:
         city = by_id.get(cid)
         if not city:
             continue
         plan = label_plan.get(cid) or _default_label_plan(city, dense)
-        parts.append(_city_svg(city, x, y, marks.get(cid), plan))
+        city_parts.append(_city_svg(city, x, y, marks.get(cid), plan))
+    city_parts.append("</g>")
+    cities_svg = "\n".join(city_parts)
+
+    sea_routes = (geo or {}).get("sea_routes") or {}
+    road_labels: dict[str, Optional[tuple[float, float]]] = {}
+    if not dense:
+        road_labels = plan_road_labels(
+            roads,
+            pos,
+            sea_routes,
+            occupied_label_boxes("\n".join(parts) + cities_svg)
+            # A label that clears every other label can still print over a
+            # town dot or its port arc, which is what "110 mi" did to
+            # Rhaethvale. The dots are obstacles too.
+            + _marker_boxes(cities, pos, halo=6.0),
+        )
+
+    parts.append('<g class="map-routes">')
+    for r in roads:
+        a, b = pos.get(r.get("from")), pos.get(r.get("to"))
+        if not a or not b:
+            continue
+        sailed = sea_routes.get(r.get("id"))
+        rid = str(r.get("id", ""))
+        parts.append(
+            _route_svg(
+                r, a, b, dense=dense,
+                sailed=(
+                    [layout.project_miles(px, py) for px, py in sailed]
+                    if sailed else None
+                ),
+                label_at=road_labels.get(rid),
+                label_visible=(dense or road_labels.get(rid) is not None),
+            )
+        )
     parts.append("</g>")
+
+    parts.append(cities_svg)
 
     parts.append("</svg>")
     return "\n".join(parts)
@@ -924,16 +987,27 @@ def _short_city_name(name: str, max_len: int = 12) -> str:
     return name
 
 
+# Advance width per character, in ems, for the two faces the map sets.
+# Measured in the browser off the drawn SVG rather than guessed: the
+# monospace captions run 0.602em a glyph and the serif names top out at
+# 0.54em, so one number for both faces made every caption box ~15% too
+# narrow -- which is how labels that measured clear still printed through
+# each other. A little over the measurement, so the box is never short.
+LABEL_EM_SERIF = 0.55
+LABEL_EM_MONO = 0.62
+
+
 def _label_box_at(
     lx: float,
     ly: float,
     name: str,
     font_size: float,
     anchor: str = "middle",
+    em_width: float = LABEL_EM_SERIF,
+    letter_spacing: float = 0.0,
 ) -> tuple[float, float, float, float]:
     """Axis-aligned box for a label whose baseline is at (lx, ly)."""
-    # ~0.52em average glyph width for Georgia-ish faces at small sizes.
-    w = max(14.0, len(name) * font_size * 0.52)
+    w = max(14.0, len(name) * (font_size * em_width + letter_spacing))
     h = font_size + 3.0
     if anchor == "start":
         left = lx
@@ -974,6 +1048,47 @@ def _label_candidates(
     ]
 
 
+def _marker_boxes(
+    cities: list[dict],
+    pos: dict[str, tuple[float, float]],
+    radius_scale: float = 1.0,
+    halo: float = 0.0,
+) -> list[tuple[float, float, float, float]]:
+    """Boxes around the town dots themselves, so labels stay off them."""
+    boxes: list[tuple[float, float, float, float]] = []
+    for city in cities:
+        cid = city.get("id")
+        if not cid or cid not in pos:
+            continue
+        x, y = pos[cid]
+        band = city.get("population_band") or "10k-99k"
+        r = max(3.0, _BAND_RADIUS.get(band, 8.5) * radius_scale) + halo
+        boxes.append((x - r, y - r, x + r, y + r))
+    return boxes
+
+
+def _sparse_label_boxes(
+    city: dict,
+    x: float,
+    y: float,
+    lx: float,
+    ly: float,
+    anchor: str,
+    name: str,
+    font: float,
+    draw_r: float,
+    meta: str,
+) -> list[tuple[float, float, float, float]]:
+    """The boxes a sparse town's permanent labels would occupy at a slot."""
+    boxes = [_label_box_at(lx, ly, name, font, anchor)]
+    if meta:
+        meta_y = _city_meta_baseline(y, draw_r, bool(city.get("is_port")), ly - y)
+        boxes.append(
+            _label_box_at(x, meta_y, meta, 8.5, "middle", em_width=LABEL_EM_MONO)
+        )
+    return boxes
+
+
 def _font_for_band(band: str, dense: bool, very_dense: bool) -> float:
     if not dense:
         return 15.0
@@ -1001,16 +1116,8 @@ def _plan_city_labels(
 
     ranked = sorted(cities, key=_city_priority, reverse=True)
     plan: dict[str, CityLabelPlan] = {}
-    placed_boxes: list[tuple[float, float, float, float]] = []
     # Reserve space around every marker so labels don't sit on other dots.
-    for city in cities:
-        cid = city.get("id")
-        if not cid or cid not in pos:
-            continue
-        x, y = pos[cid]
-        band = city.get("population_band") or "10k-99k"
-        r = max(3.0, _BAND_RADIUS.get(band, 8.5) * radius_scale)
-        placed_boxes.append((x - r, y - r, x + r, y + r))
+    placed_boxes = _marker_boxes(cities, pos, radius_scale)
 
     for city in ranked:
         cid = city.get("id")
@@ -1024,20 +1131,58 @@ def _plan_city_labels(
         rings = (not dense) or _BAND_RANK.get(band, 0) >= 3
 
         if not dense:
+            # A sparse town carries two permanent lines: the name on one
+            # side of the marker and the caption on the other. Name above,
+            # caption below is the habit, so it is tried first and a town
+            # with room around it does not move. The flip comes next, then
+            # the slots around the marker -- that is what keeps a close pair
+            # from printing one town's caption through its neighbour's name.
+            # If nothing seats both, the caption goes to hover as it already
+            # does on a dense map: the name is what the map owes a town, and
+            # the tooltip carries the caption either way.
+            draw_r = max(3.5, _BAND_RADIUS.get(band, 8.5))
+            meta = _city_meta_text(city)
+            above, below = -(base_r + 10), base_r + font * 0.85
+            slots = [
+                (x, y + above, "middle"),
+                (x, y + below, "middle"),
+            ] + _label_candidates(x, y, base_r + 4, font)
+            chosen = None
+            for with_meta in (True, False):
+                for lx, ly, anchor in slots:
+                    boxes = _sparse_label_boxes(
+                        city, x, y, lx, ly, anchor, full_name, font, draw_r,
+                        meta if with_meta else "",
+                    )
+                    if not any(
+                        _boxes_overlap(box, other, pad=1.0)
+                        for box in boxes
+                        for other in placed_boxes
+                    ):
+                        chosen = (lx, ly, anchor, with_meta)
+                        break
+                if chosen:
+                    break
+            if chosen is None:
+                # Nowhere clear even without the caption. The name still
+                # goes up: an unnamed town is worse than a crowded one.
+                chosen = (x, y + above, "middle", False)
+                boxes = _sparse_label_boxes(
+                    city, x, y, x, y + above, "middle", full_name, font, draw_r, ""
+                )
+            lx, ly, anchor, with_meta = chosen
             plan[cid] = CityLabelPlan(
                 name_mode="always",
-                meta_mode="always",
+                meta_mode="always" if with_meta else "hover",
                 name_size=font,
                 radius_scale=1.0,
                 show_rings=True,
-                label_dx=0.0,
-                label_dy=-(base_r + 10),
+                label_dx=lx - x,
+                label_dy=ly - y,
                 display_name=full_name,
-                text_anchor="middle",
+                text_anchor=anchor,
             )
-            # Still track the box so dense path isn't the only one that cares.
-            box = _label_box_at(x, y - base_r - 10, full_name, font, "middle")
-            placed_boxes.append(box)
+            placed_boxes.extend(boxes)
             continue
 
         # Dense: try full name at several slots, then a shortened form.
@@ -1299,14 +1444,11 @@ def _defs() -> str:
     .soe-map.soe-map-very-dense .map-routes { opacity: 0.72; }
     .soe-map.soe-map-dense .land-label,
     .soe-map.soe-map-very-dense .land-label { opacity: 0.38; }
-    .soe-map.soe-map-dense .land-label-meta,
-    .soe-map.soe-map-very-dense .land-label-meta { opacity: 0.28; }
     .soe-map .map-landmass:hover .land-shore { stroke-width: 2.4; opacity: 1; }
     .soe-map .map-title { font-family: Georgia, "Times New Roman", serif; }
     .soe-map .map-label { font-family: Georgia, "Times New Roman", serif; }
     .soe-map .map-meta { font-family: ui-monospace, Consolas, monospace; }
     .soe-map .land-label { opacity: 0.55; pointer-events: none; }
-    .soe-map .land-label-meta { opacity: 0.4; pointer-events: none; }
   ]]></style>
 </defs>
 """.strip()
@@ -1611,13 +1753,11 @@ def _landmasses_svg(
                 f'letter-spacing="{caption_size * 0.34:.1f}" font-weight="bold">'
                 f"{_esc(caption)}</text>"
             )
-            if not dense:
-                parts.append(
-                    f'<text class="map-meta land-label-meta" x="{label_x:.1f}" '
-                    f'y="{label_y + 15:.1f}" '
-                    f'text-anchor="middle" fill="#7f8794" font-size="10">'
-                    f"{m['kind']} · {n} cit{'ies' if n != 1 else 'y'}</text>"
-                )
+            # No kind/count line under it. The engraved name is underprint
+            # and reads as such; a solid caption at the same point is a
+            # label, and it printed through whichever town stood there --
+            # while the roster in the corner already says "continent -- 12
+            # cities" about the same landmass, on every map that draws it.
         parts.append("</g>")
     parts.append("</g>")
     return "\n".join(parts)
@@ -1682,6 +1822,209 @@ def _format_hop(cost: Optional[float]) -> str:
     return f"{cost:.1f} mv"
 
 
+# How far a mile label sits from its route's control point. A sea lane's
+# label clears the wave glyph drawn at the same point; a road's rides above.
+ROAD_LABEL_DY_SEA = 16.0
+ROAD_LABEL_DY_LAND = -6.0
+
+
+def road_label_text(road: dict) -> str:
+    """The mile/movement label a route prints, or "" if it has no distance."""
+    miles = road.get("distance_miles")
+    if miles is None or miles == "":
+        return ""
+    hop_txt = _format_hop(_hop_cost_for_raw_road(road))
+    return f"{miles} mi · {hop_txt}" if hop_txt else f"{miles} mi"
+
+
+def _road_control_point(
+    a: tuple[float, float], b: tuple[float, float], road_id: str
+) -> tuple[float, float]:
+    """The bow's control point — where a route bends, and where it is labelled.
+
+    Gentle bow so parallel routes and dense maps read as paths, not a grid.
+    The side is stable from the road id, not Python's salted ``hash()``.
+    """
+    mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(dx, dy) or 1.0
+    bow = min(28.0, length * 0.08)
+    sign = 1.0 if (sum(ord(ch) for ch in road_id) % 2) == 0 else -1.0
+    return (mx + sign * (-dy / length) * bow, my + sign * (dx / length) * bow)
+
+
+def _road_label_candidates(
+    a: tuple[float, float],
+    b: tuple[float, float],
+    c: tuple[float, float],
+    label_dy: float,
+) -> list[tuple[float, float]]:
+    """Places a mile label may sit, best first.
+
+    The first is where the label has always sat, so a route with room around
+    it does not move. The rest slide along the drawn curve and take either
+    side of it, which is what a route has that a town does not: length.
+    """
+    slots = [(c[0], c[1] + label_dy), (c[0], c[1] - label_dy)]
+    off = abs(label_dy) + 4.0
+    # Nearest ring first, then along the curve from the middle out: a label
+    # slides down its own road before it is pushed away from it.
+    for ring in (1.0, 1.7, 2.6):
+        for t in (0.50, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82):
+            u = 1.0 - t
+            px = u * u * a[0] + 2 * u * t * c[0] + t * t * b[0]
+            py = u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]
+            tx = 2 * u * (c[0] - a[0]) + 2 * t * (b[0] - c[0])
+            ty = 2 * u * (c[1] - a[1]) + 2 * t * (b[1] - c[1])
+            n = math.hypot(tx, ty) or 1.0
+            nx, ny = -ty / n * off * ring, tx / n * off * ring
+            slots.append((px + nx, py + ny))
+            slots.append((px - nx, py - ny))
+    return slots
+
+
+_SCAN_RE = re.compile(r"<g(\s[^>]*)?>|</g>|<text\s([^>]*)>(.*?)</text>", re.S)
+_ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
+_TAG_RE = re.compile(r"<[^>]+>")
+_TRANSLATE_RE = re.compile(r"translate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)\s*\)")
+
+
+class LabelBox(NamedTuple):
+    """A drawn label's box, and enough of the label to say which it is.
+
+    The first four fields are the box, so it passes anywhere a plain
+    ``(left, top, right, bottom)`` tuple does.
+    """
+
+    left: float
+    top: float
+    right: float
+    bottom: float
+    text: str
+    cls: str
+
+
+def occupied_label_boxes(svg_fragment: str) -> list[LabelBox]:
+    """Boxes of every permanently visible label in already-drawn SVG.
+
+    Measured off the drawing rather than recomputed beside it, so the
+    reservation cannot drift from what the map actually prints. Groups are
+    walked in document order because the scale bar and the compass are
+    translated into place — read flat, their contents measure as if they
+    sat in the top-left corner. Hover-only labels are not on the page until
+    someone points at them, and the engraved landmass caption is deliberate
+    underprint — neither reserves space.
+    """
+    boxes: list[LabelBox] = []
+    offsets: list[tuple[float, float]] = [(0.0, 0.0)]
+    for m in _SCAN_RE.finditer(svg_fragment):
+        token = m.group(0)
+        if token.startswith("</g"):
+            if len(offsets) > 1:
+                offsets.pop()
+            continue
+        if token.startswith("<g"):
+            ox, oy = offsets[-1]
+            shift = _TRANSLATE_RE.search(m.group(1) or "")
+            if shift:
+                ox += float(shift.group(1))
+                oy += float(shift.group(2))
+            offsets.append((ox, oy))
+            continue
+        text = _TAG_RE.sub("", m.group(3) or "").strip()
+        if not text:
+            continue
+        d = dict(_ATTR_RE.findall(m.group(2) or ""))
+        cls = d.get("class", "")
+        if "hover" in cls or "land-label" in cls:
+            continue
+        try:
+            x = float(d.get("x", "0"))
+            y = float(d.get("y", "0"))
+            size = float(d.get("font-size", "10"))
+        except ValueError:
+            continue
+        try:
+            spacing = float(d.get("letter-spacing", "0"))
+        except ValueError:
+            spacing = 0.0
+        ox, oy = offsets[-1]
+        box = _label_box_at(
+            x + ox,
+            y + oy,
+            text,
+            size,
+            # SVG's own default, which is `start` -- not `middle`. Four
+            # permanent labels omit the attribute (the title, the stats line
+            # and the two roster lines), and modelling them as centred put
+            # their reserved boxes half a width to the left: the title really
+            # occupies 32..384 and was reserved at -162..226. So the planner
+            # was free to seat a mile label over the right half of the title
+            # while this audit called the map clean.
+            d.get("text-anchor", "start"),
+            em_width=LABEL_EM_MONO if "map-meta" in cls else LABEL_EM_SERIF,
+            letter_spacing=spacing,
+        )
+        boxes.append(LabelBox(*box, text=text, cls=cls))
+    return boxes
+
+
+def plan_road_labels(
+    roads: list[dict],
+    pos: dict[str, tuple[float, float]],
+    sea_routes: dict,
+    reserved: list[tuple[float, float, float, float]],
+) -> dict[str, Optional[tuple[float, float]]]:
+    """Where each route's mile label goes, or ``None`` for "do not print it".
+
+    Every label on a sparse map was placed at its own route's control point
+    and nowhere else, so a label that landed on a town's caption, or on
+    another route's label, simply printed through it — nine such collisions
+    on ``calib_12_fbm`` alone, which is how "167 mi" and "ruin · port · plain"
+    became one unreadable line.
+
+    Routes are planned shortest first: a short route has the least curve to
+    slide along, so it gets first claim on the room it has. A label that
+    fits nowhere is dropped rather than overprinted; the distance is still
+    in the route's tooltip, where a label that cannot be read is not.
+    """
+    placed: dict[str, Optional[tuple[float, float]]] = {}
+    taken = list(reserved)
+
+    plannable = []
+    for road in roads:
+        a, b = pos.get(road.get("from")), pos.get(road.get("to"))
+        if not a or not b:
+            continue
+        rid = str(road.get("id", ""))
+        if sea_routes.get(road.get("id")):
+            continue  # drawn along the water it sails; carries no label
+        text = road_label_text(road)
+        if not text:
+            continue
+        c = _road_control_point(a, b, rid)
+        if road.get("quality") == "sea":
+            # The wave glyph is printed at the control point either way.
+            taken.append(
+                _label_box_at(c[0], c[1], "≈", 14.0, "middle", em_width=LABEL_EM_MONO)
+            )
+            label_dy = ROAD_LABEL_DY_SEA
+        else:
+            label_dy = ROAD_LABEL_DY_LAND
+        plannable.append((math.dist(a, b), rid, a, b, c, label_dy, text))
+
+    for _, rid, a, b, c, label_dy, text in sorted(plannable, key=lambda r: r[0]):
+        placed[rid] = None
+        for lx, ly in _road_label_candidates(a, b, c, label_dy):
+            box = _label_box_at(lx, ly, text, 10.0, "middle", em_width=LABEL_EM_MONO)
+            if any(_boxes_overlap(box, other, pad=1.0) for other in taken):
+                continue
+            placed[rid] = (lx, ly)
+            taken.append(box)
+            break
+    return placed
+
+
 def _sailed_route_svg(
     road: dict,
     points: list[tuple[float, float]],
@@ -1719,6 +2062,8 @@ def _route_svg(
     b: tuple[float, float],
     dense: bool = False,
     sailed: Optional[list[tuple[float, float]]] = None,
+    label_at: Optional[tuple[float, float]] = None,
+    label_visible: bool = True,
 ) -> str:
     quality = road.get("quality")
     try:
@@ -1737,16 +2082,7 @@ def _route_svg(
         # over land before this, one of them 78% ashore.
         return _sailed_route_svg(road, sailed, color, width, dash)
 
-    mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
-    # Gentle bow so parallel routes / dense maps read as paths, not a grid.
-    dx, dy = b[0] - a[0], b[1] - a[1]
-    length = math.hypot(dx, dy) or 1.0
-    bow = min(28.0, length * 0.08)
-    # Perpendicular offset; stable from road id (not Python's salted hash()).
-    rid_key = str(road.get("id", ""))
-    sign = 1.0 if (sum(ord(ch) for ch in rid_key) % 2) == 0 else -1.0
-    cx = mx + sign * (-dy / length) * bow
-    cy = my + sign * (dx / length) * bow
+    cx, cy = _road_control_point(a, b, str(road.get("id", "")))
     path_d = f"M {a[0]:.1f} {a[1]:.1f} Q {cx:.1f} {cy:.1f} {b[0]:.1f} {b[1]:.1f}"
 
     rid = _esc(str(road.get("id", "")))
@@ -1781,7 +2117,7 @@ def _route_svg(
                 f'<text x="{cx:.1f}" y="{cy:.1f}" fill="{color}" font-size="14" '
                 f'text-anchor="middle" opacity="0.85" class="map-meta">≈</text>'
             )
-        label_dy = 12
+        label_dy = ROAD_LABEL_DY_SEA
     else:
         chunks.append(
             f'<path d="{path_d}" fill="none" stroke="#0c0e14" stroke-width="{width + 2.5}" '
@@ -1791,15 +2127,14 @@ def _route_svg(
             f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{width}" '
             f'stroke-dasharray="{dash}" stroke-linecap="round" opacity="0.95"/>'
         )
-        label_dy = -6
+        label_dy = ROAD_LABEL_DY_LAND
 
     # Mile/mv labels only on sparse maps — on the world map they overlap into soup.
-    if not dense and miles is not None and miles != "":
-        label = f"{miles} mi"
-        if hop_txt:
-            label = f"{miles} mi · {hop_txt}"
+    if not dense and label_visible and miles is not None and miles != "":
+        label = road_label_text(road)
+        lx, ly = label_at if label_at else (cx, cy + label_dy)
         chunks.append(
-            f'<text x="{cx:.1f}" y="{cy + label_dy:.1f}" fill="#6d7584" font-size="10" '
+            f'<text x="{lx:.1f}" y="{ly:.1f}" fill="#6d7584" font-size="10" '
             f'text-anchor="middle" class="map-meta" paint-order="stroke" stroke="#0e1218" '
             f'stroke-width="3">{_esc(label)}</text>'
         )
@@ -1948,6 +2283,10 @@ def _marks_svg(
         if ships:
             bits.append(f"{ships}⚓")  # anchor: ships
         badge = " ".join(bits)
+        # Set against the name rather than clear of it, and drawn on its own
+        # opaque panel so it stays legible there. The label planner does not
+        # see marks, deliberately: forces change every turn and town names
+        # must not walk around the board as they do.
         bx, by = x - radius - 8, y - radius - 4
         width = 11 + 15 * len(bits)
         chunks.append(
@@ -1972,6 +2311,44 @@ def _marks_svg(
     return chunks, tips
 
 
+def _city_meta_text(city: dict) -> str:
+    """The caption printed under a city: population, grid, flags, terrain."""
+    band = city.get("population_band") or "10k-99k"
+    info_bits: list[str] = []
+    pop = city.get("population")
+    if pop is not None:
+        try:
+            info_bits.append(f"{int(pop):,}")
+        except (TypeError, ValueError):
+            info_bits.append(str(pop))
+    else:
+        info_bits.append(str(band))
+    if city.get("grid_ref"):
+        info_bits.append(str(city["grid_ref"]))
+    if city.get("is_magic_free"):
+        info_bits.append("magic-free")
+    if city.get("is_ruin"):
+        info_bits.append("ruin")
+    if city.get("is_port"):
+        info_bits.append("port")
+    resources = _resource_labels(city)
+    if resources:
+        info_bits.append("+".join(resources))
+    terrain = city.get("terrain") or []
+    if isinstance(terrain, (list, set, tuple)) and terrain:
+        info_bits.append("/".join(sorted(str(t) for t in terrain)[:2]))
+    return " · ".join(info_bits)
+
+
+def _city_meta_baseline(
+    y: float, radius: float, is_port: bool, label_dy: float
+) -> float:
+    """Where that caption sits: opposite the name, clear of the port arc."""
+    if label_dy <= 0:
+        return y + radius + (14 if not is_port else 18)
+    return y - radius - 8
+
+
 def _city_svg(
     city: dict,
     x: float,
@@ -1992,30 +2369,9 @@ def _city_svg(
     is_ruin = bool(city.get("is_ruin"))
     resources = _resource_labels(city)
 
-    info_bits: list[str] = []
-    pop = city.get("population")
-    if pop is not None:
-        try:
-            info_bits.append(f"{int(pop):,}")
-        except (TypeError, ValueError):
-            info_bits.append(str(pop))
-    else:
-        info_bits.append(str(band))
-    if city.get("grid_ref"):
-        info_bits.append(str(city["grid_ref"]))
-    if is_magic:
-        info_bits.append("magic-free")
-    if is_ruin:
-        info_bits.append("ruin")
-    if is_port:
-        info_bits.append("port")
-    if resources:
-        info_bits.append("+".join(resources))
-    terrain = city.get("terrain") or []
-    if isinstance(terrain, (list, set, tuple)) and terrain:
-        info_bits.append("/".join(sorted(str(t) for t in terrain)[:2]))
-    meta = " · ".join(info_bits)
+    meta = _city_meta_text(city)
 
+    pop = city.get("population")
     tip_parts = [name]
     if pop is not None:
         tip_parts.append(f"pop {pop:,}" if isinstance(pop, int) else f"pop {pop}")
@@ -2039,11 +2395,7 @@ def _city_svg(
     label_text = plan.display_name or name
     label_x = x + plan.label_dx
     label_y = y + plan.label_dy
-    # Meta sits opposite the name when the name is above; otherwise below.
-    if plan.label_dy <= 0:
-        meta_y = y + radius + (14 if not is_port else 18)
-    else:
-        meta_y = y - radius - 8
+    meta_y = _city_meta_baseline(y, radius, is_port, plan.label_dy)
     cid = _esc(str(city.get("id", "")))
     anchor = plan.text_anchor or "middle"
 

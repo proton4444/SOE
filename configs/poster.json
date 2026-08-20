@@ -1,13 +1,14 @@
 {
-  "cache_token": "h4",
-  "asset_digest": "sha256:ff4d7438a3edc52954cbb4b0b3d51f31d5052ac3698c12d6b160919dec424c24",
+  "cache_token": "h38",
+  "asset_digest": "sha256:d6308ef250cc9d8203b700a6be3fcca35ddf69eb273b6ff2fb75ac3f2fa923bd",
   "assets": [
     "atlas.css",
     "atlas.js",
     "board.js",
     "board3d.js",
+    "elevation.js",
     "vendor/OrbitControls.js",
     "vendor/three.module.js"
   ],
-  "recorded_at": "2026-08-16"
+  "recorded_at": "2026-08-20"
 }

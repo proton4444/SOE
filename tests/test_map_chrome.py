@@ -280,3 +280,236 @@ def test_a_map_without_geography_gets_no_bar(tmp_path, monkeypatch):
     assert not layout.has_geography
     assert mapview._scale_bar(layout) == ""
     assert 'class="map-scale"' not in mapview.render_svg("toy.json")
+
+
+# ---------------------------------------------------------------------------
+# label collisions
+# ---------------------------------------------------------------------------
+#
+# Every permanent label on a sparse map used to be placed with no knowledge
+# of any other. Town names and captions were laid out against each other,
+# and mile labels were not laid out at all -- each one went to its own
+# route's control point and printed through whatever was already there.
+#
+# On `calib_12_fbm` that was nine collisions, which is how "167 mi · 53.4 mv"
+# and "0 · C4 · ruin · port · plain" became one line nobody could read.
+
+PLAYABLE_MAPS = [
+    "starter_map.json",
+    "calib_12.json",
+    "calib_12_fbm.json",
+    "calib_12_s2.json",
+    "calib_12_s3.json",
+    "calib_24.json",
+    "calib_48.json",
+    "world.json",
+    "world2.json",
+]
+
+
+def overlapping_labels(map_file: str):
+    boxes = mapview.occupied_label_boxes(mapview.render_svg(map_file))
+    return [
+        (a, b)
+        for i, a in enumerate(boxes)
+        for b in boxes[i + 1 :]
+        if mapview._boxes_overlap(a, b, pad=0.0)
+    ]
+
+
+@pytest.mark.parametrize("map_file", PLAYABLE_MAPS)
+def test_no_two_permanent_labels_print_over_each_other(map_file):
+    """The invariant the map never had.
+
+    One exception, and the planner declares it: on a dense map a town whose
+    name fits in none of its eight slots gets it anyway, because an unnamed
+    town is worse than a crowded one. That licenses two *names* touching.
+    It does not license a caption or a mile label landing on anything.
+    """
+    for a, b in overlapping_labels(map_file):
+        assert "city-name" in a.cls and "city-name" in b.cls, (
+            f"{map_file}: {a.text!r} prints over {b.text!r}"
+        )
+        assert len(mapview.load_raw_map(map_file)["cities"]) >= 24, (
+            f"{map_file} is not crowded enough to excuse {a.text!r} on {b.text!r}"
+        )
+
+
+@pytest.mark.parametrize("map_file", PLAYABLE_MAPS)
+def test_every_town_still_says_its_name(map_file):
+    """Decluttering must not be achieved by dropping towns off the map."""
+    svg = mapview.render_svg(map_file)
+    for city in mapview.load_raw_map(map_file)["cities"]:
+        assert f'data-city="{city["id"]}"' in svg
+
+
+def test_the_box_model_knows_which_face_it_is_measuring():
+    """The bug that made the model agree the map was clean when it was not.
+
+    Captions are set in a monospace face and names in a serif one. Measured
+    in the browser off the drawn SVG, the monospace advance is 0.602em a
+    glyph against at most 0.54em for the serif -- so one width for both left
+    every caption box about 15% short, and labels that overlapped measured
+    clear.
+    """
+    assert mapview.LABEL_EM_MONO > mapview.LABEL_EM_SERIF
+    assert mapview.LABEL_EM_MONO >= 0.602  # measured, not guessed
+    assert mapview.LABEL_EM_SERIF >= 0.54
+
+    text = "655 · H10 · port · desert"
+    mono = mapview._label_box_at(
+        100, 100, text, 8.5, "middle", em_width=mapview.LABEL_EM_MONO
+    )
+    serif = mapview._label_box_at(
+        100, 100, text, 8.5, "middle", em_width=mapview.LABEL_EM_SERIF
+    )
+    assert (mono[2] - mono[0]) > (serif[2] - serif[0])
+
+
+def test_a_translated_group_is_measured_where_it_is_drawn():
+    """The scale bar and the compass are translated into their corner.
+
+    Read flat, their text measures as if it sat at the top-left of the
+    frame, where it collides with the title and reserves space nothing is
+    using.
+    """
+    fragment = (
+        '<g transform="translate(400.0,700.0)">'
+        '<text x="10" y="20" font-size="10" text-anchor="middle">MILES</text>'
+        "</g>"
+    )
+    (box,) = mapview.occupied_label_boxes(fragment)
+    assert box.left > 300 and box.top > 600
+
+
+def test_a_route_keeps_the_label_place_it_has_always_had():
+    """A route with room around it does not move. Only a blocked one does."""
+    a, b = (100.0, 100.0), (500.0, 100.0)
+    road = {"id": "r1", "from": "a", "to": "b", "quality": "good", "distance_miles": 90}
+    control = mapview._road_control_point(a, b, "r1")
+    placed = mapview.plan_road_labels(
+        [road], {"a": a, "b": b}, {}, reserved=[]
+    )
+    assert placed["r1"] == (control[0], control[1] + mapview.ROAD_LABEL_DY_LAND)
+
+
+def test_a_label_with_nowhere_to_go_is_dropped_rather_than_overprinted():
+    """The distance survives in the tooltip, where an unreadable one did not."""
+    a, b = (100.0, 100.0), (500.0, 100.0)
+    road = {"id": "r1", "from": "a", "to": "b", "quality": "good", "distance_miles": 90}
+    placed = mapview.plan_road_labels(
+        [road], {"a": a, "b": b}, {}, reserved=[(-1e4, -1e4, 1e4, 1e4)]
+    )
+    assert placed["r1"] is None
+
+    drawn = mapview._route_svg(road, a, b, label_visible=False)
+    assert "<text" not in drawn
+    assert "90 mi" in drawn  # the <title> still carries it
+
+    printed = mapview._route_svg(road, a, b, label_visible=True)
+    assert f">{mapview.road_label_text(road)}</text>" in printed
+
+
+def test_a_town_with_nowhere_for_its_caption_keeps_its_name():
+    """Last resort on a sparse map: the caption goes to hover, the name stays.
+
+    The name is what the map owes a town. The caption is detail, and the
+    tooltip carries it whether or not it is printed.
+    """
+    cities = [
+        {
+            "id": f"c{i}",
+            "name": f"Town{i}",
+            "population": 40000,
+            "population_band": "10k-99k",
+            "grid_ref": "A1",
+            "terrain": ["plain"],
+        }
+        for i in range(6)
+    ]
+    pos = {f"c{i}": (300.0 + i * 12.0, 300.0) for i in range(6)}
+    plan = mapview._plan_city_labels(cities, pos)
+    assert all(p.name_mode == "always" for p in plan.values())
+    assert any(p.meta_mode == "hover" for p in plan.values()), (
+        "six towns stacked on top of each other and every caption still fits"
+    )
+
+
+def test_the_land_does_not_repeat_the_roster_across_itself():
+    """The engraved name is underprint and reads as one; a solid kind/count
+    line at the same point is a label, and it printed through whichever town
+    stood there -- while the roster in the corner already says it."""
+    svg = mapview.render_svg("calib_12_fbm.json")
+    assert "land-label-meta" not in svg
+    assert "land-label" in svg  # the engraved name itself stays
+    assert "continent" in svg  # the roster still says what kind it is
+    assert "12 cities" in svg
+
+
+def test_a_force_badge_may_sit_against_a_town_name():
+    """The one label allowed to touch another, and why.
+
+    A live board's force badge is drawn on its own opaque panel and set
+    beside the name. Planning names around it would move them whenever a
+    force moved, and a board whose town names walk about between turns is
+    worse than one where a badge abuts a name.
+    """
+    overlay = {"cities": {"zeleis": {"units": 12, "ships": 2, "observed": True}}}
+    live = mapview.render_svg("calib_12_fbm.json", overlay)
+    assert "12▲" in live
+
+    def names(svg):
+        return sorted(
+            (box.text, round(box.left, 1), round(box.top, 1))
+            for box in mapview.occupied_label_boxes(svg)
+            if "city-name" in box.cls
+        )
+
+    assert names(live) == names(mapview.render_svg("calib_12_fbm.json"))
+
+
+def test_the_box_model_is_measured_against_the_faces_the_map_sets():
+    """The constants are measurements, and a measurement names its subject.
+
+    Change the font stack and the numbers stop describing anything, silently
+    -- which is exactly how a caption box came to be 15% short. If this
+    fails, re-measure with `python -m scripts.check_map_labels --browser`
+    before touching the constants.
+    """
+    defs = mapview._defs()
+    assert '.map-meta { font-family: ui-monospace, Consolas, monospace; }' in defs
+    assert '.map-label { font-family: Georgia, "Times New Roman", serif; }' in defs
+
+
+def test_the_label_audit_runs_and_passes_over_the_maps_we_ship():
+    """The report an operator reads is the invariant this file holds.
+
+    Without the browser: this is the renderer's own box model checking
+    itself, which is worth having and is not proof. `--browser` is the
+    proof, and needs Playwright and a Chromium this machine may not have.
+    """
+    from scripts import check_map_labels
+
+    assert check_map_labels.main([]) == 0
+
+
+def test_an_unanchored_label_is_measured_the_way_svg_draws_it():
+    """SVG's default `text-anchor` is `start`, not `middle`.
+
+    Four permanent labels omit the attribute — the title, the stats line and
+    the two roster lines — so modelling them as centred slid every reserved
+    box half a width left. The title really occupies x 32..384 and was
+    reserved at -162..226: the planner was free to seat a mile label over the
+    right half of it while this audit called the map clean.
+    """
+    fragment = '<text x="100" y="50" font-size="10">Reserved</text>'
+    (box,) = mapview.occupied_label_boxes(fragment)
+    assert box.left == pytest.approx(100.0), (
+        "an unanchored label is being measured as centred; SVG starts it at x"
+    )
+    assert box.right > 100.0
+
+    centred = mapview.occupied_label_boxes(
+        '<text x="100" y="50" font-size="10" text-anchor="middle">Reserved</text>'
+    )[0]
+    assert centred.left < 100.0 < centred.right, "an explicit anchor is ignored"

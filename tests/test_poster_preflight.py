@@ -126,9 +126,18 @@ def test_a_personal_inbox_as_operator_contact_is_a_note_not_a_blocker(bundle, ma
 # ---------------------------------------------------------------------------
 
 
-def test_a_sea_texture_is_refused(bundle, manifest):
-    (bundle / "textures" / "sea.jpg").write_bytes(b"\xff\xd8\xff")
-    assert any("no sea" in m for m in blockers(run(bundle, manifest), "inventory"))
+def test_the_sea_texture_is_required_now(bundle, manifest):
+    """It used to be refused, and the reversal is the point.
+
+    The original visual contract allowed the board no sea at all, so shipping
+    `textures/sea.jpg` was evidence someone was about to grow an ocean the map
+    did not have, and this test asserted the refusal. Amendments 2 and 3 opened
+    that deliberately: the board draws the app's landmass, the water outside
+    it, and the relief between, and states in its legend what is surveyed and
+    what is implied. The tile is required, and its absence is the blocker.
+    """
+    (bundle / "textures" / "sea.jpg").unlink()
+    assert any("sea.jpg" in m for m in blockers(run(bundle, manifest), "inventory"))
 
 
 def test_a_missing_required_file_is_refused(bundle, manifest):
@@ -136,17 +145,36 @@ def test_a_missing_required_file_is_refused(bundle, manifest):
     assert any("board3d.js" in m for m in blockers(run(bundle, manifest), "inventory"))
 
 
-def test_a_missing_terrain_texture_is_refused(bundle, manifest):
-    """The board names three terrains. A texture for one of them is not optional."""
-    (bundle / "textures" / "hills.jpg").unlink()
-    assert any("hills" in m for m in blockers(run(bundle, manifest), "inventory"))
+def test_a_missing_renderer_texture_is_refused(bundle, manifest):
+    """The tiles the renderer loads, not one per terrain label.
+
+    This named `hills.jpg` because every city wore a terrain-textured mound and
+    the required tiles were the board's terrain labels. The mounds are gone:
+    the ground is one grain tile coloured by elevation, so a map naming
+    `coastal` or `river` needs no such tile and never asks for one. What is not
+    optional is what board3d.js actually loads.
+    """
+    (bundle / "textures" / "plain.jpg").unlink()
+    assert any("plain.jpg" in m for m in blockers(run(bundle, manifest), "inventory"))
 
 
-def test_a_stray_file_is_a_note_because_it_would_be_published(bundle, manifest):
+def test_a_stray_file_refuses_the_publish_because_it_would_be_published(
+    bundle, manifest
+):
+    """The deploy uploads this directory wholesale, so its contents are the post.
+
+    This test used to assert the opposite -- that a stray file is a *note* --
+    and its own name gave the reason it should never have been one: "because
+    it would be published". `upload-pages-artifact` takes a path, not a
+    manifest, so an accidentally committed screenshot, source map or private
+    export goes up with the bundle. A note exits zero, so the one gate that
+    knew about the file waved it through.
+    """
     (bundle / "notes-to-self.txt").write_text("draft copy", encoding="utf-8")
-    findings = run(bundle, manifest)
-    assert blockers(findings, "inventory") == []
-    assert any("notes-to-self.txt" in f.message for f in findings)
+    found = blockers(run(bundle, manifest), "inventory")
+    assert any("notes-to-self.txt" in m for m in found), (
+        "a file nobody listed is about to be published and nothing blocked it"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +254,9 @@ def test_a_replay_on_a_different_map_is_refused(bundle, manifest):
 
 
 def test_a_board_drifted_from_the_map_is_refused(bundle, manifest):
-    edit(bundle / "board.js", '"x": 0.4665', '"x": 0.5000')
+    # Any city's x will do; this used to name a calib_12 coordinate, and the
+    # poster's map has moved since.
+    edit(bundle / "board.js", '"x": 0.12', '"x": 0.5000')
     assert any("drifted" in m for m in blockers(run(bundle, manifest), "board"))
 
 
@@ -400,3 +430,107 @@ def test_an_oversized_bundle_is_refused(bundle, manifest):
     # unoptimised texture or a video someone dropped in.
     (bundle / "textures" / "plain.jpg").write_bytes(random.Random(7).randbytes(2 * 1024 * 1024))
     assert any("MB gzipped" in m for m in blockers(run(bundle, manifest), "weight"))
+
+
+# ---------------------------------------------------------------------------
+# the Pages workflow
+# ---------------------------------------------------------------------------
+
+
+def test_the_pages_workflow_cannot_publish_by_itself():
+    """The whole safety of the deploy is that a human has to start it.
+
+    A push trigger here would put the poster on the public internet on every
+    commit to the branch, form placeholders and all. That is the one change to
+    this file that must never pass review, so it is the one this test holds.
+    """
+    import yaml
+
+    spec = yaml.safe_load(
+        (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+    )
+    # PyYAML reads a bare `on:` key as the boolean True.
+    triggers = spec.get("on", spec.get(True))
+    assert set(triggers) == {"workflow_dispatch"}, (
+        f"the poster deploys on {sorted(triggers)}; only a human may start it"
+    )
+
+
+def test_the_pages_workflow_checks_the_bundle_before_it_deploys():
+    """Deploying a bundle nothing checked is how a broken poster goes live.
+
+    Both checks, and in order. `check_poster` reads the files; the smoke opens
+    them in a browser, which is the only thing that sees a board that throws or
+    a label printed over another. `--require-browser` is what stops a missing
+    Chromium turning the second one into a quiet pass.
+    """
+    text = (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(
+        encoding="utf-8"
+    )
+    upload = text.index("upload-pages-artifact")
+    assert text.index("scripts.check_poster") < upload, (
+        "the bundle is uploaded before the preflight reads it"
+    )
+    assert text.index("scripts.smoke_poster") < upload, (
+        "the bundle is uploaded before a browser has opened it"
+    )
+    assert "--require-browser" in text, (
+        "a missing browser would skip the board check and still deploy"
+    )
+
+
+def test_the_pages_workflow_publishes_only_the_poster_bundle():
+    """Not the repo, not the maps, not the game. One directory."""
+    import yaml
+
+    spec = yaml.safe_load(
+        (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+    )
+    paths = [
+        step["with"]["path"]
+        for step in spec["jobs"]["deploy"]["steps"]
+        if "upload-pages-artifact" in str(step.get("uses", ""))
+    ]
+    assert paths == ["webapp/static/public"]
+
+
+def test_the_pages_workflow_installs_what_the_board_check_looks_with():
+    """`--require-browser` buys nothing if the checks cannot see.
+
+    Two of the smoke's checks read the canvas pixels -- the blank-board test
+    and the flat-vale test -- and both need Pillow. It lives in the `map`
+    extra, and this job installs `.[dev,web]`, so it arrived here missing:
+    with the fallback bug reintroduced and Pillow hidden, the smoke printed
+    `ok`. The script now refuses that combination outright, and the workflow
+    installs Pillow so it never has to.
+    """
+    text = (check_poster.REPO_ROOT / ".github" / "workflows" / "pages.yml").read_text(
+        encoding="utf-8"
+    )
+    install = text.lower().index("pip install playwright")
+    assert "pillow" in text[install : text.index("scripts.smoke_poster")].lower(), (
+        "the smoke runs without Pillow, and its two pixel checks would pass "
+        "without looking at a pixel"
+    )
+
+
+def test_a_required_browser_run_refuses_to_judge_pixels_it_cannot_see():
+    """The failure this replaces was silent, which is the whole problem.
+
+    Without Pillow, `distinct_colours()` returns the passing threshold and
+    `centre_land_share()` returns `None`, so both checks stand down and the
+    run still reports `ok`. On a developer's machine that is the right
+    manners; on the publish path it is a bundle nobody checked.
+    """
+    pytest.importorskip("playwright", reason="main() checks for it first")
+    from scripts import smoke_poster
+
+    def blind():
+        return False
+
+    original = smoke_poster._pillow_available
+    smoke_poster._pillow_available = blind
+    try:
+        assert smoke_poster.main(["--require-browser"]) == 1
+    finally:
+        smoke_poster._pillow_available = original

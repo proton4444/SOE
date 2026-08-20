@@ -1,8 +1,8 @@
 {
   "schema": "soe.public_replay.v1",
-  "map": "calib_12.json",
-  "match_id": "AR031_ba",
-  "label": "official-gate",
+  "map": "starter_map.json",
+  "match_id": "exh-ex017",
+  "label": "exhibition",
   "turns": 30,
   "seats": [
     {
@@ -11,7 +11,7 @@
     },
     {
       "id": "player_2",
-      "label": "expansionist-v1"
+      "label": "scripted (expansionist)"
     }
   ],
   "result": {
@@ -25,78 +25,48 @@
         {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "character"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "ashford",
           "occupied_by": [
             "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
+          "id": "highfell",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelothvale",
+          "id": "oldbarrow",
+          "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": null
+        },
+        {
+          "id": "redport",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -108,96 +78,72 @@
         {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
+          "kind": "stack"
+        },
+        {
+          "id": "s4",
+          "seat": "player_2",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": "player_1"
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "ashford",
           "occupied_by": [
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
+          "id": "highfell",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelothvale",
+          "id": "oldbarrow",
+          "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "redport",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -209,95 +155,72 @@
         {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
+          "kind": "stack"
+        },
+        {
+          "id": "s4",
+          "seat": "player_2",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
+          "id": "ashford",
           "occupied_by": [
-            "player_1",
             "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "gullhaven",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "highfell",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "oldbarrow",
+          "occupied_by": [
+            "player_1"
           ],
           "secured_by": "player_1"
         },
         {
-          "id": "dunaen",
+          "id": "redport",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -309,114 +232,72 @@
         {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s6",
+          "id": "s4",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "oldbarrow",
           "occupied_by": [
             "player_1"
           ],
           "secured_by": "player_1"
         },
         {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -426,122 +307,80 @@
       "turn": 4,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "oldbarrow",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s6",
+          "id": "s4",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "oldbarrow",
           "occupied_by": [
             "player_1"
           ],
           "secured_by": "player_1"
         },
         {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -551,133 +390,79 @@
       "turn": 5,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s6",
+          "id": "s4",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "oldbarrow",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "redport",
           "occupied_by": [
             "player_1",
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -687,140 +472,85 @@
       "turn": 6,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s6",
+          "id": "s4",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "oldbarrow",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "redport",
           "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -830,158 +560,87 @@
       "turn": 7,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s11",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s6",
+          "id": "s4",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
           "occupied_by": [
             "player_1"
           ],
-          "secured_by": null
+          "secured_by": "player_1"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -991,157 +650,99 @@
       "turn": 8,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s11",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s6",
+          "id": "s4",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
+          "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "oldbarrow",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "redport",
           "occupied_by": [
             "player_1",
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -1151,169 +752,100 @@
       "turn": 9,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s11",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
-          "id": "s6",
+          "id": "s4",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
           ],
-          "secured_by": "player_2"
+          "secured_by": "player_1"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
           "secured_by": null
         },
         {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -1323,170 +855,100 @@
       "turn": 10,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s11",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_1"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -1496,188 +958,100 @@
       "turn": 11,
       "pieces": [
         {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s11",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s5",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
           "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_1"
         },
         {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -1687,175 +1061,106 @@
       "turn": 12,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_1"
         },
         {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -1865,139 +1170,85 @@
       "turn": 13,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -2005,47 +1256,20 @@
           "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_1"
         },
         {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -2055,193 +1279,106 @@
       "turn": 14,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s12",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s9",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_1"
         },
         {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -2251,169 +1388,98 @@
       "turn": 15,
       "pieces": [
         {
-          "id": "c1",
+          "id": "c8",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -2421,17 +1487,7 @@
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -2441,190 +1497,106 @@
       "turn": 16,
       "pieces": [
         {
-          "id": "c1",
+          "id": "c8",
           "seat": "player_1",
-          "city_id": "rhaethdale",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
+          "id": "highfell",
           "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -2634,175 +1606,87 @@
       "turn": 17,
       "pieces": [
         {
-          "id": "c1",
+          "id": "c8",
           "seat": "player_1",
-          "city_id": "rhaethdale",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -2810,19 +1694,20 @@
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelothvale",
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": null
+        },
+        {
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -2832,181 +1717,87 @@
       "turn": 18,
       "pieces": [
         {
-          "id": "c1",
+          "id": "c8",
           "seat": "player_1",
-          "city_id": "rhaethdale",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -3014,19 +1805,20 @@
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelothvale",
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": null
+        },
+        {
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -3036,202 +1828,114 @@
       "turn": 19,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "rhaethdale",
+          "city_id": "highfell",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
+          "id": "ashford",
           "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "gullhaven",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "highfell",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "oldbarrow",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "rhaethdale",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -3241,202 +1945,114 @@
       "turn": 20,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "rhaethdale",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
+          "id": "ashford",
           "occupied_by": [
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelothvale",
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -3446,207 +2062,114 @@
       "turn": 21,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "rhaethdale",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [
-            "player_1"
-          ],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelothvale",
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "sarnvale",
           "occupied_by": [],
           "secured_by": null
         }
@@ -3656,208 +2179,115 @@
       "turn": 22,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "redport",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "redport",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "redport",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "sarnvale",
+          "occupied_by": [],
           "secured_by": null
         }
       ]
@@ -3866,193 +2296,93 @@
       "turn": 23,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "sarnvale",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "sarnvale",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "character"
+        },
+        {
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s15",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s17",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -4060,21 +2390,24 @@
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
-          "occupied_by": [],
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
           "secured_by": null
         },
         {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [
             "player_1"
           ],
-          "secured_by": null
+          "secured_by": "player_1"
         }
       ]
     },
@@ -4082,209 +2415,116 @@
       "turn": 24,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "ashford",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
-          "id": "s27",
-          "seat": "player_1",
-          "city_id": "zelothvale",
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
+          "id": "ashford",
           "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "oldbarrow",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
+          "id": "sarnvale",
           "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
-          "occupied_by": [
-            "player_1"
-          ],
           "secured_by": null
         }
       ]
@@ -4293,209 +2533,116 @@
       "turn": 25,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "ashford",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
-          "id": "s27",
-          "seat": "player_1",
-          "city_id": "zelothvale",
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
+          "id": "ashford",
           "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "oldbarrow",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "redport",
+          "occupied_by": [
+            "player_1",
+            "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
+          "id": "sarnvale",
           "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
-          "occupied_by": [
-            "player_1"
-          ],
           "secured_by": null
         }
       ]
@@ -4504,193 +2651,106 @@
       "turn": 26,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "ashford",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "character"
         },
         {
-          "id": "s27",
-          "seat": "player_1",
-          "city_id": "zelothvale",
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
           "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s28",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
+          "id": "highfell",
+          "occupied_by": [
+            "player_1",
+            "player_2"
+          ],
+          "secured_by": "player_2"
+        },
+        {
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -4698,21 +2758,11 @@
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [
-            "player_1"
+            "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         }
       ]
     },
@@ -4720,193 +2770,99 @@
       "turn": 27,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "ashford",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "character"
         },
         {
-          "id": "s27",
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
+        },
+        {
+          "id": "s6",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s28",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -4914,21 +2870,24 @@
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "redport",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
           "secured_by": null
+        },
+        {
+          "id": "sarnvale",
+          "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
         }
       ]
     },
@@ -4936,199 +2895,99 @@
       "turn": 28,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "ashford",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "character"
         },
         {
-          "id": "s27",
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
+        },
+        {
+          "id": "s6",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s1",
           "seat": "player_1",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
-          "id": "s11",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s28",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s29",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "narunon",
+          "city_id": "sarnvale",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
+          "id": "ashford",
+          "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "gullhaven",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dunaen",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "highfell",
           "occupied_by": [
             "player_1",
             "player_2"
@@ -5136,21 +2995,24 @@
           "secured_by": "player_2"
         },
         {
-          "id": "rhaethdale",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "redport",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
           "secured_by": null
+        },
+        {
+          "id": "sarnvale",
+          "occupied_by": [
+            "player_2"
+          ],
+          "secured_by": "player_2"
         }
       ]
     },
@@ -5158,222 +3020,118 @@
       "turn": 29,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "ashford",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "sarnvale",
           "kind": "character"
         },
         {
-          "id": "s27",
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
+        },
+        {
+          "id": "s6",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
-          "id": "s1",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s11",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s28",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s29",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "sarnvale",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
+          "id": "ashford",
           "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "gullhaven",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "highfell",
+          "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [
-            "player_1"
+            "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         }
       ]
     },
@@ -5381,222 +3139,118 @@
       "turn": 30,
       "pieces": [
         {
+          "id": "c8",
+          "seat": "player_1",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c3",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c4",
+          "seat": "player_1",
+          "city_id": "ashford",
+          "kind": "character"
+        },
+        {
+          "id": "c5",
+          "seat": "player_1",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
+          "id": "c6",
+          "seat": "player_2",
+          "city_id": "redport",
+          "kind": "character"
+        },
+        {
+          "id": "c7",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "character"
+        },
+        {
           "id": "c1",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "character"
         },
         {
           "id": "c2",
           "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "sarnvale",
           "kind": "character"
         },
         {
-          "id": "s27",
+          "id": "s5",
+          "seat": "player_2",
+          "city_id": "highfell",
+          "kind": "stack"
+        },
+        {
+          "id": "s6",
           "seat": "player_1",
-          "city_id": "zelothvale",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
-          "id": "s1",
+          "id": "s2",
           "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s11",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s14",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s16",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s19",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s20",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s4",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s8",
-          "seat": "player_1",
-          "city_id": "narunon",
-          "kind": "stack"
-        },
-        {
-          "id": "s10",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s13",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s18",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s21",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s22",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s23",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s24",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s25",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s26",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s28",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s29",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "ashford",
           "kind": "stack"
         },
         {
           "id": "s3",
           "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s6",
-          "seat": "player_2",
-          "city_id": "dreliwick",
-          "kind": "stack"
-        },
-        {
-          "id": "s7",
-          "seat": "player_2",
-          "city_id": "dreliwick",
+          "city_id": "sarnvale",
           "kind": "stack"
         }
       ],
       "cities": [
         {
-          "id": "barunburn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "drelerford",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "dreliwick",
+          "id": "ashford",
           "occupied_by": [
+            "player_1"
+          ],
+          "secured_by": "player_1"
+        },
+        {
+          "id": "gullhaven",
+          "occupied_by": [],
+          "secured_by": null
+        },
+        {
+          "id": "highfell",
+          "occupied_by": [
+            "player_1",
             "player_2"
           ],
           "secured_by": "player_2"
         },
         {
-          "id": "dunaen",
+          "id": "oldbarrow",
           "occupied_by": [],
           "secured_by": null
         },
         {
-          "id": "ephunyn",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garmere",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "garoath",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "joreththorpe",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "narunon",
+          "id": "redport",
           "occupied_by": [
-            "player_1"
+            "player_1",
+            "player_2"
           ],
           "secured_by": null
         },
         {
-          "id": "rhaethdale",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelahold",
-          "occupied_by": [],
-          "secured_by": null
-        },
-        {
-          "id": "zelothvale",
+          "id": "sarnvale",
           "occupied_by": [
-            "player_1"
+            "player_2"
           ],
-          "secured_by": null
+          "secured_by": "player_2"
         }
       ]
     }

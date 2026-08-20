@@ -187,25 +187,147 @@ tokens and declares no dollars. See `LAUNCH_OPERATIONS.md`, **Model gate**.
 
 ## Visual contract: atlas board
 
-`maps/calib_12.json` is twelve cities with fractional `x`/`y`, mile
-coordinates, terrain labels, and roads. It has no coastline, no land
-polygon, and no elevation mesh. `webapp/mapview.py` draws coastlines
-only when a paired geography file exists (`soe_geography.json`). That
-file is not this map.
+The board is generated from **`maps/starter_map.json`** — six cities with
+fractional `x`/`y`, terrain labels, populations, grid references, regions,
+port and magic-free flags, and roads with distances (including one sea
+lane). It has no coastline, no
+land polygon, and no elevation mesh. `webapp/mapview.py` draws traced
+coastlines only when a paired geography file exists
+(`soe_geography.json`). That file is not this map — for this one the app
+falls back to a padded convex hull of the road-connected cities.
 
-**Render the coordinate topology that exists.**
+**Render what the app renders.**
 
-- Place the twelve cities at their exact `x`/`y`.
-- Draw the roads exactly as listed.
-- Around each city, a small terrain-textured disk or mound from
-  `maps/textures/` matching that city’s `terrain` label. Local relief
-  only. No interpolated continent between cities.
-- Empty surrounding space stays empty. No sea, no implied landmass, no
-  invented shore.
+- Place the six cities at their exact `x`/`y`, **on mapview’s own
+  frame** — the app draws a 1300×1000 mile field into 1180×680 units, and
+  that anisotropy is the map’s proportions. One scale on both axes renders
+  the world 23% too narrow for its height, which is what made the board
+  and the app read as two different places. Carry the population, grid
+  reference, terrain, port and magic-free flags the map gives them.
+- Draw the roads exactly as listed, with their mileage and movement
+  cost. The movement cost is the engine’s own number, not a second
+  formula.
+- Draw each city as a **settlement**: a walled platform, roofed houses and a
+  keep with a spire. A ruin loses its roofs and its spire and keeps the
+  stump; a port gains a jetty. Stylised and out of scale on purpose, in
+  the tradition of the little drawn towns on an estate map — a city has to
+  be recognisable as one from across the board, not merely labelled as one.
+- Give the landmass **a surface**: elevation interpolated from the six
+  cities’ `terrain` labels, with fractal detail, falling to sea level at
+  the shore. A city on hills stands on high ground because the ground is
+  high, not because it wears a cone. Vertical is exaggerated, as a relief
+  map’s always is, and the ground carries contour lines — shading alone
+  cannot tell a reader whether a slope runs up or down.
+- The heightmap is **baked**, by `scripts/build_elevation.py`, and shipped
+  as `elevation.js`. Not computed in the browser: baking it makes the
+  terrain identical on every machine, lets a test regenerate and compare
+  it, and keeps the work off the reader’s phone. It is a visual output
+  and nothing else — no order, no movement cost and no result reads a
+  value from it.
+- Because that surface is interpolated and the map has no elevation at
+  all, **the page says so where it is drawn**, exactly as it does for the
+  coast. The legend carries “relief interpolated from city terrain — high
+  ground is data, contours are not”.
+- Draw the landmass, its coast, the sea outside it, and the region
+  names. The landmass must be **the polygon `webapp/mapview.py` computes
+  for this map**, carried across by `scripts/build_public_board.py` —
+  not a shore invented for the poster, and not a second computation of
+  the same idea that can drift from the app’s. It is drawn as a **solid
+  standing out of the water**, not a fill printed on a plate: a coast is
+  an edge, and giving it a real one is what makes this a relief of a
+  world rather than a picture of a map. The water is ruled; the land is
+  not. The whole object is framed, so the sea is never cut off
+  mid-picture — the board scales down to hold it.
+- The hull is a **confine, not a coastline**. It is convex — for
+  starter_map’s mainland, four points and four straight edges — and drawn
+  as a shore it looks like the survey boundary it is. The shoreline is an
+  **isoline of the heightfield** instead: the distance to the hull is
+  perturbed by fractal noise before the coastal shelf is taken from it,
+  and the ground goes on descending past it to a seabed. Where that
+  surface crosses sea level is the coast, bays and headlands included.
+  Nothing draws it; it is an intersection.
+- The wobble is **biased inward**. A hull is the smallest convex shape
+  containing its cities, so a real coast inside one mostly bites into it
+  and only occasionally pushes a headland out — and a symmetric wobble
+  puts land past the sheet it is printed on.
+- Because that polygon is a road-connectivity confine and not a survey,
+  **the page says so where it is drawn.** The legend carries
+  “road-connected extent, not a surveyed coast”.
 - Call this an **atlas relief board**. That name is allowed. “Continent”
-  and “world map” are not.
+  and “world map” are not — the board shows one landmass of a world, at
+  a calibration size, and neither word is true of it.
 
-The page may rotate or tilt the board. It may not add geography.
+The page may rotate or tilt the board.
+
+> **Amendment 2, accepted 2026-08-17.** This section previously read
+> “Render the coordinate topology that exists”, and forbade the rest:
+> “Empty surrounding space stays empty. No sea, no implied landmass, no
+> invented shore… It may not add geography.” The board therefore drew
+> twelve mounds on blank paper while the map a coach opens in the app
+> drew a named landmass, ports, populations, grid references and road
+> mileages — the same twelve cities reading as two different worlds, and
+> the public one reading as the emptier.
+>
+> What the old rule was protecting is real and is kept: the coastline is
+> **not** surveyed, and a map that draws a shore is read as claiming one.
+> The resolution is to draw it and say what it is, rather than to
+> withhold it — the legend line above is part of the contract, not
+> decoration, and the board is built from mapview’s own polygon so the
+> two pictures cannot disagree about where the coast runs.
+>
+> The withheld fields (population, mile coordinates, grid references,
+> regions, port and magic-free flags, road distances) now cross to the
+> public page. They are map topology from a tracked, generated
+> calibration map — not match data, and not the traced material the
+> cleanroom excludes. Replay sanitization is untouched: see **Sanitized
+> replay** below, which this amendment does not open.
+>
+> Applied in `scripts/build_public_board.py`, `board.js`, `board3d.js`,
+> `atlas.js`, `atlas.css`, and guarded by `tests/test_public_board.py`.
+> See **Amendments** in `LAUNCH_OPERATIONS.md`.
+
+> **Amendment 3, accepted 2026-08-17.** Amendment 2 kept one line from the
+> original rule: “elevation still comes from the twelve terrain labels and
+> nowhere else”, which in practice meant a flat slab with twelve cones
+> standing on it. That is what the board looked like — pins pushed into a
+> plane — and it is not what the game’s world is.
+>
+> The landmass now carries an interpolated surface. Be exact about what
+> that is: these maps carry terrain **labels** and no elevation
+> whatsoever — no mesh, no heightfield, not one spot height. Which cities
+> stand on hills is data. The shape of the ground between them is a
+> plausible invention, deterministic from position so it is at least the
+> same invention on every machine and every reload.
+>
+> Same resolution as the coast: draw it, and say on the page that it is
+> implied. The legend line above is part of the contract. **Vertical is
+> exaggerated** (×2.6) — true to scale, 60 units of hill across a
+> 1300-unit vale is a 4.6% grade, which is geologically honest and
+> visually nothing.
+>
+> **Amendment 4, accepted 2026-08-18.** The board moves from
+> `calib_12.json` to `starter_map.json`, and its replay from the official
+> gate match `AR031_ba` to an exhibition, `exh-ex017`.
+>
+> Reason: calib_12 is a calibration map and its terrain is nine plain, two
+> hills and one desert — no mountains, no forest, no rivers, no sea lane.
+> The board was rendering the most it could of a map that had almost
+> nothing to render. starter_map has six cities carrying six terrains
+> across all four population bands, and one sea lane, which makes it an
+> **archipelago**: `compute_landmasses` does not join land across water,
+> so Gullhaven is its own island and the board draws two masses.
+>
+> The cost, stated plainly: the caption changes from **"Official gate
+> replay"** to **"Exhibition replay"**, and the page claims correspondingly
+> less about that picture. It is generated by
+> `export_public_replay exhibition`, scripted against scripted, with no
+> model calls — deterministic, reproducible from the seed, and never
+> described as gate evidence. The proof section is untouched: the official
+> gate's 7,200 model turns are a separate claim and remain true.
+>
+> `configs/phase0_gate.json` is NOT touched. The engine's frozen gate is
+> still calib_12 and its hashes are unchanged; this amendment moves what
+> the poster draws, not what the gate measures.
 
 ## Sanitized replay
 
@@ -436,6 +558,26 @@ A Cloudflare or GitHub page is enough for `poster live`. A custom
 domain is preferred once ownership is confirmed. Confirm ownership
 before printing the name on posts.
 
+A GitHub page is wired but not switched on. `.github/workflows/pages.yml`
+publishes the bundle and nothing else, and two things stop it reaching
+anyone by itself: it has no trigger but `workflow_dispatch`, so a human
+starts it from the Actions tab or it never runs; and Pages must first be
+enabled for the repository with its source set to **GitHub Actions**
+(Settings -> Pages), without which the deploy step fails rather than
+publishing. `tests/test_poster_preflight.py` holds the first of those --
+adding a push trigger fails the suite, because that would put the poster
+online on every commit.
+
+It runs the poster preflight before it uploads, at a stage you choose:
+
+| Stage | Placeholders | What the URL is |
+|---|---|---|
+| `build` (default) | may be empty | A preview. The page shows its "not published yet" banner and the submit button is disabled, so it cannot swallow an application. Use it to read the board on a phone. |
+| `publish` | must be filled | The launch. The preflight refuses it while `data-endpoint` or `data-contact` is blank. |
+
+The hosting gate is still an operator decision: this makes a GitHub page
+available, it does not choose it, and it does not confirm a domain.
+
 ## Outreach
 
 Borrow three rooms, once. Post only after `poster live` and after one
@@ -591,14 +733,17 @@ compressed formats that gzip cannot improve.
 
 The board is a tilted 3D relief board rendered with three.js
 (`board3d.js`), which the contract permits: "The page may rotate or
-tilt the board. It may not add geography." Twelve cities at their exact
-`x`/`y`, the fourteen roads as listed and weighted by quality, and a
-terrain-textured **mound** per city whose height and tint come from
-that city's own `terrain` label and nothing else. The ground is a
-printed sheet with a graticule — a print convention, not land — and it
-is deliberately not navy, because a blue ground would read as ocean and
-turn twelve cities into islands. City names are HTML labels projected
-over the canvas.
+tilt the board." Twelve cities at their exact `x`/`y`, the fourteen
+roads as listed and weighted by quality, and a terrain-textured
+**mound** per city whose height and tint come from that city's own
+`terrain` label and nothing else. Since Amendment 2 the board is a relief
+of a world rather than a printed sheet: mapview's landmass stands 30
+units out of ruled water with a cut cliff at the coast, the cities sit on
+its surface, and the three region names are lettered across it. They are
+placed on mapview's own 1180x680 frame, so the arrangement is the one a
+coach already knows rather than a square approximation of it. City names, their data rows, the region titles and
+the road mileages are HTML labels projected over the canvas, planned
+against each other in screen space so a rotation cannot pile them up.
 
 **The match is decided by movement, so the board animates movement.**
 `AR031_ba` records 134 piece-moves: two forces grow from one piece to
@@ -619,7 +764,17 @@ ranking.
 
 Playback starts only when the board is actually on screen, pauses when
 it scrolls away, and honours `prefers-reduced-motion` by not animating
-at all.
+at all. A board that will never move opens on the **last** turn rather
+than the first: turn 0 is two lone commanders on an otherwise empty
+board, which is the one picture of this match that argues against
+showing it, while turn 30 carries twenty-five pieces, three cities held,
+the readouts at their final counts and the outcome line. The scrubber
+still walks it back — which was written here before it was true: a parked
+board keeps the frame it last drew, so scrubbing moved the readouts and
+left the pieces where they were until `applyFrame` began asking for a
+repaint. `scripts/smoke_poster.py` checks both in the browser now, and
+fails if the canvas does not follow the scrubber. "The board drew" was
+true of the empty frame too.
 
 Board topology is baked into `board.js` by
 `scripts/build_public_board.py`, which copies only id, name, `x`, `y`,
@@ -680,23 +835,32 @@ reconstruction audit — `AR031_ba`, competence bundle, `official-gate`.
 Closed 2026-08-16: the model. Claude Haiku 4.5, in the frozen regulation.
 See `LAUNCH_OPERATIONS.md`, **Model gate: closed**.
 
-### Parked, and why: the poster's map
+### Unparked, and what it cost: the poster's map
 
-The map the project draws got a great deal better on 2026-08-16 — owned
-coastlines, terrain, sea lanes, a scale bar — and a stronger twelve-town
-scenario was screened and frozen as `calib_12_fbm.json`. **None of that is
-on the poster**, and it should not be forced there.
+This section used to say the opposite, and it was left standing after it
+stopped being true. Recorded rather than rewritten, because the trade it
+describes is the one that was actually made.
 
-The poster shows a real recorded match, and that match was played on
-`calib_12.json`. Its map and its replay are one object: drawing the new
-coast under the old game would be a picture of a world the game was not
-played in, and swapping in a prettier match means dropping to an
-`exhibition` label and a 17-move game in place of a 134-move one. Both
-improvements need the same thing — a paid run on the new scenario — which
-needs the ceiling above.
+**What it said, on 2026-08-16.** The map had got much better — owned
+coastlines, terrain, sea lanes, a scale bar — and none of it was on the
+poster. The poster showed a real recorded match played on `calib_12.json`;
+its map and its replay are one object, so drawing the new coast under the
+old game would picture a world the game was not played in, and swapping in
+a prettier match meant dropping to an `exhibition` label and a shorter
+game. Both improvements needed a paid run on the new scenario, which needed
+a spend ceiling nobody had set. So it shipped as it was, labelled
+`official-gate`, and waited for the money rather than for more code.
 
-So the poster ships as it is, honestly labelled `official-gate`, and the
-map work waits for the money rather than for more code.
+**What happened instead.** Amendments 2 and 3 rebuilt the board against
+`maps/starter_map.json` with a real elevation surface, and the poster moved
+with it. It now ships `exh-ex017` — six cities, thirty turns, 33 piece-moves
+— and is labelled **`exhibition`**, not `official-gate`.
+
+That is the cost, and it should be named: the poster no longer shows an
+official-gate match. It shows an exhibition, honestly labelled as one, on a
+map the coach will actually meet. The spend ceiling is still unset, so the
+option the old text was holding out for — an official-gate replay on the
+better map — is still unbought. Re-recording one remains a paid run.
 
 Everything else in this file is decided.
 
