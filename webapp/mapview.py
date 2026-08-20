@@ -536,9 +536,12 @@ def _disambiguate_names(masses: list[dict]) -> None:
 _ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
 
 
-def _majority_region(cities: list[dict], by_id: dict) -> Optional[str]:
+def _majority_region(city_ids: list[str], by_id: dict) -> Optional[str]:
+    """The region most of these cities are in, ties settled alphabetically."""
     regions = [
-        by_id[c].get("region") for c in cities if c in by_id and by_id[c].get("region")
+        by_id[c].get("region")
+        for c in city_ids
+        if c in by_id and by_id[c].get("region")
     ]
     if not regions:
         return None
@@ -586,14 +589,19 @@ def landmasses_from_geography(
     masses: list[dict] = []
     for i, poly in enumerate(coastlines):
         cids = sorted(cid for cid, pi in assign.items() if pi == i)
-        regions = [by_id[cid].get("region") for cid in cids if cid in by_id]
-        regions = [r for r in regions if r]
-        if regions:
-            name = max(set(regions), key=regions.count)
-        elif cids and cids[0] in by_id:
-            name = by_id[cids[0]].get("name") or cids[0]
-        else:
-            name = f"Landmass {i + 1}"
+        # Through the helper directly above, not a second copy of it. The copy
+        # that stood here was written with `max(set(regions))`, which is the
+        # exact bug that helper was added to fix: over a set, `max` breaks a
+        # tie on iteration order, which follows PYTHONHASHSEED. A two-region
+        # coastline named itself Alpha under seeds 1, 3 and 6 and Beta under
+        # 2, 4 and 5 -- so regenerating `board.js` could change a visible
+        # label, and its asset digest, with no source change at all.
+        name = _majority_region(cids, by_id)
+        if name is None:
+            if cids and cids[0] in by_id:
+                name = by_id[cids[0]].get("name") or cids[0]
+            else:
+                name = f"Landmass {i + 1}"
 
         area = _poly_area_miles(poly)
         # Small land bodies read as islands; large ones as continents.
@@ -676,25 +684,13 @@ def compute_landmasses(
     masses: list[dict] = []
     for comp in components:
         pts = [pos[cid] for cid in comp if cid in pos]
-        # Annotated, so the filter below actually narrows away the None: an
-        # unannotated comprehension keeps `Any | None` as its element type and
-        # `sorted` has nothing to order.
-        named: list[str] = [
-            str(by_id[cid].get("region"))
-            for cid in comp
-            if by_id.get(cid) and by_id[cid].get("region")
-        ]
-        regions = named
-        if regions and len(set(regions)) == 1:
-            name = regions[0]
-        elif regions:
-            # Sorted for the same reason as _majority_region: a tie must not
-            # depend on set iteration order.
-            name = max(sorted(set(regions)), key=regions.count)
-        elif len(comp) == 1:
-            name = by_id[comp[0]].get("name") or comp[0]
-        else:
-            name = f"Landmass {len(masses) + 1}"
+        name = _majority_region(comp, by_id)
+        if name is None:
+            name = (
+                by_id[comp[0]].get("name") or comp[0]
+                if len(comp) == 1
+                else f"Landmass {len(masses) + 1}"
+            )
 
         kind = "island" if len(comp) == 1 else "continent"
         if "island" in name.lower():

@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import base64
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -447,6 +449,52 @@ def test_a_borrowed_basename_does_not_borrow_the_other_map_s_field(tmp_path):
     )
     assert one["landmasses"] == two["landmasses"], (
         "the coastline moved when the file was renamed"
+    )
+
+
+#: The naming runs in a subprocess per seed because hash randomisation is
+#: fixed at interpreter start: nothing inside a running pytest can vary it,
+#: and a single-seed test passes or fails by luck.
+_TIE_PROGRAM = """
+import sys
+sys.path.insert(0, %r)
+from webapp.mapview import landmasses_from_geography, layout_for_map
+
+geo = {"field_miles": [1000, 800],
+       "coastlines": [[[100, 100], [900, 100], [900, 700], [100, 700]]]}
+cities = [
+    {"id": "a", "name": "A", "region": "Alpha", "x_miles": 300, "y_miles": 300},
+    {"id": "b", "name": "B", "region": "Beta", "x_miles": 700, "y_miles": 500},
+]
+layout = layout_for_map("tie.json", {"cities": cities}, geo)
+print(landmasses_from_geography(geo, cities, layout)[0]["name"])
+"""
+
+
+def test_a_tied_landmass_name_does_not_depend_on_the_hash_seed():
+    """`max` over a set breaks ties on iteration order, and that is seeded.
+
+    `_majority_region` exists to fix exactly this and says so in its docstring
+    -- `calib_12` is a 4/4/4 tie that named its landmass differently from one
+    process to the next. The geography path, written later, sits fifty lines
+    below that helper and had its own copy of the bug it was written for. A
+    coastline whose cities tie two ways came out `Alpha` under seeds 1, 3 and
+    6 and `Beta` under 2, 4 and 5, so regenerating `board.js` could change a
+    visible label -- and the asset digest the publish gate checks -- with no
+    source change at all.
+    """
+    program = _TIE_PROGRAM % str(REPO_ROOT)
+    seen = set()
+    for seed in ("1", "2", "3", "4", "5", "6"):
+        env = dict(os.environ, PYTHONHASHSEED=seed)
+        out = subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True, text=True, env=env, check=True,
+        )
+        seen.add(out.stdout.strip())
+    assert seen == {"Alpha"}, (
+        f"a two-way tie named the landmass {sorted(seen)} across hash seeds; "
+        f"a tie has to settle alphabetically or the board is not reproducible"
     )
 
 
