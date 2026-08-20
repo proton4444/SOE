@@ -195,12 +195,29 @@ def load_geography(map_file: str) -> Optional[dict]:
     return data
 
 
+#: Passed as ``geo`` to say "I have already looked, and this map has none".
+#:
+#: ``None`` cannot say that. It means "resolve it from the map file's name",
+#: which is right for the app -- it only ever draws maps out of ``maps/`` --
+#: and wrong for a build script handed a path from anywhere. `--map
+#: /tmp/world.json` with no sidecar beside it returned None from the script's
+#: own check, and this function then read `maps/world_geography.json` and
+#: built the supplied map on a 1300x1000 field instead of its own 1180x680.
+#: Same file under a name that collides with nothing came out correct, which
+#: is the tell: the geometry was following the filename.
+NO_GEOGRAPHY: dict = {}
+
+
 def layout_for_map(
     map_file: str,
     data: Optional[dict] = None,
     geo: Optional[dict] = None,
 ) -> MapLayout:
-    """Canvas sized to the geography field aspect (or the sparse fallback)."""
+    """Canvas sized to the geography field aspect (or the sparse fallback).
+
+    ``geo`` is three-valued: a geography to use, ``NO_GEOGRAPHY`` for a map
+    known to have none, and ``None`` for "look one up by this map's name".
+    """
     if data is None:
         data = load_raw_map(map_file)
     if geo is None:
@@ -255,19 +272,22 @@ def city_miles(city: dict, layout: MapLayout) -> tuple[float, float]:
 
 
 def positions(
-    map_file: str, data: Optional[dict] = None
+    map_file: str, data: Optional[dict] = None, geo: Optional[dict] = None
 ) -> dict[str, tuple[float, float]]:
     """City id -> (x, y) in SVG coordinates. Hand-placed x/y (or miles) wins.
 
-    ``data`` mirrors ``layout_for_map``: a caller holding the map already --
-    a build script handed a path outside ``maps/`` -- passes it rather than
-    having the name resolved back to a file in the repository. Without it the
-    only thing carried across was the basename, which either named nothing
-    (and raised) or named a *different* map that happened to share it.
+    ``data`` and ``geo`` mirror ``layout_for_map``: a caller holding the map
+    already -- a build script handed a path outside ``maps/`` -- passes both
+    rather than having the name resolved back to files in the repository.
+    Without ``data`` the only thing carried across was the basename, which
+    either named nothing (and raised) or named a *different* map that happened
+    to share it. Without ``geo`` the layout these coordinates are measured in
+    was still being resolved that way, so the positions and the coastline
+    could be computed against two different fields.
     """
     if data is None:
         data = load_raw_map(map_file)
-    layout = layout_for_map(map_file, data)
+    layout = layout_for_map(map_file, data, geo)
     cities = data.get("cities") or []
     roads = data.get("roads") or []
 

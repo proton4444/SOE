@@ -417,6 +417,39 @@ def test_a_borrowed_basename_does_not_borrow_the_other_map_s_land(tmp_path):
             )
 
 
+def test_a_borrowed_basename_does_not_borrow_the_other_map_s_field(tmp_path):
+    """The residue of the fix above, in the one place it did not reach.
+
+    The builder stopped resolving the *map* by basename and started resolving
+    the geography sidecar against the supplied path -- but it reported "no
+    sidecar" as None, and None means "look one up by name" to `layout_for_map`
+    and `positions`. So a map handed in from anywhere, named after a bundled
+    map that does have geography, was still laid out on that map's field:
+    `starter_map.json` copied to `world.json` came out on 1300x1000 instead of
+    its own 1180x680, with its coastline stretched to match, and
+    `build_elevation` inherited the frame. The same bytes under a name that
+    collides with nothing came out right, which is the tell -- the geometry
+    was following the filename.
+    """
+    payload = MAP_PATH.read_text(encoding="utf-8")
+    # `world.json` is bundled and has a geography sidecar; this file does not.
+    borrowed = tmp_path / "world.json"
+    borrowed.write_text(payload, encoding="utf-8")
+    plain = tmp_path / "a_name_nothing_shares.json"
+    plain.write_text(payload, encoding="utf-8")
+
+    one = build_board(borrowed)
+    two = build_board(plain)
+
+    assert one["frame_units"] == two["frame_units"], (
+        f"the same map came out on {one['frame_units']} as world.json and "
+        f"{two['frame_units']} under its own name"
+    )
+    assert one["landmasses"] == two["landmasses"], (
+        "the coastline moved when the file was renamed"
+    )
+
+
 def test_a_geography_backed_map_exports_the_coast_the_app_draws():
     """The builder's whole claim is that the board cannot disagree with the app.
 

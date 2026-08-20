@@ -36,6 +36,7 @@ from webapp.mapview import (  # noqa: E402
     city_miles,
     compute_landmasses,
     landmasses_from_geography,
+    NO_GEOGRAPHY,
     layout_for_map,
     positions,
 )
@@ -68,12 +69,18 @@ def _round(value: float, places: int = 4) -> float:
     return round(float(value), places)
 
 
-def _geography_for(map_path: Path) -> dict | None:
-    """Traced coastlines beside the map we were handed, if there are any.
+def _geography_for(map_path: Path) -> dict:
+    """Traced coastlines beside the map we were handed, or `NO_GEOGRAPHY`.
 
     Resolved against `map_path`, not against the repository's `maps/`: the
     sidecar belongs to the file that was supplied, and looking it up by
     basename is how the city positions came to be read from a different map.
+
+    Returns `NO_GEOGRAPHY` rather than None for a map that has no sidecar,
+    because None means "look one up by name" to everything downstream --
+    which is the very lookup this function exists to avoid, and it undid the
+    fix: `--map /tmp/world.json` got `maps/world_geography.json`'s field
+    anyway, and drew the supplied map's coast on it.
     """
     stem = map_path.stem
     for name in (
@@ -86,10 +93,10 @@ def _geography_for(map_path: Path) -> dict | None:
         try:
             data = json.loads(candidate.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return None
+            return NO_GEOGRAPHY
         if isinstance(data, dict) and data.get("coastlines"):
             return data
-    return None
+    return NO_GEOGRAPHY
 
 
 def build_board(map_path: Path) -> dict:
@@ -105,7 +112,7 @@ def build_board(map_path: Path) -> dict:
     # point anywhere; resolving the name again under `maps/` raised for a
     # custom filename, and for one that collided with a bundled map it built a
     # board whose landmass hulls belonged to a different world than its towns.
-    pos = positions(map_file, source)
+    pos = positions(map_file, source, geo)
 
     cities = [
         {
