@@ -97,12 +97,41 @@ COAST_SHELF = 30.0
 # surface crosses sea level IS the coast -- bays, headlands and all -- and it
 # is a real intersection rather than a polygon anyone has to draw.
 #
-# WOBBLE is how far the shore may wander from the hull, in board units. It is
-# bounded on purpose: the hull sits ~72 units outside the cities it was built
-# around, so a shore that wandered further inland than that would start
-# drowning towns.
+# WOBBLE is how far the shore may wander from the hull, in board units.
+#
+# It was described as bounded on purpose -- "the hull sits ~72 units outside
+# the cities it was built around, so a shore that wandered further inland than
+# that would start drowning towns". That is not true of `starter_map.json`,
+# and nothing was checking it. Measured, hull to town:
+#
+#     Highfell 23.3   Ashford 34.6   Oldbarrow 45.3
+#     Gullhaven 55.5  Sarnvale 46.4  Redport 112.4
+#
+# So 46 units of inward wobble, plus the 30-unit shelf ramp behind it, reaches
+# 76 units inland -- past every town on the board but one. SITE_GUARD below is
+# what actually keeps them out of the water now; this number is free to be
+# chosen for how the coast looks.
 COAST_WOBBLE = 46.0
 COAST_NOISE = 1.0 / 210.0
+
+# How close the shelf may come to a town, in board units.
+#
+# A town stands on its own ground. Without this the shelf decided the height
+# of a settlement: it ramps the land to sea level across COAST_SHELF units,
+# and where the wobble brought the shore near a town it multiplied that town's
+# ground by whatever fraction was left. `starter_map.json` came out with its
+# terrain ordering inverted --
+#
+#     Redport   river plains  raw 45.8  shelf 1.00  ->  45.8
+#     Oldbarrow mountains     raw 84.2  shelf 0.11  ->   9.5
+#
+# -- so the one mountains city on the board stood a third the height of a
+# river town, while the page's own legend read "relief interpolated from city
+# terrain, high ground is data". The raw field had it right all along; the
+# shelf took it away.
+#
+# The shore may still run between towns. It may not run through one.
+SITE_GUARD = 78.0
 
 # Below the waterline. The seabed exists so the coast can be an intersection
 # instead of an edge; it is never seen, because the water above it is opaque.
@@ -224,6 +253,106 @@ def _edge_distance(ring: list, px: float, pz: float) -> float:
     return best
 
 
+class _Coast:
+    """The coastline rings, bucketed so a lookup does not walk all of them.
+
+    `_edge_distance` and `_inside` are both linear in the number of ring
+    vertices, and they are called once per grid cell. A connectivity hull has
+    four; a traced coastline has thousands. `maps/world.json` carries 5,284
+    across two rings, and 256x148 cells over them is roughly 200 million edge
+    visits per helper -- `python -m scripts.build_elevation --map
+    maps/world.json` took 118 seconds, and it is a documented option.
+
+    Both questions are local. A uniform bucket grid over the frame answers
+    them from the handful of edges that could matter: the ray cast reads one
+    row of buckets, and the distance search walks outward from the query's own
+    bucket and stops as soon as the ring it is about to search is further away
+    than the best edge it has found. Same answers, and `starter_map.json`
+    regenerates byte-identical.
+    """
+
+    def __init__(self, rings: list, frame_w: float, frame_h: float) -> None:
+        self.rings = rings
+        edges = []
+        for ring in rings:
+            for i in range(len(ring)):
+                edges.append((ring[i - 1], ring[i]))
+        self.edges = edges
+
+        # About one edge per bucket, and never so fine that the grid itself
+        # costs more to walk than the edges it holds.
+        count = max(1, len(edges))
+        self.cell = max(4.0, math.sqrt(frame_w * frame_h / count))
+        self.cols = max(1, int(frame_w / self.cell) + 2)
+        self.rows = max(1, int(frame_h / self.cell) + 2)
+        self.buckets: list[list[int]] = [[] for _ in range(self.cols * self.rows)]
+        for n, ((ax, az), (bx, bz)) in enumerate(edges):
+            lo_c, hi_c = self._span(min(ax, bx), max(ax, bx), self.cols)
+            lo_r, hi_r = self._span(min(az, bz), max(az, bz), self.rows)
+            for r in range(lo_r, hi_r + 1):
+                row = r * self.cols
+                for c in range(lo_c, hi_c + 1):
+                    self.buckets[row + c].append(n)
+
+        # Ray casting only ever needs one row of the grid, so those are kept
+        # whole: an edge lands in every row its z-span crosses.
+        self.rows_index: list[list[int]] = [[] for _ in range(self.rows)]
+        for n, ((_ax, az), (_bx, bz)) in enumerate(edges):
+            lo_r, hi_r = self._span(min(az, bz), max(az, bz), self.rows)
+            for r in range(lo_r, hi_r + 1):
+                self.rows_index[r].append(n)
+
+    def _span(self, lo: float, hi: float, limit: int) -> tuple[int, int]:
+        a = max(0, min(limit - 1, int(lo / self.cell)))
+        b = max(0, min(limit - 1, int(hi / self.cell)))
+        return a, b
+
+    def inside(self, px: float, pz: float) -> bool:
+        r = max(0, min(self.rows - 1, int(pz / self.cell)))
+        hit = False
+        for n in self.rows_index[r]:
+            (ax, az), (bx, bz) = self.edges[n]
+            if (az > pz) != (bz > pz) and px < (bx - ax) * (pz - az) / (bz - az) + ax:
+                hit = not hit
+        return hit
+
+    def distance(self, px: float, pz: float) -> float:
+        c0 = max(0, min(self.cols - 1, int(px / self.cell)))
+        r0 = max(0, min(self.rows - 1, int(pz / self.cell)))
+        best = math.inf
+        reach = max(self.cols, self.rows)
+        for step in range(reach + 1):
+            # Everything in the previous rings is closer than this one can be,
+            # so once the best edge is inside that radius there is no point
+            # looking further out.
+            if best <= (step - 1) * self.cell:
+                break
+            lo_r, hi_r = max(0, r0 - step), min(self.rows - 1, r0 + step)
+            lo_c, hi_c = max(0, c0 - step), min(self.cols - 1, c0 + step)
+            for r in range(lo_r, hi_r + 1):
+                on_r_edge = r in (r0 - step, r0 + step)
+                row = r * self.cols
+                span = (
+                    range(lo_c, hi_c + 1)
+                    if on_r_edge
+                    else (c for c in (c0 - step, c0 + step) if lo_c <= c <= hi_c)
+                )
+                for c in span:
+                    for n in self.buckets[row + c]:
+                        d = _segment_distance(self.edges[n], px, pz)
+                        if d < best:
+                            best = d
+        return best
+
+
+def _segment_distance(edge: tuple, px: float, pz: float) -> float:
+    (ax, az), (bx, bz) = edge
+    dx, dz = bx - ax, bz - az
+    length2 = dx * dx + dz * dz or 1.0
+    t = max(0.0, min(1.0, ((px - ax) * dx + (pz - az) * dz) / length2))
+    return math.hypot(px - (ax + dx * t), pz - (az + dz * t))
+
+
 def build_elevation(map_path: Path) -> dict:
     board = build_board(map_path)
     frame_w, frame_h = board["frame_units"]
@@ -239,6 +368,8 @@ def build_elevation(map_path: Path) -> dict:
         base, rough = TERRAIN_ELEV.get(terrain, TERRAIN_FALLBACK)
         seeds.append((city["x"] * frame_w, city["y"] * frame_h, base, rough))
 
+    coast_index = _Coast(rings, frame_w, frame_h)
+
     heights = []
     depths = []
     peak = 0.0
@@ -250,8 +381,8 @@ def build_elevation(map_path: Path) -> dict:
             px = fx * frame_w
 
             # Signed distance to the nearest hull: positive inside, negative out.
-            near = min(_edge_distance(ring, px, pz) for ring in rings)
-            signed = near if any(_inside(ring, px, pz) for ring in rings) else -near
+            near = coast_index.distance(px, pz)
+            signed = near if coast_index.inside(px, pz) else -near
 
             # Perturb it, and the shoreline moves with it. Two octaves: a slow
             # one for bays and headlands, a quick one for the ragged detail
@@ -266,6 +397,16 @@ def build_elevation(map_path: Path) -> dict:
                 (_fbm(px * COAST_NOISE, pz * COAST_NOISE, 401) - 0.68) * 1.5
                 + (_fbm(px * COAST_NOISE * 3.9, pz * COAST_NOISE * 3.9, 907) - 0.55) * 0.6
             )
+
+            # A town stands on its own ground: the shelf is not allowed to
+            # reach one. This only ever lifts, so the coast keeps its shape
+            # everywhere it is not about to run through a settlement.
+            if seeds:
+                near_city = min(
+                    math.hypot(px - sx, pz - sz) for sx, sz, _b, _r in seeds
+                )
+                if near_city < SITE_GUARD:
+                    coast = max(coast, COAST_SHELF * (1.0 - near_city / SITE_GUARD))
 
             shelf = _smoothstep(min(1.0, max(0.0, coast / COAST_SHELF)))
             # Below the waterline, running out to the seabed floor.

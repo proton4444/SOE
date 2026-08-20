@@ -498,6 +498,100 @@ def test_a_tied_landmass_name_does_not_depend_on_the_hash_seed():
     )
 
 
+def test_the_coast_index_answers_what_scanning_every_edge_answers():
+    """The index is a speed-up, so it has to be a speed-up and nothing else.
+
+    `_edge_distance` and `_inside` walk every ring vertex, once per grid cell.
+    A connectivity hull has four; `maps/world.json` carries 5,284, and
+    `build_elevation --map maps/world.json` took 118 seconds -- for a
+    documented option. Bucketing the edges brings it to 13. The two originals
+    stay as the definition of the right answer, and this holds the new one to
+    them.
+    """
+    from scripts.build_elevation import _Coast, _edge_distance, _inside
+
+    geo = json.loads(
+        (REPO_ROOT / "maps" / "world_geography.json").read_text(encoding="utf-8")
+    )
+    rings = [[(float(x), float(y)) for x, y in ring] for ring in geo["coastlines"]]
+    frame_w, frame_h = (float(v) for v in geo["field_miles"])
+    index = _Coast(rings, frame_w, frame_h)
+
+    # A coarse sweep of the whole frame, so the sample covers open sea, deep
+    # inland, and the shore itself rather than only one of the three.
+    for i in range(37):
+        for j in range(23):
+            px = frame_w * i / 36
+            pz = frame_h * j / 22
+            want = min(_edge_distance(ring, px, pz) for ring in rings)
+            got = index.distance(px, pz)
+            assert abs(got - want) < 1e-6, (
+                f"distance at ({px:.0f}, {pz:.0f}): index {got}, scan {want}"
+            )
+            assert index.inside(px, pz) == any(
+                _inside(ring, px, pz) for ring in rings
+            ), f"inside at ({px:.0f}, {pz:.0f}) disagrees with the scan"
+
+
+def test_a_town_is_not_drowned_by_the_shelf_that_reaches_it():
+    """The board must not put a mountain city below a desert one.
+
+    The page's legend reads "relief interpolated from city terrain -- high
+    ground is data, contours are not", and the field plan says which cities
+    stand on hills is data. The shelf ramps land to sea level across 30 units,
+    the shore wobbles up to 46 units inland, and nothing kept the two off a
+    town: `starter_map.json` shipped with Oldbarrow, its one mountains city,
+    at 19 units while river-plains Redport stood at 90.
+
+    The raw field had it right -- Oldbarrow computed to 84 against Redport's
+    46 -- and the shelf multiplied it by 0.11. So this is not a check on the
+    terrain model; it is a check that nothing downstream of it silently
+    overrules the data the legend promises.
+    """
+    import base64
+
+    elev = build_elevation(MAP_PATH)
+    board = build_board(MAP_PATH)
+    grid = base64.b64decode(elev["data"])
+    w, h = elev["width"], elev["height"]
+
+    def height(fx, fy):
+        gx = min(w - 1, max(0.0, fx * (w - 1)))
+        gy = min(h - 1, max(0.0, fy * (h - 1)))
+        x0, y0 = int(gx), int(gy)
+        x1, y1 = min(w - 1, x0 + 1), min(h - 1, y0 + 1)
+        tx, ty = gx - x0, gy - y0
+        a, b = grid[y0 * w + x0], grid[y0 * w + x1]
+        c, d = grid[y1 * w + x0], grid[y1 * w + x1]
+        top, bot = a + (b - a) * tx, c + (d - c) * tx
+        return (top + (bot - top) * ty) / 255 * elev["scale"] - elev["sea_level"]
+
+    from scripts.build_elevation import TERRAIN_ELEV, TERRAIN_FALLBACK
+
+    # Against the label the generator actually reads -- the first one. Whether
+    # that is the right label to read is a separate question: Gullhaven is
+    # "coastal mountains" and comes through here as `coastal`. This test holds
+    # the model to its own reading, not to a better one.
+    high, low = [], []
+    for city in board["cities"]:
+        label = city["terrain"][0] if city["terrain"] else None
+        base = TERRAIN_ELEV.get(label, TERRAIN_FALLBACK)[0]
+        site = (height(city["x"], city["y"]), city["name"], label)
+        if base >= TERRAIN_ELEV["hills"][0]:
+            high.append(site)
+        elif base <= TERRAIN_ELEV["plain"][0]:
+            low.append(site)
+
+    assert high, "no city on high ground; this map cannot show the inversion"
+    for got_high, name_high, label_high in high:
+        for got_low, name_low, label_low in low:
+            assert got_high > got_low, (
+                f"{name_high} ({label_high}) stands at {got_high:.0f} and "
+                f"{name_low} ({label_low}) at {got_low:.0f} -- the board "
+                f"contradicts the legend it prints"
+            )
+
+
 def test_a_geography_backed_map_exports_the_coast_the_app_draws():
     """The builder's whole claim is that the board cannot disagree with the app.
 
