@@ -517,6 +517,10 @@ def test_the_coast_index_answers_what_scanning_every_edge_answers():
     # OVERLAP: `calib_24` had 219 points inside two at once and `calib_48` had
     # 932, and one shared counter cancelled every one of them to "sea". A test
     # that only looks at the easy map is how that shipped.
+    # Both kinds: `world`/`world2` have rings that stay clear of each other,
+    # where the index must match the scan exactly; `calib_24`/`calib_48` have
+    # hulls that overlap, where the scan itself measures to buried edges and
+    # the index is deliberately the better answer.
     checked = 0
     for name in ("calib_24.json", "calib_48.json", "world.json", "world2.json"):
         board = build_board(REPO_ROOT / "maps" / name)
@@ -538,10 +542,20 @@ def test_the_coast_index_answers_what_scanning_every_edge_answers():
                 pz = frame_h * j / 22
                 want = min(_edge_distance(ring, px, pz) for ring in rings)
                 got = index.distance(px, pz)
-                assert abs(got - want) < 1e-6, (
-                    f"{name} distance at ({px:.0f}, {pz:.0f}): "
-                    f"index {got}, scan {want}"
-                )
+                if index.may_overlap:
+                    # Where hulls overlap the scan is the one that is wrong:
+                    # it measures to edges buried inside a neighbour, which
+                    # are inland, so the index may only ever report the shore
+                    # as FURTHER away, never nearer.
+                    assert got >= want - 1e-6, (
+                        f"{name} distance at ({px:.0f}, {pz:.0f}): index {got} "
+                        f"is nearer than the scan's {want}, which it cannot be"
+                    )
+                else:
+                    assert abs(got - want) < 1e-6, (
+                        f"{name} distance at ({px:.0f}, {pz:.0f}): "
+                        f"index {got}, scan {want}"
+                    )
                 assert index.inside(px, pz) == any(
                     _inside(ring, px, pz) for ring in rings
                 ), f"{name}: inside at ({px:.0f}, {pz:.0f}) disagrees with the scan"
@@ -606,6 +620,43 @@ def test_a_town_is_not_drowned_by_the_shelf_that_reaches_it():
                 f"{name_low} ({label_low}) at {got_low:.0f} -- the board "
                 f"contradicts the legend it prints"
             )
+
+
+def test_the_shore_is_measured_from_the_union_not_from_buried_edges():
+    """An edge that runs through a neighbouring hull is not a shoreline.
+
+    The parity fix made `inside` treat overlapping hulls as a union; the
+    distance did not follow. It still took the nearest of ALL input edges, and
+    a padded hull's edge buried inside its neighbour is inland, not coast. On
+    `calib_48.json` the point (657.1, 217.4) lies 112.6 units deep inside hull
+    0 and 0.75 from an edge of hull 3 buried there: taking that as the shore
+    gave the point `coast = -22.4` and packed seabed into the middle of land
+    the app draws continuous.
+
+    This one is older than the index -- `min(_edge_distance(ring, ...) for
+    ring in rings)` did exactly the same -- so it is not a regression from
+    bucketing, only something bucketing had to carry across correctly.
+    """
+    from scripts.build_elevation import _Coast, _inside
+
+    board = build_board(REPO_ROOT / "maps" / "calib_48.json")
+    frame_w, frame_h = board["frame_units"]
+    rings = [
+        [(px * frame_w, py * frame_h) for px, py in mass["hull"]]
+        for mass in board["landmasses"]
+    ]
+    index = _Coast(rings, frame_w, frame_h)
+    assert index.may_overlap, "calib_48's hulls overlap; the check needs that"
+
+    px, pz = 657.1, 217.4
+    holding = [i for i, ring in enumerate(rings) if _inside(ring, px, pz)]
+    assert len(holding) >= 2, "the point that shows this must be inside two hulls"
+
+    got = index.distance(px, pz)
+    assert got > 100.0, (
+        f"the shore at ({px}, {pz}) measures {got:.2f} units away, which is an "
+        f"edge buried inside a neighbouring hull rather than the coast"
+    )
 
 
 def test_a_sailed_lane_carries_the_route_the_app_sails():

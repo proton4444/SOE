@@ -307,10 +307,52 @@ class _Coast:
             for r in range(lo_r, hi_r + 1):
                 self.rows_index[r].append(n)
 
+        # Whether any two rings actually overlap. Where none do -- one
+        # landmass, or hulls that stay clear of each other -- every edge is on
+        # the union boundary and the buried-edge test in `distance` is dead
+        # weight, so it is skipped.
+        #
+        # Boxes alone are not enough to decide this, and using them cost real
+        # time: `world.json` is a continent with an island lying inside its
+        # bounding box but nowhere near its coast, and testing boxes took the
+        # build from 12.7s to 25.4s for nothing. Boxes are the pre-filter and
+        # a vertex-containment test settles the pairs that survive it.
+        boxes = []
+        for ring in rings:
+            xs = [pt[0] for pt in ring]
+            zs = [pt[1] for pt in ring]
+            boxes.append((min(xs), min(zs), max(xs), max(zs)))
+
+        self.may_overlap = False
+        for i, a in enumerate(boxes):
+            for j in range(i + 1, len(boxes)):
+                b = boxes[j]
+                if a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1]:
+                    continue
+                one, two = rings[i], rings[j]
+                if any(_inside(two, x, z) for x, z in one) or any(
+                    _inside(one, x, z) for x, z in two
+                ):
+                    self.may_overlap = True
+                    break
+            if self.may_overlap:
+                break
+
     def _span(self, lo: float, hi: float, limit: int) -> tuple[int, int]:
         a = max(0, min(limit - 1, int(lo / self.cell)))
         b = max(0, min(limit - 1, int(hi / self.cell)))
         return a, b
+
+    def _parity(self, px: float, pz: float) -> list[bool]:
+        """Even-odd parity per ring, for the row this point sits in."""
+        r = max(0, min(self.rows - 1, int(pz / self.cell)))
+        hits = [False] * len(self.rings)
+        for n in self.rows_index[r]:
+            (ax, az), (bx, bz) = self.edges[n]
+            if (az > pz) != (bz > pz) and px < (bx - ax) * (pz - az) / (bz - az) + ax:
+                ring = self.owner[n]
+                hits[ring] = not hits[ring]
+        return hits
 
     def inside(self, px: float, pz: float) -> bool:
         """Inside ANY ring -- parity counted per ring, never pooled.
@@ -323,14 +365,20 @@ class _Coast:
         signed distance, and the board gets ocean cut through land that
         `mapview` draws as the union of those same hulls.
         """
-        r = max(0, min(self.rows - 1, int(pz / self.cell)))
-        hits = [False] * len(self.rings)
-        for n in self.rows_index[r]:
-            (ax, az), (bx, bz) = self.edges[n]
-            if (az > pz) != (bz > pz) and px < (bx - ax) * (pz - az) / (bz - az) + ax:
-                ring = self.owner[n]
-                hits[ring] = not hits[ring]
-        return any(hits)
+        return any(self._parity(px, pz))
+
+    def _buried(self, edge_ring: int, px: float, pz: float) -> bool:
+        """Is this point on some OTHER ring's interior -- so, not a shore?
+
+        A point on the union boundary is on one ring's edge and outside every
+        other ring. A point on an edge that runs *through* a neighbour is
+        inland: it is an artefact of how the hulls were built, not a coast.
+        """
+        hits = self._parity(px, pz)
+        for i, hit in enumerate(hits):
+            if hit and i != edge_ring:
+                return True
+        return False
 
     def distance(self, px: float, pz: float) -> float:
         c0 = max(0, min(self.cols - 1, int(px / self.cell)))
@@ -356,17 +404,36 @@ class _Coast:
                 for c in span:
                     for n in self.buckets[row + c]:
                         d = _segment_distance(self.edges[n], px, pz)
-                        if d < best:
-                            best = d
+                        if d >= best:
+                            continue
+                        if self.may_overlap:
+                            # Distance to the boundary of the UNION, not to
+                            # every edge that was fed in. Padded hulls overlap,
+                            # and an edge that runs through a neighbour is not
+                            # a shoreline -- it is inland. On `calib_48` the
+                            # point (657.1, 217.4) lies 112.6 units deep inside
+                            # hull 0 and 0.75 from an edge of hull 3 buried
+                            # there; taking that as the coast gave it
+                            # `coast = -22.4` and packed seabed into the middle
+                            # of land the app draws continuous.
+                            cx, cz = _closest_point(self.edges[n], px, pz)
+                            if self._buried(self.owner[n], cx, cz):
+                                continue
+                        best = d
         return best
 
 
-def _segment_distance(edge: tuple, px: float, pz: float) -> float:
+def _closest_point(edge: tuple, px: float, pz: float) -> tuple[float, float]:
     (ax, az), (bx, bz) = edge
     dx, dz = bx - ax, bz - az
     length2 = dx * dx + dz * dz or 1.0
     t = max(0.0, min(1.0, ((px - ax) * dx + (pz - az) * dz) / length2))
-    return math.hypot(px - (ax + dx * t), pz - (az + dz * t))
+    return ax + dx * t, az + dz * t
+
+
+def _segment_distance(edge: tuple, px: float, pz: float) -> float:
+    cx, cz = _closest_point(edge, px, pz)
+    return math.hypot(px - cx, pz - cz)
 
 
 def build_elevation(map_path: Path) -> dict:

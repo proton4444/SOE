@@ -324,9 +324,11 @@ def check_inventory(bundle: Path, board: dict | None) -> list[Finding]:
 
     for name in sorted(present - expected - FORBIDDEN_FILES):
         out.append(
-            note(
+            blocker(
                 "inventory",
-                f"not in the plan's file list, and it will be published: {name}",
+                f"not in the plan's file list, and the deploy uploads this "
+                f"directory wholesale, so it would be published: {name}. "
+                f"Add it to the plan or take it out of the bundle.",
             )
         )
     return out

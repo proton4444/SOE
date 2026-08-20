@@ -158,11 +158,23 @@ def test_a_missing_renderer_texture_is_refused(bundle, manifest):
     assert any("plain.jpg" in m for m in blockers(run(bundle, manifest), "inventory"))
 
 
-def test_a_stray_file_is_a_note_because_it_would_be_published(bundle, manifest):
+def test_a_stray_file_refuses_the_publish_because_it_would_be_published(
+    bundle, manifest
+):
+    """The deploy uploads this directory wholesale, so its contents are the post.
+
+    This test used to assert the opposite -- that a stray file is a *note* --
+    and its own name gave the reason it should never have been one: "because
+    it would be published". `upload-pages-artifact` takes a path, not a
+    manifest, so an accidentally committed screenshot, source map or private
+    export goes up with the bundle. A note exits zero, so the one gate that
+    knew about the file waved it through.
+    """
     (bundle / "notes-to-self.txt").write_text("draft copy", encoding="utf-8")
-    findings = run(bundle, manifest)
-    assert blockers(findings, "inventory") == []
-    assert any("notes-to-self.txt" in f.message for f in findings)
+    found = blockers(run(bundle, manifest), "inventory")
+    assert any("notes-to-self.txt" in m for m in found), (
+        "a file nobody listed is about to be published and nothing blocked it"
+    )
 
 
 # ---------------------------------------------------------------------------
