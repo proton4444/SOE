@@ -19,7 +19,7 @@
  * their road between turns rather than jumping, and the road they take lights
  * up as they use it. That motion is the whole show.
  */
-import { createBoard } from "./board3d.js?v=h35";
+import { createBoard } from "./board3d.js?v=h36";
 
 (function () {
   "use strict";

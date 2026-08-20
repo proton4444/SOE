@@ -35,8 +35,12 @@ import argparse
 import functools
 import http.server
 import io
+import json
+import re
+import shutil
 import socket
 import socketserver
+import tempfile
 import threading
 from pathlib import Path
 
@@ -324,6 +328,117 @@ def check_fallback_board(browser, url: str, out_dir: Path | None) -> list[str]:
     return problems
 
 
+#: How alike two renders must be to say the hull did not shape the coast.
+#: Measured, in canvas pixels that moved: two renders of the same bundle
+#: differ by 0.14% (compositing noise), the bent hull moves 1% because the
+#: board's own region caption is placed from the hull it is naming, and before
+#: this was fixed the same bend moved 7%. The gate sits between the last two.
+MAX_COAST_DRIFT = 0.03
+
+
+def _pixels_differing(a: bytes, b: bytes) -> float:
+    """Share of pixels whose colour moved, over a coarse grid."""
+    from PIL import Image  # noqa: PLC0415
+
+    one = Image.open(io.BytesIO(a)).convert("RGB")
+    two = Image.open(io.BytesIO(b)).convert("RGB")
+    if one.size != two.size:
+        return 1.0
+    step = max(1, min(one.size) // 120)
+    seen = moved = 0
+    for y in range(0, one.size[1], step):
+        for x in range(0, one.size[0], step):
+            p, q = one.getpixel((x, y)), two.getpixel((x, y))
+            seen += 1
+            if max(abs(p[i] - q[i]) for i in range(3)) > 24:
+                moved += 1
+    return moved / (seen or 1)
+
+
+def check_coast_follows_elevation(browser, bundle: Path, out_dir: Path | None):
+    """The hull in `board.js` bounds the mesh. It must not shape the coast.
+
+    It used to. Each landmass hull was pushed outward from its own centroid
+    and every terrain cell clipped against the result with Sutherland-Hodgman,
+    which is exact for a convex clip polygon and nothing else. Connectivity
+    hulls are convex, so the poster's own board never showed it -- but
+    `build_public_board` exports *traced* coastlines for any map with a
+    geography file, and on `maps/world.json` the radial push dragged a
+    5,092-point ring across itself while the convex clip returned an empty
+    fragment for every one of its 764 boundary cells. A northern headland lost
+    its ground: a mountain 169 units above the waterline, drawn as open water.
+
+    The coast comes from the elevation now -- the `sea` channel is the
+    distance from the shoreline outward, so "within CLIP_MARGIN of the shore"
+    is a bilinear sample and has no opinion about the shape of a polygon. This
+    proves it by replacing the hull with a deliberately wrong one, concave and
+    self-crossing, spanning the same ground. The board should not notice.
+    """
+    label = "hull-shape"
+    problems: list[str] = []
+
+    board = (bundle / "board.js").read_text(encoding="utf-8")
+    match = re.search(r"=\s*(\{.*\})\s*;?\s*$", board, re.S)
+    if match is None:
+        return [f"{label}: cannot read the board constant out of board.js"]
+    data = json.loads(match.group(1))
+    masses = [m for m in data.get("landmasses", []) if len(m.get("hull") or []) >= 3]
+    if not masses:
+        return []                     # nothing to be wrong about
+
+    def shot(dir_: Path) -> bytes:
+        url, server = serve(dir_)
+        try:
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page.goto(url, wait_until="domcontentloaded")
+            page.wait_for_timeout(5000)
+            canvas = page.query_selector("#atlas")
+            png = canvas.screenshot(timeout=15000) if canvas else b""
+            page.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+        return png
+
+    with tempfile.TemporaryDirectory() as tmp:
+        bent = Path(tmp) / "public"
+        shutil.copytree(bundle, bent)
+        for mass in masses:
+            hull = mass["hull"]
+            xs = [pt[0] for pt in hull]
+            ys = [pt[1] for pt in hull]
+            lo_x, hi_x = min(xs), max(xs)
+            lo_y, hi_y = min(ys), max(ys)
+            mid_x, mid_y = (lo_x + hi_x) / 2, (lo_y + hi_y) / 2
+            # A bow tie over the same extent: concave, self-crossing, and
+            # nothing any half-plane clipper can be right about.
+            mass["hull"] = [
+                [lo_x, lo_y], [mid_x, mid_y], [hi_x, lo_y],
+                [hi_x, hi_y], [mid_x, mid_y], [lo_x, hi_y],
+            ]
+        head = board[: match.start(1)]
+        tail = board[match.end(1) :]
+        (bent / "board.js").write_text(head + json.dumps(data) + tail, encoding="utf-8")
+
+        straight = shot(bundle)
+        crooked = shot(bent)
+
+    if not straight or not crooked:
+        return [f"{label}: there is no board canvas on the page"]
+
+    drift = _pixels_differing(straight, crooked)
+    if drift > MAX_COAST_DRIFT:
+        problems.append(
+            f"{label}: bending every hull into a bow tie moved {drift:.0%} of "
+            f"the board (allowed {MAX_COAST_DRIFT:.0%}) -- the coastline is "
+            f"being taken from the hull polygon, not from the elevation"
+        )
+    if out_dir:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "board-bent-hull.png").write_bytes(crooked)
+    return problems
+
+
 def check_page(
     browser,
     url: str,
@@ -489,6 +604,9 @@ def main(argv: list[str] | None = None) -> int:
             # And the board with its elevation grid missing, which is the one
             # state the bundle promises to survive and nothing had rendered.
             problems += check_fallback_board(browser, url, args.out)
+            # And the board drawn from a hull bent out of shape, which proves
+            # the coast is coming from the elevation rather than the polygon.
+            problems += check_coast_follows_elevation(browser, args.bundle, args.out)
             browser.close()
     finally:
         server.shutdown()
@@ -504,8 +622,8 @@ def main(argv: list[str] | None = None) -> int:
         "ok    the board drew on desktop and phone, animated and "
         "reduced-motion, with no console error, no label printing over "
         "another or clipped by the frame, the still one opened on the "
-        "finished match, and the board without its elevation grid still "
-        "drew land"
+        "finished match, the board without its elevation grid still drew "
+        "land, and its coast came from the elevation rather than the hull"
     )
     return 0
 

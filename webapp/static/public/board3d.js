@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h35";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h36";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -996,38 +996,20 @@ export function createBoard(options) {
     return raw - elevation.sea_level;
   }
 
-  // Hull in world units, for the shore ring the terrain mesh is clipped to.
-  /* The hull, pushed outward, used only to bound the mesh.
-
-     It is not the coastline any more -- the coastline is where the ground
-     crosses sea level, and the generator perturbs it by up to COAST_WOBBLE so
-     it can wander outside the hull as readily as inside. Clipping the mesh to
-     the hull itself would cut the wandering shore back to a straight line
-     exactly where it is meant to meander. Expanded, the clip lands well under
-     water, where opaque sea hides the one straight edge left in the scene. */
   /* How far the ground descends below the waterline, from the generator's own
      figure rather than a constant here. */
   const seabedFloor = (elevation && elevation.sea_level) || 30;
 
-  /* Enough for the outward half of the coast wobble and the shelf behind it,
-     and no more. It is paired with PAD: the sheet's margin must exceed this or
-     the mesh runs off the print, which is a containment the rect clip below
-     should never actually be called on to enforce. */
+  /* How far past the shoreline the terrain mesh is carried.
+
+     The mesh has to reach beyond the coast, because the coast is not the hull
+     any more: the generator perturbs it by up to COAST_WOBBLE and it wanders
+     outside the hull as readily as inside, so a mesh stopping at the hull
+     would cut the wandering shore back to a straight line exactly where it is
+     meant to meander. This much past it lands well under water, where opaque
+     sea hides the one straight edge left in the scene. It is paired with PAD:
+     the sheet's margin must exceed it or the mesh runs off the print. */
   const CLIP_MARGIN = 40;
-  const shore = [];
-  hullMasses.forEach(function (mass) {
-    const pts = mass.hull.map(function (pt) {
-      return [worldX(pt[0]), worldZ(pt[1])];
-    });
-    let cx = 0, cz = 0;
-    pts.forEach(function (pt) { cx += pt[0]; cz += pt[1]; });
-    cx /= pts.length; cz /= pts.length;
-    shore.push(pts.map(function (pt) {
-      const dx = pt[0] - cx, dz = pt[1] - cz;
-      const len = Math.hypot(dx, dz) || 1;
-      return [pt[0] + dx / len * CLIP_MARGIN, pt[1] + dz / len * CLIP_MARGIN];
-    }));
-  });
 
   function insideRing(ring, px, pz) {
     let hit = false;
@@ -1444,204 +1426,237 @@ export function createBoard(options) {
     sea.receiveShadow = true;
     scene.add(sea);
 
-    landHull.forEach(function (mass) {
-      /* No cliff, and no drawn coastline.
+    /* --- the ground surface.
 
-         Both are gone for the same reason, and it is the whole point of this
-         change: they were polygons. The skirt hung from the hull and the ink
-         line traced it, so a four-point hull produced a four-sided island with
-         four straight cliffs, and no amount of lighting or colour was going to
-         make that read as a shore.
+       One surface for the whole board rather than one per landmass. It was
+       per-mass because the bound was per-mass: each hull, pushed outward,
+       clipped its own grid. The bound is a field now (below) and a field does
+       not belong to any one island, so the masses share a mesh -- same
+       material, same tint ramp, one draw call, and no seam where two padded
+       hulls overlapped.
 
-         The coast is now where the ground crosses sea level. It is an
-         intersection, it has bays and headlands because the height field does,
-         and there is nothing to draw: the water is opaque and simply covers
-         whatever is below it. What used to be a cliff is a beach. */
+       No cliff, and no drawn coastline. Both are gone for the same reason:
+       they were polygons. The skirt hung from the hull and the ink line
+       traced it, so a four-point hull produced a four-sided island with four
+       straight cliffs, and no amount of lighting was going to make that read
+       as a shore. The coast is where the ground crosses sea level -- an
+       intersection, with bays and headlands because the height field has
+       them -- and there is nothing to draw: the water is opaque and covers
+       whatever is below it.
 
-      /* --- the ground surface itself.
+       Coloured by height rather than by texture. Twelve terrain labels cannot
+       paint a continent, but an elevation can read itself: low ground green,
+       upland ochre, the tops bare. */
+    const landTex = terrainMap("plain");
 
-         The extruded body above is the island's base and its cliff; this is
-         the land ON it. A grid is laid over the mass's bounding box, every
-         vertex lifted to groundHeight, and any cell whose centre falls outside
-         the shore is clipped to it. Because the height falls to zero at the
-         coastline and the clipped fragments put their vertices exactly on the
-         hull, this surface and the cliff skirt below it share one edge.
+    /* Where there is ground to draw.
 
-         Coloured by height rather than by texture. Twelve terrain labels
-         cannot paint a continent, but an elevation can read itself: low ground
-         green, upland ochre, the tops bare. */
-      const landTex = terrainMap("plain");
-      const bounds = shore[hullMasses.indexOf(mass)].reduce(function (acc, pt) {
-        return [Math.min(acc[0], pt[0]), Math.min(acc[1], pt[1]),
-                Math.max(acc[2], pt[0]), Math.max(acc[3], pt[1])];
-      }, [Infinity, Infinity, -Infinity, -Infinity]);
+       This was a polygon question, and it was the wrong shape of question.
+       Each hull was pushed CLIP_MARGIN outward from its own centroid and
+       every cell tested against the result with Sutherland-Hodgman. Both
+       halves assume a ring you can see all of from its middle. A connectivity
+       hull is convex and qualifies; the traced coastlines
+       `build_public_board` now exports for any map with a geography file do
+       not. On `maps/world.json` the radial push dragged a 5,092-point ring
+       across itself -- and the convex clip, asked to intersect a cell with
+       the inward half-plane of all 5,092 edges, returned nothing at all for
+       every one of the 764 boundary cells. Between them they left a northern
+       headland with no ground under it: a mountain 169 units above the
+       waterline, drawn as open water.
 
-      const STEP = 7;
-      const cols = Math.ceil((bounds[2] - bounds[0]) / STEP) + 1;
-      const rows = Math.ceil((bounds[3] - bounds[1]) / STEP) + 1;
-      const shoreRing = shore[hullMasses.indexOf(mass)];
+       The elevation file already answers this, and answers it as a field
+       instead of a polygon. Its `sea` channel is the distance from the
+       shoreline outward -- from the wobbled coast the board actually draws,
+       not from the hull that coast was grown from -- so "within CLIP_MARGIN
+       of the shore" is one bilinear sample. No ring, no offset, no
+       convexity, and it costs the same on a four-point hull as on a traced
+       one. */
+    const OFFSHORE_LIMIT = (elevation && elevation.sea_range)
+      ? CLIP_MARGIN / elevation.sea_range
+      : 0;
 
-      const gPos = [], gCol = [], gUv = [], gIdx = [];
-      let peak = 0;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const px = bounds[0] + c * STEP;
-          const pz = bounds[1] + r * STEP;
-          const h = groundHeight(px, pz);
-          if (h > peak) { peak = h; }
-          gPos.push(px, h, pz);
-          gUv.push(px / 300, pz / 300);
-          gCol.push(0, 0, 0);          // filled once the peak is known
-        }
-      }
-      /* Cells are clipped to the shore, not merely dropped. Dropping whole
-         cells left the coastline as a flight of 7-unit stairs -- the grid's
-         edge, showing against the flat cap beneath it, in a place where the
-         board has already promised the reader an exact hull. Sutherland-
-         Hodgman against the shore ring gives each boundary cell its true
-         shape, and those fragments are fanned into triangles and appended as
-         loose vertices. The interior is still the cheap regular grid. */
-      function clipToShore(poly, ring) {
-        let out = poly;
-        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-          if (!out.length) { return out; }
-          const ax = ring[j][0], az = ring[j][1];
-          const bx = ring[i][0], bz = ring[i][1];
-          // Positive side of the directed edge; the ring is convex here.
-          const side = function (px, pz) {
-            return (bx - ax) * (pz - az) - (bz - az) * (px - ax);
-          };
-          const input = out;
-          out = [];
-          for (let k = 0; k < input.length; k++) {
-            const cur = input[k], prv = input[(k + input.length - 1) % input.length];
-            const dc = side(cur[0], cur[1]), dp = side(prv[0], prv[1]);
-            if (dc >= 0) {
-              if (dp < 0) {
-                const t = dp / (dp - dc);
-                out.push([prv[0] + (cur[0] - prv[0]) * t,
-                          prv[1] + (cur[1] - prv[1]) * t]);
-              }
-              out.push(cur);
-            } else if (dp >= 0) {
-              const t = dp / (dp - dc);
-              out.push([prv[0] + (cur[0] - prv[0]) * t,
-                        prv[1] + (cur[1] - prv[1]) * t]);
-            }
-          }
-        }
-        return out;
-      }
-
-      // The ring must wind consistently for the half-plane test above.
-      let area2 = 0;
-      for (let i = 0, j = shoreRing.length - 1; i < shoreRing.length; j = i++) {
-        area2 += shoreRing[j][0] * shoreRing[i][1] - shoreRing[i][0] * shoreRing[j][1];
-      }
-      const windRing = area2 < 0 ? shoreRing.slice().reverse() : shoreRing;
-
-      /* Clipped to the printed sheet as well as to the shore.
-
-         The clip ring is pushed CLIP_MARGIN past the hull so the wandering
-         coast is never cut back to a straight line -- but the sheet's own
-         margin is smaller than that, so the seabed ran off the edge of the
-         board and hung in the air beyond it, in full view, because the water
-         that is supposed to hide it stops at the print. Cells outside the
-         plate are dropped. The straight edge that leaves is deep offshore and
-         under opaque water, which is the one place a straight edge does no
-         harm. */
-      const plateHalfW = (sheetW - REVEAL * 2) / 2;
-      const plateHalfD = (sheetD - REVEAL * 2) / 2;
-
-      for (let r = 0; r < rows - 1; r++) {
-        for (let c = 0; c < cols - 1; c++) {
-          const x0 = bounds[0] + c * STEP, x1 = x0 + STEP;
-          const z0 = bounds[1] + r * STEP, z1 = z0 + STEP;
-          if (x1 < -plateHalfW || x0 > plateHalfW ||
-              z1 < -plateHalfD || z0 > plateHalfD) { continue; }
-          const corners = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
-          const allIn = corners.every(function (pt) {
-            return insideRing(windRing, pt[0], pt[1]);
-          });
-
-          if (allIn) {
-            const a = r * cols + c, b = a + 1;
-            const d = (r + 1) * cols + c, e = d + 1;
-            gIdx.push(a, d, b, b, d, e);
-            continue;
-          }
-
-          const frag = clipToShore(corners, windRing);
-          if (frag.length < 3) { continue; }
-          const base = gPos.length / 3;
-          frag.forEach(function (pt) {
-            const h = groundHeight(pt[0], pt[1]);
-            if (h > peak) { peak = h; }
-            gPos.push(pt[0], h, pt[1]);
-            gUv.push(pt[0] / 300, pt[1] / 300);
-            gCol.push(0, 0, 0);
-          });
-          for (let f = 1; f + 1 < frag.length; f++) {
-            gIdx.push(base, base + f + 1, base + f);
-          }
-        }
-      }
-
-      /* Hypsometric tint needs the full range, so colour is a second pass --
-         and it has to run after the clipped shore fragments have been added,
-         or they arrive black. */
-      for (let i = 0; i < gPos.length / 3; i++) {
-        /* Colour by height above the waterline. Below it the ramp has nothing
-           to say, so the seabed takes its own tone instead of being painted
-           with the bottom of the land ramp, which would put a green fringe in
-           the surf. */
-        const y = gPos[i * 3 + 1];
-        const tint = y <= 0
-          ? SEABED_TINT
-          : hypso(y / (elevation ? elevation.max_height : FALLBACK_REF));
-        gCol[i * 3] = tint[0];
-        gCol[i * 3 + 1] = tint[1];
-        gCol[i * 3 + 2] = tint[2];
-      }
-
-      if (gIdx.length) {
-        const gGeo = new THREE.BufferGeometry();
-        gGeo.setAttribute("position", new THREE.Float32BufferAttribute(gPos, 3));
-        gGeo.setAttribute("color", new THREE.Float32BufferAttribute(gCol, 3));
-        gGeo.setAttribute("uv", new THREE.Float32BufferAttribute(gUv, 2));
-        gGeo.setIndex(gIdx);
-        gGeo.computeVertexNormals();
-
-        /* No colour map. The grain jpgs are near-white greyscale, so
-           multiplying the hypsometric tint by one washed the whole landscape
-           to cream and the relief lost the only cue it had left. The tint IS
-           the surface colour; the jpg is demoted to roughness, where it gives
-           the ground a tooth without touching its hue. */
-        /* Contoured. The shader was written for the mounds and outlived them,
-           and it belongs here far more: a relief map draws contours because
-           shading alone cannot tell a reader whether a slope runs up or down,
-           and on a board lit by one soft key that ambiguity is most of the
-           surface. Twelve units a line, every fifth heavier, which puts eight
-           or nine lines on the tallest ground and none on the flats. */
-        const ground = new THREE.Mesh(gGeo, applyContours(
-          new THREE.MeshStandardMaterial({
-            vertexColors: true, roughnessMap: landTex, roughness: 0.98,
-            metalness: 0, envMapIntensity: 0.20, flatShading: false
-          }), 12));
-        ground.castShadow = true;
-        ground.receiveShadow = true;
-        scene.add(ground);
-        terrainPeak = Math.max(terrainPeak, peak);
-      }
-
-      /* No inked coastline. It used to trace `mass.hull` at y = 0.30, which
-         is above the water, so wherever the generated shore retreated inside
-         the hull -- which is most of it, a hull being convex and a coast not
-         -- straight segments stood offshore over open sea and argued with the
-         waterline they were supposed to describe. The comment at the top of
-         this block already said there was nothing to draw; the code had not
-         caught up. */
+    const fallbackRings = landHull.map(function (mass) {
+      return mass.hull.map(function (pt) {
+        return [worldX(pt[0]), worldZ(pt[1])];
+      });
     });
+
+    /* Ground as a signed field, positive where there is land to draw.
+
+       Signed rather than a yes/no, because the mesh's edge is placed by
+       interpolating it: a cell the coast runs through is cut where the field
+       crosses zero, which is a smooth line rather than a step. It is sampled
+       once per grid vertex and read four times per cell. */
+    function groundField(px, pz) {
+      if (!seaBytes) {
+        /* No elevation, no distance field -- and no wobble either. The
+           fallback vale is flat, so its hull IS its shore and wants no margin
+           at all. Inside or out is all this path can say, so the cut lands
+           halfway along the cell edge. That is a 3.5-unit tolerance on the
+           rim of a flat plate, on the board that only draws when the
+           elevation file failed to load. `check_fallback_board` drives it. */
+        for (let i = 0; i < fallbackRings.length; i++) {
+          if (insideRing(fallbackRings[i], px, pz)) { return 1; }
+        }
+        return -1;
+      }
+      return OFFSHORE_LIMIT - sampleSea((px + midX) / FX, (pz + midY) / FY);
+    }
+
+    /* The grid spans every hull plus the margin, and stops at the plate.
+
+       The mesh is carried past the coast so the wandering shore is never cut
+       back to a straight line -- but the sheet's own margin is smaller than
+       that, so the seabed ran off the edge of the board and hung in the air
+       beyond it, in full view, because the water that is supposed to hide it
+       stops at the print. The straight edge that leaves is deep offshore and
+       under opaque water, which is the one place a straight edge does no
+       harm. */
+    const plateHalfW = (sheetW - REVEAL * 2) / 2;
+    const plateHalfD = (sheetD - REVEAL * 2) / 2;
+
+    const bounds = fallbackRings.reduce(function (acc, ring) {
+      ring.forEach(function (pt) {
+        acc[0] = Math.min(acc[0], pt[0] - CLIP_MARGIN);
+        acc[1] = Math.min(acc[1], pt[1] - CLIP_MARGIN);
+        acc[2] = Math.max(acc[2], pt[0] + CLIP_MARGIN);
+        acc[3] = Math.max(acc[3], pt[1] + CLIP_MARGIN);
+      });
+      return acc;
+    }, [Infinity, Infinity, -Infinity, -Infinity]);
+    bounds[0] = Math.max(bounds[0], -plateHalfW);
+    bounds[1] = Math.max(bounds[1], -plateHalfD);
+    bounds[2] = Math.min(bounds[2], plateHalfW);
+    bounds[3] = Math.min(bounds[3], plateHalfD);
+
+    const STEP = 7;
+    const cols = Math.ceil((bounds[2] - bounds[0]) / STEP) + 1;
+    const rows = Math.ceil((bounds[3] - bounds[1]) / STEP) + 1;
+
+    const gPos = [], gCol = [], gUv = [], gIdx = [];
+    const field = new Float32Array(cols * rows);
+    let peak = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const px = bounds[0] + c * STEP;
+        const pz = bounds[1] + r * STEP;
+        const h = groundHeight(px, pz);
+        if (h > peak) { peak = h; }
+        field[r * cols + c] = groundField(px, pz);
+        gPos.push(px, h, pz);
+        gUv.push(px / 300, pz / 300);
+        gCol.push(0, 0, 0);          // filled once the peak is known
+      }
+    }
+
+    /* A cell the coast runs through is cut to it, not dropped. Dropping whole
+       cells left the mesh edge as a flight of 7-unit stairs in a place where
+       the board has already promised the reader a coast.
+
+       This was Sutherland-Hodgman against the shore ring, which is exact --
+       and valid only for a convex clip polygon. A connectivity hull is
+       convex; the traced coastlines `build_public_board` now exports for any
+       map with a geography file are not, and intersecting a cell with the
+       inward half-plane of all 5,092 edges of `maps/world.json`'s ring left
+       nothing at all: every one of its 764 boundary cells came back empty, so
+       the clipper written to prevent a staircase produced one.
+
+       Cutting the cell where the field crosses zero has no opinion about the
+       shape of the coast at all -- a bay, a spit and a fjord are the same
+       arithmetic as a straight edge -- and it costs what the clipper cost:
+       four or five vertices for the cell, from values already sampled. */
+    function cutCell(c, r) {
+      const x0 = bounds[0] + c * STEP, x1 = x0 + STEP;
+      const z0 = bounds[1] + r * STEP, z1 = z0 + STEP;
+      const corner = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+      const val = [field[r * cols + c], field[r * cols + c + 1],
+                   field[(r + 1) * cols + c + 1], field[(r + 1) * cols + c]];
+      const poly = [];
+      for (let k = 0; k < 4; k++) {
+        const a = k, b = (k + 1) % 4;
+        if (val[a] >= 0) { poly.push(corner[a]); }
+        if ((val[a] >= 0) !== (val[b] >= 0)) {
+          const t = val[a] / (val[a] - val[b]);
+          poly.push([corner[a][0] + (corner[b][0] - corner[a][0]) * t,
+                     corner[a][1] + (corner[b][1] - corner[a][1]) * t]);
+        }
+      }
+      return poly;
+    }
+
+    for (let r = 0; r < rows - 1; r++) {
+      for (let c = 0; c < cols - 1; c++) {
+        const a = r * cols + c, b = a + 1;
+        const d = (r + 1) * cols + c, e = d + 1;
+        if (field[a] >= 0 && field[b] >= 0 && field[d] >= 0 && field[e] >= 0) {
+          gIdx.push(a, d, b, b, d, e);
+          continue;
+        }
+        if (field[a] < 0 && field[b] < 0 && field[d] < 0 && field[e] < 0) {
+          continue;
+        }
+        const poly = cutCell(c, r);
+        if (poly.length < 3) { continue; }
+        const base = gPos.length / 3;
+        poly.forEach(function (pt) {
+          const h = groundHeight(pt[0], pt[1]);
+          if (h > peak) { peak = h; }
+          gPos.push(pt[0], h, pt[1]);
+          gUv.push(pt[0] / 300, pt[1] / 300);
+          gCol.push(0, 0, 0);
+        });
+        for (let f = 1; f + 1 < poly.length; f++) {
+          gIdx.push(base, base + f + 1, base + f);
+        }
+      }
+    }
+
+    /* Hypsometric tint needs the full range, so colour is a second pass --
+       and it has to run after the cut shore polygons have been added, or they
+       arrive black. */
+    for (let i = 0; i < gPos.length / 3; i++) {
+      /* Colour by height above the waterline. Below it the ramp has nothing
+         to say, so the seabed takes its own tone instead of being painted
+         with the bottom of the land ramp, which would put a green fringe in
+         the surf. */
+      const y = gPos[i * 3 + 1];
+      const tint = y <= 0
+        ? SEABED_TINT
+        : hypso(y / (elevation ? elevation.max_height : FALLBACK_REF));
+      gCol[i * 3] = tint[0];
+      gCol[i * 3 + 1] = tint[1];
+      gCol[i * 3 + 2] = tint[2];
+    }
+
+    if (gIdx.length) {
+      const gGeo = new THREE.BufferGeometry();
+      gGeo.setAttribute("position", new THREE.Float32BufferAttribute(gPos, 3));
+      gGeo.setAttribute("color", new THREE.Float32BufferAttribute(gCol, 3));
+      gGeo.setAttribute("uv", new THREE.Float32BufferAttribute(gUv, 2));
+      gGeo.setIndex(gIdx);
+      gGeo.computeVertexNormals();
+
+      /* No colour map. The grain jpgs are near-white greyscale, so
+         multiplying the hypsometric tint by one washed the whole landscape to
+         cream and the relief lost the only cue it had left. The tint IS the
+         surface colour; the jpg is demoted to roughness, where it gives the
+         ground a tooth without touching its hue. */
+      /* Contoured. The shader was written for the mounds and outlived them,
+         and it belongs here far more: a relief map draws contours because
+         shading alone cannot tell a reader whether a slope runs up or down,
+         and on a board lit by one soft key that ambiguity is most of the
+         surface. Twelve units a line, every fifth heavier, which puts eight
+         or nine lines on the tallest ground and none on the flats. */
+      const ground = new THREE.Mesh(gGeo, applyContours(
+        new THREE.MeshStandardMaterial({
+          vertexColors: true, roughnessMap: landTex, roughness: 0.98,
+          metalness: 0, envMapIntensity: 0.20, flatShading: false
+        }), 12));
+      ground.castShadow = true;
+      ground.receiveShadow = true;
+      scene.add(ground);
+      terrainPeak = Math.max(terrainPeak, peak);
+    }
   }
 
   /* The ruling stops at the neatline, as it does on a printed plate -- and it
