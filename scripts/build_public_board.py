@@ -139,18 +139,33 @@ def build_board(map_path: Path) -> dict:
         for city in source["cities"]
     ]
 
+    sea_routes = (geo or {}).get("sea_routes") or {}
     roads = []
     for road in source["roads"]:
         cost = _hop_cost_for_raw_road(road)
-        roads.append(
-            {
-                "from": road["from"],
-                "to": road["to"],
-                "quality": road["quality"],
-                "distance_miles": road.get("distance_miles"),
-                "move_cost": None if cost is None else _round(cost, 1),
-            }
-        )
+        entry = {
+            "from": road["from"],
+            "to": road["to"],
+            "quality": road["quality"],
+            "distance_miles": road.get("distance_miles"),
+            "move_cost": None if cost is None else _round(cost, 1),
+        }
+        # A sailed lane follows the water, and the geography says where.
+        #
+        # `mapview` draws these along `sea_routes[road.id]`, which threads
+        # between the coastlines rather than across them. The board had no
+        # road ids and no paths, so it could only bow a quadratic between the
+        # two ports -- and on `world.json` that draws
+        # `selivale -> vasordale` 1.83x shorter than the route it stands for,
+        # straight over the land it exists to sail around. One lane's straight
+        # line is over land for its entire length.
+        sailed = sea_routes.get(road.get("id"))
+        if sailed:
+            entry["id"] = road["id"]
+            entry["path"] = _in_fractions(
+                [layout.project_miles(px, py) for px, py in sailed], layout
+            )
+        roads.append(entry)
 
     return {
         "map": map_file,
@@ -166,6 +181,28 @@ def build_board(map_path: Path) -> dict:
         "cities": cities,
         "roads": roads,
     }
+
+
+def _in_fractions(points, layout) -> list[list[float]]:
+    """SVG coordinates back to the 0..1 fractions the cities are given in.
+
+    `project_miles` places a mile coordinate at `pad + (mi / field) *
+    map_extent`; this inverts it. Points outside 0..1 are expected and are not
+    clamped -- a hull is padded outward from its cities and a sea lane rounds
+    a headland, and clamping either would flatten it against the field edge.
+
+    Six places, not the usual four. A fraction is multiplied by the frame
+    extent on the way back, so 1e-4 here is 0.12px there -- small, but these
+    are meant to BE the 2D map's, and a test says so to a tolerance the
+    rounding would otherwise set.
+    """
+    return [
+        [
+            _round((px - layout.pad_x) / layout.map_w, 6),
+            _round((py - layout.pad_y) / layout.map_h, 6),
+        ]
+        for px, py in points
+    ]
 
 
 def _landmasses_in_fractions(
@@ -193,17 +230,7 @@ def _landmasses_in_fractions(
         masses = compute_landmasses(source["cities"], source["roads"], pos)
     out = []
     for mass in masses:
-        # Six places, not the usual four. A fraction is multiplied by the frame
-        # extent on the way back, so 1e-4 here is 0.12px of shoreline there --
-        # small, but this polygon is meant to BE the 2D map's, and a test says
-        # so to a tolerance the rounding would otherwise set.
-        hull = [
-            [
-                _round((px - layout.pad_x) / layout.map_w, 6),
-                _round((py - layout.pad_y) / layout.map_h, 6),
-            ]
-            for px, py in mass["hull"]
-        ]
+        hull = _in_fractions(mass["hull"], layout)
         out.append(
             {
                 "index": mass["index"],

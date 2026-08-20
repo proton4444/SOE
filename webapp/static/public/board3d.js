@@ -28,7 +28,7 @@
  */
 
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/OrbitControls.js?v=h37";
+import { OrbitControls } from "./vendor/OrbitControls.js?v=h38";
 
 /* Board units. One unit of fractional map coordinate = SU units, on both
    axes, so the recorded geometry is never stretched. */
@@ -411,7 +411,14 @@ function glowTexture() {
    min(28, length * 0.08) and picks the side from the road id's character sum,
    which keeps the choice stable across renders — same rule here, off the
    endpoint ids, since the public board has no road ids. */
-function roadRibbon(ax, az, bx, bz, width, key, height) {
+/* `path`, when given, is the route the 2D map actually draws -- the geography
+   file's `sea_routes` entry for this lane, projected into world units. A lane
+   that has one is threaded between the coastlines rather than bowed across
+   them: on `maps/world.json` the quadratic drew `selivale -> vasordale` at
+   0.55 of the length of the route it stands for, straight over the land the
+   route exists to sail around. Where there is no path this is the quadratic
+   it always was. */
+function roadRibbon(ax, az, bx, bz, width, key, height, path) {
   const dx = bx - ax, dz = bz - az;
   const len = Math.hypot(dx, dz) || 1;
   let sum = 0;
@@ -432,13 +439,50 @@ function roadRibbon(ax, az, bx, bz, width, key, height) {
      hill -- at 28 a long road chorded straight across the valleys between its
      samples and surfaced through the high ground in between. */
   const SEG = 64;
+
+  /* A traced path is walked by arc length, so the ribbon's segments are
+     evenly spaced along the route rather than bunching wherever the source
+     polyline happened to put its vertices. */
+  let cumulative = null;
+  if (path && path.length > 1) {
+    cumulative = [0];
+    for (let i = 1; i < path.length; i++) {
+      cumulative.push(cumulative[i - 1] + Math.hypot(
+        path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+    }
+  }
+
+  function along(t) {
+    if (!cumulative) {
+      const mt = 1 - t;
+      return {
+        x: mt * mt * ax + 2 * mt * t * cx + t * t * bx,
+        z: mt * mt * az + 2 * mt * t * cz + t * t * bz,
+        tx: 2 * mt * (cx - ax) + 2 * t * (bx - cx),
+        tz: 2 * mt * (cz - az) + 2 * t * (bz - cz)
+      };
+    }
+    const total = cumulative[cumulative.length - 1] || 1;
+    const want = t * total;
+    let i = 1;
+    while (i < cumulative.length - 1 && cumulative[i] < want) { i++; }
+    const span = cumulative[i] - cumulative[i - 1] || 1;
+    const u = Math.max(0, Math.min(1, (want - cumulative[i - 1]) / span));
+    const p = path[i - 1], q = path[i];
+    return {
+      x: p[0] + (q[0] - p[0]) * u,
+      z: p[1] + (q[1] - p[1]) * u,
+      tx: q[0] - p[0],
+      tz: q[1] - p[1]
+    };
+  }
+
   const pos = [], uv = [], idx = [];
   for (let i = 0; i <= SEG; i++) {
-    const t = i / SEG, mt = 1 - t;
-    const px = mt * mt * ax + 2 * mt * t * cx + t * t * bx;
-    const pz = mt * mt * az + 2 * mt * t * cz + t * t * bz;
-    const tx = 2 * mt * (cx - ax) + 2 * t * (bx - cx);
-    const tz = 2 * mt * (cz - az) + 2 * t * (bz - cz);
+    const t = i / SEG;
+    const at = along(t);
+    const px = at.x, pz = at.z;
+    const tx = at.tx, tz = at.tz;
     const tl = Math.hypot(tx, tz) || 1;
     const nx = -tz / tl, nz = tx / tl;
     /* Draped, not flat. A road laid at y = 0 across a landscape with 60 units
@@ -1726,8 +1770,13 @@ export function createBoard(options) {
       ? function (px, pz) { return Math.max(groundHeight(px, pz), SEA_SURFACE_Y); }
       : groundHeight;
 
+    // The lane's own route, if the map's geography traced one for it.
+    const sailed = (road.path && road.path.length > 1)
+      ? road.path.map(function (pt) { return [worldX(pt[0]), worldZ(pt[1])]; })
+      : null;
+
     const geo = roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                           style.width, key, ride);
+                           style.width, key, ride, sailed);
     alpha.repeat.set(Math.max(1, Math.round(geo.userData.length / 42)), 1);
 
     /* Unlit, deliberately. The game's roads are flat SVG strokes, and a lit
@@ -1743,7 +1792,7 @@ export function createBoard(options) {
     casingAlpha.needsUpdate = true;
     const casing = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 3.4, key, ride),
+                 style.width + 3.4, key, ride, sailed),
       new THREE.MeshBasicMaterial({
         color: ROAD_CASING, transparent: true, opacity: 0.30,
         alphaMap: casingAlpha, depthWrite: false, side: THREE.DoubleSide
@@ -1770,7 +1819,7 @@ export function createBoard(options) {
     pulseAlpha.needsUpdate = true;
     const pulse = new THREE.Mesh(
       roadRibbon(worldX(a.x), worldZ(a.y), worldX(b.x), worldZ(b.y),
-                 style.width + 4, key, ride),
+                 style.width + 4, key, ride, sailed),
       new THREE.MeshBasicMaterial({
         color: 0xffffff, transparent: true, opacity: 0,
         alphaMap: pulseAlpha, blending: THREE.AdditiveBlending,

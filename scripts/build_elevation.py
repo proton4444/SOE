@@ -422,7 +422,17 @@ def build_elevation(map_path: Path) -> dict:
                     math.hypot(px - sx, pz - sz) for sx, sz, _b, _r in seeds
                 )
                 if near_city < SITE_GUARD:
-                    coast = max(coast, COAST_SHELF * (1.0 - near_city / SITE_GUARD))
+                    # Capped at the UNWOBBLED distance, so the guard can only
+                    # undo the wobble near a town, never invent land beyond
+                    # the hull. Without the cap it did: `world.json`'s hull is
+                    # its traced coastline, and 154 cities each pushing the
+                    # shore out took the map from 31% land to 51% -- a board
+                    # whose coast no longer matched the one the app draws,
+                    # which is the disagreement this builder exists to
+                    # prevent. Offshore `signed` is negative and the cap makes
+                    # this a no-op.
+                    lift = COAST_SHELF * (1.0 - near_city / SITE_GUARD)
+                    coast = max(coast, min(signed, lift))
 
             shelf = _smoothstep(min(1.0, max(0.0, coast / COAST_SHELF)))
             # Below the waterline, running out to the seabed floor.

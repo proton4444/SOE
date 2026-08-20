@@ -230,7 +230,7 @@ elevation.js            baked heightmap + sea ramp, 99 KB (27 KB gzipped)
 
 Asset URLs carry a `?v=` token that is **hardcoded, not generated**. Bump it
 by hand whenever a versioned asset changes, or returning visitors keep the old
-file. It is currently `v=h37`.
+file. It is currently `v=h38`.
 
 The token is not only in `index.html`, and that was a trap: `atlas.js` imports
 `board3d.js?v=`, and `board3d.js` imports `vendor/OrbitControls.js?v=`. Those

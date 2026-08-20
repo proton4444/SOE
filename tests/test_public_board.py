@@ -608,6 +608,70 @@ def test_a_town_is_not_drowned_by_the_shelf_that_reaches_it():
             )
 
 
+def test_a_sailed_lane_carries_the_route_the_app_sails():
+    """A sea lane goes round the land, and the geography says how.
+
+    `mapview` draws these along `sea_routes[road.id]`, which threads between
+    the coastlines. The board carried neither the road id nor the path, so it
+    could only bow a quadratic between the two ports -- and a quadratic
+    between two ports on opposite sides of a headland goes straight over the
+    headland. On `maps/world.json`, `caluen -> eshustead` was drawn 77% over
+    land where its actual route is 5%.
+
+    Nine of the twenty-four lanes are unchanged by this, and correctly: they
+    are river and lake routes that run *through* the landmass, so crossing the
+    coastline polygon is what they are supposed to do.
+    """
+    import math
+
+    from scripts.build_elevation import _Coast
+
+    board = build_board(REPO_ROOT / "maps" / "world.json")
+    frame_w, frame_h = board["frame_units"]
+    index = _Coast(
+        [
+            [(px * frame_w, py * frame_h) for px, py in mass["hull"]]
+            for mass in board["landmasses"]
+        ],
+        frame_w,
+        frame_h,
+    )
+    pos = {c["id"]: (c["x"] * frame_w, c["y"] * frame_h) for c in board["cities"]}
+
+    sailed = [r for r in board["roads"] if r.get("path")]
+    assert sailed, "world.json has traced sea routes; none reached the board"
+
+    def over_land(points):
+        return sum(index.inside(x, y) for x, y in points) / len(points)
+
+    improved = 0
+    for road in sailed:
+        ax, az = pos[road["from"]]
+        bx, bz = pos[road["to"]]
+        dx, dz = bx - ax, bz - az
+        span = math.hypot(dx, dz) or 1.0
+        key = road["from"] + road["to"]
+        bow = min(11.0, span * 0.03) * (1 if sum(map(ord, key)) % 2 == 0 else -1)
+        cx = (ax + bx) / 2 + (-dz / span) * bow
+        cz = (az + bz) / 2 + (dx / span) * bow
+        quad = [
+            (
+                (1 - t) ** 2 * ax + 2 * (1 - t) * t * cx + t * t * bx,
+                (1 - t) ** 2 * az + 2 * (1 - t) * t * cz + t * t * bz,
+            )
+            for t in (i / 80 for i in range(81))
+        ]
+        traced = [(px * frame_w, py * frame_h) for px, py in road["path"]]
+        if over_land(traced) < over_land(quad) - 0.02:
+            improved += 1
+
+    assert improved >= 12, (
+        f"only {improved} of {len(sailed)} sailed lanes cross less land along "
+        f"their traced route than along the quadratic -- the routes are not "
+        f"reaching the board, or are landing in the wrong frame"
+    )
+
+
 def test_a_geography_backed_map_exports_the_coast_the_app_draws():
     """The builder's whole claim is that the board cannot disagree with the app.
 
