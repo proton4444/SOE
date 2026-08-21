@@ -40,6 +40,11 @@ def _count(name: str, default: int) -> int:
 LIMITS: Dict[str, Tuple[int, float]] = {
     "signup": (_count("SOE_RATE_LIMIT_SIGNUP", 30), 600.0),
     "bot": (_count("SOE_RATE_LIMIT_BOT", 60), 3600.0),
+    # Order submissions write files per turn and resolve runs the whole
+    # engine plus a backup copy; both are cheap to automate and expensive
+    # to absorb, so they get buckets of their own.
+    "orders": (_count("SOE_RATE_LIMIT_ORDERS", 120), 3600.0),
+    "resolve": (_count("SOE_RATE_LIMIT_RESOLVE", 30), 600.0),
 }
 
 #: Above this many tracked callers we drop the windows that have fully expired.

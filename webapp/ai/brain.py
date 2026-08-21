@@ -215,9 +215,18 @@ def chat_result(
     prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
     max_tokens = max_tokens or _max_output_tokens()
     retries = _max_retries()
+    # One budget for the whole call: every attempt and every backoff sleep
+    # spends from the same pool. Without this, retries stack on top of each
+    # other and one bot turn can pin a threadpool worker for minutes on end;
+    # with it, the worst case is exactly (retries + 1) full timeouts.
+    deadline = time.perf_counter() + (retries + 1) * _timeout_seconds()
 
     last_error: Exception | None = None
+    attempts_made = 0
     for attempt in range(1, retries + 2):
+        if time.perf_counter() >= deadline:
+            break
+        attempts_made = attempt
         started = time.perf_counter()
         try:
             text, usage, request_id = _post_once(
@@ -244,26 +253,30 @@ def chat_result(
             )
         except _RetryableError as exc:
             last_error = exc
+            delay = _backoff(attempt, exc.retry_after)
             logger.warning(
                 "llm_retry model=%s attempt=%d status=%d",
                 model,
                 attempt,
                 exc.status,
             )
-            time.sleep(_backoff(attempt, exc.retry_after))
         except LLMError:
             raise
         except Exception as exc:  # transport-level: retry, then surface
             last_error = exc
+            delay = float(attempt)
             logger.warning(
                 "llm_retry model=%s attempt=%d error=%s",
                 model,
                 attempt,
                 type(exc).__name__,
             )
-            time.sleep(attempt)
+        remaining = deadline - time.perf_counter()
+        if attempt > retries or remaining <= 0:
+            break
+        time.sleep(min(delay, remaining))
     raise LLMError(
-        f"LLM request failed after {retries + 1} attempts: "
+        f"LLM request failed after {attempts_made} attempts: "
         f"{type(last_error).__name__}: {last_error}"
     ) from last_error
 
@@ -300,8 +313,8 @@ def _openai_request(
     headers = {
         "Authorization": f"Bearer {_api_key()}",
         "Content-Type": "application/json",
-        # OpenRouter attribution headers; a neutral title is fine.
-        "HTTP-Referer": "https://github.com/anomalyco/opencode",
+        # OpenRouter attribution headers.
+        "HTTP-Referer": "https://github.com/proton4444/SOE",
         "X-Title": "SOE",
     }
     return "/chat/completions", headers, payload

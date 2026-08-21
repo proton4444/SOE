@@ -98,8 +98,10 @@ class Room:
         return all(p.faction_id in submitted for p in self.joined_players())
 
     def player_by_key(self, key: str) -> RoomPlayer | None:
+        from webapp.net import secret_eq
+
         for p in self.players:
-            if p.agent_key == key:
+            if secret_eq(p.agent_key, key):
                 return p
         return None
 

@@ -16,6 +16,7 @@ import json
 import math
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple, Optional
 
@@ -135,7 +136,16 @@ def load_raw_map(map_file: str) -> dict:
     path = _map_path(map_file)
     if not path.exists():
         raise FileNotFoundError(map_file)
-    return json.loads(path.read_text(encoding="utf-8"))
+    return _read_json_cached(str(path), path.stat().st_mtime_ns)
+
+
+#: Map files are immutable once shipped, but tests and build scripts do
+#: rewrite them, so the cache key carries the file's mtime: a changed file
+#: is a different key. Raw maps are small; geography sidecars are tens of
+#: megabytes of parsed coastlines, so they get their own tighter cache.
+@lru_cache(maxsize=8)
+def _read_json_cached(path_str: str, mtime_ns: int) -> dict:
+    return json.loads(Path(path_str).read_text(encoding="utf-8"))
 
 
 def _map_path(map_file: str) -> Path:
@@ -187,12 +197,19 @@ def load_geography(map_file: str) -> Optional[dict]:
     if path is None:
         return None
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = _read_geo_json_cached(str(path), path.stat().st_mtime_ns)
     except (OSError, json.JSONDecodeError):
         return None
     if not isinstance(data, dict) or not data.get("coastlines"):
         return None
     return data
+
+
+#: Geography files are the heavy ones (``world_geography.json`` alone is
+#: ~50 MB of text); two entries cover the map being rendered plus one.
+@lru_cache(maxsize=2)
+def _read_geo_json_cached(path_str: str, mtime_ns: int) -> dict:
+    return json.loads(Path(path_str).read_text(encoding="utf-8"))
 
 
 #: Passed as ``geo`` to say "I have already looked, and this map has none".
@@ -811,7 +828,8 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     data = load_raw_map(map_file)
     stats = map_stats(map_file)
     layout: MapLayout = stats["layout"]
-    pos = positions(map_file)
+    geo = load_geography(map_file)
+    pos = positions(map_file, data, geo)
     cities = data.get("cities") or []
     roads = data.get("roads") or []
     by_id = {c["id"]: c for c in cities}
@@ -832,7 +850,6 @@ def render_svg(map_file: str, overlay: Optional[dict] = None) -> str:
     )
     parts.append(_defs())
     parts.append(_background(layout))
-    geo = load_geography(map_file)
     parts.append(
         _landmasses_svg(
             masses, dense=dense, traced=layout.has_geography, frame_w=layout.width

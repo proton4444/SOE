@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -125,7 +126,11 @@ def save_settings(patch: dict) -> dict:
             current[field] = value
         current["updated_at"] = datetime.now(timezone.utc).isoformat()
         SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp = SETTINGS_FILE.with_suffix(".json.tmp")
+        # Same per-write temp name discipline as the room registry: two
+        # writers sharing one fixed tmp file would race on multi-worker.
+        tmp = SETTINGS_FILE.with_name(
+            f"{SETTINGS_FILE.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp"
+        )
         tmp.write_text(
             json.dumps(current, indent=2), encoding="utf-8", newline="\n"
         )

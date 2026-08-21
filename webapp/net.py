@@ -10,6 +10,8 @@ that a hop happened at all.
 
 from __future__ import annotations
 
+import secrets
+
 from fastapi import Request
 
 #: Headers a reverse proxy adds on the way through. Their presence is what
@@ -58,3 +60,16 @@ def client_ip(request: Request) -> str:
         return real
     client = request.client
     return (client.host if client else "").strip() or "unknown"
+
+
+def secret_eq(a: str | None, b: str | None) -> bool:
+    """Constant-time equality for credentials. Empty values never match.
+
+    The PIN join path already used ``secrets.compare_digest``; this wraps the
+    same primitive so every other credential check -- host keys, seat keys,
+    share tokens, invite codes -- can stop using ``==`` without each site
+    re-deciding what to do about empty strings.
+    """
+    a = (a or "").encode()
+    b = (b or "").encode()
+    return bool(a) and bool(b) and secrets.compare_digest(a, b)

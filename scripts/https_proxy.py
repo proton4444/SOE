@@ -55,8 +55,28 @@ class _Proxy(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:  # noqa: N802
         self._forward()
 
+    def _respond_simple(self, status: int, message: str) -> None:
+        body = message.encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
     def _forward(self) -> None:
-        length = int(self.headers.get("Content-Length") or 0)
+        if "chunked" in (self.headers.get("Transfer-Encoding") or "").lower():
+            # Hop-by-hop TE was stripped below; a chunked body cannot be
+            # forwarded without de-chunking it first, so refuse honestly.
+            self._respond_simple(
+                501, "Chunked request bodies are not supported by this proxy."
+            )
+            return
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            self._respond_simple(400, "Invalid Content-Length header.")
+            return
         body = self.rfile.read(length) if length else None
         headers = {
             key: value

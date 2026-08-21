@@ -304,9 +304,11 @@ class AlphaStore:
         return None
 
     def share_by_token(self, token: str) -> Share:
+        from webapp.net import secret_eq
+
         with self._lock:
             for item in self._state.shares:
-                if item.token == token:
+                if secret_eq(item.token, token):
                     return item
         raise AlphaError("No shared result with that link.")
 

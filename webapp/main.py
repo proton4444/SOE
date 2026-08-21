@@ -11,6 +11,7 @@ param).
 
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
 import time
@@ -48,7 +49,7 @@ from webapp import (
     service,
     training,
 )
-from webapp.ai import autoplay, brain, orchestrator
+from webapp.ai import autoplay, bot_jobs, brain, orchestrator
 from webapp.ai.registry import AgentProfile, default_registry
 from webapp.blueprints import (
     BlueprintAccessError,
@@ -113,13 +114,61 @@ OPERATOR_COOKIE = "soe_operator"
 OPERATOR_HEADER = "X-SOE-Operator-Key"
 OPERATOR_KEY = os.environ.get("SOE_OPERATOR_KEY", "").strip()
 _LOOPBACK_CLIENTS = frozenset({"127.0.0.1", "::1", "localhost"})
-COOKIE_SECURE = os.environ.get("SOE_COOKIE_SECURE", "0").lower() in {
+_cookie_secure_env = os.environ.get("SOE_COOKIE_SECURE", "").strip().lower()
+#: Secure-by-default once an operator key exists: that flag is the "this is a
+#: real deployment" signal, and auth cookies over plain http are then a
+#: mistake rather than a convenience. An explicit env value still wins.
+COOKIE_SECURE = (
+    _cookie_secure_env in {"1", "true", "yes", "on"}
+    if _cookie_secure_env
+    else bool(OPERATOR_KEY)
+)
+COOKIE_MAX_AGE = 30 * 24 * 60 * 60
+#: The ``?key=`` fallback predates taking proxy access logs seriously: a URL
+#: credential leaks into logs, history and Referer headers. It stays because
+#: documented agents still use it, but it is deprecated -- prefer the header.
+#: Set SOE_REJECT_QUERY_KEYS=1 to refuse query credentials outright once
+#: every caller has migrated.
+REJECT_QUERY_KEYS = os.environ.get("SOE_REJECT_QUERY_KEYS", "").strip().lower() in {
     "1",
     "true",
     "yes",
     "on",
 }
-COOKIE_MAX_AGE = 30 * 24 * 60 * 60
+_query_credential_warned = False
+
+
+def _accept_query_credential(
+    request: Request, value: Optional[str], what: str
+) -> str:
+    """The deprecated ``?key=`` fallback: warn once, or refuse when hardened."""
+    global _query_credential_warned
+    value = value or ""
+    if not value:
+        return ""
+    if REJECT_QUERY_KEYS:
+        raise HTTPException(401, f"{what} must be sent in a header, not the URL.")
+    if not _query_credential_warned:
+        _query_credential_warned = True
+        logger.warning(
+            "credential_in_query what=%s path=%s -- deprecated; send it as a "
+            "header instead. SOE_REJECT_QUERY_KEYS=1 refuses this.",
+            what,
+            request.url.path,
+        )
+    return value
+
+
+def _operator_session_value() -> str:
+    """Cookie value derived from the operator key, not the key itself.
+
+    A browser holds this for 30 days; a stolen cookie must not be a stolen
+    credential. Rotating ``SOE_OPERATOR_KEY`` invalidates every session at
+    once, which is exactly what a raw-key cookie could not promise.
+    """
+    return hashlib.sha256(
+        f"soe-operator-session:{OPERATOR_KEY}".encode()
+    ).hexdigest()
 
 
 @app.middleware("http")
@@ -171,9 +220,9 @@ def _set_auth_cookie(response, name: str, value: str) -> None:
 
 def _require_beta_invite(request: Request, supplied: str = "") -> None:
     """Require the operator-supplied invite code when beta mode enables it."""
-    if BETA_ACCESS_CODE and (
-        request.headers.get(BETA_INVITE_HEADER, "") != BETA_ACCESS_CODE
-        and str(supplied or "").strip() != BETA_ACCESS_CODE
+    if BETA_ACCESS_CODE and not (
+        net.secret_eq(request.headers.get(BETA_INVITE_HEADER), BETA_ACCESS_CODE)
+        or net.secret_eq(str(supplied or "").strip(), BETA_ACCESS_CODE)
     ):
         raise HTTPException(403, "A valid beta invitation is required.")
 
@@ -183,11 +232,16 @@ def _is_operator(request: Request, supplied: str = "") -> bool:
     if OPERATOR_KEY:
         offered = (
             request.headers.get(OPERATOR_HEADER, ""),
-            request.cookies.get(OPERATOR_COOKIE, ""),
             str(supplied or "").strip(),
         )
-        return any(
+        if any(
             secrets.compare_digest(value, OPERATOR_KEY) for value in offered if value
+        ):
+            return True
+        # The browser session carries a derived value, never the key itself.
+        cookie = request.cookies.get(OPERATOR_COOKIE, "")
+        return bool(cookie) and secrets.compare_digest(
+            cookie, _operator_session_value()
         )
     # Without a configured secret only the server's own console qualifies --
     # and only when it reached us directly. Both documented deployments put a
@@ -215,10 +269,14 @@ def _require_operator(request: Request, supplied: str = "") -> None:
 
 
 def _remember_operator(response, supplied: str) -> None:
-    """Keep a browser operator signed in after a correct key."""
+    """Keep a browser operator signed in after a correct key.
+
+    The cookie stores the derived session value, not the key: see
+    ``_operator_session_value``.
+    """
     supplied = str(supplied or "").strip()
     if OPERATOR_KEY and supplied and secrets.compare_digest(supplied, OPERATOR_KEY):
-        _set_auth_cookie(response, OPERATOR_COOKIE, OPERATOR_KEY)
+        _set_auth_cookie(response, OPERATOR_COOKIE, _operator_session_value())
 
 
 def _resolve_room(code: str) -> Room:
@@ -323,7 +381,9 @@ def _setup_context(room: Room, notice: str = "", request: Request | None = None)
 
 
 def _require_master(request: Request, room: Room) -> None:
-    if request.cookies.get(_host_cookie_name(room.code)) != room.host_key:
+    if not net.secret_eq(
+        request.cookies.get(_host_cookie_name(room.code)), room.host_key
+    ):
         raise HTTPException(403, "The master dashboard requires the host session.")
 
 
@@ -340,7 +400,7 @@ def _my_games(request: Request, current_code: str) -> list[dict]:
     for r in default_store().all():
         if r.code == current_code:
             continue
-        if request.cookies.get(_host_cookie_name(r.code)) != r.host_key:
+        if not net.secret_eq(request.cookies.get(_host_cookie_name(r.code)), r.host_key):
             continue
         out.append(
             {
@@ -394,7 +454,7 @@ def index(request: Request):
 def _any_host_session(request: Request) -> bool:
     """True when the request carries a valid host cookie for any room."""
     return any(
-        request.cookies.get(_host_cookie_name(r.code)) == r.host_key
+        net.secret_eq(request.cookies.get(_host_cookie_name(r.code)), r.host_key)
         for r in default_store().all()
     )
 
@@ -508,7 +568,9 @@ def join_room(
 def room_page(request: Request, code: str):
     room = _resolve_room(code)
     player = _player_for(room, request, None)
-    is_host = request.cookies.get(_host_cookie_name(code)) == room.host_key
+    is_host = net.secret_eq(
+        request.cookies.get(_host_cookie_name(code)), room.host_key
+    )
     return templates.TemplateResponse(
         request,
         "room.html",
@@ -634,7 +696,10 @@ def setup_agent(
         except orchestrator.BotError as exc:
             msg = f"Bot {player.faction_name} not run: {exc}"
         except Exception as exc:  # noqa: BLE001 - keep the dashboard usable
-            msg = f"Bot {player.faction_name} failed: {type(exc).__name__}: {exc}"
+            logger.exception(
+                "bot_run_failed room=%s faction=%s", room.code, faction_id
+            )
+            msg = f"Bot {player.faction_name} failed: {type(exc).__name__}."
         return RedirectResponse(
             url=f"/room/{room.code}/setup?msg={quote(msg)}", status_code=303
         )
@@ -842,6 +907,7 @@ def _probe_llm() -> str:
 
 @app.post("/room/{code}/master/resolve", response_class=HTMLResponse)
 def master_resolve_now(request: Request, code: str):
+    ratelimit.check(request, "resolve")
     room = _resolve_room(code)
     _require_master(request, room)
     try:
@@ -901,7 +967,9 @@ def room_panel(request: Request, code: str):
     """HTMX fragment: live room status, order form, latest report."""
     room = _resolve_room(code)
     player = _player_for(room, request, None)
-    is_host = request.cookies.get(_host_cookie_name(code)) == room.host_key
+    is_host = net.secret_eq(
+        request.cookies.get(_host_cookie_name(code)), room.host_key
+    )
     return templates.TemplateResponse(
         request,
         "partials/panel.html",
@@ -911,16 +979,27 @@ def room_panel(request: Request, code: str):
 
 @app.post("/room/{code}/orders", response_class=HTMLResponse)
 def submit_orders(request: Request, code: str, orders: str = Form(...)):
+    ratelimit.check(request, "orders")
     room = _resolve_room(code)
     player = _player_for(room, request, None)
-    is_host = request.cookies.get(_host_cookie_name(code)) == room.host_key
+    is_host = net.secret_eq(
+        request.cookies.get(_host_cookie_name(code)), room.host_key
+    )
     if not player:
         return templates.TemplateResponse(
             request,
             "partials/panel.html",
             _panel_context(request, room, None, is_host, "Join the game first."),
         )
-    feedback = service.submit_orders(room, player, orders)
+    try:
+        text = _check_order_text(orders)
+        feedback = service.submit_orders(room, player, text)
+    except HTTPException as exc:
+        return templates.TemplateResponse(
+            request,
+            "partials/panel.html",
+            _panel_context(request, room, player, is_host, exc.detail),
+        )
     notice = f"Stored {feedback['parsed']} order(s) for turn {feedback['turn']}."
     if not feedback["parsed"]:
         notice = "No orders recognised."
@@ -935,8 +1014,11 @@ def submit_orders(request: Request, code: str, orders: str = Form(...)):
 
 @app.post("/room/{code}/resolve", response_class=HTMLResponse)
 def resolve_now(request: Request, code: str):
+    ratelimit.check(request, "resolve")
     room = _resolve_room(code)
-    is_host = request.cookies.get(_host_cookie_name(code)) == room.host_key
+    is_host = net.secret_eq(
+        request.cookies.get(_host_cookie_name(code)), room.host_key
+    )
     player = _player_for(room, request, None)
     if not is_host:
         return templates.TemplateResponse(
@@ -966,15 +1048,35 @@ def resolve_now(request: Request, code: str):
 
 
 def _key(request: Request, key: Optional[str] = Query(None)) -> str:
-    token = request.headers.get("X-Agent-Key") or key
+    token = request.headers.get("X-Agent-Key") or _accept_query_credential(
+        request, key, "The agent key"
+    )
     if not token:
         raise HTTPException(401, "Missing agent key (X-Agent-Key header or ?key=).")
     return token
 
 
+#: Ceiling on one order submission. The parser reads prose; a real turn of
+#: orders is a few kilobytes, so this bounds disk and registry growth without
+#: ever being felt by a legitimate seat. Bots cannot approach it: their text
+#: is capped by the model's max_tokens.
+MAX_ORDER_CHARS = 100_000
+
+
+def _check_order_text(text: str) -> str:
+    if not isinstance(text, str) or not text.strip():
+        raise HTTPException(400, "No orders given.")
+    if len(text) > MAX_ORDER_CHARS:
+        raise HTTPException(
+            400,
+            f"Orders are limited to {MAX_ORDER_CHARS} characters.",
+        )
+    return text
+
+
 def _require_host_key(request: Request, room: Room, key: Optional[str]) -> None:
     token = _key(request, key)
-    if token != room.host_key:
+    if not net.secret_eq(token, room.host_key):
         raise HTTPException(403, "Host key required.")
 
 
@@ -1926,12 +2028,13 @@ def api_create_room(request: Request, payload: dict):
     ratelimit.check(request, "signup")
     _require_beta_invite(request, payload.get("invite", ""))
     name = payload.get("name", "")
-    slots = int(payload.get("slots", 2))
+    try:
+        slots = int(payload.get("slots", 2))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "slots must be a whole number.")
     map_file = payload.get("map") or service.default_map()
     if map_file not in service.available_maps():
-        raise HTTPException(
-            400, f"Unknown map '{map_file}'. Available: {service.available_maps()}"
-        )
+        raise HTTPException(400, f"Unknown map '{map_file}'.")
     room = _store.create(name, slots, map_file)
     try:
         service.create_game(room)
@@ -1954,8 +2057,17 @@ def api_create_room(request: Request, payload: dict):
 def api_join(request: Request, payload: dict):
     ratelimit.check(request, "signup")
     _require_beta_invite(request, payload.get("invite", ""))
+    missing = [
+        field
+        for field in ("code", "pin", "name")
+        if not isinstance(payload.get(field), str) or not payload[field].strip()
+    ]
+    if missing:
+        raise HTTPException(400, f"Missing field(s): {', '.join(missing)}.")
     try:
-        room, player = _store.join(payload["code"], payload["pin"], payload["name"])
+        room, player = _store.join(
+            payload["code"], payload["pin"], payload["name"]
+        )
     except RoomError as exc:
         raise HTTPException(400, str(exc))
     return {
@@ -1971,7 +2083,7 @@ def api_join(request: Request, payload: dict):
 def api_status(code: str, request: Request, key: Optional[str] = Query(None)):
     room = _resolve_room(code)
     token = _key(request, key)
-    if not room.player_by_key(token) and token != room.host_key:
+    if not room.player_by_key(token) and not net.secret_eq(token, room.host_key):
         raise HTTPException(403, "This key does not belong to the game.")
     return service.room_status(room)
 
@@ -1981,13 +2093,12 @@ def api_orders(
     code: str, request: Request, payload: dict, key: Optional[str] = Query(None)
 ):
     room = _resolve_room(code)
+    ratelimit.check(request, "orders")
     token = _key(request, key)
     player = room.player_by_key(token)
     if not player:
         raise HTTPException(403, "This key does not belong to the game.")
-    text = payload.get("orders", "")
-    if not isinstance(text, str) or not text.strip():
-        raise HTTPException(400, "No orders given.")
+    text = _check_order_text(payload.get("orders", ""))
     feedback = service.submit_orders(room, player, text)
     return feedback
 
@@ -2038,8 +2149,9 @@ def api_resolve(
 ):
     room = _resolve_room(code)
     token = _key(request, key)
-    if token != room.host_key:
+    if not net.secret_eq(token, room.host_key):
         raise HTTPException(403, "Host key required to resolve.")
+    ratelimit.check(request, "resolve")
     force = bool((payload or {}).get("force", False))
     try:
         result = service.resolve_turn(room, force=force)
@@ -2126,13 +2238,26 @@ def api_delete_agent(
 
 @app.post("/api/rooms/{code}/agents/{faction_id}/run")
 def api_run_agent(
-    code: str, faction_id: str, request: Request, key: Optional[str] = Query(None)
+    code: str,
+    faction_id: str,
+    request: Request,
+    key: Optional[str] = Query(None),
+    background: bool = Query(False),
 ):
-    """Host-only: have one bot decide and submit orders for the next turn."""
+    """Host-only: have one bot decide and submit orders for the next turn.
+
+    ``?background=1`` returns 202 with a job id immediately and plays the
+    seat on the bot worker; poll ``GET /api/bot-jobs/{job_id}``. The default
+    stays synchronous and holds the connection until the turn is played.
+    """
     room = _resolve_room(code)
     _require_host_key(request, room, key)
     ratelimit.check(request, "bot")
     player = _faction_by_id(room, faction_id)
+    if background:
+        return JSONResponse(
+            _submit_bot_job(room.code, faction_id), status_code=202
+        )
     try:
         return orchestrator.run_bot_turn(room, player)
     except orchestrator.BotError as exc:
@@ -2140,6 +2265,32 @@ def api_run_agent(
         raise HTTPException(status, str(exc))
     except brain.LLMError as exc:
         raise HTTPException(503, str(exc))
+
+
+def _submit_bot_job(room_code: str, faction_id: str) -> dict:
+    """Enqueue one seat on the bot worker; returns its public payload."""
+    try:
+        job = bot_jobs.default_runner().submit(room_code, faction_id)
+    except bot_jobs.QueueFullError as exc:
+        raise HTTPException(503, str(exc))
+    payload = job.public()
+    payload["status_url"] = f"/api/bot-jobs/{job.id}"
+    return payload
+
+
+@app.get("/api/bot-jobs/{job_id}")
+def api_bot_job(
+    job_id: str, request: Request, key: Optional[str] = Query(None)
+):
+    """Poll one background bot turn. Any key valid for its room works."""
+    job = bot_jobs.default_runner().get(job_id)
+    if not job:
+        raise HTTPException(404, "No such bot job.")
+    room = _resolve_room(job.room_code)
+    token = _key(request, key)
+    if not room.player_by_key(token) and not net.secret_eq(token, room.host_key):
+        raise HTTPException(403, "This key does not belong to the game.")
+    return job.public()
 
 
 @app.get("/api/rooms/{code}/map")
@@ -2160,7 +2311,7 @@ def api_map(
     room = _resolve_room(code)
     token = _key(request, key)
     player = room.player_by_key(token)
-    is_host = token == room.host_key
+    is_host = net.secret_eq(token, room.host_key)
     if not player and not is_host:
         raise HTTPException(403, "This key does not belong to the game.")
     fmt = (format or "json").lower()
@@ -2187,13 +2338,38 @@ def api_map(
     return Response(payload["png"], media_type="image/png")
 
 
+def _run_all_budget_seconds() -> float:
+    """Wall-clock ceiling for one run-all request.
+
+    Each bot carries brain's own retry budget, so six slow bots could
+    otherwise hold a threadpool worker for the sum of all of them. Bots that
+    do not get their turn are reported as skipped, not silently dropped.
+    """
+    raw = os.environ.get("SOE_RUN_ALL_BUDGET_SECONDS", "").strip()
+    try:
+        return max(60.0, float(raw) if raw else 600.0)
+    except ValueError:
+        return 600.0
+
+
 @app.post("/api/rooms/{code}/agents/run-all")
-def api_run_all_agents(code: str, request: Request, key: Optional[str] = Query(None)):
-    """Host-only: run every enabled bot in the room, one turn each."""
+def api_run_all_agents(
+    code: str,
+    request: Request,
+    key: Optional[str] = Query(None),
+    background: bool = Query(False),
+):
+    """Host-only: run every enabled bot in the room, one turn each.
+
+    ``?background=1`` enqueues each enabled seat and returns its job id
+    immediately; the worker plays them one at a time.
+    """
     room = _resolve_room(code)
     _require_host_key(request, room, key)
     registry = default_registry()
     results = []
+    jobs: list[dict] = []
+    started = time.monotonic()
     for player in room.players:
         profile = registry.get(room.code, player.faction_id)
         if not profile or not profile.enabled:
@@ -2207,6 +2383,27 @@ def api_run_all_agents(code: str, request: Request, key: Optional[str] = Query(N
         except HTTPException as exc:
             results.append({"faction_id": player.faction_id, "error": exc.detail})
             break
+        if background:
+            payload = _submit_bot_job(room.code, player.faction_id)
+            jobs.append(
+                {
+                    "faction_id": player.faction_id,
+                    "job_id": payload["job_id"],
+                    "status_url": payload["status_url"],
+                }
+            )
+            continue
+        if time.monotonic() - started >= _run_all_budget_seconds():
+            results.append(
+                {
+                    "faction_id": player.faction_id,
+                    "error": (
+                        "Skipped: the run-all time budget ran out; "
+                        "run this bot individually."
+                    ),
+                }
+            )
+            continue
         try:
             results.append(orchestrator.run_bot_turn(room, player))
         except Exception as exc:  # noqa: BLE001 - report per-bot, keep going
@@ -2216,6 +2413,10 @@ def api_run_all_agents(code: str, request: Request, key: Optional[str] = Query(N
                     "error": f"{type(exc).__name__}: {exc}",
                 }
             )
+    if background:
+        if not jobs:
+            raise HTTPException(400, "No enabled bots in this room.")
+        return JSONResponse({"jobs": jobs}, status_code=202)
     if not results:
         raise HTTPException(400, "No enabled bots in this room.")
     return {"results": results}
@@ -2229,7 +2430,7 @@ def api_run_all_agents(code: str, request: Request, key: Optional[str] = Query(N
 def _presented_coach_key(request: Request, key: Optional[str] = None) -> str:
     return (
         request.headers.get(COACH_KEY_HEADER)
-        or (key or "")
+        or _accept_query_credential(request, key, "The coach key")
         or request.cookies.get(COACH_COOKIE, "")
     ).strip()
 
@@ -2481,7 +2682,9 @@ def api_enroll_blueprint(
     room = _resolve_room(code)
     seat = _faction_by_id(room, faction_id)
     token = _key(request, key)
-    if token != room.host_key and token != seat.agent_key:
+    if not net.secret_eq(token, room.host_key) and not net.secret_eq(
+        token, seat.agent_key
+    ):
         raise HTTPException(403, "This key does not hold that seat.")
     coach = _require_coach(request, coach_key)
     body = payload or {}

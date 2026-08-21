@@ -19,6 +19,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from soe import (
     config,
@@ -67,24 +68,42 @@ _DEFAULT_INDEPENDENTS = [
 _lock = threading.RLock()
 
 
+#: Memo for ``available_maps``: (directory signature, playable names). The
+#: signature is the resolved maps directory plus every ``*.json`` name with
+#: its mtime, so adding, removing or rewriting a map invalidates the memo
+#: while the common case costs a handful of stat calls instead of parsing
+#: ~130 MB of geography JSON on every page load.
+_maps_cache: Optional[tuple[list, list[str]]] = None
+
+
 def available_maps() -> list[str]:
     """Playable world maps only (JSON with a non-empty cities list).
 
     Pipeline sidecars such as ``soe_geography.json`` live in ``maps/`` but are
-    not engine maps and must not appear in the room picker.
+    not engine maps and must not appear in the room picker. Parsing goes
+    through ``mapview.load_raw_map``, whose mtime-keyed cache shares one
+    parsed copy with the renderers.
     """
-    import json
-
+    global _maps_cache
+    try:
+        signature: list = [str(Path(_MAPS_DIR).resolve())]
+        for path in sorted(_MAPS_DIR.glob("*.json")):
+            signature.append((path.name, path.stat().st_mtime_ns))
+    except OSError:
+        return []
+    if _maps_cache is not None and _maps_cache[0] == signature:
+        return list(_maps_cache[1])
     names: list[str] = []
-    for path in sorted(_MAPS_DIR.glob("*.json")):
+    for name, _ in signature[1:]:
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            data = mapview.load_raw_map(name)
+        except (OSError, ValueError):
             continue
         cities = data.get("cities") if isinstance(data, dict) else None
         if isinstance(cities, list) and cities:
-            names.append(path.name)
-    return names
+            names.append(name)
+    _maps_cache = (signature, names)
+    return list(names)
 
 
 def default_map() -> str:
